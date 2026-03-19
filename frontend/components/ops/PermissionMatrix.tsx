@@ -238,7 +238,7 @@ export function PermissionMatrix({ roles }: PermissionMatrixProps) {
           <Button onClick={handleSave} disabled={isSaving}>
             {isSaving ? (
               <>
-                <Loader2 className="size-4 animate-spin" />
+                <Loader2 className="size-4 animate-spin motion-reduce:animate-none" />
                 Saving...
               </>
             ) : (
@@ -250,7 +250,7 @@ export function PermissionMatrix({ roles }: PermissionMatrixProps) {
 
       {/* Toast notification */}
       {toast && (
-        <div className="fixed top-4 right-4 z-[100] animate-in slide-in-from-top-2 fade-in-0 rounded-lg border bg-card px-4 py-3 text-sm shadow-lg">
+        <div className="fixed top-4 right-4 z-[100] animate-in slide-in-from-top-2 fade-in-0 motion-reduce:animate-none rounded-lg border bg-card px-4 py-3 text-sm shadow-lg">
           {toast}
         </div>
       )}

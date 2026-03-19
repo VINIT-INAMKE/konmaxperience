@@ -123,6 +123,9 @@ export default function ForgotPasswordPage() {
           <ChevronLeft className="size-4" />
           Back to sign in
         </Link>
+        <p className="text-[28px] font-semibold leading-[1.1] text-center">
+          Konma Xperience
+        </p>
         <h1 className="text-xl font-semibold text-center">
           Reset your password
         </h1>
@@ -166,7 +169,7 @@ export default function ForgotPasswordPage() {
           >
             {isLoading ? (
               <>
-                <Loader2 className="size-4 animate-spin" />
+                <Loader2 className="size-4 animate-spin motion-reduce:animate-none" />
                 Sending...
               </>
             ) : (

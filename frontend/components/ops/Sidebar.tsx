@@ -125,7 +125,7 @@ export function Sidebar() {
               </AvatarFallback>
             </Avatar>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">
+              <p className="text-sm font-semibold truncate">
                 {user?.name || 'User'}
               </p>
               <Badge variant="secondary" className="text-[11px] h-4 px-1.5">

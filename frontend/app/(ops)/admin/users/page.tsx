@@ -7,6 +7,7 @@ import {
   MoreHorizontal,
   Plus,
   Loader2,
+  AlertCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -48,7 +49,7 @@ export default function AdminUsersPage() {
   const [isDeactivating, setIsDeactivating] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
-  const { data: users, isLoading } = useQuery({
+  const { data: users, isLoading, isError } = useQuery({
     queryKey: ['users'],
     queryFn: () => apiClient.get<UserProfile[]>('/users'),
   });
@@ -120,7 +121,16 @@ export default function AdminUsersPage() {
 
       {isLoading && (
         <div className="flex items-center justify-center py-12">
-          <Loader2 className="size-6 animate-spin text-muted-foreground" />
+          <Loader2 className="size-6 animate-spin motion-reduce:animate-none text-muted-foreground" />
+        </div>
+      )}
+
+      {isError && (
+        <div className="flex flex-col items-center justify-center py-12 space-y-2 text-center">
+          <AlertCircle className="size-6 text-destructive" />
+          <p className="text-sm text-muted-foreground">
+            Failed to load team members. Please try again later.
+          </p>
         </div>
       )}
 
@@ -128,7 +138,7 @@ export default function AdminUsersPage() {
         <div className="flex flex-col items-center justify-center py-16 space-y-4 text-center">
           <Users className="size-12 text-muted-foreground" />
           <div className="space-y-1">
-            <h2 className="text-lg font-semibold">No team members yet</h2>
+            <h2 className="text-xl font-semibold">No team members yet</h2>
             <p className="text-sm text-muted-foreground">
               Add your first team member to get started.
             </p>
@@ -255,7 +265,7 @@ export default function AdminUsersPage() {
             >
               {isDeactivating ? (
                 <>
-                  <Loader2 className="size-4 animate-spin" />
+                  <Loader2 className="size-4 animate-spin motion-reduce:animate-none" />
                   Deactivating...
                 </>
               ) : (
@@ -268,7 +278,7 @@ export default function AdminUsersPage() {
 
       {/* Toast notification */}
       {toast && (
-        <div className="fixed top-4 right-4 z-[100] animate-in slide-in-from-top-2 fade-in-0 rounded-lg border bg-card px-4 py-3 text-sm shadow-lg">
+        <div className="fixed top-4 right-4 z-[100] animate-in slide-in-from-top-2 fade-in-0 motion-reduce:animate-none rounded-lg border bg-card px-4 py-3 text-sm shadow-lg">
           {toast}
         </div>
       )}

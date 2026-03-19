@@ -23,7 +23,7 @@ export default function DashboardPage() {
         <CardContent className="px-6 py-6 space-y-2">
           <p className="text-muted-foreground">Dashboard coming in Phase 7</p>
           <p className="text-sm">
-            Welcome, <span className="font-medium">{user?.name}</span>
+            Welcome, <span className="font-semibold">{user?.name}</span>
           </p>
           <p className="text-sm text-muted-foreground">
             Role: {roleDisplayName}

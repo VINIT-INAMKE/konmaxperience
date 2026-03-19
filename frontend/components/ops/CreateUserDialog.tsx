@@ -8,6 +8,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   Dialog,
   DialogContent,
@@ -53,6 +54,7 @@ export function CreateUserDialog({
 }: CreateUserDialogProps) {
   const queryClient = useQueryClient();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
 
   const { data: roles } = useQuery({
@@ -72,6 +74,7 @@ export function CreateUserDialog({
 
   async function onSubmit(data: CreateUserForm) {
     setIsSubmitting(true);
+    setSubmitError(null);
     try {
       await apiClient.post('/users', {
         name: data.name,
@@ -84,8 +87,10 @@ export function CreateUserDialog({
       onOpenChange(false);
       // Show toast briefly
       setTimeout(() => setToast(null), 3000);
-    } catch {
-      // Error handling in a real implementation would show the error
+    } catch (err) {
+      setSubmitError(
+        err instanceof Error ? err.message : 'Something went wrong. Please try again.',
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -93,6 +98,7 @@ export function CreateUserDialog({
 
   function handleDiscard() {
     reset();
+    setSubmitError(null);
     onOpenChange(false);
   }
 
@@ -107,6 +113,11 @@ export function CreateUserDialog({
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            {submitError && (
+              <Alert variant="destructive">
+                <AlertDescription>{submitError}</AlertDescription>
+              </Alert>
+            )}
             <div className="space-y-2">
               <Label htmlFor="name">Full name</Label>
               <Input
@@ -187,7 +198,7 @@ export function CreateUserDialog({
               <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting ? (
                   <>
-                    <Loader2 className="size-4 animate-spin" />
+                    <Loader2 className="size-4 animate-spin motion-reduce:animate-none" />
                     Adding...
                   </>
                 ) : (
@@ -201,7 +212,7 @@ export function CreateUserDialog({
 
       {/* Toast notification */}
       {toast && (
-        <div className="fixed top-4 right-4 z-[100] animate-in slide-in-from-top-2 fade-in-0 rounded-lg border bg-card px-4 py-3 text-sm shadow-lg">
+        <div className="fixed top-4 right-4 z-[100] animate-in slide-in-from-top-2 fade-in-0 motion-reduce:animate-none rounded-lg border bg-card px-4 py-3 text-sm shadow-lg">
           {toast}
         </div>
       )}

@@ -11,7 +11,7 @@ function ResetPasswordContent() {
       subtitle="Enter a new password for your account."
       ctaLabel="Reset password and sign in"
       onSubmitAction={resetPassword}
-      expiredMessage="This setup link has expired. Ask your admin to resend the invitation."
+      expiredMessage="This link has expired. Ask your admin to send a new one."
       usedMessage="This link has already been used. Sign in or reset your password."
     />
   );

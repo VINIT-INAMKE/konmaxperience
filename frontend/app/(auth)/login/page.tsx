@@ -66,7 +66,10 @@ function LoginContent() {
   return (
     <Card className="max-w-[400px] w-full rounded-xl border shadow-sm">
       <CardHeader className="space-y-1 text-center px-6 pt-6 pb-0">
-        <h1 className="text-[28px] font-semibold leading-[1.1] tracking-tight">
+        <p className="text-[28px] font-semibold leading-[1.1]">
+          Konma Xperience
+        </p>
+        <h1 className="text-xl font-semibold">
           Welcome back
         </h1>
         <p className="text-sm text-muted-foreground">
@@ -160,7 +163,7 @@ function LoginContent() {
           >
             {isLoading ? (
               <>
-                <Loader2 className="size-4 animate-spin" />
+                <Loader2 className="size-4 animate-spin motion-reduce:animate-none" />
                 Signing in...
               </>
             ) : (
