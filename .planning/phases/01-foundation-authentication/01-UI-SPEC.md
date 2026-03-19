@@ -68,13 +68,13 @@ Exceptions:
 | Role | Size | Weight | Line Height | Usage |
 |------|------|--------|-------------|-------|
 | Body | 14px | 400 (Regular) | 1.5 | Form labels, table cell text, sidebar nav items, helper text |
-| Label | 13px | 500 (Medium) | 1.4 | Input labels, permission row labels, table column headers, badge text |
+| Label | 13px | 400 (Regular) | 1.4 | Input labels, permission row labels, table column headers, badge text |
 | Heading | 20px | 600 (Semibold) | 1.2 | Page titles, card headings, modal titles |
-| Display | 28px | 700 (Bold) | 1.1 | Auth page headline ("Welcome back"), login page brand mark |
+| Display | 28px | 600 (Semibold) | 1.1 | Auth page headline ("Welcome back"), login page brand mark |
 
 **Font family:** Geist Variable — `font-sans` for all text.
-**Monospace exception:** User role codes (e.g. `FRONTEND_LEAD`) and token/ID display use `font-mono` (Geist Mono) at 12px, weight 400.
-**Two weights for body text only:** Regular (400) and Medium (500). Semibold (600) and Bold (700) reserved for headings only.
+**Monospace:** User role codes (e.g. `FRONTEND_LEAD`) and token/ID display use `font-mono` (Geist Mono) at Label size (13px), weight 400.
+**Two weights only:** Regular (400) for body and label text; Semibold (600) for headings and display.
 
 ---
 
@@ -171,7 +171,7 @@ Install these shadcn components as part of scaffolding. No third-party registry 
 1. Brand headline: "Welcome back" (Display, centered)
 2. Subtitle: "Sign in to Konma Xperience" (Body, muted, centered)
 3. Email input — label "Email address", type="email", autocomplete="email"
-4. Password input — label "Password", type="password", autocomplete="current-password", show/hide toggle (Eye icon, 44px touch target)
+4. Password input — label "Password", type="password", autocomplete="current-password", show/hide toggle (Eye icon, 44px touch target, `aria-label="Show password"` when hidden / `aria-label="Hide password"` when visible)
 5. "Forgot password?" link — right-aligned below password field, Body size, accent underline on hover
 6. Primary CTA button — full-width, "Sign in"
 7. No "Remember me" checkbox — JWT 7-day expiry handles persistence (CONTEXT.md decision)
@@ -211,8 +211,8 @@ Install these shadcn components as part of scaffolding. No third-party registry 
 **Elements:**
 1. Heading: "Set your password" (Heading, centered)
 2. Subtitle: "Create a password to access Konma Xperience." (Body, muted)
-3. New Password input — label "Password", show/hide toggle
-4. Confirm Password input — label "Confirm password", show/hide toggle
+3. New Password input — label "Password", show/hide toggle (`aria-label="Show password"` when hidden / `aria-label="Hide password"` when visible)
+4. Confirm Password input — label "Confirm password", show/hide toggle (`aria-label="Show password"` when hidden / `aria-label="Hide password"` when visible)
 5. Password strength indicator — 3-segment bar below password field (weak/medium/strong — no text label, color only: destructive/amber-500/green-500)
 6. Password requirements list (inline): "At least 8 characters", "At least one number" — check icon turns accent when met
 7. Primary CTA — full-width, "Set password and sign in"
@@ -231,6 +231,7 @@ Install these shadcn components as part of scaffolding. No third-party registry 
 **Heading:** "Choose a new password"
 **Subtitle:** "Enter a new password for your account."
 **CTA:** "Reset password and sign in"
+**Password show/hide toggles:** `aria-label="Show password"` when hidden / `aria-label="Hide password"` when visible (same as Set Password page)
 **All states:** Same as Set Password page
 
 ---
@@ -252,7 +253,7 @@ Install these shadcn components as part of scaffolding. No third-party registry 
 **Create User modal (Dialog):**
 - Title: "Add team member"
 - Fields: Full name (Input), Email address (Input), Role (Select — all 8 roles listed by display name)
-- Footer: "Cancel" ghost button + "Add member" primary button
+- Footer: "Discard" ghost button + "Add member" primary button
 - Loading state: "Add member" → spinner + "Adding..."
 - Success: modal closes + toast "Invitation sent to [name]"
 
@@ -329,7 +330,7 @@ Install these shadcn components as part of scaffolding. No third-party registry 
 | Expired token error | "This link has expired. Ask your admin to send a new one." | Who to contact, what to do |
 | Used token error | "This link has already been used. Sign in or reset your password." | Offers two paths |
 | No email found (forgot pw) | "No account found with that email address." | Honest; this is an internal tool where user enumeration is not a concern |
-| Deactivate user confirmation | "Deactivate [name]?" in dialog — body: "They will lose access immediately. You can reactivate them at any time." CTA: "Deactivate" (destructive) | Reversible, so no "permanent" language |
+| Deactivate user confirmation | "Deactivate [name]?" in dialog — body: "They will lose access immediately. You can reactivate them at any time." CTA: "Deactivate" (destructive) + "Keep active" ghost button | Reversible, so no "permanent" language |
 | Send reset email confirmation | No confirmation required — toast only: "Password reset email sent to [name]" | Low-stakes action |
 | Invitation sent toast | "Invitation sent to [name]" | Personal, uses their name |
 | Permissions saved toast | "Permissions updated" | Minimal confirmation |
@@ -341,7 +342,7 @@ Install these shadcn components as part of scaffolding. No third-party registry 
 
 | Action | Trigger | Confirmation Pattern | Reversible |
 |--------|---------|---------------------|------------|
-| Deactivate user | Row action dropdown "Deactivate user" | Dialog modal — "Deactivate [name]?" + explanation + "Deactivate" (destructive) + "Cancel" buttons | Yes — admin can reactivate |
+| Deactivate user | Row action dropdown "Deactivate user" | Dialog modal — "Deactivate [name]?" + explanation + "Deactivate" (destructive) + "Keep active" buttons | Yes — admin can reactivate |
 
 No hard-delete actions in Phase 1. User deactivation sets `status = inactive`, never deletes.
 
@@ -389,6 +390,7 @@ Respect `prefers-reduced-motion`: all transitions reduce to instant (0ms) when O
 - Color is never the only indicator of state (badges have text, error inputs have text message)
 - Minimum contrast ratio: 4.5:1 for body text, 3:1 for large text (WCAG AA)
 - Screen reader: all icons that carry meaning have `aria-label`; decorative icons have `aria-hidden="true"`
+- Password show/hide toggles use `aria-label="Show password"` (when password hidden) and `aria-label="Hide password"` (when password visible) — applies to Login, Set Password, and Reset Password pages
 - Tab order follows visual reading order — no skip links needed (auth pages are single-focus flows)
 
 ---
