@@ -21,7 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { AnimatedList, AnimatedListItem } from '@/components/ui/animated-list';
+import { BlurFade } from '@/components/ui/blur-fade';
 import type { Task, TaskStatus } from '@/lib/types/tasks';
 import {
   TASK_TYPE_LABELS,
@@ -157,47 +157,47 @@ export function TaskListView({
           </p>
         </div>
       ) : (
+        <div className="rounded-lg border overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead
-                className="cursor-pointer select-none"
+                className="cursor-pointer select-none w-[35%]"
                 onClick={() => toggleSort('title')}
               >
                 Title{sortIndicator('title')}
               </TableHead>
               <TableHead
-                className="cursor-pointer select-none"
+                className="cursor-pointer select-none w-[12%]"
                 onClick={() => toggleSort('status')}
               >
                 Status{sortIndicator('status')}
               </TableHead>
               <TableHead
-                className="cursor-pointer select-none"
+                className="cursor-pointer select-none w-[12%]"
                 onClick={() => toggleSort('priority')}
               >
                 Priority{sortIndicator('priority')}
               </TableHead>
-              <TableHead>Owner</TableHead>
+              <TableHead className="w-[15%]">Owner</TableHead>
               <TableHead
-                className="cursor-pointer select-none"
+                className="cursor-pointer select-none w-[14%]"
                 onClick={() => toggleSort('due_date')}
               >
                 Due Date{sortIndicator('due_date')}
               </TableHead>
-              <TableHead>Blocked</TableHead>
+              <TableHead className="w-[12%]">Blocked</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            <AnimatedList delay={50} className="contents">
-              {filteredAndSorted.map((task) => {
+              {filteredAndSorted.map((task, index) => {
                 const isOverdue =
                   task.due_date &&
                   !task.completed_at &&
                   isPast(parseISO(task.due_date));
                 return (
-                  <AnimatedListItem key={task.id}>
                     <TableRow
+                      key={task.id}
                       className="cursor-pointer hover:bg-muted/50"
                       onClick={() => router.push(`/tasks/${task.id}`)}
                     >
@@ -274,12 +274,11 @@ export function TaskListView({
                         )}
                       </TableCell>
                     </TableRow>
-                  </AnimatedListItem>
                 );
               })}
-            </AnimatedList>
           </TableBody>
         </Table>
+        </div>
       )}
     </div>
   );

@@ -66,11 +66,12 @@ function SortableCard({
     data: { task },
   });
 
-  const style = {
-    transform: CSS.Translate.toString(transform),
-    transition,
-    opacity: isDragging ? 0.3 : 1,
-  };
+  const style: React.CSSProperties = isDragging
+    ? { opacity: 0.3, transition }
+    : {
+        transform: CSS.Transform.toString(transform),
+        transition,
+      };
 
   return (
     <div
