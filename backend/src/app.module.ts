@@ -7,6 +7,9 @@ import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
 import { PermissionsModule } from './permissions/permissions.module';
+import { UsersModule } from './users/users.module';
+import { RolesModule } from './roles/roles.module';
+import { EmailModule } from './email/email.module';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { PermissionsGuard } from './auth/permissions.guard';
 
@@ -17,6 +20,9 @@ import { PermissionsGuard } from './auth/permissions.guard';
     PrismaModule,
     AuthModule,
     PermissionsModule,
+    UsersModule,
+    RolesModule,
+    EmailModule,
   ],
   controllers: [AppController],
   providers: [
