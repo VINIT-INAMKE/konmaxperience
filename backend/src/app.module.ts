@@ -10,6 +10,8 @@ import { PermissionsModule } from './permissions/permissions.module';
 import { UsersModule } from './users/users.module';
 import { RolesModule } from './roles/roles.module';
 import { EmailModule } from './email/email.module';
+import { MissionsModule } from './missions/missions.module';
+import { QuestsModule } from './quests/quests.module';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { PermissionsGuard } from './auth/permissions.guard';
 
@@ -22,6 +24,8 @@ import { PermissionsGuard } from './auth/permissions.guard';
     PermissionsModule,
     UsersModule,
     RolesModule,
+    MissionsModule,
+    QuestsModule,
     EmailModule,
   ],
   controllers: [AppController],

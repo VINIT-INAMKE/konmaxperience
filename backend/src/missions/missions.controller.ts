@@ -1,0 +1,50 @@
+import {
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Param,
+  Body,
+  Req,
+  ParseUUIDPipe,
+} from '@nestjs/common';
+import express from 'express';
+import { MissionsService } from './missions.service';
+import { RequiresPermission } from '../common/decorators/permissions.decorator';
+import { Permission } from '../types/permissions';
+import { CreateMissionDto } from './dto/create-mission.dto';
+import { UpdateMissionDto } from './dto/update-mission.dto';
+
+@Controller('missions')
+export class MissionsController {
+  constructor(private readonly missionsService: MissionsService) {}
+
+  @Get()
+  async findAll() {
+    return this.missionsService.findAll();
+  }
+
+  @Get(':id')
+  async findOne(@Param('id', ParseUUIDPipe) id: string) {
+    return this.missionsService.findOne(id);
+  }
+
+  @Post()
+  @RequiresPermission(Permission.CREATE_MISSION)
+  async create(
+    @Body() dto: CreateMissionDto,
+    @Req() request: express.Request,
+  ) {
+    const user = (request as any).user;
+    return this.missionsService.create(dto, user.id);
+  }
+
+  @Patch(':id')
+  @RequiresPermission(Permission.CREATE_MISSION)
+  async update(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateMissionDto,
+  ) {
+    return this.missionsService.update(id, dto);
+  }
+}
