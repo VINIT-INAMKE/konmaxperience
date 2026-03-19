@@ -316,30 +316,31 @@ export class TasksService {
     const quest = await tx.quest.findUnique({ where: { id: questId } });
     if (!quest) return;
 
-    // Core progress: valid core tasks / baseline_task_count
-    const coreValidCount = await tx.task.count({
-      where: { quest_id: questId, task_type: 'core', valid: true },
+    // Core progress: done core tasks / baseline_task_count
+    // NOTE: Uses status='done' until Phase 3 adds evidence validation (valid=true)
+    const coreDoneCount = await tx.task.count({
+      where: { quest_id: questId, task_type: 'core', status: 'done' },
     });
     const coreProgress =
       quest.baseline_task_count > 0
-        ? Math.round((coreValidCount / quest.baseline_task_count) * 100)
+        ? Math.round((coreDoneCount / quest.baseline_task_count) * 100)
         : 0;
 
-    // Adhoc progress: valid adhoc tasks / total adhoc tasks
+    // Adhoc progress: done adhoc tasks / total adhoc tasks
     const totalAdhoc = await tx.task.count({
       where: { quest_id: questId, task_type: 'adhoc' },
     });
-    const validAdhoc = await tx.task.count({
-      where: { quest_id: questId, task_type: 'adhoc', valid: true },
+    const doneAdhoc = await tx.task.count({
+      where: { quest_id: questId, task_type: 'adhoc', status: 'done' },
     });
     const adhocProgress =
-      totalAdhoc > 0 ? Math.round((validAdhoc / totalAdhoc) * 100) : 0;
+      totalAdhoc > 0 ? Math.round((doneAdhoc / totalAdhoc) * 100) : 0;
 
     // Combined progress (weighted: core carries more weight)
     const combinedProgress =
       quest.baseline_task_count > 0
         ? Math.round(
-            ((coreValidCount + validAdhoc * 0.7) /
+            ((coreDoneCount + doneAdhoc * 0.7) /
               (quest.baseline_task_count + totalAdhoc * 0.7)) *
               100,
           )
@@ -360,14 +361,14 @@ export class TasksService {
     missionId: string,
     tx: any,
   ): Promise<void> {
-    const tasks = await tx.task.findMany({
+    // NOTE: Uses status='done' until Phase 3 adds evidence validation (valid=true)
+    const total = await tx.task.count({
       where: { mission_id: missionId },
-      select: { valid: true },
     });
-
-    const total = tasks.length;
-    const validDone = tasks.filter((t: { valid: boolean }) => t.valid).length;
-    const progress = total > 0 ? Math.round((validDone / total) * 100) : 0;
+    const doneCount = await tx.task.count({
+      where: { mission_id: missionId, status: 'done' },
+    });
+    const progress = total > 0 ? Math.round((doneCount / total) * 100) : 0;
 
     // IMPORTANT: Do NOT touch mission.status
     await tx.mission.update({
