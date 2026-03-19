@@ -12,6 +12,7 @@ import { RolesModule } from './roles/roles.module';
 import { EmailModule } from './email/email.module';
 import { MissionsModule } from './missions/missions.module';
 import { QuestsModule } from './quests/quests.module';
+import { TasksModule } from './tasks/tasks.module';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { PermissionsGuard } from './auth/permissions.guard';
 
@@ -26,6 +27,7 @@ import { PermissionsGuard } from './auth/permissions.guard';
     RolesModule,
     MissionsModule,
     QuestsModule,
+    TasksModule,
     EmailModule,
   ],
   controllers: [AppController],
