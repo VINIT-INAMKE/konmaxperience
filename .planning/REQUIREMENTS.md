@@ -1,7 +1,7 @@
 # Requirements: Konma Xperience OS
 
 **Defined:** 2026-03-19
-**Core Value:** Every piece of work must be evidence-backed, approved, and validated before it counts — turning real execution into measurable readiness and progress.
+**Core Value:** Every piece of work must be evidence-backed, approved, and validated before it counts -- turning real execution into measurable readiness and progress.
 
 ## v1 Requirements
 
@@ -11,7 +11,7 @@
 - [ ] **AUTH-02**: System enforces 8 generic roles (Frontend Lead, Backend Lead, BI Lead, Procurement Lead, Talent Lead, Tech Lead, Design/Outreach Lead, Founder/Admin)
 - [ ] **AUTH-03**: Each role has scoped permissions controlling what they can view, create, approve
 - [ ] **AUTH-04**: User session persists across browser refresh
-- [ ] **AUTH-05**: Admin has super access — can see everything across all roles
+- [ ] **AUTH-05**: Admin has super access -- can see everything across all roles
 - [ ] **AUTH-06**: Admin can switch to view the system from any role's perspective
 
 ### Missions & Execution
@@ -54,7 +54,7 @@
 ### Operations Management
 
 - [ ] **OPS-01**: Manage 6+ villa zones with type, owner, and status
-- [ ] **OPS-02**: Manage brands with type (food/art/lifestyle) and status lifecycle (idea → active)
+- [ ] **OPS-02**: Manage brands with type (food/art/lifestyle) and status lifecycle (idea to active)
 - [ ] **OPS-03**: Manage sales channels (dine-in, delivery, takeaway, retail, event, workshop, online)
 - [ ] **OPS-04**: Asset library for recipes, SOPs, menus, cost sheets, training docs with status workflow
 
@@ -67,10 +67,10 @@
 
 ### Dashboards
 
-- [ ] **DASH-01**: Admin mission control — readiness overview, pending approvals, blockers, decisions, ad-hoc task injector, leaderboard
-- [ ] **DASH-02**: Role user dashboard — my tasks, quests, evidence, contribution meters
+- [ ] **DASH-01**: Admin mission control -- readiness overview, pending approvals, blockers, decisions, ad-hoc task injector, leaderboard
+- [ ] **DASH-02**: Role user dashboard -- my tasks, quests, evidence, contribution meters
 - [ ] **DASH-03**: Admin can switch view to see the system from any role's perspective
-- [ ] **DASH-04**: Shared boards — mission board, quest board, wins/milestones, latest evidence feed
+- [ ] **DASH-04**: Shared boards -- mission board, quest board, wins/milestones, latest evidence feed
 
 ## v2 Requirements
 
@@ -120,52 +120,52 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| AUTH-01 | — | Pending |
-| AUTH-02 | — | Pending |
-| AUTH-03 | — | Pending |
-| AUTH-04 | — | Pending |
-| AUTH-05 | — | Pending |
-| AUTH-06 | — | Pending |
-| EXEC-01 | — | Pending |
-| EXEC-02 | — | Pending |
-| EXEC-03 | — | Pending |
-| EXEC-04 | — | Pending |
-| EXEC-05 | — | Pending |
-| EXEC-06 | — | Pending |
-| EXEC-07 | — | Pending |
-| EXEC-08 | — | Pending |
-| EVID-01 | — | Pending |
-| EVID-02 | — | Pending |
-| EVID-03 | — | Pending |
-| INTL-01 | — | Pending |
-| INTL-02 | — | Pending |
-| INTL-03 | — | Pending |
-| INTL-04 | — | Pending |
-| INTL-05 | — | Pending |
-| GOVN-01 | — | Pending |
-| GOVN-02 | — | Pending |
-| GOVN-03 | — | Pending |
-| NOTF-01 | — | Pending |
-| NOTF-02 | — | Pending |
-| NOTF-03 | — | Pending |
-| OPS-01 | — | Pending |
-| OPS-02 | — | Pending |
-| OPS-03 | — | Pending |
-| OPS-04 | — | Pending |
-| CUST-01 | — | Pending |
-| CUST-02 | — | Pending |
-| CUST-03 | — | Pending |
-| CUST-04 | — | Pending |
-| DASH-01 | — | Pending |
-| DASH-02 | — | Pending |
-| DASH-03 | — | Pending |
-| DASH-04 | — | Pending |
+| AUTH-01 | Phase 1 | Pending |
+| AUTH-02 | Phase 1 | Pending |
+| AUTH-03 | Phase 1 | Pending |
+| AUTH-04 | Phase 1 | Pending |
+| AUTH-05 | Phase 1 | Pending |
+| AUTH-06 | Phase 1 | Pending |
+| EXEC-01 | Phase 2 | Pending |
+| EXEC-02 | Phase 2 | Pending |
+| EXEC-03 | Phase 2 | Pending |
+| EXEC-04 | Phase 2 | Pending |
+| EXEC-05 | Phase 2 | Pending |
+| EXEC-06 | Phase 2 | Pending |
+| EXEC-07 | Phase 2 | Pending |
+| EXEC-08 | Phase 2 | Pending |
+| EVID-01 | Phase 3 | Pending |
+| EVID-02 | Phase 3 | Pending |
+| EVID-03 | Phase 3 | Pending |
+| INTL-01 | Phase 4 | Pending |
+| INTL-02 | Phase 4 | Pending |
+| INTL-03 | Phase 4 | Pending |
+| INTL-04 | Phase 4 | Pending |
+| INTL-05 | Phase 4 | Pending |
+| GOVN-01 | Phase 5 | Pending |
+| GOVN-02 | Phase 5 | Pending |
+| GOVN-03 | Phase 5 | Pending |
+| NOTF-01 | Phase 8 | Pending |
+| NOTF-02 | Phase 8 | Pending |
+| NOTF-03 | Phase 8 | Pending |
+| OPS-01 | Phase 6 | Pending |
+| OPS-02 | Phase 6 | Pending |
+| OPS-03 | Phase 6 | Pending |
+| OPS-04 | Phase 6 | Pending |
+| CUST-01 | Phase 9 | Pending |
+| CUST-02 | Phase 9 | Pending |
+| CUST-03 | Phase 9 | Pending |
+| CUST-04 | Phase 9 | Pending |
+| DASH-01 | Phase 7 | Pending |
+| DASH-02 | Phase 7 | Pending |
+| DASH-03 | Phase 7 | Pending |
+| DASH-04 | Phase 7 | Pending |
 
 **Coverage:**
-- v1 requirements: 39 total
-- Mapped to phases: 0
-- Unmapped: 39 ⚠️
+- v1 requirements: 40 total
+- Mapped to phases: 40
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-19*
-*Last updated: 2026-03-19 after initial definition*
+*Last updated: 2026-03-19 after roadmap creation*
