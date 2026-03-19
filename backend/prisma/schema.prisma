@@ -6,3 +6,276 @@ datasource db {
 generator client {
   provider = "prisma-client-js"
 }
+
+model Role {
+  id          String   @id @default(uuid())
+  code        String   @unique
+  name        String
+  description String
+  permissions String[]
+  created_at  DateTime @default(now())
+  users       User[]
+}
+
+model User {
+  id                  String               @id @default(uuid())
+  name                String
+  email               String               @unique
+  password_hash       String
+  role_id             String
+  role                Role                 @relation(fields: [role_id], references: [id])
+  function            String
+  status              String               @default("active")
+  xp_total            Int                  @default(0)
+  level               Int                  @default(1)
+  streak_days         Int                  @default(0)
+  created_at          DateTime             @default(now())
+  updated_at          DateTime             @updatedAt
+  refresh_tokens      RefreshToken[]
+  reset_tokens        PasswordResetToken[]
+  owned_tasks         Task[]               @relation("TaskOwner")
+  created_tasks       Task[]               @relation("TaskCreator")
+  evidence            Evidence[]
+  reviewed_evidence   Evidence[]           @relation("EvidenceReviewer")
+  approved_approvals  Approval[]           @relation("ApprovalApprover")
+  proposed_decisions  Decision[]           @relation("DecisionProposer")
+  owned_quests        Quest[]
+  owned_zones         Zone[]
+  owned_brands        Brand[]
+  created_assets      Asset[]
+}
+
+model RefreshToken {
+  id         String    @id @default(uuid())
+  user_id    String
+  user       User      @relation(fields: [user_id], references: [id])
+  token_hash String
+  revoked_at DateTime?
+  expires_at DateTime
+  created_at DateTime  @default(now())
+
+  @@index([user_id])
+}
+
+model PasswordResetToken {
+  id         String    @id @default(uuid())
+  user_id    String
+  user       User      @relation(fields: [user_id], references: [id])
+  token_hash String
+  expires_at DateTime
+  used_at    DateTime?
+  created_at DateTime  @default(now())
+}
+
+model Mission {
+  id               String     @id @default(uuid())
+  title            String
+  description      String
+  phase            String     @default("setup")
+  scope            String     @default("food")
+  status           String     @default("planned")
+  start_date       DateTime?
+  end_date         DateTime?
+  progress_percent Float      @default(0)
+  created_by       String
+  created_at       DateTime   @default(now())
+  updated_at       DateTime   @updatedAt
+  quests           Quest[]
+  tasks            Task[]
+  decisions        Decision[] @relation("DecisionMission")
+}
+
+model Quest {
+  id                     String    @id @default(uuid())
+  mission_id             String
+  mission                Mission   @relation(fields: [mission_id], references: [id])
+  title                  String
+  description            String
+  week_number            Int
+  owner_user_id          String
+  owner                  User      @relation(fields: [owner_user_id], references: [id])
+  status                 String    @default("planned")
+  baseline_task_count    Int       @default(0)
+  core_progress_percent  Float     @default(0)
+  adhoc_progress_percent Float     @default(0)
+  progress_percent       Float     @default(0)
+  start_date             DateTime?
+  end_date               DateTime?
+  created_at             DateTime  @default(now())
+  updated_at             DateTime  @updatedAt
+  tasks                  Task[]
+}
+
+model Task {
+  id                   String               @id @default(uuid())
+  mission_id           String
+  mission              Mission              @relation(fields: [mission_id], references: [id])
+  quest_id             String?
+  quest                Quest?               @relation(fields: [quest_id], references: [id])
+  title                String
+  description          String
+  task_type            String               @default("core")
+  domain               String
+  owner_user_id        String
+  owner                User                 @relation("TaskOwner", fields: [owner_user_id], references: [id])
+  created_by           String
+  creator              User                 @relation("TaskCreator", fields: [created_by], references: [id])
+  status               String               @default("todo")
+  priority             String               @default("medium")
+  xp                   Int                  @default(25)
+  valid_xp             Int                  @default(0)
+  verified             Boolean              @default(false)
+  valid                Boolean              @default(false)
+  requires_approval    Boolean              @default(true)
+  blocked              Boolean              @default(false)
+  blocked_reason       String?
+  depends_on_task_id   String?
+  depends_on           Task?                @relation("TaskDependency", fields: [depends_on_task_id], references: [id])
+  dependents           Task[]               @relation("TaskDependency")
+  readiness_meter_id   String?
+  readiness_meter      ReadinessMeter?      @relation(fields: [readiness_meter_id], references: [id])
+  readiness_value      Int                  @default(0)
+  kpi_id               String?
+  kpi                  Kpi?                 @relation(fields: [kpi_id], references: [id])
+  due_date             DateTime?
+  completed_at         DateTime?
+  created_at           DateTime             @default(now())
+  updated_at           DateTime             @updatedAt
+  evidence             Evidence[]
+  approvals            Approval[]           @relation("TaskApprovals")
+  readiness_events     TaskReadinessEvent[]
+  linked_assets        Asset[]
+
+  @@index([owner_user_id, status])
+  @@index([quest_id, valid])
+  @@index([mission_id])
+}
+
+model Evidence {
+  id              String    @id @default(uuid())
+  task_id         String
+  task            Task      @relation(fields: [task_id], references: [id])
+  uploaded_by     String
+  uploader        User      @relation(fields: [uploaded_by], references: [id])
+  type            String
+  url             String
+  notes           String?
+  approval_status String    @default("pending")
+  reviewed_by     String?
+  reviewer        User?     @relation("EvidenceReviewer", fields: [reviewed_by], references: [id])
+  reviewed_at     DateTime?
+  created_at      DateTime  @default(now())
+}
+
+model Approval {
+  id                 String   @id @default(uuid())
+  entity_type        String
+  entity_id          String
+  task               Task?    @relation("TaskApprovals", fields: [entity_id], references: [id])
+  approval_scope     String
+  required_role_code String
+  approved_by        String?
+  approver           User?    @relation("ApprovalApprover", fields: [approved_by], references: [id])
+  status             String   @default("pending")
+  notes              String?
+  created_at         DateTime @default(now())
+  updated_at         DateTime @updatedAt
+}
+
+model Decision {
+  id                String   @id @default(uuid())
+  title             String
+  decision_type     String
+  context           String
+  proposed_by       String
+  proposer          User     @relation("DecisionProposer", fields: [proposed_by], references: [id])
+  impact_scope      String
+  final_decision    String?
+  status            String   @default("proposed")
+  linked_task_id    String?
+  linked_mission_id String?
+  linked_mission    Mission? @relation("DecisionMission", fields: [linked_mission_id], references: [id])
+  created_at        DateTime @default(now())
+  updated_at        DateTime @updatedAt
+}
+
+model ReadinessMeter {
+  id            String               @id @default(uuid())
+  code          String               @unique
+  name          String
+  description   String
+  current_value Float                @default(0)
+  target_value  Float                @default(100)
+  weight        Float                @default(1.0)
+  updated_at    DateTime             @updatedAt
+  tasks         Task[]
+  events        TaskReadinessEvent[]
+}
+
+model TaskReadinessEvent {
+  id                 String         @id @default(uuid())
+  task_id            String
+  task               Task           @relation(fields: [task_id], references: [id])
+  readiness_meter_id String
+  readiness_meter    ReadinessMeter @relation(fields: [readiness_meter_id], references: [id])
+  value              Int
+  applied            Boolean        @default(true)
+  revoked_at         DateTime?
+  created_at         DateTime       @default(now())
+}
+
+model Kpi {
+  id            String   @id @default(uuid())
+  name          String
+  description   String
+  unit          String
+  target_value  Float    @default(0)
+  current_value Float    @default(0)
+  status        String   @default("on_track")
+  domain        String
+  updated_at    DateTime @updatedAt
+  tasks         Task[]
+}
+
+model Zone {
+  id            String  @id @default(uuid())
+  name          String
+  zone_type     String
+  owner_user_id String?
+  owner         User?   @relation(fields: [owner_user_id], references: [id])
+  status        String  @default("planned")
+  notes         String?
+}
+
+model Brand {
+  id            String  @id @default(uuid())
+  name          String
+  brand_type    String
+  status        String  @default("idea")
+  owner_user_id String?
+  owner         User?   @relation(fields: [owner_user_id], references: [id])
+  notes         String?
+  assets        Asset[]
+}
+
+model Channel {
+  id           String @id @default(uuid())
+  name         String
+  channel_type String
+  status       String @default("planned")
+}
+
+model Asset {
+  id              String   @id @default(uuid())
+  name            String
+  asset_type      String
+  linked_task_id  String?
+  linked_task     Task?    @relation(fields: [linked_task_id], references: [id])
+  linked_brand_id String?
+  linked_brand    Brand?   @relation(fields: [linked_brand_id], references: [id])
+  url             String
+  status          String   @default("draft")
+  created_by      String
+  creator         User     @relation(fields: [created_by], references: [id])
+  created_at      DateTime @default(now())
+}
