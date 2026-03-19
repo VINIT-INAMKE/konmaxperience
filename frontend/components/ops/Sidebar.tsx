@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -9,6 +10,8 @@ import {
   Shield,
   LogOut,
   ChevronsUpDown,
+  AlertTriangle,
+  Plus,
 } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -22,6 +25,7 @@ import {
 import { useAuthStore } from '@/lib/stores/auth-store';
 import { logout, logoutAll } from '@/lib/auth';
 import { RoleCode, ROLE_DISPLAY_NAMES } from '@/lib/types/roles';
+import { AdHocTaskSheet } from '@/components/ops/tasks/AdHocTaskSheet';
 
 interface NavItem {
   label: string;
@@ -35,6 +39,7 @@ export function Sidebar() {
   const pathname = usePathname();
   const user = useAuthStore((s) => s.user);
   const isAdmin = user?.roleCode === RoleCode.FOUNDER_ADMIN;
+  const [adHocOpen, setAdHocOpen] = useState(false);
 
   const mainNav: NavItem[] = [
     {
@@ -59,6 +64,11 @@ export function Sidebar() {
       label: 'Permissions',
       href: '/admin/permissions',
       icon: <Shield className="size-4" />,
+    },
+    {
+      label: 'Blockers',
+      href: '/admin/blockers',
+      icon: <AlertTriangle className="size-4" />,
     },
   ];
 
@@ -113,6 +123,19 @@ export function Sidebar() {
         )}
       </nav>
 
+      {/* Ad-hoc task shortcut (admin only) */}
+      {isAdmin && (
+        <div className="px-2 pb-2">
+          <button
+            onClick={() => setAdHocOpen(true)}
+            className="w-full flex items-center gap-2 rounded-md px-3 py-2 text-sm bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 transition-colors"
+          >
+            <Plus className="size-4" />
+            Ad-hoc task
+          </button>
+        </div>
+      )}
+
       {/* Bottom: User section */}
       <div className="border-t p-2">
         <DropdownMenu>
@@ -159,6 +182,9 @@ export function Sidebar() {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+
+      {/* Ad-hoc task sheet */}
+      <AdHocTaskSheet open={adHocOpen} onOpenChange={setAdHocOpen} />
     </aside>
   );
 }
