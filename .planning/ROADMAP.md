@@ -12,7 +12,7 @@ Konma Xperience OS delivers a role-based socio-technical operating system for a 
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Foundation & Authentication** - Project scaffolding, full database schema, JWT auth with 8-role RBAC including admin super access and role-switching
+- [ ] **Phase 1: Foundation & Authentication** - Project scaffolding (separate backend/frontend projects), full database schema, JWT auth with 8-role RBAC including admin super access and user-level filtering
 - [ ] **Phase 2: Mission Execution Hierarchy** - Mission/quest/task CRUD with types, ad-hoc injection, dependencies, blockers, and progress calculation
 - [ ] **Phase 3: Evidence & Validation Cascade** - Evidence upload via presigned URLs, approval workflow, and the complete task validation engine (the architectural heart)
 - [ ] **Phase 4: Gamification & Readiness Intelligence** - XP from valid tasks, levels, leaderboard, 10 readiness meters (event-sourced), and KPI tracking
@@ -37,7 +37,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans:** 3 plans
 
 Plans:
-- [ ] 01-01-PLAN.md — Scaffold Turborepo monorepo, full 15-entity Prisma schema, seed data
+- [ ] 01-01-PLAN.md — Scaffold separate backend/frontend projects, shared types, full 15-entity Prisma schema, seed data
 - [ ] 01-02-PLAN.md — Backend auth (JWT login/refresh/logout), RBAC guards, permission cache, user/role management APIs, MailerSend email
 - [ ] 01-03-PLAN.md — Frontend auth pages, edge middleware, ops layout with sidebar, admin user management, admin permission settings, dashboard shell
 
