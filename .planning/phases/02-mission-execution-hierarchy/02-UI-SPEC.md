@@ -107,7 +107,7 @@ Inherited from Phase 1. Phase 2 adds semantic status and task-type colors.
 - "Create Mission" primary CTA button
 - "Create Quest" primary CTA button
 - "Create Task" primary CTA button
-- "Save" / "Submit" buttons on all forms
+- "Save changes" / form submit buttons on all forms
 - Active kanban column header underline (indicates current drag target)
 - Focus ring on form inputs (inherited from Phase 1)
 - View toggle button (active state: kanban selected)
@@ -319,7 +319,7 @@ button, input, label, card, badge, table, checkbox, switch, select, dialog, aler
 - Title: "Report a blocker" (Dialog title)
 - Body: "What is blocking this task? Be specific so your admin can help resolve it."
 - Field: Textarea (required), placeholder: "e.g. Waiting for supplier confirmation on ingredient list"
-- Footer: "Cancel" ghost + "Report blocker" destructive button
+- Footer: "Keep working" ghost + "Report blocker" destructive button
 - On submit: task status → blocked, blocked=true, blocked_reason set; toast: "Blocker reported. Admin has been notified."
 
 ### Ad-hoc Task Injection Sheet (Global Sidebar Shortcut)
@@ -329,7 +329,7 @@ button, input, label, card, badge, table, checkbox, switch, select, dialog, aler
 - Sheet title: "Inject ad-hoc task"
 - Step 1 (if opened from sidebar — no quest pre-selected): Mission Select → Quest Select (cascading, second disabled until first selected)
 - Step 2 (always shown, or step 1 if opened from quest page with quest pre-selected): Full task form (identical to Task Create form but task_type pre-set to Ad-hoc and disabled, quest pre-selected)
-- Sheet footer: "Cancel" ghost + "Inject task" amber-accented primary button (not standard accent — amber signals ad-hoc)
+- Sheet footer: "Close panel" ghost + "Inject task" amber-accented primary button (not standard accent — amber signals ad-hoc)
 - On submit: task created with task_type=adhoc; sheet closes; toast: "Ad-hoc task injected into [Quest Title]"
 
 ### Admin Blockers Overview (`/(ops)/admin/blockers`)
@@ -565,9 +565,11 @@ All Phase 1 accessibility rules apply. Phase 2 additions:
 | Registry | Blocks Used | Safety Gate |
 |----------|-------------|-------------|
 | shadcn official | button, input, label, card, badge, table, checkbox, switch, select, dialog, alert, separator, tooltip, avatar, dropdown-menu (Phase 1) + sheet, textarea, popover, progress, tabs, scroll-area (Phase 2) | not required — official registry |
-| Shoogle MCP (https://mcp.shoogle.dev/mcp) | Query at executor time — kanban component TBD | Required: executor must run `npx shadcn view {block} --registry https://mcp.shoogle.dev/mcp` and scan for `fetch(`, `eval(`, `process.env`, dynamic imports. Record result here with date. |
+| @magicui | animated-circular-progress-bar, number-ticker, magic-card, avatar-circles, blur-fade, animated-list, confetti | developer-approved — 19k+ GitHub stars, MIT license, official shadcn registry partner. Approved 2026-03-19. |
+| @spectrumui | kanbanboard | developer-approved — user-selected component. Approved 2026-03-19. |
+| @reui | p-combobox-3 | developer-approved — user-selected component. Approved 2026-03-19. |
 
-**Shoogle MCP vetting note:** This spec cannot pre-vet a component that has not yet been queried. The executor agent MUST complete the vetting gate before including any Shoogle component in implementation. If vetting fails (flags found and not developer-approved), build the kanban from scratch with @dnd-kit + shadcn Card.
+**Shoogle MCP removed** — replaced by user-specified @spectrumui/kanbanboard for the kanban component.
 
 ---
 
