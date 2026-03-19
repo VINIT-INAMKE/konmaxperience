@@ -40,9 +40,11 @@ Project scaffolding (NestJS + PostgreSQL + Prisma + Next.js 16), full database s
 - Shared boards (mission board, quest board, wins feed) are readable by all internal users
 - Cross-functional approvals appear in both "Pending Approvals" queue AND inline on the task detail page
 
+### Email Provider
+- Use MailerSend (not Resend) for transactional emails (password setup, password reset)
+
 ### Claude's Discretion
 - JWT refresh token implementation details (httpOnly cookie vs localStorage)
-- Email service provider for password setup/reset emails
 - Permission settings UI layout and interaction design
 - Exact permission defaults per role (sensible defaults based on dev spec)
 - Database migration strategy and seed data structure
