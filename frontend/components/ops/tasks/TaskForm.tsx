@@ -68,8 +68,11 @@ export function TaskForm({
     defaultValues: {
       task_type: defaultTaskType || 'core',
       priority: 'medium',
+      domain: 'food',
+      owner_user_id: '',
       xp: 25,
       description: '',
+      title: '',
     },
   });
 
