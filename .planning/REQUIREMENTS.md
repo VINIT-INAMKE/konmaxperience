@@ -7,12 +7,12 @@
 
 ### Authentication & RBAC
 
-- [ ] **AUTH-01**: User can log in with email and password (JWT-based)
+- [x] **AUTH-01**: User can log in with email and password (JWT-based)
 - [x] **AUTH-02**: System enforces 8 generic roles (Frontend Lead, Backend Lead, BI Lead, Procurement Lead, Talent Lead, Tech Lead, Design/Outreach Lead, Founder/Admin)
-- [ ] **AUTH-03**: Each role has scoped permissions controlling what they can view, create, approve
-- [ ] **AUTH-04**: User session persists across browser refresh
-- [ ] **AUTH-05**: Admin has super access -- can see everything across all roles
-- [ ] **AUTH-06**: Admin can switch to view the system from any role's perspective
+- [x] **AUTH-03**: Each role has scoped permissions controlling what they can view, create, approve
+- [x] **AUTH-04**: User session persists across browser refresh
+- [x] **AUTH-05**: Admin has super access -- can see everything across all roles
+- [x] **AUTH-06**: Admin can switch to view the system from any role's perspective
 
 ### Missions & Execution
 
@@ -120,12 +120,12 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| AUTH-01 | Phase 1 | Pending |
+| AUTH-01 | Phase 1 | Complete |
 | AUTH-02 | Phase 1 | Complete |
-| AUTH-03 | Phase 1 | Pending |
-| AUTH-04 | Phase 1 | Pending |
-| AUTH-05 | Phase 1 | Pending |
-| AUTH-06 | Phase 1 | Pending |
+| AUTH-03 | Phase 1 | Complete |
+| AUTH-04 | Phase 1 | Complete |
+| AUTH-05 | Phase 1 | Complete |
+| AUTH-06 | Phase 1 | Complete |
 | EXEC-01 | Phase 2 | Pending |
 | EXEC-02 | Phase 2 | Pending |
 | EXEC-03 | Phase 2 | Pending |
