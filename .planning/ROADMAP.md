@@ -51,12 +51,13 @@ Plans:
   3. Admin can inject an ad-hoc task into an active quest without the quest's core progress percentage changing (dual-track progress: core vs. ad-hoc)
   4. A task can declare a dependency on another task; when the dependency is incomplete, the dependent task shows as blocked with the reason and triggers a blocker alert
   5. Mission and quest progress percentages auto-update when their child tasks change status
-**Plans**: TBD
+**Plans:** 4 plans
 
 Plans:
-- [ ] 02-01: TBD
-- [ ] 02-02: TBD
-- [ ] 02-03: TBD
+- [ ] 02-01-PLAN.md — Backend Missions + Quests NestJS modules (CRUD, RBAC, baseline_task_count activation) + shared frontend types
+- [ ] 02-02-PLAN.md — Backend Tasks NestJS module (scope-filtered CRUD, dependencies, blocking, atomic progress recalculation) + unit tests
+- [ ] 02-03-PLAN.md — Frontend Mission list/detail/create pages, Quest form/cards, dual-track progress display, dependency installs
+- [ ] 02-04-PLAN.md — Frontend Task kanban/list views, task detail/form, blocker dialog, ad-hoc injection sheet, admin blockers page, sidebar update
 
 ### Phase 3: Evidence & Validation Cascade
 **Goal**: Users can upload evidence to tasks, leads/admin can approve or reject it, and the system enforces that a task is valid only when all conditions are met -- producing the foundation every downstream feature depends on
@@ -179,7 +180,7 @@ Note: Phase 5 and Phase 6 both depend on Phase 3 (not Phase 4), so they could po
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation & Authentication | 0/3 | Planned | - |
-| 2. Mission Execution Hierarchy | 0/3 | Not started | - |
+| 2. Mission Execution Hierarchy | 0/4 | Planned | - |
 | 3. Evidence & Validation Cascade | 0/3 | Not started | - |
 | 4. Gamification & Readiness Intelligence | 0/3 | Not started | - |
 | 5. Governance & Decision Management | 0/2 | Not started | - |
