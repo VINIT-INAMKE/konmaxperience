@@ -39,7 +39,7 @@ export default function MissionsPage() {
         <div className="flex items-center justify-between">
           <h1 className="text-xl font-semibold">Missions</h1>
           {isAdmin && (
-            <Button render={<Link href="/missions/new" />}>
+            <Button nativeButton={false} render={<Link href="/missions/new" />}>
               <Plus className="size-4" />
               New mission
             </Button>
@@ -90,7 +90,7 @@ export default function MissionsPage() {
               </p>
             </div>
             {isAdmin && (
-              <Button render={<Link href="/missions/new" />}>
+              <Button nativeButton={false} render={<Link href="/missions/new" />}>
                 <Plus className="size-4" />
                 New mission
               </Button>

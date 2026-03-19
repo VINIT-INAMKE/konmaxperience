@@ -170,6 +170,7 @@ export default function QuestDetailPage(props: {
           <div className="flex items-center gap-2">
             <TaskViewToggle view={view} onViewChange={setView} />
             <Button
+              nativeButton={false}
               render={<Link href={`/quests/${id}/tasks/new`} />}
             >
               <Plus className="size-4" />
@@ -178,6 +179,7 @@ export default function QuestDetailPage(props: {
             <Button
               variant="outline"
               className="text-amber-500 border-amber-500/30 hover:bg-amber-500/10"
+              nativeButton={false}
               render={<Link href={`/quests/${id}/tasks/new?type=adhoc`} />}
             >
               <Plus className="size-4" />

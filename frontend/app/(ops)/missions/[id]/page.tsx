@@ -176,7 +176,7 @@ export default function MissionDetailPage({
           <div className="flex items-center justify-between">
             <h2 className="text-base font-semibold">Quests</h2>
             {isAdmin && (
-              <Button render={<Link href={`/missions/${id}/quests/new`} />} size="sm">
+              <Button nativeButton={false} render={<Link href={`/missions/${id}/quests/new`} />} size="sm">
                 <Plus className="size-4" />
                 Add quest
               </Button>

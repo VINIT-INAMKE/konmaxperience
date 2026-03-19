@@ -1,4 +1,5 @@
 import { IsDateString, IsInt, IsOptional, IsString, IsUUID, Min, MinLength } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class CreateQuestDto {
   @IsUUID()
@@ -11,6 +12,7 @@ export class CreateQuestDto {
   @IsString()
   description!: string;
 
+  @Type(() => Number)
   @IsInt()
   @Min(1)
   week_number!: number;
