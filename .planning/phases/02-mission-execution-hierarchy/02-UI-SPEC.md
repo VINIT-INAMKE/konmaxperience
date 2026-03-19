@@ -160,11 +160,24 @@ button, input, label, card, badge, table, checkbox, switch, select, dialog, aler
 | Tabs | `npx shadcn@latest add tabs` | (Optional) kanban/list view toggle — if Tabs component is cleaner than custom toggle |
 | Scroll Area | `npx shadcn@latest add scroll-area` | Kanban column scroll (vertical overflow within fixed-height columns) |
 
-### Shoogle MCP — Kanban Component
+### Premium Components (user-specified)
 
-**Executor requirement:** Before building TaskKanban.tsx from scratch, query Shoogle MCP at `https://mcp.shoogle.dev/mcp` for a kanban component. If a component with 4-column layout (or configurable columns) and drag-and-drop is available, use it as the base and customize to match this spec. If Shoogle does not provide a suitable match, build with @dnd-kit/core + @dnd-kit/sortable + shadcn Card.
+| Component | Install | Used In |
+|-----------|---------|---------|
+| Kanban Board | `npx shadcn@latest add @spectrumui/kanbanboard` | Task kanban view — includes cards, DnD, columns |
+| Combobox | `npx shadcn@latest add @reui/p-combobox-3` | Dependency picker (search tasks by title) |
 
-Registry safety for any Shoogle component: run `npx shadcn view {block} --registry https://mcp.shoogle.dev/mcp` and scan for `fetch(`, `eval(`, `process.env`, dynamic imports before including.
+### MagicUI Components (animations & polish)
+
+| Component | Install | Used In |
+|-----------|---------|---------|
+| Animated Circular Progress Bar | `npx shadcn@latest add @magicui/animated-circular-progress-bar` | Mission/quest progress display |
+| Number Ticker | `npx shadcn@latest add @magicui/number-ticker` | Animated progress percentages, task counts on cards |
+| Magic Card | `npx shadcn@latest add @magicui/magic-card` | Mission cards (spotlight hover effect) |
+| Avatar Circles | `npx shadcn@latest add @magicui/avatar-circles` | Team member avatars on quest/mission cards |
+| Blur Fade | `npx shadcn@latest add @magicui/blur-fade` | Page transition animations |
+| Animated List | `npx shadcn@latest add @magicui/animated-list` | Task list view with staggered item animations |
+| Confetti | `npx shadcn@latest add @magicui/confetti` | Celebration when mission/quest completes |
 
 ---
 
