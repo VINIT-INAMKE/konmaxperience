@@ -44,10 +44,8 @@ export function Sidebar() {
     },
     {
       label: 'Missions',
-      href: '#',
+      href: '/missions',
       icon: <Rocket className="size-4" />,
-      disabled: true,
-      badge: 'Coming soon',
     },
   ];
 
