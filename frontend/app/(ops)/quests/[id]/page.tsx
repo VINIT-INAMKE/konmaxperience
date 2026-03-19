@@ -117,7 +117,6 @@ export default function QuestDetailPage(props: {
   }
 
   return (
-    <BlurFade>
       <div className="space-y-6">
         {/* Breadcrumb + header */}
         <div className="space-y-2">
@@ -226,6 +225,5 @@ export default function QuestDetailPage(props: {
           className="pointer-events-none fixed inset-0 z-[200] h-full w-full"
         />
       </div>
-    </BlurFade>
   );
 }
