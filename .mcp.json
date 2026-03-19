@@ -1,7 +1,8 @@
 {
   "mcpServers": {
-    "shoogle": {
-      "url": "https://mcp.shoogle.dev/mcp"
+    "magicuidesign-mcp": {
+      "command": "cmd",
+      "args": ["/c", "npx", "-y", "@magicuidesign/mcp@latest"]
     }
   }
 }
