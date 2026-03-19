@@ -84,6 +84,13 @@ export default function QuestDetailPage(props: {
     void queryClient.invalidateQueries({ queryKey: ['quests', id] });
   };
 
+  const deactivateMutation = useMutation({
+    mutationFn: () => apiClient.patch(`/quests/${id}`, { status: 'planned' }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['quests', id] });
+    },
+  });
+
   // Count core tasks for activation dialog
   const coreTaskCount = tasks.filter((t) => t.task_type === 'core').length;
   const totalAdhocTasks = tasks.filter((t) => t.task_type === 'adhoc').length;
@@ -140,10 +147,21 @@ export default function QuestDetailPage(props: {
               </Badge>
             </div>
 
-            {/* Activate quest button */}
+            {/* Activate / Deactivate quest button */}
             {quest.status === 'planned' && isAdmin && (
               <Button onClick={() => setActivateOpen(true)}>
                 Activate quest
+              </Button>
+            )}
+            {quest.status === 'active' && isAdmin && (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  deactivateMutation.mutate();
+                }}
+                disabled={deactivateMutation.isPending}
+              >
+                {deactivateMutation.isPending ? 'Deactivating...' : 'Deactivate quest'}
               </Button>
             )}
           </div>
