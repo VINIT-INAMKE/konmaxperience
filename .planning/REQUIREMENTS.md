@@ -16,11 +16,11 @@
 
 ### Missions & Execution
 
-- [ ] **EXEC-01**: Admin can create long-term missions with phases (setup, foundation, activation, scale)
-- [ ] **EXEC-02**: Missions contain weekly quests assigned to role owners
+- [x] **EXEC-01**: Admin can create long-term missions with phases (setup, foundation, activation, scale)
+- [x] **EXEC-02**: Missions contain weekly quests assigned to role owners
 - [ ] **EXEC-03**: Quests contain daily tasks assigned to individual users
 - [ ] **EXEC-04**: Tasks have types: Core (100% XP), Ad-hoc (70% XP), Improvement (80% XP)
-- [ ] **EXEC-05**: Admin can inject ad-hoc tasks without breaking the mission roadmap
+- [x] **EXEC-05**: Admin can inject ad-hoc tasks without breaking the mission roadmap
 - [ ] **EXEC-06**: Tasks can declare dependencies on other tasks
 - [ ] **EXEC-07**: Blocked tasks show reason and trigger blocker alerts
 - [ ] **EXEC-08**: Mission and quest progress auto-calculate from valid task completion
@@ -126,11 +126,11 @@
 | AUTH-04 | Phase 1 | Complete |
 | AUTH-05 | Phase 1 | Complete |
 | AUTH-06 | Phase 1 | Complete |
-| EXEC-01 | Phase 2 | Pending |
-| EXEC-02 | Phase 2 | Pending |
+| EXEC-01 | Phase 2 | Complete |
+| EXEC-02 | Phase 2 | Complete |
 | EXEC-03 | Phase 2 | Pending |
 | EXEC-04 | Phase 2 | Pending |
-| EXEC-05 | Phase 2 | Pending |
+| EXEC-05 | Phase 2 | Complete |
 | EXEC-06 | Phase 2 | Pending |
 | EXEC-07 | Phase 2 | Pending |
 | EXEC-08 | Phase 2 | Pending |
