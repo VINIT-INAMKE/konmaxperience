@@ -71,7 +71,7 @@ The second critical commitment is **data-layer RBAC** via a `buildScopeFilter(us
 
 This phase also delivers the complete Prisma schema for all 15 entities in one migration, so Phase 2 and beyond can immediately build on a fully-defined, seed-populated database.
 
-**Primary recommendation:** Scaffold as a monorepo (Turborepo + pnpm workspaces) with `apps/api` (NestJS 11) and `apps/web` (Next.js 16), sharing a `packages/types` package for Zod schemas and TypeScript interfaces. Implement auth in NestJS with httpOnly refresh cookies. Use Resend for transactional emails (password setup + reset). Use an in-memory Map with 60s TTL for permission caching (no Redis dependency in Phase 1 — upgrade path is clear if Redis is added later for BullMQ).
+**Primary recommendation:** Scaffold as a monorepo (Turborepo + npm workspaces) with `apps/api` (NestJS 11) and `apps/web` (Next.js 16), sharing a `packages/types` package for Zod schemas and TypeScript interfaces. Implement auth in NestJS with httpOnly refresh cookies. Use MailerSend for transactional emails (password setup + reset). Use an in-memory Map with 60s TTL for permission caching (no Redis dependency in Phase 1 — upgrade path is clear if Redis is added later for BullMQ).
 
 ---
 
@@ -98,15 +98,15 @@ This phase also delivers the complete Prisma schema for all 15 entities in one m
 | jose | 6.2.2 | Edge-compatible JWT verification | Use in `middleware.ts` only — jsonwebtoken cannot run in Next.js edge runtime |
 | @nestjs/throttler | 6.5.0 | Rate limiting | Apply to `/auth/login` and `/auth/forgot-password` to prevent brute force |
 | helmet | 7.x | HTTP security headers | Global NestJS middleware; prevents XSS, clickjacking |
-| @nestjs/config | 4.0.3 | Environment config | Load JWT_SECRET, DATABASE_URL, RESEND_API_KEY from .env |
+| @nestjs/config | 4.0.3 | Environment config | Load JWT_SECRET, DATABASE_URL, MAILERSEND_API_KEY from .env |
 
-### Email (Claude's Discretion — Resend recommended)
+### Email (Claude's Discretion — MailerSend recommended)
 
 | Library | Version | Purpose | When to Use |
 |---------|---------|---------|-------------|
-| resend | latest | Transactional email | Password setup + password reset emails; 3,000 free emails/month covers 8 internal users comfortably |
+| mailersend | latest | Transactional email | Password setup + password reset emails; 3,000 free emails/month covers 8 internal users comfortably |
 
-Resend is preferred over Nodemailer because it requires no SMTP server configuration, has a clean REST API, React email template support, and a free tier adequate for this use case. Nodemailer is the fallback if domain/DNS setup for Resend is blocked.
+MailerSend is preferred over Nodemailer because it requires no SMTP server configuration, has a clean REST API, React email template support, and a free tier adequate for this use case. Nodemailer is the fallback if domain/DNS setup for MailerSend is blocked.
 
 ### Frontend (Phase 1 relevant)
 
@@ -131,7 +131,7 @@ Resend is preferred over Nodemailer because it requires no SMTP server configura
 
 | Instead of | Could Use | Tradeoff |
 |------------|-----------|----------|
-| Resend | Nodemailer | Nodemailer requires SMTP server; Resend is API-first and simpler; Nodemailer acceptable if external mail relay is available |
+| MailerSend | Nodemailer | Nodemailer requires SMTP server; MailerSend is API-first and simpler; Nodemailer acceptable if external mail relay is available |
 | httpOnly cookie for refresh token | localStorage for access token | httpOnly cookie is more secure (not accessible to JavaScript, XSS-resistant); tradeoff is CSRF requires SameSite=Strict; for internal app on same domain this is acceptable |
 | In-memory permission cache | Redis | In-memory is sufficient at 8 users; Redis is the upgrade path when BullMQ is added (Phase 8) and can absorb permission cache at that point |
 | Turborepo monorepo | Two separate repos | Monorepo enables shared types/Zod schemas; avoids type drift between API and frontend; Turborepo caching speeds builds |
@@ -139,13 +139,13 @@ Resend is preferred over Nodemailer because it requires no SMTP server configura
 **Installation:**
 ```bash
 # Monorepo scaffold
-npx create-turbo@latest konmaxperience --package-manager pnpm
+npx create-turbo@latest konmaxperience --package-manager npm
 # Then set up apps/api (NestJS), apps/web (Next.js), packages/types
 
 # Backend (apps/api)
 nest new api
 npm install @nestjs/passport @nestjs/jwt @nestjs/config @nestjs/throttler
-npm install passport passport-jwt bcrypt jose resend
+npm install passport passport-jwt bcrypt jose mailersend
 npm install -D @types/passport-jwt @types/bcrypt
 npm install class-validator class-transformer
 npm install prisma @prisma/client && npx prisma init
@@ -189,7 +189,7 @@ konmaxperience/                    # Turborepo monorepo root
 │   │   │   │   ├── permissions.module.ts
 │   │   │   │   ├── permissions.cache.ts  # In-memory Map<roleCode, Permission[]> with 60s TTL
 │   │   │   │   └── scope.filter.ts       # buildScopeFilter(user) utility
-│   │   │   ├── email/             # EmailModule: Resend integration
+│   │   │   ├── email/             # EmailModule: MailerSend integration
 │   │   │   │   ├── email.module.ts
 │   │   │   │   └── email.service.ts  # sendPasswordSetup(), sendPasswordReset()
 │   │   │   ├── prisma/            # PrismaModule: shared PrismaService
@@ -436,7 +436,7 @@ async createUser(dto: CreateUserDto): Promise<User> {
 | JWT signing + verification | Custom crypto | @nestjs/jwt + jose | JWT signing has subtle security requirements (algorithm confusion, weak secrets); these libraries handle HS256/RS256 correctly |
 | Password hashing | MD5, SHA1, custom | bcrypt | bcrypt has adaptive cost factor (work factor increases as CPUs get faster); MD5/SHA1 are broken for passwords |
 | Request body validation | Manual if-checks | class-validator + ValidationPipe | ValidationPipe auto-rejects malformed requests before reaching controller; whitelist: true strips unknown fields |
-| Email delivery | Raw SMTP | Resend | SMTP requires server config, SPF/DKIM setup, deliverability management; Resend handles all of this |
+| Email delivery | Raw SMTP | MailerSend | SMTP requires server config, SPF/DKIM setup, deliverability management; MailerSend handles all of this |
 | Permission UI | Custom drag-drop | shadcn/ui table + checkboxes | The permission settings screen is a simple matrix; shadcn Table + Checkbox covers it cleanly |
 | Edge JWT verification | jwt-decode (no verify) | jose | jwt-decode only decodes, does not verify signature. jose's jwtVerify() verifies signature, expiry, and claims |
 
@@ -692,7 +692,7 @@ const ROLES = [
 ## Open Questions
 
 1. **Monorepo or separate repos?**
-   - What we know: Turborepo + pnpm monorepo enables shared `packages/types` (Zod schemas, TypeScript interfaces) between NestJS and Next.js. Prevents type drift.
+   - What we know: Turborepo + npm monorepo enables shared `packages/types` (Zod schemas, TypeScript interfaces) between NestJS and Next.js. Prevents type drift.
    - What's unclear: Whether the user has a preference for repo structure.
    - Recommendation: Default to Turborepo monorepo. If user prefers separate repos, shared types must be published as an npm package or duplicated manually.
 
@@ -701,10 +701,10 @@ const ROLES = [
    - What's unclear: This is marked Claude's discretion.
    - Recommendation: httpOnly cookie for refresh token; access token in memory (Zustand store, cleared on tab close). This is the recommended pattern per security research.
 
-3. **Email service: Resend vs Nodemailer**
-   - What we know: Resend is simpler (REST API, no SMTP), free tier covers 3,000 emails/month, has React email template support. Nodemailer is more universal.
-   - What's unclear: Whether user has a domain already verified with Resend or a preferred SMTP provider.
-   - Recommendation: Resend as primary. Nodemailer as documented fallback if Resend is blocked.
+3. **Email service: MailerSend vs Nodemailer**
+   - What we know: MailerSend is simpler (REST API, no SMTP), free tier covers 3,000 emails/month, has React email template support. Nodemailer is more universal.
+   - What's unclear: Whether user has a domain already verified with MailerSend or a preferred SMTP provider.
+   - Recommendation: MailerSend as primary. Nodemailer as documented fallback if MailerSend is blocked.
 
 4. **Permission defaults per role**
    - What we know: Dev spec lists 15 permission enums and 8 roles. Default assignments are inference based on role descriptions.
@@ -777,7 +777,7 @@ const ROLES = [
 - WebSearch verified: jose for Next.js edge runtime JWT verification — multiple 2025-2026 sources confirm jsonwebtoken fails at edge; jose is the standard solution
 - WebSearch verified: httpOnly cookie for refresh tokens in NestJS — multiple sources confirm this as security best practice
 - RBAC with Custom Guards in NestJS (oneuptime.com, Jan 2026) — https://oneuptime.com/blog/post/2026-01-25-rbac-custom-guards-nestjs/view
-- Resend + NestJS integration (shaoxuan.dev, Jan 2025) — https://shaoxuandev10.medium.com/using-resend-with-a-nestjs-backend-a-step-by-step-guide-54a449d1b3d4
+- MailerSend + NestJS integration (shaoxuan.dev, Jan 2025) — https://shaoxuandev10.medium.com/using-mailersend-with-a-nestjs-backend-a-step-by-step-guide-54a449d1b3d4
 - Prisma 7 + NestJS (Medium, 2025) — https://medium.com/@msmiraj8/get-started-with-prisma-7-with-nest-js-mysql-3919eaa7c760
 
 ### Tertiary (LOW confidence, flagged for validation)
@@ -794,7 +794,7 @@ const ROLES = [
 - JWT/jose edge runtime: HIGH — confirmed by multiple 2025-2026 sources; STATE.md concern resolved
 - Prisma transactions: HIGH — confirmed by official Prisma docs; STATE.md concern resolved
 - Permission defaults: MEDIUM — derived from dev_spec role descriptions; admin-configurable so incorrect defaults are easily corrected
-- Email provider (Resend): MEDIUM — no first-party confirmation of Resend availability; Nodemailer is documented fallback
+- Email provider (MailerSend): MEDIUM — no first-party confirmation of MailerSend availability; Nodemailer is documented fallback
 
 **Research date:** 2026-03-19
 **Valid until:** 2026-04-19 (stable stack; 30-day validity reasonable)
