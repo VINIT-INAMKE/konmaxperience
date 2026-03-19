@@ -19,7 +19,6 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { TaskKanbanCard } from './TaskKanbanCard';
 import type { Task, TaskStatus } from '@/lib/types/tasks';
 import { KANBAN_COLUMNS, TASK_STATUS_LABELS } from '@/lib/types/tasks';
@@ -180,9 +179,9 @@ export function TaskKanban({
         })}
       </div>
 
-      <DragOverlay>
+      <DragOverlay adjustScale={false} dropAnimation={null}>
         {activeTask ? (
-          <div className="shadow-lg scale-[1.02] opacity-90">
+          <div className="shadow-lg opacity-90 pointer-events-none">
             <TaskKanbanCard task={activeTask} isDraggable={false} />
           </div>
         ) : null}
@@ -226,7 +225,7 @@ function KanbanColumn({
       </div>
 
       {/* Tasks */}
-      <ScrollArea className="flex-1 min-h-0">
+      <div className="flex-1 min-h-0 overflow-y-auto">
         <div className="space-y-2 p-1">
           {tasks.length === 0 ? (
             <p className="text-center text-[13px] text-muted-foreground py-8">
@@ -242,7 +241,7 @@ function KanbanColumn({
             ))
           )}
         </div>
-      </ScrollArea>
+      </div>
     </div>
   );
 }
