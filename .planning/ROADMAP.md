@@ -25,21 +25,21 @@ Decimal phases appear between their surrounding integers in numeric order.
 ## Phase Details
 
 ### Phase 1: Foundation & Authentication
-**Goal**: Internal users can log in with their role and see a system that enforces what they can view, create, and approve -- including admin super access and role-perspective switching
+**Goal**: Internal users can log in with their role and see a system that enforces what they can view, create, and approve -- including admin super access and user-level filtering (reinterpreted from role-switching per CONTEXT.md)
 **Depends on**: Nothing (first phase)
 **Requirements**: AUTH-01, AUTH-02, AUTH-03, AUTH-04, AUTH-05, AUTH-06
 **Success Criteria** (what must be TRUE):
   1. A user can log in with email/password and receive a JWT that persists across browser refresh
   2. Each of the 8 roles (Frontend Lead, Backend Lead, BI Lead, Procurement Lead, Talent Lead, Tech Lead, Design/Outreach Lead, Founder/Admin) sees only the data and actions their permissions allow
   3. Admin can see everything across all roles without restriction
-  4. Admin can switch to view the system from any other role's perspective and switch back
+  4. Admin can filter view by individual user name (unified admin view, not role-switching)
   5. An unprivileged user attempting to access another role's data receives an access-denied response (RBAC enforced at data layer, not just route layer)
-**Plans**: TBD
+**Plans:** 3 plans
 
 Plans:
-- [ ] 01-01: TBD
-- [ ] 01-02: TBD
-- [ ] 01-03: TBD
+- [ ] 01-01-PLAN.md — Scaffold Turborepo monorepo, full 15-entity Prisma schema, seed data
+- [ ] 01-02-PLAN.md — Backend auth (JWT login/refresh/logout), RBAC guards, permission cache, user/role management APIs, MailerSend email
+- [ ] 01-03-PLAN.md — Frontend auth pages, edge middleware, ops layout with sidebar, admin user management, admin permission settings, dashboard shell
 
 ### Phase 2: Mission Execution Hierarchy
 **Goal**: Admin can structure work as missions containing quests containing tasks, with dependency tracking and ad-hoc injection, and progress auto-calculates from task completion
@@ -178,7 +178,7 @@ Note: Phase 5 and Phase 6 both depend on Phase 3 (not Phase 4), so they could po
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation & Authentication | 0/3 | Not started | - |
+| 1. Foundation & Authentication | 0/3 | Planned | - |
 | 2. Mission Execution Hierarchy | 0/3 | Not started | - |
 | 3. Evidence & Validation Cascade | 0/3 | Not started | - |
 | 4. Gamification & Readiness Intelligence | 0/3 | Not started | - |
