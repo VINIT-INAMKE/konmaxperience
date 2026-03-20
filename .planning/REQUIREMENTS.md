@@ -28,8 +28,8 @@
 ### Evidence & Validation
 
 - [x] **EVID-01**: User can upload evidence (photo, doc, video, link, note) to any assigned task
-- [ ] **EVID-02**: Lead/admin can approve or reject evidence with notes
-- [ ] **EVID-03**: Task is valid only when: status=done + approved evidence + all required approvals satisfied + verified=true
+- [x] **EVID-02**: Lead/admin can approve or reject evidence with notes
+- [x] **EVID-03**: Task is valid only when: status=done + approved evidence + all required approvals satisfied + verified=true
 
 ### Intelligence & Gamification
 
@@ -134,9 +134,9 @@
 | EXEC-06 | Phase 2 | Complete |
 | EXEC-07 | Phase 2 | Complete |
 | EXEC-08 | Phase 2 | Complete |
-| EVID-01 | Phase 3 | Pending |
-| EVID-02 | Phase 3 | Pending |
-| EVID-03 | Phase 3 | Pending |
+| EVID-01 | Phase 3 | Complete |
+| EVID-02 | Phase 3 | Complete |
+| EVID-03 | Phase 3 | Complete |
 | INTL-01 | Phase 4 | Pending |
 | INTL-02 | Phase 4 | Pending |
 | INTL-03 | Phase 4 | Pending |
