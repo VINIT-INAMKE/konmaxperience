@@ -129,11 +129,25 @@ export function EvidenceItem({
         <Icon className="size-5 shrink-0 text-muted-foreground" />
 
         <Tooltip>
-          <TooltipTrigger className="text-sm truncate max-w-[240px] text-left">
-            {displayName}
+          <TooltipTrigger asChild>
+            {evidence.type === 'note' ? (
+              <span className="text-sm truncate max-w-[240px] text-left">
+                {evidence.notes || 'Note'}
+              </span>
+            ) : (
+              <a
+                href={evidence.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm truncate max-w-[240px] text-left hover:underline underline-offset-4 hover:text-foreground text-muted-foreground transition-colors"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {displayName}
+              </a>
+            )}
           </TooltipTrigger>
           <TooltipContent side="top">
-            <p className="text-xs">{evidence.url || evidence.notes}</p>
+            <p className="text-xs">{evidence.type === 'note' ? evidence.notes : 'Click to open'}</p>
           </TooltipContent>
         </Tooltip>
 
