@@ -88,7 +88,10 @@ Sadhana creates → Anchitha operationalizes → Hasmitha measures → Surya ena
 - Approval gates: food = Sadhana+Anchitha, pricing = Hasmitha+Anchitha, vendor = Surya+Sadhana, experience = Anchitha+Advitha, tech = Vinit+Founder, hiring = Sathya+Founder
 
 ### Existing Dev Spec
-Full schema (15 entities), REST API design (15+ endpoint groups), business rules, pseudo-code, and seed data defined in `contextdocs/dev_spec.md`. This is the primary implementation reference.
+Full schema (15 entities), REST API design (15+ endpoint groups), business rules, pseudo-code, and seed data defined in `contextdocs/dev_spec.md`. This is the primary implementation reference for Phases 1-6.
+
+### Food Production Pipeline Spec
+Complete data model for Phases 7-13 (22 new entities) defined in `docs/superpowers/specs/2026-03-20-food-production-pipeline-design.md`. Covers: multi-stage recipes with polymorphic BOM, unit conversion, two-layer inventory (raw + production), procurement, kitchen prep batches, POS ordering with deduct-on-ready, delivery dispatch, and customer experience. This is the primary implementation reference for Phases 7-13.
 
 ## Constraints
 
@@ -102,12 +105,18 @@ Full schema (15 entities), REST API design (15+ endpoint groups), business rules
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Food-first v1 scope | Dev spec is deepest on food; art/lifestyle lack equivalent detail | — Pending |
-| No Python/Supabase | Team preference for Node.js ecosystem consistency | — Pending |
-| Express vs NestJS | To be determined by research | — Pending |
-| Postgres vs MongoDB | To be determined by research (complex relations suggest Postgres) | — Pending |
-| Vercel + cloud DB deploy | Simple, scalable, low ops overhead | — Pending |
-| Internal + customer-facing | Customers get menu, ordering, feedback, booking in v1 | — Pending |
+| Food-first v1 scope | Dev spec is deepest on food; art/lifestyle lack equivalent detail | Confirmed |
+| No Python/Supabase | Team preference for Node.js ecosystem consistency | NestJS + PostgreSQL |
+| NestJS (not Express) | Research confirmed better fit for module system, guards, DI | Confirmed |
+| PostgreSQL on Neon | Complex relational data (15+ entities with FKs) | Confirmed |
+| Vercel + Neon deploy | Simple, scalable, low ops overhead | Confirmed |
+| POS model (not customer self-service) | Staff takes orders, no customer auth needed | Confirmed |
+| Two-layer inventory | Raw ingredients + production (PrepBatch) | Confirmed |
+| Unified recipe entity | No type distinction, depth emerges from chaining | Confirmed |
+| Deduct on "ready" | Simple, no reversal needed, matches villa kitchen | Confirmed |
+| Delivery: name string only | 1-2 riders, no rider management entity | Confirmed |
+| Single payment + notes | No gateway, just recording method + amount + split notes | Confirmed |
+| Channel modifier (not per-item pricing) | One modifier per channel, base_price + modifier = final | Confirmed |
 
 ---
-*Last updated: 2026-03-19 after initialization*
+*Last updated: 2026-03-20 after food production pipeline design*

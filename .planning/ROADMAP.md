@@ -128,16 +128,17 @@ Plans:
 - [ ] 06-03: TBD
 
 ### Phase 7: Recipe & Ingredient Management
-**Goal**: Structured recipes with ingredient BOMs, vendor management, auto-costed recipes, and menu items with pricing — the food production data layer
+**Goal**: Unified recipe system with polymorphic BOM (raw ingredients + recipe outputs), unit conversion, vendor management, recursive cost calculation, and menu items with channel-aware pricing — the food production data layer
 **Depends on**: Phase 6 (brands, assets)
-**Requirements**: RECIPE-01, RECIPE-02, RECIPE-03, RECIPE-04, RECIPE-05, RECIPE-06
+**Requirements**: RECIPE-01, RECIPE-02, RECIPE-03, RECIPE-04, RECIPE-05, RECIPE-06, RECIPE-07
 **Success Criteria** (what must be TRUE):
-  1. A recipe can be created with structured steps, yield, and linked to a brand, with status workflow (draft → approved → archived)
-  2. Each recipe has a BOM (bill of materials) listing ingredients with quantities and units
-  3. Ingredients have a master list with categories, units, and min stock levels
-  4. Vendors can be created and linked to ingredients with price tracking (effective date)
-  5. Recipe cost auto-calculates from ingredient costs × BOM quantities
-  6. Menu items can be created from approved recipes with selling price, food cost %, and channel availability
+  1. A recipe can be created with steps, yield, shelf_life_hours, brand, zone, and status workflow — no type distinction (prep or assembly determined by usage)
+  2. Each RecipeLine is either a raw ingredient or the output of another recipe (polymorphic BOM), supporting unlimited chaining depth
+  3. Ingredients have a master list with category, base_unit, and min stock level
+  4. UnitConversion table converts between compatible units (kg↔g, L↔ml, dozen↔pieces) — all stock operations in base_unit
+  5. Vendors can be created and linked to ingredients with historical price tracking (VendorPrice with effective_date)
+  6. Recipe cost auto-calculates recursively — ingredient costs from best vendor price, prep item costs from source recipe cost prorated. Cached in computed_cost.
+  7. Menu items created from approved recipes with base_price, food cost %, manual availability toggle, MenuCategory (Brand → Category → Item), and ChannelModifier for per-channel price adjustments
 **Plans**: TBD
 
 ### Phase 8: Inventory & Procurement
@@ -152,28 +153,29 @@ Plans:
 **Plans**: TBD
 
 ### Phase 9: Kitchen & Prep
-**Goal**: Kitchen prep batch system that bridges raw ingredients to servable items, KDS for real-time order display, menu availability from prep levels, and structured waste tracking
-**Depends on**: Phase 7 (recipes), Phase 8 (raw inventory)
-**Requirements**: KITCHEN-01, KITCHEN-02, KITCHEN-03, KITCHEN-04, KITCHEN-05
+**Goal**: Kitchen prep batch system that bridges raw ingredients to servable items (deducting both raw ingredients AND source prep batches via FIFO), KDS for real-time order display via polling, menu availability from BOTH prep levels AND raw stock, structured waste tracking with auto-expiry, and kitchen metrics
+**Depends on**: Phase 7 (recipes, ingredients, unit conversion), Phase 8 (raw inventory, stock movements)
+**Requirements**: KITCHEN-01, KITCHEN-02, KITCHEN-03, KITCHEN-04, KITCHEN-05, KITCHEN-06
 **Success Criteria** (what must be TRUE):
-  1. Kitchen can log prep batches (recipe × quantity) — system deducts raw ingredients per BOM and tracks production quantity remaining
-  2. Kitchen display shows incoming orders grouped by zone/station with real-time updates
-  3. Menu items auto-mark as sold out when prep batch levels are insufficient, and alert kitchen to prep more
-  4. Waste can be logged with structured reason categories and cost impact calculation
-  5. Kitchen metrics display: orders in queue, prep batch levels, average prep time, waste percentage
+  1. Kitchen can log prep batches (recipe × quantity) — deducts raw ingredients from IngredientStock AND source prep items from other PrepBatches (FIFO), all in single $transaction
+  2. Kitchen display (KDS) polls for orders every 5 seconds, grouped by zone, cook updates item status (pending → preparing → ready)
+  3. Menu availability checks BOTH PrepBatch levels AND raw IngredientStock for each RecipeLine — shows servings remaining on POS, auto-marks sold out when any input insufficient
+  4. Waste logged with structured reasons (spoilage/over_prep/cooking_error/expired/other) and auto-calculated cost impact
+  5. Kitchen metrics: orders in queue, prep batch levels, average prep time, waste percentage
+  6. PrepBatch expiry: auto-calculated from recipe.shelf_life_hours, expired batches excluded from availability, hourly cron marks expired + auto-creates waste entries
 **Plans**: TBD
 
 ### Phase 10: POS & Orders
-**Goal**: Full POS interface for staff to take orders across all channels (dine-in, takeaway, delivery), with payment tracking, order-to-kitchen flow, and own-delivery dispatch
-**Depends on**: Phase 7 (menu items), Phase 9 (KDS, prep batch deduction)
+**Goal**: Full POS interface for staff to take orders across all channels (dine-in, takeaway, delivery), with payment tracking (single record + notes for splits), order-to-kitchen-to-deduction flow (deduct on "ready"), and own-delivery dispatch (plain name string, no rider entity)
+**Depends on**: Phase 7 (menu items, channel modifiers), Phase 9 (KDS, prep batch deduction logic)
 **Requirements**: POS-01, POS-02, POS-03, POS-04, POS-05, POS-06
 **Success Criteria** (what must be TRUE):
-  1. Staff can take orders on a POS interface with menu grid, category browsing, quantity adjustment, and order summary
-  2. Orders track channel (dine-in/takeaway/delivery) with channel-specific fields and status flow (placed → preparing → ready → served/dispatched)
-  3. Payment method and status are recorded per order (cash/card/UPI, pending/paid)
-  4. When an order is placed, items appear on KDS; when marked ready on KDS, order status updates; production inventory deducts on fulfillment
-  5. Delivery orders can be assigned to delivery staff with dispatch status tracking
-  6. Order history is searchable with filters and daily revenue summary
+  1. Staff can take orders on POS with Brand → Category → Items grid, servings-remaining indicator, quantity adjustment, order summary, channel selector
+  2. Orders track channel with channel-specific fields (table_number, customer_phone, delivery_address, delivery_assigned_to) and status flow (placed → preparing → ready → served/dispatched/cancelled)
+  3. Single Payment per order: method (cash/card/UPI), status (pending/paid/refunded), amount, notes field for split description
+  4. Order → kitchen → deduction: items appear on KDS on placement, cook marks ready → DEDUCTION (PrepBatch.quantity_remaining decremented via FIFO + IngredientStock decremented for direct-use items + StockMovements created) → when all items ready → order ready
+  5. Delivery: delivery_assigned_to (plain name string), delivery_status (picked_up → in_transit → delivered)
+  6. Order history searchable with filters (date, channel, status, payment), daily revenue summary
 **Plans**: TBD
 
 ### Phase 11: Dashboards & Shared Boards

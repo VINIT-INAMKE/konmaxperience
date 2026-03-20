@@ -64,41 +64,43 @@
 
 ### Recipe & Ingredient Management
 
-- [ ] **RECIPE-01**: Structured recipe creation with name, description, prep steps, cooking method, yield quantity + unit, portion size, linked to brand, status (draft → approved → archived)
-- [ ] **RECIPE-02**: Recipe ingredient list (BOM) — each recipe has ingredients with quantity, unit, and prep notes
-- [ ] **RECIPE-03**: Ingredient master list with name, category, unit, min stock level
-- [ ] **RECIPE-04**: Vendor management — vendor entity with contact info, which ingredients they supply, price tracking over time (VendorPrice with effective date)
-- [ ] **RECIPE-05**: Auto-calculated recipe cost from ingredient costs (best vendor price) × quantities
-- [ ] **RECIPE-06**: Menu item creation from approved recipes with selling price, food cost percentage display, and channel availability (dine-in/takeaway/delivery)
+- [ ] **RECIPE-01**: Unified recipe entity — name, description, prep steps, cooking method, yield qty + unit, portion size, shelf_life_hours, linked to brand + zone, status (draft → approved → archived). No type distinction — any recipe can be prep or final dish.
+- [ ] **RECIPE-02**: Polymorphic BOM (RecipeLine) — each line is either a raw ingredient (ingredient_id) or output of another recipe (source_recipe_id), with quantity, unit, and prep notes. Supports unlimited chaining depth.
+- [ ] **RECIPE-03**: Ingredient master list with name, category, base_unit (canonical unit for stock tracking), min stock level
+- [ ] **RECIPE-04**: Unit conversion system — UnitConversion table (kg↔g, L↔ml, dozen↔pieces). All stock in base_unit, recipes/POs use any compatible unit, system converts automatically.
+- [ ] **RECIPE-05**: Vendor management — Vendor entity with contact info + VendorPrice tracking per ingredient with effective dates. Current price = latest by date.
+- [ ] **RECIPE-06**: Recursive recipe cost calculation — ingredient cost from best vendor price × BOM qty; prep item cost from source recipe cost prorated by usage. Cached in computed_cost field, recalculated on save or price change.
+- [ ] **RECIPE-07**: Menu items — MenuItem from approved recipe with base_price, food cost %, manual availability toggle, image_url. MenuCategory for Brand → Category → Items hierarchy. ChannelModifier for per-channel price adjustments (base_price + modifier).
 
 ### Inventory & Procurement
 
-- [ ] **INV-01**: Raw ingredient stock tracking — current quantity per ingredient per zone, min stock level, low-stock alerts when below minimum
-- [ ] **INV-02**: Stock movement history — type (received/prep-deducted/waste/adjustment), quantity, reason, reference to PO or PrepBatch
-- [ ] **INV-03**: Purchase order workflow — create PO to vendor with line items (ingredient + qty + unit cost), track status (draft → ordered → received), auto-update raw inventory on receive
+- [ ] **INV-01**: Raw ingredient stock tracking — IngredientStock per ingredient per zone in base_unit, min stock level triggers low-stock alert
+- [ ] **INV-02**: Stock movement audit trail — every change logged as StockMovement (received/prep_deducted/order_deducted/waste/adjustment) with quantity, reason, reference to PO/PrepBatch/Order/WasteLog
+- [ ] **INV-03**: Purchase order workflow — PO to vendor with line items (ingredient + qty + unit_cost), status (draft → ordered → received), partial receiving supported (received_qty can differ from ordered), auto-update IngredientStock on receive with unit conversion
 - [ ] **INV-04**: Procurement dashboard — pending POs, low stock alerts, vendor spend summary, ingredient price trends, total inventory value
 
 ### Kitchen & Prep
 
-- [ ] **KITCHEN-01**: Prep batch system — select recipe + quantity to prep, auto-deducts raw ingredients per BOM, creates PrepBatch with quantity_remaining (production layer)
-- [ ] **KITCHEN-02**: Kitchen display (KDS) showing incoming orders with items to prepare, grouped by zone/station, real-time updates
-- [ ] **KITCHEN-03**: Menu availability — MenuItem knows if it's servable based on PrepBatch levels. Auto-marks "sold out" on POS when prep runs out. Alerts kitchen to prep more.
-- [ ] **KITCHEN-04**: Waste logging — structured waste reports with reason (spoilage/over-prep/cooking-error/expired), quantity, ingredient, cost impact
-- [ ] **KITCHEN-05**: Kitchen metrics — average prep time per item, orders in queue, items completed today, prep batch levels, waste percentage
+- [ ] **KITCHEN-01**: Prep batch system — select recipe × quantity, auto-deducts inputs per BOM (raw ingredients from IngredientStock, prep items from other PrepBatches via FIFO), creates PrepBatch with quantity_remaining. All in single $transaction.
+- [ ] **KITCHEN-02**: Kitchen display (KDS) — polls for orders with status placed/preparing every 5 seconds, grouped by zone. Cook taps to update item status (pending → preparing → ready).
+- [ ] **KITCHEN-03**: Menu availability — checks BOTH PrepBatch levels AND raw IngredientStock for each RecipeLine. Shows servings remaining on POS. Auto-marks "sold out" when any input insufficient. Alerts kitchen to prep more.
+- [ ] **KITCHEN-04**: Waste logging — WasteLog with type (ingredient/prep_batch), structured reason (spoilage/over_prep/cooking_error/expired/other), auto-calculated cost impact. Expired PrepBatches auto-create waste entries via scheduled job.
+- [ ] **KITCHEN-05**: Kitchen metrics — orders in queue, prep batch levels, average prep time, waste percentage, items completed today
+- [ ] **KITCHEN-06**: PrepBatch expiry — shelf_life_hours on Recipe, expires_at auto-set on PrepBatch creation, expired batches excluded from availability, hourly cron marks expired + logs waste
 
 ### POS & Orders
 
-- [ ] **POS-01**: Full POS interface — menu grid with categories/brands, tap to add items to order, quantity adjustment, order summary sidebar, channel selector (dine-in/takeaway/delivery)
-- [ ] **POS-02**: Order management — order entity with status (placed → confirmed → preparing → ready → served/dispatched/cancelled), channel-specific fields (table number for dine-in, phone for takeaway, address for delivery)
-- [ ] **POS-03**: Payment tracking — payment method (cash/card/UPI), payment status (pending/paid/refunded), amount. No gateway integration, just recording.
-- [ ] **POS-04**: Order → kitchen flow — when order is placed, items appear on KDS. When item marked ready on KDS, order status updates. Deduct from PrepBatch on fulfillment.
-- [ ] **POS-05**: Delivery dispatch — assign delivery staff, track status (picked-up → in-transit → delivered), delivery notes
-- [ ] **POS-06**: Order history — searchable list of all orders with filters (date, channel, status, payment), daily revenue summary
+- [ ] **POS-01**: Full POS interface — Brand → Category → Items menu grid, tap to add, quantity adjustment, order summary sidebar, channel selector (dine-in/takeaway/delivery), servings-remaining indicator per item
+- [ ] **POS-02**: Order management — Order with channel-specific fields (table_number for dine-in, customer_phone for takeaway, delivery_address + delivery_assigned_to string for delivery), status flow (placed → preparing → ready → served/dispatched/cancelled)
+- [ ] **POS-03**: Payment tracking — single Payment per order with method (cash/card/UPI), status (pending/paid/refunded), amount, notes field for split description. No gateway integration.
+- [ ] **POS-04**: Order → kitchen → deduction flow — order placed → items appear on KDS → cook marks preparing → cook marks ready → DEDUCTION HAPPENS (PrepBatch.quantity_remaining decremented, IngredientStock decremented for direct-use items, StockMovements created) → when all items ready → order status = ready
+- [ ] **POS-05**: Delivery dispatch — delivery_assigned_to (plain name string), delivery_status (picked_up → in_transit → delivered) on Order. No rider entity.
+- [ ] **POS-06**: Order history — searchable list with filters (date, channel, status, payment method), daily revenue summary
 
 ### Customer Experience
 
-- [ ] **CUST-01**: Post-dining feedback collection via QR code or link — rate dishes, leave comments (no customer auth required)
-- [ ] **CUST-02**: Experience event browsing and booking — event listings with capacity, booking form (name + phone), confirmation
+- [ ] **CUST-01**: Post-dining feedback via QR code or link — Feedback entity with optional order_id, rating (1-5), comment, customer name/phone. No auth required.
+- [ ] **CUST-02**: Experience event management — Event entity created internally (title, type, date, capacity, price, zone, brand), public display, EventBooking (name + phone + guests), capacity enforcement (auto-full when bookings >= capacity)
 - [ ] **CUST-03**: Digital menu display (non-interactive) — shows current menu with prices, available items, brand sections. For display screens or QR access.
 
 ### Dashboards
@@ -195,6 +197,7 @@
 | RECIPE-04 | Phase 7 | Pending |
 | RECIPE-05 | Phase 7 | Pending |
 | RECIPE-06 | Phase 7 | Pending |
+| RECIPE-07 | Phase 7 | Pending |
 | INV-01 | Phase 8 | Pending |
 | INV-02 | Phase 8 | Pending |
 | INV-03 | Phase 8 | Pending |
@@ -204,6 +207,7 @@
 | KITCHEN-03 | Phase 9 | Pending |
 | KITCHEN-04 | Phase 9 | Pending |
 | KITCHEN-05 | Phase 9 | Pending |
+| KITCHEN-06 | Phase 9 | Pending |
 | POS-01 | Phase 10 | Pending |
 | POS-02 | Phase 10 | Pending |
 | POS-03 | Phase 10 | Pending |
@@ -228,8 +232,8 @@
 | CUST-03 | Phase 13 | Pending |
 
 **Coverage:**
-- v1 requirements: 68 total
-- Mapped to phases: 68
+- v1 requirements: 70 total
+- Mapped to phases: 70
 - Unmapped: 0
 
 ---
