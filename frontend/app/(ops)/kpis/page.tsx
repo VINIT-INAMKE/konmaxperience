@@ -35,7 +35,8 @@ export default function KpisPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [selectedDomain, setSelectedDomain] = useState('all');
 
-  const hasManageKpis = useAuthStore.getState().hasPermission('MANAGE_KPIS');
+  const permissions = useAuthStore((s) => s.permissions);
+  const hasManageKpis = permissions.includes('MANAGE_KPIS');
 
   const {
     data: kpis,
