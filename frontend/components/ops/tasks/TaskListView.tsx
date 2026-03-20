@@ -27,6 +27,7 @@ import {
   TASK_TYPE_LABELS,
   TASK_STATUS_LABELS,
   TASK_PRIORITY_LABELS,
+  TASK_TYPE_XP_WEIGHT,
 } from '@/lib/types/tasks';
 
 interface TaskListViewProps {
@@ -186,7 +187,8 @@ export function TaskListView({
               >
                 Due Date{sortIndicator('due_date')}
               </TableHead>
-              <TableHead className="w-[12%]">Blocked</TableHead>
+              <TableHead className="w-[10%]">XP</TableHead>
+              <TableHead className="w-[10%]">Blocked</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -198,7 +200,7 @@ export function TaskListView({
                 return (
                     <TableRow
                       key={task.id}
-                      className="cursor-pointer hover:bg-muted/50"
+                      className={`cursor-pointer hover:bg-muted/50 ${task.valid ? 'bg-green-500/5' : ''}`}
                       onClick={() => router.push(`/tasks/${task.id}`)}
                     >
                       <TableCell>
@@ -267,6 +269,17 @@ export function TaskListView({
                         {task.due_date
                           ? `${format(parseISO(task.due_date), 'MMM d')}${isOverdue ? ' \u00b7 Overdue' : ''}`
                           : '-'}
+                      </TableCell>
+                      <TableCell className="text-[13px]">
+                        {task.valid ? (
+                          <span className="text-green-500 font-medium">
+                            {task.valid_xp} XP
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground">
+                            +{Math.floor(task.xp * (TASK_TYPE_XP_WEIGHT[task.task_type] ?? 1))} XP
+                          </span>
+                        )}
                       </TableCell>
                       <TableCell>
                         {task.blocked && (

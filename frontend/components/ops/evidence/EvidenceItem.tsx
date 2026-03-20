@@ -58,6 +58,7 @@ interface EvidenceItemProps {
   canApprove: boolean;
   uploadProgress?: number;
   onApprovalAction?: () => void;
+  onXpUpdate?: (xp_total: number, level: number) => void;
 }
 
 export function EvidenceItem({
@@ -65,6 +66,7 @@ export function EvidenceItem({
   canApprove,
   uploadProgress,
   onApprovalAction,
+  onXpUpdate,
 }: EvidenceItemProps) {
   const Icon = TYPE_ICONS[evidence.type] || FileText;
   const displayName = getDisplayName(evidence);
@@ -88,10 +90,22 @@ export function EvidenceItem({
   const handleApprove = async () => {
     setIsApproving(true);
     try {
-      await apiClient.post<{ valid: boolean; valid_xp: number }>(
-        `/evidence/${evidence.id}/approve`,
+      const data = await apiClient.post<{
+        valid: boolean;
+        valid_xp: number;
+        user?: { id: string; xp_total: number; level: number };
+      }>(`/evidence/${evidence.id}/approve`);
+
+      // Notify parent of new XP/level if backend returns user data
+      if (data.user) {
+        onXpUpdate?.(data.user.xp_total, data.user.level);
+      }
+
+      toast.success(
+        data.valid_xp > 0
+          ? `Task validated! +${data.valid_xp} XP earned.`
+          : 'Evidence approved.',
       );
-      toast.success('Evidence approved.');
       setShowShine(true);
       onApprovalAction?.();
     } catch {

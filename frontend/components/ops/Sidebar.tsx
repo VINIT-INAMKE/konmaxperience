@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -13,6 +13,10 @@ import {
   ChevronsUpDown,
   AlertTriangle,
   Plus,
+  Trophy,
+  Gauge,
+  BarChart3,
+  Settings,
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
@@ -30,6 +34,10 @@ import { useAuthStore } from '@/lib/stores/auth-store';
 import { logout, logoutAll } from '@/lib/auth';
 import { RoleCode, ROLE_DISPLAY_NAMES } from '@/lib/types/roles';
 import { AdHocTaskSheet } from '@/components/ops/tasks/AdHocTaskSheet';
+import { NumberTicker } from '@/components/ui/number-ticker';
+import { LevelBadge } from '@/components/ops/gamification/LevelBadge';
+import { XpProgressBar } from '@/components/ops/gamification/XpProgressBar';
+import { LevelUpCelebration } from '@/components/ops/gamification/LevelUpCelebration';
 
 interface NavItem {
   label: string;
@@ -43,8 +51,37 @@ interface NavItem {
 export function Sidebar() {
   const pathname = usePathname();
   const user = useAuthStore((s) => s.user);
+  const levelUpEvent = useAuthStore((s) => s.levelUpEvent);
+  const clearLevelUpEvent = useAuthStore((s) => s.clearLevelUpEvent);
   const isAdmin = user?.roleCode === RoleCode.FOUNDER_ADMIN;
   const [adHocOpen, setAdHocOpen] = useState(false);
+  const [showLevelGlow, setShowLevelGlow] = useState(false);
+  const [levelUpLevel, setLevelUpLevel] = useState<number | null>(null);
+  const prevLevelRef = useRef<number>(user?.level ?? 1);
+
+  // Detect level-up via auth store levelUpEvent
+  useEffect(() => {
+    if (levelUpEvent !== null) {
+      setLevelUpLevel(levelUpEvent);
+      setShowLevelGlow(true);
+      const glowTimer = setTimeout(() => setShowLevelGlow(false), 3000);
+      clearLevelUpEvent();
+      return () => clearTimeout(glowTimer);
+    }
+  }, [levelUpEvent, clearLevelUpEvent]);
+
+  // Also detect level-up via direct user.level change
+  useEffect(() => {
+    const currentLevel = user?.level ?? 1;
+    if (currentLevel > prevLevelRef.current) {
+      setLevelUpLevel(currentLevel);
+      setShowLevelGlow(true);
+      const glowTimer = setTimeout(() => setShowLevelGlow(false), 3000);
+      prevLevelRef.current = currentLevel;
+      return () => clearTimeout(glowTimer);
+    }
+    prevLevelRef.current = currentLevel;
+  }, [user?.level]);
 
   // Fetch pending approvals count for badge
   const { data: pendingEvidence } = useQuery({
@@ -55,6 +92,15 @@ export function Sidebar() {
     enabled: isAdmin || (user?.roleCode?.endsWith('_LEAD') ?? false),
   });
   const pendingCount = pendingEvidence?.length ?? 0;
+
+  // Fetch leaderboard kill switch setting
+  const { data: leaderboardSetting } = useQuery({
+    queryKey: ['settings', 'leaderboard_enabled'],
+    queryFn: () =>
+      apiClient.get<{ key: string; value: string }>('/settings/leaderboard_enabled'),
+    retry: false,
+  });
+  const leaderboardEnabled = leaderboardSetting?.value === 'true';
 
   const mainNav: NavItem[] = [
     {
@@ -74,6 +120,25 @@ export function Sidebar() {
       badge: pendingCount > 0 ? String(pendingCount) : undefined,
       badgeClassName: 'text-amber-400 bg-amber-950 border-amber-500/20',
     },
+    {
+      label: 'Readiness',
+      href: '/readiness',
+      icon: <Gauge className="size-4" />,
+    },
+    ...(leaderboardEnabled
+      ? [
+          {
+            label: 'Leaderboard',
+            href: '/leaderboard',
+            icon: <Trophy className="size-4" />,
+          },
+        ]
+      : []),
+    {
+      label: 'KPIs',
+      href: '/kpis',
+      icon: <BarChart3 className="size-4" />,
+    },
   ];
 
   const adminNav: NavItem[] = [
@@ -91,6 +156,11 @@ export function Sidebar() {
       label: 'Blockers',
       href: '/admin/blockers',
       icon: <AlertTriangle className="size-4" />,
+    },
+    {
+      label: 'Settings',
+      href: '/admin/settings',
+      icon: <Settings className="size-4" />,
     },
   ];
 
@@ -174,6 +244,15 @@ export function Sidebar() {
               <Badge variant="secondary" className="text-[11px] h-4 px-1.5">
                 {roleDisplayName}
               </Badge>
+              {/* XP total + Level badge */}
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <NumberTicker
+                  value={user?.xp_total ?? 0}
+                  className="text-xs tabular-nums text-muted-foreground"
+                />
+                <span className="text-xs text-muted-foreground">XP</span>
+                <LevelBadge level={user?.level ?? 1} showGlow={showLevelGlow} />
+              </div>
             </div>
             <ChevronsUpDown className="size-4 text-muted-foreground shrink-0" />
           </DropdownMenuTrigger>
@@ -183,6 +262,14 @@ export function Sidebar() {
             sideOffset={8}
             className="w-[224px]"
           >
+            {/* XP progress bar in dropdown — user profile/header location */}
+            <div className="px-2 py-2">
+              <XpProgressBar
+                xpTotal={user?.xp_total ?? 0}
+                level={user?.level ?? 1}
+              />
+            </div>
+            <DropdownMenuSeparator />
             <DropdownMenuItem
               onClick={() => {
                 void logout();
@@ -204,6 +291,14 @@ export function Sidebar() {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+
+      {/* Level-up celebration overlay */}
+      {levelUpLevel !== null && (
+        <LevelUpCelebration
+          newLevel={levelUpLevel}
+          onComplete={() => setLevelUpLevel(null)}
+        />
+      )}
 
       {/* Ad-hoc task sheet */}
       <AdHocTaskSheet open={adHocOpen} onOpenChange={setAdHocOpen} />

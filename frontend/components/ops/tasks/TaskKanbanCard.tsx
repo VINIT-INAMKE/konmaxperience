@@ -1,12 +1,13 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { GripVertical, Link as LinkIcon } from 'lucide-react';
+import { GripVertical, Link as LinkIcon, CheckCircle2 } from 'lucide-react';
 import { format, isPast, parseISO } from 'date-fns';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { CoolMode } from '@/components/ui/cool-mode';
 import type { Task } from '@/lib/types/tasks';
-import { TASK_TYPE_LABELS, TASK_PRIORITY_LABELS } from '@/lib/types/tasks';
+import { TASK_TYPE_LABELS, TASK_PRIORITY_LABELS, TASK_TYPE_XP_WEIGHT } from '@/lib/types/tasks';
 
 interface TaskKanbanCardProps {
   task: Task;
@@ -108,6 +109,27 @@ export function TaskKanbanCard({ task, isDraggable }: TaskKanbanCardProps) {
             </span>
           </div>
         )}
+
+        {/* XP value display */}
+        <div className="flex items-center gap-1">
+          {task.valid ? (
+            <CoolMode>
+              <div className="flex items-center gap-1">
+                <CheckCircle2 className="size-3.5 text-green-500" />
+                <Badge
+                  variant="outline"
+                  className="text-[10px] h-4 px-1 text-green-500 border-green-500/30"
+                >
+                  {task.valid_xp} XP earned
+                </Badge>
+              </div>
+            </CoolMode>
+          ) : (
+            <Badge variant="outline" className="text-[10px] h-4 px-1">
+              +{Math.floor(task.xp * (TASK_TYPE_XP_WEIGHT[task.task_type] ?? 1))} XP
+            </Badge>
+          )}
+        </div>
       </CardContent>
     </Card>
   );

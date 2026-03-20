@@ -27,6 +27,8 @@ interface EvidenceSectionProps {
 export function EvidenceSection({ task, isOwn, isAdmin }: EvidenceSectionProps) {
   const queryClient = useQueryClient();
   const user = useAuthStore((s) => s.user);
+  const updateXpAndLevel = useAuthStore((s) => s.updateXpAndLevel);
+  const triggerLevelUp = useAuthStore((s) => s.triggerLevelUp);
 
   const [showLinkForm, setShowLinkForm] = useState(false);
   const [showNoteForm, setShowNoteForm] = useState(false);
@@ -76,6 +78,14 @@ export function EvidenceSection({ task, isOwn, isAdmin }: EvidenceSectionProps) 
     }
     setShowLinkForm(false);
     setShowNoteForm(false);
+  };
+
+  const handleXpUpdate = (xp_total: number, level: number) => {
+    const prevLevel = useAuthStore.getState().user?.level ?? 1;
+    updateXpAndLevel(xp_total, level);
+    if (level > prevLevel) {
+      triggerLevelUp(level);
+    }
   };
 
   const handleApprovalAction = () => {
@@ -164,6 +174,7 @@ export function EvidenceSection({ task, isOwn, isAdmin }: EvidenceSectionProps) 
                     item.uploaded_by !== user?.id
                   }
                   onApprovalAction={handleApprovalAction}
+                  onXpUpdate={handleXpUpdate}
                 />
               ))}
             </AnimatedList>
