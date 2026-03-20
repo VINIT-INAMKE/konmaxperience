@@ -157,27 +157,20 @@ export function ApprovalItem({ evidence, onAction }: ApprovalItemProps) {
         {/* Row 2: Type icon, filename, uploader, submitted time */}
         <div className="flex items-center gap-3 flex-wrap">
           <Icon className="size-4 shrink-0 text-muted-foreground" />
-          <Tooltip>
-            <TooltipTrigger asChild>
-              {evidence.type === 'note' ? (
-                <span className="text-sm truncate max-w-[200px] text-left">
-                  {evidence.notes || 'Note'}
-                </span>
-              ) : (
-                <a
-                  href={evidence.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-sm truncate max-w-[200px] text-left hover:underline underline-offset-4 hover:text-foreground text-muted-foreground transition-colors"
-                >
-                  {displayName}
-                </a>
-              )}
-            </TooltipTrigger>
-            <TooltipContent side="top">
-              <p className="text-xs">{evidence.type === 'note' ? evidence.notes : 'Click to open'}</p>
-            </TooltipContent>
-          </Tooltip>
+          {evidence.type === 'note' ? (
+            <span className="text-sm truncate max-w-[200px] text-left">
+              {evidence.notes || 'Note'}
+            </span>
+          ) : (
+            <a
+              href={evidence.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm truncate max-w-[200px] text-left hover:underline underline-offset-4 hover:text-foreground text-muted-foreground transition-colors"
+            >
+              {displayName}
+            </a>
+          )}
           <div className="flex items-center gap-2 ml-auto">
             <AvatarCircles
               avatarUrls={uploaderAvatars}

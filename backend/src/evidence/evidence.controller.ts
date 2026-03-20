@@ -76,7 +76,7 @@ export class EvidenceReviewController {
     @Req() req: express.Request,
   ) {
     const user = (req as any).user;
-    return this.evidenceService.approveEvidence(id, user.id);
+    return this.evidenceService.approveEvidence(id, user.id, user.roleCode);
   }
 
   @Post(':id/reject')
@@ -87,6 +87,6 @@ export class EvidenceReviewController {
     @Req() req: express.Request,
   ) {
     const user = (req as any).user;
-    return this.evidenceService.rejectEvidence(id, user.id, dto.notes);
+    return this.evidenceService.rejectEvidence(id, user.id, dto.notes, user.roleCode);
   }
 }

@@ -372,6 +372,7 @@ export class EvidenceService {
   async approveEvidence(
     evidenceId: string,
     reviewerId: string,
+    reviewerRoleCode?: string,
   ): Promise<{ valid: boolean; valid_xp: number }> {
     return this.prisma.$transaction(async (tx: any) => {
       const evidence = await tx.evidence.findUnique({
@@ -384,8 +385,8 @@ export class EvidenceService {
         );
       }
 
-      // Self-approval check BEFORE any writes
-      if (evidence.uploaded_by === reviewerId) {
+      // Self-approval check — admin can override
+      if (evidence.uploaded_by === reviewerId && reviewerRoleCode !== 'FOUNDER_ADMIN') {
         throw new ForbiddenException('Cannot approve your own evidence');
       }
 
@@ -410,6 +411,7 @@ export class EvidenceService {
     evidenceId: string,
     reviewerId: string,
     notes: string,
+    reviewerRoleCode?: string,
   ): Promise<void> {
     await this.prisma.$transaction(async (tx: any) => {
       const evidence = await tx.evidence.findUnique({
@@ -422,8 +424,8 @@ export class EvidenceService {
         );
       }
 
-      // Self-rejection check
-      if (evidence.uploaded_by === reviewerId) {
+      // Self-rejection check — admin can override
+      if (evidence.uploaded_by === reviewerId && reviewerRoleCode !== 'FOUNDER_ADMIN') {
         throw new ForbiddenException('Cannot reject your own evidence');
       }
 
