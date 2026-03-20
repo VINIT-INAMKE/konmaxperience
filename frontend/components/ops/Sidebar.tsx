@@ -17,6 +17,7 @@ import {
   Gauge,
   BarChart3,
   Settings,
+  ClipboardList,
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
@@ -100,14 +101,18 @@ export function Sidebar() {
       apiClient.get<{ key: string; value: string }>('/settings/leaderboard_enabled'),
     retry: false,
   });
-  const leaderboardEnabled = leaderboardSetting?.value === 'true';
+  // Default to true — leaderboard shows unless explicitly disabled
+  const leaderboardEnabled = leaderboardSetting?.value !== 'false';
 
-  const mainNav: NavItem[] = [
+  const overviewNav: NavItem[] = [
     {
       label: 'Dashboard',
       href: '/dashboard',
       icon: <LayoutDashboard className="size-4" />,
     },
+  ];
+
+  const workNav: NavItem[] = [
     {
       label: 'Missions',
       href: '/missions',
@@ -120,6 +125,9 @@ export function Sidebar() {
       badge: pendingCount > 0 ? String(pendingCount) : undefined,
       badgeClassName: 'text-amber-400 bg-amber-950 border-amber-500/20',
     },
+  ];
+
+  const intelligenceNav: NavItem[] = [
     {
       label: 'Readiness',
       href: '/readiness',
@@ -193,14 +201,32 @@ export function Sidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto px-2 py-2 space-y-1">
-        {mainNav.map((item) => (
+        {overviewNav.map((item) => (
+          <NavLink key={item.label} item={item} active={isActive(item.href)} />
+        ))}
+
+        <div className="pt-3 pb-1 px-2">
+          <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/60">
+            Work
+          </span>
+        </div>
+        {workNav.map((item) => (
+          <NavLink key={item.label} item={item} active={isActive(item.href)} />
+        ))}
+
+        <div className="pt-3 pb-1 px-2">
+          <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/60">
+            Intelligence
+          </span>
+        </div>
+        {intelligenceNav.map((item) => (
           <NavLink key={item.label} item={item} active={isActive(item.href)} />
         ))}
 
         {isAdmin && (
           <>
-            <div className="pt-4 pb-1 px-2">
-              <span className="text-[13px] font-normal text-muted-foreground">
+            <div className="pt-3 pb-1 px-2">
+              <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/60">
                 Admin
               </span>
             </div>

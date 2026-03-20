@@ -251,12 +251,20 @@ async function main() {
         },
       });
     }
+
+    // Upsert system settings
+    await tx.systemSetting.upsert({
+      where: { key: 'leaderboard_enabled' },
+      update: {},
+      create: { key: 'leaderboard_enabled', value: 'true' },
+    });
   });
 
   console.log('Seed completed successfully!');
   console.log(`  - ${ROLE_SEEDS.length} roles`);
   console.log(`  - ${ROLE_SEEDS.length} users (one per role)`);
   console.log(`  - ${READINESS_METERS.length} readiness meters`);
+  console.log('  - 1 system setting (leaderboard_enabled)');
   console.log(`  - ${ZONES.length} zones`);
 }
 
