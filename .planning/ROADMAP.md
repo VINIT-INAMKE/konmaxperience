@@ -18,11 +18,13 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 4: Gamification & Readiness Intelligence** - XP from valid tasks, levels, leaderboard, 10 readiness meters (event-sourced), and KPI tracking
 - [ ] **Phase 5: Governance & Decision Management** - Decision logging with types, admin override/escalation on approvals, and approval delegation
 - [ ] **Phase 6: Operations Management** - Zone management, brand lifecycle, sales channels, and asset library with approval workflow
-- [ ] **Phase 7: Recipe & Ingredient Management** - Structured recipes with BOM, ingredient master, recipe costing, menu item creation from approved recipes
-- [ ] **Phase 8: Inventory, Procurement & Kitchen** - Stock tracking, stock movements, purchase order workflow, production orders with auto-deduction, kitchen display system (order → prepare → ready), procurement dashboard
-- [ ] **Phase 9: Dashboards & Shared Boards** - Admin mission control, role user dashboard, admin role-perspective view, and shared boards (mission board, quest board, wins, evidence feed)
-- [ ] **Phase 10: Notifications** - BullMQ-backed alerts for deadlines, blockers, and pending approvals
-- [ ] **Phase 11: Customer-Facing Layer** - Public menu browsing, online ordering, customer feedback, and experience/event booking
+- [ ] **Phase 7: Recipe & Ingredient Management** - Structured recipes with BOM, ingredient master, vendor management, recipe costing, menu items with pricing and food cost %
+- [ ] **Phase 8: Inventory & Procurement** - Raw ingredient stock tracking, stock movements, purchase order workflow with vendor prices, low-stock alerts
+- [ ] **Phase 9: Kitchen & Prep** - Prep batch system (recipe × qty → deduct raw, add production), kitchen display (KDS), menu availability based on prep levels, waste logging
+- [ ] **Phase 10: POS & Orders** - Full POS interface for staff, order management (dine-in/takeaway/delivery), payment tracking (method + status), own-delivery dispatch, order → kitchen flow
+- [ ] **Phase 11: Dashboards & Shared Boards** - Mission control, role dashboards, kitchen metrics, inventory overview, recipe cost analysis, procurement spend
+- [ ] **Phase 12: Notifications** - BullMQ alerts for tasks, stock levels, orders, kitchen, approvals, delivery
+- [ ] **Phase 13: Customer Experience** - Post-dining feedback (QR/link), experience event booking with capacity, digital menu display (non-interactive)
 
 ## Phase Details
 
@@ -176,20 +178,22 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11
+Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11 → 12 → 13
 
-Note: Phase 5 and Phase 6 both depend on Phase 3 (not Phase 4), so they could potentially overlap with Phase 4 if needed. Phase 7 (Recipes) depends on Phase 6 (brands/assets). Phase 8 (Inventory) depends on Phase 7 (ingredients). Phase 11 (Customer) depends on Phase 7+8 (menu items from recipes).
+Dependencies: Phase 7 (Recipes) depends on Phase 6 (brands/vendors). Phase 8 (Inventory) depends on Phase 7 (ingredients). Phase 9 (Kitchen) depends on Phase 7+8 (recipes + inventory). Phase 10 (POS) depends on Phase 7+9 (menu items + KDS). Phase 13 (Customer) depends on Phase 10 (orders exist).
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation & Authentication | 3/3 | Complete | 2026-03-19 |
 | 2. Mission Execution Hierarchy | 4/4 | Complete | 2026-03-19 |
 | 3. Evidence & Validation Cascade | 4/4 | Complete | 2026-03-20 |
-| 4. Gamification & Readiness Intelligence | 0/3 | Not started | - |
-| 5. Governance & Decision Management | 0/2 | Not started | - |
-| 6. Operations Management | 0/3 | Not started | - |
+| 4. Gamification & Readiness Intelligence | 0/0 | Not started | - |
+| 5. Governance & Decision Management | 0/0 | Not started | - |
+| 6. Operations Management | 0/0 | Not started | - |
 | 7. Recipe & Ingredient Management | 0/0 | Not started | - |
 | 8. Inventory & Procurement | 0/0 | Not started | - |
-| 9. Dashboards & Shared Boards | 0/3 | Not started | - |
-| 10. Notifications | 0/2 | Not started | - |
-| 11. Customer-Facing Layer | 0/3 | Not started | - |
+| 9. Kitchen & Prep | 0/0 | Not started | - |
+| 10. POS & Orders | 0/0 | Not started | - |
+| 11. Dashboards & Shared Boards | 0/0 | Not started | - |
+| 12. Notifications | 0/0 | Not started | - |
+| 13. Customer Experience | 0/0 | Not started | - |

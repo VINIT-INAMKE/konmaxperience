@@ -33,7 +33,7 @@
 
 ### Intelligence & Gamification
 
-- [ ] **INTL-01**: 10 readiness meters track real operational readiness (Villa, Backend, Frontend, Procurement, Standardization, Sales, Tech, Talent, Art Experience, Lifestyle Experience)
+- [ ] **INTL-01**: 13 readiness meters track real operational readiness (Villa, Backend, Frontend, Procurement, Standardization, Sales, Tech, Talent, Art Experience, Lifestyle Experience, Kitchen, Menu, Inventory)
 - [ ] **INTL-02**: Only valid tasks contribute to readiness meters (event-based, not recalculated)
 - [ ] **INTL-03**: Users earn XP from valid tasks, accumulate levels (1-4)
 - [ ] **INTL-04**: Leaderboard ranks users by valid XP with kill switch option
@@ -50,6 +50,10 @@
 - [ ] **NOTF-01**: Alert user when task is due within 48 hours
 - [ ] **NOTF-02**: Alert user when task is blocked by unresolved dependency
 - [ ] **NOTF-03**: Alert admin when approval is pending more than 24 hours
+- [ ] **NOTF-04**: Low stock alert when ingredient drops below min level
+- [ ] **NOTF-05**: New order alert to kitchen (KDS push or sound)
+- [ ] **NOTF-06**: Order ready alert to POS staff
+- [ ] **NOTF-07**: Delivery dispatched / delivered status update
 
 ### Operations Management
 
@@ -58,42 +62,53 @@
 - [ ] **OPS-03**: Manage sales channels (dine-in, delivery, takeaway, retail, event, workshop, online)
 - [ ] **OPS-04**: Asset library for recipes, SOPs, menus, cost sheets, training docs with status workflow
 
-### Customer-Facing
-
-- [ ] **CUST-01**: Public menu page showing approved food items from the asset library
-- [ ] **CUST-02**: Customers can place delivery/takeaway orders online
-- [ ] **CUST-03**: Customers can rate dishes and leave feedback after ordering/dining
-- [ ] **CUST-04**: Customers can browse and book experience events (tastings, workshops, pop-ups)
-
 ### Recipe & Ingredient Management
 
-- [ ] **RECIPE-01**: Structured recipe creation with name, description, prep steps, cooking method, yield, portion size, linked to brand
+- [ ] **RECIPE-01**: Structured recipe creation with name, description, prep steps, cooking method, yield quantity + unit, portion size, linked to brand, status (draft → approved → archived)
 - [ ] **RECIPE-02**: Recipe ingredient list (BOM) — each recipe has ingredients with quantity, unit, and prep notes
-- [ ] **RECIPE-03**: Ingredient master list with name, category, unit, supplier info, and current unit cost
-- [ ] **RECIPE-04**: Auto-calculated recipe cost from ingredient costs × quantities
-- [ ] **RECIPE-05**: Menu item creation from approved recipes with pricing and food cost percentage display
+- [ ] **RECIPE-03**: Ingredient master list with name, category, unit, min stock level
+- [ ] **RECIPE-04**: Vendor management — vendor entity with contact info, which ingredients they supply, price tracking over time (VendorPrice with effective date)
+- [ ] **RECIPE-05**: Auto-calculated recipe cost from ingredient costs (best vendor price) × quantities
+- [ ] **RECIPE-06**: Menu item creation from approved recipes with selling price, food cost percentage display, and channel availability (dine-in/takeaway/delivery)
 
 ### Inventory & Procurement
 
-- [ ] **INV-01**: Two-layer inventory — raw ingredients (what procurement buys) and production items (what kitchen preps). Each tracked separately with current quantity, zone, and min stock level with low-stock alerts
-- [ ] **INV-02**: Stock movement history (in: procurement received, out: kitchen prep deducted from raw, out: customer order deducted from production, adjustment: waste/spillage)
-- [ ] **INV-03**: Purchase order workflow — create PO to vendor with items/quantities, track status (draft → ordered → received), auto-update raw ingredient inventory on receive
-- [ ] **INV-04**: Kitchen prep batch — select recipe + quantity to prep, deducts raw ingredients, adds to production inventory (e.g., prep 20 pizza doughs → -flour/yeast/water from raw, +20 doughs to production)
-- [ ] **INV-05**: Procurement dashboard — pending POs, low stock alerts (both layers), vendor spend summary, inventory value
+- [ ] **INV-01**: Raw ingredient stock tracking — current quantity per ingredient per zone, min stock level, low-stock alerts when below minimum
+- [ ] **INV-02**: Stock movement history — type (received/prep-deducted/waste/adjustment), quantity, reason, reference to PO or PrepBatch
+- [ ] **INV-03**: Purchase order workflow — create PO to vendor with line items (ingredient + qty + unit cost), track status (draft → ordered → received), auto-update raw inventory on receive
+- [ ] **INV-04**: Procurement dashboard — pending POs, low stock alerts, vendor spend summary, ingredient price trends, total inventory value
 
-### Kitchen & Order Preparation
+### Kitchen & Prep
 
-- [ ] **KITCHEN-01**: Kitchen display showing incoming customer orders with items to prepare, assigned to zones/stations
-- [ ] **KITCHEN-02**: Order item status tracking (pending → preparing → ready → served/dispatched) with timestamp per transition
-- [ ] **KITCHEN-03**: When order item is fulfilled, auto-deduct from production inventory. If production inventory insufficient, alert kitchen to prep more (which deducts raw ingredients)
-- [ ] **KITCHEN-04**: Kitchen performance metrics — average prep time per item, orders in queue, items completed today, production inventory levels
+- [ ] **KITCHEN-01**: Prep batch system — select recipe + quantity to prep, auto-deducts raw ingredients per BOM, creates PrepBatch with quantity_remaining (production layer)
+- [ ] **KITCHEN-02**: Kitchen display (KDS) showing incoming orders with items to prepare, grouped by zone/station, real-time updates
+- [ ] **KITCHEN-03**: Menu availability — MenuItem knows if it's servable based on PrepBatch levels. Auto-marks "sold out" on POS when prep runs out. Alerts kitchen to prep more.
+- [ ] **KITCHEN-04**: Waste logging — structured waste reports with reason (spoilage/over-prep/cooking-error/expired), quantity, ingredient, cost impact
+- [ ] **KITCHEN-05**: Kitchen metrics — average prep time per item, orders in queue, items completed today, prep batch levels, waste percentage
+
+### POS & Orders
+
+- [ ] **POS-01**: Full POS interface — menu grid with categories/brands, tap to add items to order, quantity adjustment, order summary sidebar, channel selector (dine-in/takeaway/delivery)
+- [ ] **POS-02**: Order management — order entity with status (placed → confirmed → preparing → ready → served/dispatched/cancelled), channel-specific fields (table number for dine-in, phone for takeaway, address for delivery)
+- [ ] **POS-03**: Payment tracking — payment method (cash/card/UPI), payment status (pending/paid/refunded), amount. No gateway integration, just recording.
+- [ ] **POS-04**: Order → kitchen flow — when order is placed, items appear on KDS. When item marked ready on KDS, order status updates. Deduct from PrepBatch on fulfillment.
+- [ ] **POS-05**: Delivery dispatch — assign delivery staff, track status (picked-up → in-transit → delivered), delivery notes
+- [ ] **POS-06**: Order history — searchable list of all orders with filters (date, channel, status, payment), daily revenue summary
+
+### Customer Experience
+
+- [ ] **CUST-01**: Post-dining feedback collection via QR code or link — rate dishes, leave comments (no customer auth required)
+- [ ] **CUST-02**: Experience event browsing and booking — event listings with capacity, booking form (name + phone), confirmation
+- [ ] **CUST-03**: Digital menu display (non-interactive) — shows current menu with prices, available items, brand sections. For display screens or QR access.
 
 ### Dashboards
 
-- [ ] **DASH-01**: Admin mission control -- readiness overview, pending approvals, blockers, decisions, ad-hoc task injector, leaderboard
-- [ ] **DASH-02**: Role user dashboard -- my tasks, quests, evidence, contribution meters
-- [ ] **DASH-03**: Admin can switch view to see the system from any role's perspective
-- [ ] **DASH-04**: Shared boards -- mission board, quest board, wins/milestones, latest evidence feed
+- [ ] **DASH-01**: Admin mission control — readiness overview, pending approvals, blockers, decisions, ad-hoc task injector, leaderboard
+- [ ] **DASH-02**: Role user dashboard — my tasks, quests, evidence, contribution meters
+- [ ] **DASH-03**: Kitchen dashboard — orders in queue, prep batch levels, station utilization, average prep times, waste today
+- [ ] **DASH-04**: Inventory & procurement dashboard — stock levels (raw + production), low stock alerts, PO status, vendor spend, inventory value
+- [ ] **DASH-05**: BI dashboard — revenue (daily/weekly/monthly), food cost %, recipe cost analysis, top-selling items, channel breakdown
+- [ ] **DASH-06**: Shared boards — mission board, quest board, wins/milestones, latest evidence feed
 
 ## v2 Requirements
 
@@ -135,8 +150,10 @@
 | Cross-node federation | Requires multiple nodes to exist first |
 | Native mobile app | Web-first with responsive design; mobile app is v2+ |
 | Real-time chat | High complexity, not core to operations coordination |
-| Complex inventory management | ~~Moved to v1~~ — RECIPE-01 to RECIPE-05 + INV-01 to INV-05 |
-| Payment processing | Order placement without integrated payment in v1; payment is a separate decision |
+| Complex inventory management | ~~Moved to v1~~ — Full two-layer inventory, procurement, kitchen prep |
+| Payment gateway integration | Payment method + status tracked (POS-03) but no Razorpay/Stripe gateway in v1 |
+| Customer self-service ordering | POS-based (staff takes orders). No customer-facing order placement. |
+| Third-party delivery integration | Own delivery only (POS-05). No Swiggy/Zomato API integration in v1. |
 | Video evidence processing | Accept video uploads but no transcoding/processing in v1 |
 
 ## Traceability
@@ -168,9 +185,6 @@
 | GOVN-01 | Phase 5 | Pending |
 | GOVN-02 | Phase 5 | Pending |
 | GOVN-03 | Phase 5 | Pending |
-| NOTF-01 | Phase 10 | Pending |
-| NOTF-02 | Phase 10 | Pending |
-| NOTF-03 | Phase 10 | Pending |
 | OPS-01 | Phase 6 | Pending |
 | OPS-02 | Phase 6 | Pending |
 | OPS-03 | Phase 6 | Pending |
@@ -180,27 +194,42 @@
 | RECIPE-03 | Phase 7 | Pending |
 | RECIPE-04 | Phase 7 | Pending |
 | RECIPE-05 | Phase 7 | Pending |
+| RECIPE-06 | Phase 7 | Pending |
 | INV-01 | Phase 8 | Pending |
 | INV-02 | Phase 8 | Pending |
 | INV-03 | Phase 8 | Pending |
 | INV-04 | Phase 8 | Pending |
-| INV-05 | Phase 8 | Pending |
-| KITCHEN-01 | Phase 8 | Pending |
-| KITCHEN-02 | Phase 8 | Pending |
-| KITCHEN-03 | Phase 8 | Pending |
-| KITCHEN-04 | Phase 8 | Pending |
-| DASH-01 | Phase 9 | Pending |
-| DASH-02 | Phase 9 | Pending |
-| DASH-03 | Phase 9 | Pending |
-| DASH-04 | Phase 9 | Pending |
-| CUST-01 | Phase 11 | Pending |
-| CUST-02 | Phase 11 | Pending |
-| CUST-03 | Phase 11 | Pending |
-| CUST-04 | Phase 11 | Pending |
+| KITCHEN-01 | Phase 9 | Pending |
+| KITCHEN-02 | Phase 9 | Pending |
+| KITCHEN-03 | Phase 9 | Pending |
+| KITCHEN-04 | Phase 9 | Pending |
+| KITCHEN-05 | Phase 9 | Pending |
+| POS-01 | Phase 10 | Pending |
+| POS-02 | Phase 10 | Pending |
+| POS-03 | Phase 10 | Pending |
+| POS-04 | Phase 10 | Pending |
+| POS-05 | Phase 10 | Pending |
+| POS-06 | Phase 10 | Pending |
+| DASH-01 | Phase 11 | Pending |
+| DASH-02 | Phase 11 | Pending |
+| DASH-03 | Phase 11 | Pending |
+| DASH-04 | Phase 11 | Pending |
+| DASH-05 | Phase 11 | Pending |
+| DASH-06 | Phase 11 | Pending |
+| NOTF-01 | Phase 12 | Pending |
+| NOTF-02 | Phase 12 | Pending |
+| NOTF-03 | Phase 12 | Pending |
+| NOTF-04 | Phase 12 | Pending |
+| NOTF-05 | Phase 12 | Pending |
+| NOTF-06 | Phase 12 | Pending |
+| NOTF-07 | Phase 12 | Pending |
+| CUST-01 | Phase 13 | Pending |
+| CUST-02 | Phase 13 | Pending |
+| CUST-03 | Phase 13 | Pending |
 
 **Coverage:**
-- v1 requirements: 54 total
-- Mapped to phases: 54
+- v1 requirements: 68 total
+- Mapped to phases: 68
 - Unmapped: 0
 
 ---
