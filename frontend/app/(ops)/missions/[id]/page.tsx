@@ -28,6 +28,8 @@ import {
   type MissionStatus,
 } from '@/lib/types/missions';
 import type { Quest } from '@/lib/types/quests';
+import type { Task } from '@/lib/types/tasks';
+import { TASK_TYPE_XP_WEIGHT } from '@/lib/types/tasks';
 import { QuestCard } from '@/components/ops/quests/QuestCard';
 
 const PHASE_COLORS: Record<MissionPhase, string> = {
@@ -70,6 +72,21 @@ export default function MissionDetailPage({
     queryKey: ['quests', { missionId: id }],
     queryFn: () => apiClient.get<Quest[]>(`/quests?mission_id=${id}`),
   });
+
+  // Fetch all tasks for this mission to compute total XP earned
+  const { data: missionTasks = [], isLoading: missionTasksLoading } = useQuery({
+    queryKey: ['tasks', { missionId: id }],
+    queryFn: () => apiClient.get<Task[]>(`/tasks?mission_id=${id}`),
+    enabled: !!mission,
+  });
+
+  const totalXpEarned = missionTasks
+    .filter((t) => t.valid)
+    .reduce((sum, t) => sum + t.valid_xp, 0);
+  const potentialXp = missionTasks.reduce(
+    (sum, t) => sum + Math.floor(t.xp * (TASK_TYPE_XP_WEIGHT[t.task_type] ?? 1)),
+    0,
+  );
 
   const sortedQuests = quests
     ? [...quests].sort((a, b) => a.week_number - b.week_number)
@@ -148,6 +165,21 @@ export default function MissionDetailPage({
             />
             <span className="text-sm text-muted-foreground">% complete</span>
           </div>
+
+          {/* XP earned summary */}
+          {missionTasksLoading ? (
+            <div className="h-4 w-32 rounded bg-muted/50 animate-pulse" />
+          ) : (
+            <div className="flex items-baseline gap-1">
+              <NumberTicker
+                value={totalXpEarned}
+                className="text-sm font-semibold text-green-500 tabular-nums"
+              />
+              <span className="text-sm text-muted-foreground">
+                / {potentialXp} XP earned
+              </span>
+            </div>
+          )}
 
           {/* Description */}
           {mission.description && (

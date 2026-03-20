@@ -19,6 +19,8 @@ import { RoleCode } from '@/lib/types/roles';
 import { QUEST_STATUS_LABELS } from '@/lib/types/quests';
 import type { Quest } from '@/lib/types/quests';
 import type { Task, TaskStatus } from '@/lib/types/tasks';
+import { TASK_TYPE_XP_WEIGHT } from '@/lib/types/tasks';
+import { NumberTicker } from '@/components/ui/number-ticker';
 
 function getStatusBadgeClass(status: string) {
   switch (status) {
@@ -94,6 +96,15 @@ export default function QuestDetailPage(props: {
   // Count core tasks for activation dialog
   const coreTaskCount = tasks.filter((t) => t.task_type === 'core').length;
   const totalAdhocTasks = tasks.filter((t) => t.task_type === 'adhoc').length;
+
+  // XP summaries from validated tasks
+  const totalXpEarned = tasks
+    .filter((t) => t.valid)
+    .reduce((sum, t) => sum + t.valid_xp, 0);
+  const potentialXp = tasks.reduce(
+    (sum, t) => sum + Math.floor(t.xp * (TASK_TYPE_XP_WEIGHT[t.task_type] ?? 1)),
+    0,
+  );
 
   // Fire confetti when quest status is completed on load
   if (quest?.status === 'completed') {
@@ -175,6 +186,18 @@ export default function QuestDetailPage(props: {
             baselineTaskCount={quest.baseline_task_count}
             totalAdhocTasks={totalAdhocTasks}
           />
+          {!tasksLoading && (
+            <div className="flex items-center gap-2 mt-2">
+              <span className="text-sm text-muted-foreground">XP earned:</span>
+              <NumberTicker
+                value={totalXpEarned}
+                className="text-sm font-semibold text-green-500 tabular-nums"
+              />
+              <span className="text-sm text-muted-foreground">
+                / {potentialXp} XP
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Task view header */}
