@@ -12,7 +12,10 @@ Every piece of work must be evidence-backed, approved, and validated before it c
 
 ### Validated
 
-(None yet — ship to validate)
+- [x] Authentication & RBAC (Phase 1)
+- [x] Mission/Quest/Task hierarchy with execution engine (Phase 2)
+- [x] Evidence upload, approval workflow, validation cascade (Phase 3)
+- [x] Gamification & Readiness Intelligence — XP, levels, leaderboard, 10 readiness meters, KPIs (Phase 4)
 
 ### Active
 
@@ -119,4 +122,4 @@ Complete data model for Phases 7-13 (22 new entities) defined in `docs/superpowe
 | Channel modifier (not per-item pricing) | One modifier per channel, base_price + modifier = final | Confirmed |
 
 ---
-*Last updated: 2026-03-20 after food production pipeline design*
+*Last updated: 2026-03-20 after Phase 4 (Gamification & Readiness Intelligence) completion*
