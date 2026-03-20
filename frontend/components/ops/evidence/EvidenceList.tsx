@@ -9,12 +9,16 @@ interface EvidenceListProps {
   evidence: Evidence[];
   currentUserId: string;
   isLoading: boolean;
+  canApprove?: boolean;
+  onApprovalAction?: () => void;
 }
 
 export function EvidenceList({
   evidence,
   currentUserId,
   isLoading,
+  canApprove = false,
+  onApprovalAction,
 }: EvidenceListProps) {
   if (isLoading) {
     return (
@@ -48,6 +52,10 @@ export function EvidenceList({
             key={item.id}
             evidence={item}
             currentUserId={currentUserId}
+            canApprove={
+              canApprove && item.uploaded_by !== currentUserId
+            }
+            onApprovalAction={onApprovalAction}
           />
         ))}
       </AnimatedList>

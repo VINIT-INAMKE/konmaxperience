@@ -24,15 +24,11 @@ import {
 import { BlurFade } from '@/components/ui/blur-fade';
 import { AvatarCircles } from '@/components/ui/avatar-circles';
 import { BlockerDialog } from '@/components/ops/tasks/BlockerDialog';
-import { EvidenceUploadZone } from '@/components/ops/evidence/EvidenceUploadZone';
-import { EvidenceList } from '@/components/ops/evidence/EvidenceList';
-import { LinkEvidenceForm } from '@/components/ops/evidence/LinkEvidenceForm';
-import { NoteEvidenceForm } from '@/components/ops/evidence/NoteEvidenceForm';
+import { EvidenceSection } from '@/components/ops/evidence/EvidenceSection';
 import { apiClient } from '@/lib/api-client';
 import { useAuthStore } from '@/lib/stores/auth-store';
 import { RoleCode } from '@/lib/types/roles';
 import type { Task, TaskStatus } from '@/lib/types/tasks';
-import type { Evidence } from '@/lib/types/evidence';
 import {
   TASK_TYPE_LABELS,
   TASK_STATUS_LABELS,
@@ -89,8 +85,6 @@ export default function TaskDetailPage(props: {
   const isAdmin = user?.roleCode === RoleCode.FOUNDER_ADMIN;
 
   const [blockerOpen, setBlockerOpen] = useState(false);
-  const [showLinkForm, setShowLinkForm] = useState(false);
-  const [showNoteForm, setShowNoteForm] = useState(false);
 
   const {
     data: task,
@@ -99,14 +93,6 @@ export default function TaskDetailPage(props: {
   } = useQuery({
     queryKey: ['tasks', id],
     queryFn: () => apiClient.get<Task>(`/tasks/${id}`),
-  });
-
-  const {
-    data: evidence,
-    isLoading: evidenceLoading,
-  } = useQuery({
-    queryKey: ['evidence', id],
-    queryFn: () => apiClient.get<Evidence[]>(`/tasks/${id}/evidence`),
   });
 
   const statusMutation = useMutation({
@@ -131,12 +117,6 @@ export default function TaskDetailPage(props: {
 
   const handleBlocked = () => {
     void queryClient.invalidateQueries({ queryKey: ['tasks', id] });
-  };
-
-  const handleEvidenceChange = () => {
-    void queryClient.invalidateQueries({ queryKey: ['evidence', id] });
-    setShowLinkForm(false);
-    setShowNoteForm(false);
   };
 
   const canEdit = task?.is_own === true || isAdmin;
@@ -218,6 +198,14 @@ export default function TaskDetailPage(props: {
             >
               {TASK_PRIORITY_LABELS[task.priority]}
             </Badge>
+            {task.valid && (
+              <Badge
+                variant="secondary"
+                className="text-green-400 bg-green-950 border-green-500/20"
+              >
+                Valid
+              </Badge>
+            )}
           </div>
 
           {!isOwn && !isAdmin && (
@@ -395,55 +383,7 @@ export default function TaskDetailPage(props: {
             </Card>
 
             {/* Evidence section */}
-            <Card>
-              <CardContent className="p-4 space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-semibold">Evidence</h3>
-                  {evidence && evidence.length > 0 && (
-                    <span className="text-[13px] text-muted-foreground">
-                      {evidence.length} {evidence.length === 1 ? 'item' : 'items'}
-                    </span>
-                  )}
-                </div>
-
-                {(isOwn || isAdmin) && (
-                  <EvidenceUploadZone
-                    taskId={id}
-                    onUploadComplete={handleEvidenceChange}
-                    onShowLinkForm={() => {
-                      setShowLinkForm(true);
-                      setShowNoteForm(false);
-                    }}
-                    onShowNoteForm={() => {
-                      setShowNoteForm(true);
-                      setShowLinkForm(false);
-                    }}
-                  />
-                )}
-
-                {showLinkForm && (
-                  <LinkEvidenceForm
-                    taskId={id}
-                    onSubmit={handleEvidenceChange}
-                    onCancel={() => setShowLinkForm(false)}
-                  />
-                )}
-
-                {showNoteForm && (
-                  <NoteEvidenceForm
-                    taskId={id}
-                    onSubmit={handleEvidenceChange}
-                    onCancel={() => setShowNoteForm(false)}
-                  />
-                )}
-
-                <EvidenceList
-                  evidence={evidence ?? []}
-                  currentUserId={user?.id ?? ''}
-                  isLoading={evidenceLoading}
-                />
-              </CardContent>
-            </Card>
+            <EvidenceSection task={task} isOwn={isOwn} isAdmin={isAdmin} />
           </div>
 
           {/* Right column - 1/3 metadata */}
