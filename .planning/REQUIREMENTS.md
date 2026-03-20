@@ -27,7 +27,7 @@
 
 ### Evidence & Validation
 
-- [ ] **EVID-01**: User can upload evidence (photo, doc, video, link, note) to any assigned task
+- [x] **EVID-01**: User can upload evidence (photo, doc, video, link, note) to any assigned task
 - [ ] **EVID-02**: Lead/admin can approve or reject evidence with notes
 - [ ] **EVID-03**: Task is valid only when: status=done + approved evidence + all required approvals satisfied + verified=true
 
