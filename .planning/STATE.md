@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Phase 4 plans verified
-last_updated: "2026-03-20T16:58:29.197Z"
+stopped_at: Completed 04-01-PLAN.md
+last_updated: "2026-03-20T17:11:53.730Z"
 progress:
   total_phases: 13
   completed_phases: 3
   total_plans: 15
-  completed_plans: 11
+  completed_plans: 12
 ---
 
 # Project State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-19)
 
 **Core value:** Every piece of work must be evidence-backed, approved, and validated before it counts -- turning real execution into measurable readiness and progress.
-**Current focus:** Phase 03 — evidence-validation-cascade
+**Current focus:** Phase 04 — gamification-readiness-intelligence
 
 ## Current Position
 
-Phase: 03 (evidence-validation-cascade) — COMPLETE
-Plan: 4 of 4 (all complete)
+Phase: 04 (gamification-readiness-intelligence) — EXECUTING
+Plan: 2 of 4
 
 ## Performance Metrics
 
@@ -55,6 +55,7 @@ Plan: 4 of 4 (all complete)
 | Phase 03 P03 | 8min | 2 tasks | 18 files |
 | Phase 03 P02 | 7min | 2 tasks | 9 files |
 | Phase 03 P04 | 6min | 2 tasks | 12 files |
+| Phase 04 P01 | 7min | 2 tasks | 26 files |
 
 ## Accumulated Context
 
@@ -101,6 +102,10 @@ Recent decisions affecting current work:
 - [Phase 03]: canApproveRole heuristic: isAdmin or roleCode.endsWith(_LEAD) -- backend APPROVE_EVIDENCE permission is authoritative
 - [Phase 03]: GET /evidence?status=pending added for approval queue data with scope filtering
 - [Phase 03]: Validation third condition simplified: met when hasApprovedEvidence (server-side validateTask is authoritative)
+- [Phase 04-01]: BI_LEAD sees all KPIs (same as admin) to support cross-domain intelligence role
+- [Phase 04-01]: leaderboard kill-switch defaults to enabled (null setting treated as true)
+- [Phase 04-01]: validateTask now fetches updatedUser via tx.user.findUnique after XP recalculation
+- [Phase 04-01]: KPI update uses transaction to atomically update fields plus clear/set task links
 
 ### Pending Todos
 
@@ -115,6 +120,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-20T16:58:29.184Z
-Stopped at: Phase 4 plans verified
-Resume file: .planning/phases/04-gamification-readiness-intelligence/04-01-PLAN.md
+Last session: 2026-03-20T17:11:53.718Z
+Stopped at: Completed 04-01-PLAN.md
+Resume file: None

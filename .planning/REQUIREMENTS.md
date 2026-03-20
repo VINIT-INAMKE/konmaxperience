@@ -33,11 +33,11 @@
 
 ### Intelligence & Gamification
 
-- [ ] **INTL-01**: 10 readiness meters track real operational readiness (Villa, Backend, Frontend, Procurement, Standardization, Sales, Tech, Talent, Art Experience, Lifestyle Experience). Additional meters (Kitchen, Menu, Inventory) added when those phases ship.
-- [ ] **INTL-02**: Only valid tasks contribute to readiness meters (event-based, not recalculated)
-- [ ] **INTL-03**: Users earn XP from valid tasks, accumulate levels (1-4)
-- [ ] **INTL-04**: Leaderboard ranks users by valid XP with kill switch option
-- [ ] **INTL-05**: KPIs track domain metrics (on_track, at_risk, off_track) tied to tasks
+- [x] **INTL-01**: 10 readiness meters track real operational readiness (Villa, Backend, Frontend, Procurement, Standardization, Sales, Tech, Talent, Art Experience, Lifestyle Experience). Additional meters (Kitchen, Menu, Inventory) added when those phases ship.
+- [x] **INTL-02**: Only valid tasks contribute to readiness meters (event-based, not recalculated)
+- [x] **INTL-03**: Users earn XP from valid tasks, accumulate levels (1-4)
+- [x] **INTL-04**: Leaderboard ranks users by valid XP with kill switch option
+- [x] **INTL-05**: KPIs track domain metrics (on_track, at_risk, off_track) tied to tasks
 
 ### Governance
 
@@ -179,11 +179,11 @@
 | EVID-01 | Phase 3 | Complete |
 | EVID-02 | Phase 3 | Complete |
 | EVID-03 | Phase 3 | Complete |
-| INTL-01 | Phase 4 | Pending |
-| INTL-02 | Phase 4 | Pending |
-| INTL-03 | Phase 4 | Pending |
-| INTL-04 | Phase 4 | Pending |
-| INTL-05 | Phase 4 | Pending |
+| INTL-01 | Phase 4 | Complete |
+| INTL-02 | Phase 4 | Complete |
+| INTL-03 | Phase 4 | Complete |
+| INTL-04 | Phase 4 | Complete |
+| INTL-05 | Phase 4 | Complete |
 | GOVN-01 | Phase 5 | Pending |
 | GOVN-02 | Phase 5 | Pending |
 | GOVN-03 | Phase 5 | Pending |
