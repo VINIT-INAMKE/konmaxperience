@@ -68,12 +68,13 @@ Plans:
   2. A lead or admin can approve or reject evidence with notes, and the approval decision is recorded with timestamp and reviewer identity
   3. A task becomes valid only when status=done AND approved evidence exists AND all required approvals are satisfied AND verified=true; missing any condition keeps the task invalid
   4. The entire validation cascade (task validity check, XP credit, quest progress update, mission progress update, readiness event emission) executes within a single database transaction -- partial failure rolls back all changes
-**Plans**: TBD
+**Plans:** 4 plans
 
 Plans:
-- [ ] 03-01: TBD
-- [ ] 03-02: TBD
-- [ ] 03-03: TBD
+- [ ] 03-01-PLAN.md — Backend StorageModule (R2 presigned URLs) + EvidenceModule (evidence CRUD), AWS SDK install
+- [ ] 03-02-PLAN.md — Backend approval endpoints, atomic validateTask cascade, progress tightening to valid=true, unit tests
+- [ ] 03-03-PLAN.md — Frontend evidence types, 8 MagicUI installs, Sonner mount, evidence upload zone + list on task detail
+- [ ] 03-04-PLAN.md — Frontend approval UI (inline approve/reject, validation checklist, celebrations), approval queue page, sidebar update
 
 ### Phase 4: Gamification & Readiness Intelligence
 **Goal**: Valid task completions produce XP, levels, leaderboard rankings, readiness meter movements, and KPI status -- all derived exclusively from validated work, never from unverified claims
@@ -180,8 +181,8 @@ Note: Phase 5 and Phase 6 both depend on Phase 3 (not Phase 4), so they could po
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation & Authentication | 3/3 | Complete    | 2026-03-19 |
-| 2. Mission Execution Hierarchy | 1/4 | Complete    | 2026-03-19 |
-| 3. Evidence & Validation Cascade | 0/3 | Not started | - |
+| 2. Mission Execution Hierarchy | 4/4 | Complete    | 2026-03-19 |
+| 3. Evidence & Validation Cascade | 0/4 | Planning complete | - |
 | 4. Gamification & Readiness Intelligence | 0/3 | Not started | - |
 | 5. Governance & Decision Management | 0/2 | Not started | - |
 | 6. Operations Management | 0/3 | Not started | - |
