@@ -38,7 +38,7 @@ export function LevelBadge({ level, showGlow = false, className }: LevelBadgePro
       </span>
       {glowActive && (
         <span className="pointer-events-none absolute inset-0 rounded-full overflow-hidden">
-          <BorderBeam duration={3} colorFrom={colors.bg} colorTo="#ffffff" />
+          <BorderBeam duration={3} colorFrom={colors.hex} colorTo="#ffffff" />
         </span>
       )}
     </span>

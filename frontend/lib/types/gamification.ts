@@ -5,11 +5,11 @@ export const XP_LEVEL_THRESHOLDS = [
   { level: 4, minXp: 1000, maxXp: Infinity, label: 'Master' },
 ] as const;
 
-export const LEVEL_COLORS: Record<number, { text: string; bg: string }> = {
-  1: { text: 'text-slate-400', bg: 'bg-slate-400' },
-  2: { text: 'text-blue-400', bg: 'bg-blue-400' },
-  3: { text: 'text-purple-400', bg: 'bg-purple-400' },
-  4: { text: 'text-amber-400', bg: 'bg-amber-400' },
+export const LEVEL_COLORS: Record<number, { text: string; bg: string; hex: string }> = {
+  1: { text: 'text-slate-400', bg: 'bg-slate-400', hex: '#94a3b8' },
+  2: { text: 'text-blue-400', bg: 'bg-blue-400', hex: '#60a5fa' },
+  3: { text: 'text-purple-400', bg: 'bg-purple-400', hex: '#a78bfa' },
+  4: { text: 'text-amber-400', bg: 'bg-amber-400', hex: '#fbbf24' },
 };
 
 export function getXpForNextLevel(

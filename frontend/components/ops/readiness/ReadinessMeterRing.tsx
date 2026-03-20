@@ -44,7 +44,8 @@ export function ReadinessMeterRing({
           value={meter.current_value}
           gaugePrimaryColor={colors.primary}
           gaugeSecondaryColor={colors.secondary}
-          className={mini ? 'size-16 text-sm font-medium' : 'size-40 text-2xl font-semibold'}
+          className={mini ? 'size-16' : 'size-40'}
+          showValue={false}
         />
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <span className={cn('font-semibold', colors.textClass, mini ? 'text-xs' : 'text-lg')}>
