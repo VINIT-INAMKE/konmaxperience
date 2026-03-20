@@ -1,7 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import { AvatarCircles } from '@/components/ui/avatar-circles';
 import { NumberTicker } from '@/components/ui/number-ticker';
 import type { LeaderboardResponse } from '@/lib/types/leaderboard';
 
@@ -16,9 +15,6 @@ export function DashboardLeaderboardPreview({ data }: DashboardLeaderboardPrevie
   }
 
   const top5 = data.users.slice(0, 5);
-  const top3Avatars = top5.slice(0, 3).map((u) => ({
-    imageUrl: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(u.name)}`,
-  }));
 
   return (
     <div className="space-y-3">
@@ -30,12 +26,6 @@ export function DashboardLeaderboardPreview({ data }: DashboardLeaderboardPrevie
         </p>
       ) : (
         <>
-          {/* Avatar circles for top 3 */}
-          {top3Avatars.length > 0 && (
-            <AvatarCircles avatarUrls={top3Avatars} className="mb-1" />
-          )}
-
-          {/* Ranked list */}
           <ol className="space-y-2">
             {top5.map((user, index) => (
               <li key={user.id} className="flex items-center gap-3 text-sm">
