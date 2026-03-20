@@ -18,9 +18,11 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 4: Gamification & Readiness Intelligence** - XP from valid tasks, levels, leaderboard, 10 readiness meters (event-sourced), and KPI tracking
 - [ ] **Phase 5: Governance & Decision Management** - Decision logging with types, admin override/escalation on approvals, and approval delegation
 - [ ] **Phase 6: Operations Management** - Zone management, brand lifecycle, sales channels, and asset library with approval workflow
-- [ ] **Phase 7: Dashboards & Shared Boards** - Admin mission control, role user dashboard, admin role-perspective view, and shared boards (mission board, quest board, wins, evidence feed)
-- [ ] **Phase 8: Notifications** - BullMQ-backed alerts for deadlines, blockers, and pending approvals
-- [ ] **Phase 9: Customer-Facing Layer** - Public menu browsing, online ordering, customer feedback, and experience/event booking
+- [ ] **Phase 7: Recipe & Ingredient Management** - Structured recipes with BOM, ingredient master, recipe costing, menu item creation from approved recipes
+- [ ] **Phase 8: Inventory, Procurement & Kitchen** - Stock tracking, stock movements, purchase order workflow, production orders with auto-deduction, kitchen display system (order → prepare → ready), procurement dashboard
+- [ ] **Phase 9: Dashboards & Shared Boards** - Admin mission control, role user dashboard, admin role-perspective view, and shared boards (mission board, quest board, wins, evidence feed)
+- [ ] **Phase 10: Notifications** - BullMQ-backed alerts for deadlines, blockers, and pending approvals
+- [ ] **Phase 11: Customer-Facing Layer** - Public menu browsing, online ordering, customer feedback, and experience/event booking
 
 ## Phase Details
 
@@ -174,18 +176,20 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9
+Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11
 
-Note: Phase 5 and Phase 6 both depend on Phase 3 (not Phase 4), so they could potentially overlap with Phase 4 if needed. Phase 8 can begin after Phase 3 is complete. The listed order is the recommended sequential path.
+Note: Phase 5 and Phase 6 both depend on Phase 3 (not Phase 4), so they could potentially overlap with Phase 4 if needed. Phase 7 (Recipes) depends on Phase 6 (brands/assets). Phase 8 (Inventory) depends on Phase 7 (ingredients). Phase 11 (Customer) depends on Phase 7+8 (menu items from recipes).
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation & Authentication | 3/3 | Complete    | 2026-03-19 |
-| 2. Mission Execution Hierarchy | 4/4 | Complete    | 2026-03-19 |
-| 3. Evidence & Validation Cascade | 1/4 | Complete    | 2026-03-20 |
+| 1. Foundation & Authentication | 3/3 | Complete | 2026-03-19 |
+| 2. Mission Execution Hierarchy | 4/4 | Complete | 2026-03-19 |
+| 3. Evidence & Validation Cascade | 4/4 | Complete | 2026-03-20 |
 | 4. Gamification & Readiness Intelligence | 0/3 | Not started | - |
 | 5. Governance & Decision Management | 0/2 | Not started | - |
 | 6. Operations Management | 0/3 | Not started | - |
-| 7. Dashboards & Shared Boards | 0/3 | Not started | - |
-| 8. Notifications | 0/2 | Not started | - |
-| 9. Customer-Facing Layer | 0/3 | Not started | - |
+| 7. Recipe & Ingredient Management | 0/0 | Not started | - |
+| 8. Inventory & Procurement | 0/0 | Not started | - |
+| 9. Dashboards & Shared Boards | 0/3 | Not started | - |
+| 10. Notifications | 0/2 | Not started | - |
+| 11. Customer-Facing Layer | 0/3 | Not started | - |

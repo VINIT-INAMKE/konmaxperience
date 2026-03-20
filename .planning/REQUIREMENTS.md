@@ -65,6 +65,29 @@
 - [ ] **CUST-03**: Customers can rate dishes and leave feedback after ordering/dining
 - [ ] **CUST-04**: Customers can browse and book experience events (tastings, workshops, pop-ups)
 
+### Recipe & Ingredient Management
+
+- [ ] **RECIPE-01**: Structured recipe creation with name, description, prep steps, cooking method, yield, portion size, linked to brand
+- [ ] **RECIPE-02**: Recipe ingredient list (BOM) — each recipe has ingredients with quantity, unit, and prep notes
+- [ ] **RECIPE-03**: Ingredient master list with name, category, unit, supplier info, and current unit cost
+- [ ] **RECIPE-04**: Auto-calculated recipe cost from ingredient costs × quantities
+- [ ] **RECIPE-05**: Menu item creation from approved recipes with pricing and food cost percentage display
+
+### Inventory & Procurement
+
+- [ ] **INV-01**: Inventory stock tracking per ingredient — current quantity, location/zone, min stock level with low-stock alerts
+- [ ] **INV-02**: Stock movement history (in: procurement received, out: production deducted, adjustment: waste/spillage/correction)
+- [ ] **INV-03**: Purchase order workflow — create PO to vendor with items/quantities, track status (draft → ordered → received), auto-update inventory on receive
+- [ ] **INV-04**: Production order — select recipe + quantity, assign zone, on completion auto-deduct ingredients from inventory based on recipe BOM
+- [ ] **INV-05**: Procurement dashboard — pending POs, low stock alerts, vendor spend summary, inventory value
+
+### Kitchen & Order Preparation
+
+- [ ] **KITCHEN-01**: Kitchen display showing incoming orders with items to prepare, assigned to zones/stations
+- [ ] **KITCHEN-02**: Order item status tracking (pending → preparing → ready → served/dispatched) with timestamp per transition
+- [ ] **KITCHEN-03**: When order item moves to "preparing", auto-deduct ingredients from inventory based on recipe BOM
+- [ ] **KITCHEN-04**: Kitchen performance metrics — average prep time per item, orders in queue, items completed today
+
 ### Dashboards
 
 - [ ] **DASH-01**: Admin mission control -- readiness overview, pending approvals, blockers, decisions, ad-hoc task injector, leaderboard
@@ -112,7 +135,7 @@
 | Cross-node federation | Requires multiple nodes to exist first |
 | Native mobile app | Web-first with responsive design; mobile app is v2+ |
 | Real-time chat | High complexity, not core to operations coordination |
-| Complex inventory management | Basic procurement tracking sufficient for v1 |
+| Complex inventory management | ~~Moved to v1~~ — RECIPE-01 to RECIPE-05 + INV-01 to INV-05 |
 | Payment processing | Order placement without integrated payment in v1; payment is a separate decision |
 | Video evidence processing | Accept video uploads but no transcoding/processing in v1 |
 
@@ -145,25 +168,39 @@
 | GOVN-01 | Phase 5 | Pending |
 | GOVN-02 | Phase 5 | Pending |
 | GOVN-03 | Phase 5 | Pending |
-| NOTF-01 | Phase 8 | Pending |
-| NOTF-02 | Phase 8 | Pending |
-| NOTF-03 | Phase 8 | Pending |
+| NOTF-01 | Phase 10 | Pending |
+| NOTF-02 | Phase 10 | Pending |
+| NOTF-03 | Phase 10 | Pending |
 | OPS-01 | Phase 6 | Pending |
 | OPS-02 | Phase 6 | Pending |
 | OPS-03 | Phase 6 | Pending |
 | OPS-04 | Phase 6 | Pending |
-| CUST-01 | Phase 9 | Pending |
-| CUST-02 | Phase 9 | Pending |
-| CUST-03 | Phase 9 | Pending |
-| CUST-04 | Phase 9 | Pending |
-| DASH-01 | Phase 7 | Pending |
-| DASH-02 | Phase 7 | Pending |
-| DASH-03 | Phase 7 | Pending |
-| DASH-04 | Phase 7 | Pending |
+| RECIPE-01 | Phase 7 | Pending |
+| RECIPE-02 | Phase 7 | Pending |
+| RECIPE-03 | Phase 7 | Pending |
+| RECIPE-04 | Phase 7 | Pending |
+| RECIPE-05 | Phase 7 | Pending |
+| INV-01 | Phase 8 | Pending |
+| INV-02 | Phase 8 | Pending |
+| INV-03 | Phase 8 | Pending |
+| INV-04 | Phase 8 | Pending |
+| INV-05 | Phase 8 | Pending |
+| KITCHEN-01 | Phase 8 | Pending |
+| KITCHEN-02 | Phase 8 | Pending |
+| KITCHEN-03 | Phase 8 | Pending |
+| KITCHEN-04 | Phase 8 | Pending |
+| DASH-01 | Phase 9 | Pending |
+| DASH-02 | Phase 9 | Pending |
+| DASH-03 | Phase 9 | Pending |
+| DASH-04 | Phase 9 | Pending |
+| CUST-01 | Phase 11 | Pending |
+| CUST-02 | Phase 11 | Pending |
+| CUST-03 | Phase 11 | Pending |
+| CUST-04 | Phase 11 | Pending |
 
 **Coverage:**
-- v1 requirements: 40 total
-- Mapped to phases: 40
+- v1 requirements: 54 total
+- Mapped to phases: 54
 - Unmapped: 0
 
 ---
