@@ -5,12 +5,15 @@ import {
   Param,
   Body,
   Req,
+  Query,
   ParseUUIDPipe,
 } from '@nestjs/common';
 import express from 'express';
 import { EvidenceService } from './evidence.service';
 import { RequiresPermission } from '../common/decorators/permissions.decorator';
 import { Permission } from '../types/permissions';
+import { buildScopeFilter } from '../permissions/scope.filter';
+import { getPermissionsForRole } from '../permissions/permissions.cache';
 import { CreateEvidenceDto } from './dto/create-evidence.dto';
 import { ReviewEvidenceDto } from './dto/review-evidence.dto';
 
@@ -44,6 +47,28 @@ export class EvidenceController {
 @Controller('evidence')
 export class EvidenceReviewController {
   constructor(private readonly evidenceService: EvidenceService) {}
+
+  @Get()
+  @RequiresPermission(Permission.APPROVE_EVIDENCE)
+  async findAll(
+    @Query('status') status: string | undefined,
+    @Req() req: express.Request,
+  ) {
+    const user = (req as any).user;
+    const perms = await getPermissionsForRole(
+      user.roleCode,
+      (this.evidenceService as any).prisma,
+    );
+    const scopeFilter = buildScopeFilter({
+      id: user.id,
+      roleCode: user.roleCode,
+      permissions: perms,
+    });
+    return this.evidenceService.findAll(
+      { status: status || undefined },
+      scopeFilter,
+    );
+  }
 
   @Post(':id/approve')
   @RequiresPermission(Permission.APPROVE_EVIDENCE)

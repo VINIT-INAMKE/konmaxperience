@@ -12,6 +12,39 @@ import { CreateEvidenceDto } from './dto/create-evidence.dto';
 export class EvidenceService {
   constructor(private readonly prisma: PrismaService) {}
 
+  async findAll(
+    filters: { status?: string },
+    scopeFilter: Record<string, unknown>,
+  ) {
+    const where: Record<string, unknown> = {};
+
+    if (filters.status) {
+      where.approval_status = filters.status;
+    }
+
+    // Apply scope filter to the task relation
+    if (Object.keys(scopeFilter).length > 0) {
+      where.task = scopeFilter;
+    }
+
+    return this.prisma.evidence.findMany({
+      where,
+      include: {
+        uploader: { select: { id: true, name: true } },
+        reviewer: { select: { id: true, name: true } },
+        task: {
+          select: {
+            id: true,
+            title: true,
+            quest: { select: { id: true, title: true } },
+            mission: { select: { id: true, title: true } },
+          },
+        },
+      },
+      orderBy: { created_at: 'asc' },
+    });
+  }
+
   async findByTask(taskId: string) {
     return this.prisma.evidence.findMany({
       where: { task_id: taskId },

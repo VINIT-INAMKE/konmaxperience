@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard,
   Rocket,
+  CheckCircle,
   Users,
   Shield,
   LogOut,
@@ -13,6 +14,9 @@ import {
   AlertTriangle,
   Plus,
 } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { apiClient } from '@/lib/api-client';
+import type { Evidence } from '@/lib/types/evidence';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -33,6 +37,7 @@ interface NavItem {
   icon: React.ReactNode;
   disabled?: boolean;
   badge?: string;
+  badgeClassName?: string;
 }
 
 export function Sidebar() {
@@ -40,6 +45,16 @@ export function Sidebar() {
   const user = useAuthStore((s) => s.user);
   const isAdmin = user?.roleCode === RoleCode.FOUNDER_ADMIN;
   const [adHocOpen, setAdHocOpen] = useState(false);
+
+  // Fetch pending approvals count for badge
+  const { data: pendingEvidence } = useQuery({
+    queryKey: ['approvals', 'pending'],
+    queryFn: () =>
+      apiClient.get<Evidence[]>('/evidence?status=pending'),
+    // Only fetch for users who can approve (admin and leads)
+    enabled: isAdmin || (user?.roleCode?.endsWith('_LEAD') ?? false),
+  });
+  const pendingCount = pendingEvidence?.length ?? 0;
 
   const mainNav: NavItem[] = [
     {
@@ -51,6 +66,13 @@ export function Sidebar() {
       label: 'Missions',
       href: '/missions',
       icon: <Rocket className="size-4" />,
+    },
+    {
+      label: 'Approvals',
+      href: '/approvals',
+      icon: <CheckCircle className="size-4" />,
+      badge: pendingCount > 0 ? String(pendingCount) : undefined,
+      badgeClassName: 'text-amber-400 bg-amber-950 border-amber-500/20',
     },
   ];
 
@@ -198,7 +220,7 @@ function NavLink({ item, active }: { item: NavItem; active: boolean }) {
         {item.badge && (
           <Badge
             variant="secondary"
-            className="ml-auto text-[10px] h-4 px-1.5"
+            className={`ml-auto text-[10px] h-4 px-1.5 ${item.badgeClassName ?? ''}`}
           >
             {item.badge}
           </Badge>
