@@ -13,6 +13,8 @@ import { EmailModule } from './email/email.module';
 import { MissionsModule } from './missions/missions.module';
 import { QuestsModule } from './quests/quests.module';
 import { TasksModule } from './tasks/tasks.module';
+import { StorageModule } from './storage/storage.module';
+import { EvidenceModule } from './evidence/evidence.module';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { PermissionsGuard } from './auth/permissions.guard';
 
@@ -28,6 +30,8 @@ import { PermissionsGuard } from './auth/permissions.guard';
     MissionsModule,
     QuestsModule,
     TasksModule,
+    StorageModule,
+    EvidenceModule,
     EmailModule,
   ],
   controllers: [AppController],
