@@ -90,12 +90,13 @@ Plans:
   3. The leaderboard ranks all users by valid XP, updates when any task is validated, and can be disabled via kill switch
   4. When a previously valid task is invalidated (evidence rejected, status reverted), the XP is removed, the readiness meter contribution is revoked, and the leaderboard updates accordingly -- no stale credit persists
   5. KPIs track domain metrics with status indicators (on_track, at_risk, off_track) and each KPI is tied to contributing tasks
-**Plans**: TBD
+**Plans:** 4 plans
 
 Plans:
-- [ ] 04-01: TBD
-- [ ] 04-02: TBD
-- [ ] 04-03: TBD
+- [ ] 04-01-PLAN.md — Backend: SystemSetting schema, MANAGE_KPIS permission, auth response extension (xp_total/level), readiness/leaderboard/settings/KPI NestJS modules with unit tests
+- [ ] 04-02-PLAN.md — Frontend foundation: auth store extension, gamification types/components (LevelBadge, XpProgressBar, LevelUpCelebration), sidebar XP display, task card XP, evidence approval wiring
+- [ ] 04-03-PLAN.md — Frontend: /readiness page (10 animated rings, meter detail panels) + /leaderboard page (podium, ranked table, kill switch paused state)
+- [ ] 04-04-PLAN.md — Frontend: /kpis page (domain-scoped cards, create/edit sheet) + /admin/settings (kill switch) + /dashboard mission control (readiness strip, KPI alerts, leaderboard preview)
 
 ### Phase 5: Governance & Decision Management
 **Goal**: The team can log decisions with proper categorization, admin can break approval deadlocks via override or delegation, and the governance trail is auditable
@@ -228,7 +229,7 @@ Dependencies: Phase 7 (Recipes) depends on Phase 6 (brands/vendors). Phase 8 (In
 | 1. Foundation & Authentication | 3/3 | Complete | 2026-03-19 |
 | 2. Mission Execution Hierarchy | 4/4 | Complete | 2026-03-19 |
 | 3. Evidence & Validation Cascade | 4/4 | Complete | 2026-03-20 |
-| 4. Gamification & Readiness Intelligence | 0/0 | Not started | - |
+| 4. Gamification & Readiness Intelligence | 0/4 | Planned | - |
 | 5. Governance & Decision Management | 0/0 | Not started | - |
 | 6. Operations Management | 0/0 | Not started | - |
 | 7. Recipe & Ingredient Management | 0/0 | Not started | - |
