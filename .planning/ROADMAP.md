@@ -15,7 +15,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: Foundation & Authentication** - Project scaffolding (separate backend/frontend projects), full database schema, JWT auth with 8-role RBAC including admin super access and user-level filtering (completed 2026-03-19)
 - [x] **Phase 2: Mission Execution Hierarchy** - Mission/quest/task CRUD with types, ad-hoc injection, dependencies, blockers, and progress calculation (completed 2026-03-19)
 - [x] **Phase 3: Evidence & Validation Cascade** - Evidence upload via presigned URLs, approval workflow, and the complete task validation engine (the architectural heart) (completed 2026-03-20)
-- [ ] **Phase 4: Gamification & Readiness Intelligence** - XP from valid tasks, levels, leaderboard, 10 readiness meters (event-sourced), and KPI tracking
+- [x] **Phase 4: Gamification & Readiness Intelligence** - XP from valid tasks, levels, leaderboard, 10 readiness meters (event-sourced), and KPI tracking (completed 2026-03-20)
 - [ ] **Phase 5: Governance & Decision Management** - Decision logging with types, admin override/escalation on approvals, and approval delegation
 - [ ] **Phase 6: Operations Management** - Zone management, brand lifecycle, sales channels, and asset library with approval workflow
 - [ ] **Phase 7: Recipe & Ingredient Management** - Structured recipes with BOM, ingredient master, vendor management, recipe costing, menu items with pricing and food cost %
@@ -90,7 +90,7 @@ Plans:
   3. The leaderboard ranks all users by valid XP, updates when any task is validated, and can be disabled via kill switch
   4. When a previously valid task is invalidated (evidence rejected, status reverted), the XP is removed, the readiness meter contribution is revoked, and the leaderboard updates accordingly -- no stale credit persists
   5. KPIs track domain metrics with status indicators (on_track, at_risk, off_track) and each KPI is tied to contributing tasks
-**Plans:** 3/4 plans executed
+**Plans:** 4/4 plans complete
 
 Plans:
 - [ ] 04-01-PLAN.md — Backend: SystemSetting schema, MANAGE_KPIS permission, auth response extension (xp_total/level), readiness/leaderboard/settings/KPI NestJS modules with unit tests
@@ -229,7 +229,7 @@ Dependencies: Phase 7 (Recipes) depends on Phase 6 (brands/vendors). Phase 8 (In
 | 1. Foundation & Authentication | 3/3 | Complete | 2026-03-19 |
 | 2. Mission Execution Hierarchy | 4/4 | Complete | 2026-03-19 |
 | 3. Evidence & Validation Cascade | 4/4 | Complete | 2026-03-20 |
-| 4. Gamification & Readiness Intelligence | 3/4 | In Progress|  |
+| 4. Gamification & Readiness Intelligence | 4/4 | Complete   | 2026-03-20 |
 | 5. Governance & Decision Management | 0/0 | Not started | - |
 | 6. Operations Management | 0/0 | Not started | - |
 | 7. Recipe & Ingredient Management | 0/0 | Not started | - |
