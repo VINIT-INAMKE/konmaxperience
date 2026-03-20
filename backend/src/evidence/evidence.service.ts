@@ -83,4 +83,329 @@ export class EvidenceService {
       },
     });
   }
+
+  // --- Approval / Rejection / Validation Cascade ---
+
+  /**
+   * Calculate effective XP based on task type.
+   * core: 100%, adhoc: 70%, improvement: 80%
+   */
+  calculateEffectiveXp(task: { xp: number; task_type: string }): number {
+    switch (task.task_type) {
+      case 'core':
+        return task.xp;
+      case 'adhoc':
+        return Math.floor(task.xp * 0.7);
+      case 'improvement':
+        return Math.floor(task.xp * 0.8);
+      default:
+        return 0;
+    }
+  }
+
+  /**
+   * Recalculate total XP and level for a user based on valid tasks.
+   * Level thresholds: <200 = 1, <500 = 2, <1000 = 3, >=1000 = 4
+   */
+  async recalculateUserXp(userId: string, tx: any): Promise<void> {
+    const result = await tx.task.aggregate({
+      where: { owner_user_id: userId, valid: true },
+      _sum: { valid_xp: true },
+    });
+
+    const xpTotal = result._sum.valid_xp || 0;
+
+    let level = 1;
+    if (xpTotal >= 1000) {
+      level = 4;
+    } else if (xpTotal >= 500) {
+      level = 3;
+    } else if (xpTotal >= 200) {
+      level = 2;
+    }
+
+    await tx.user.update({
+      where: { id: userId },
+      data: { xp_total: xpTotal, level },
+    });
+  }
+
+  /**
+   * Recalculate quest progress using VALID tasks (not status='done').
+   * Core progress: valid core tasks / baseline_task_count
+   * Adhoc progress: valid adhoc tasks / total adhoc tasks
+   * Combined: weighted formula
+   */
+  async recalculateQuestProgress(
+    questId: string | null,
+    tx: any,
+  ): Promise<void> {
+    if (!questId) return;
+
+    const quest = await tx.quest.findUnique({ where: { id: questId } });
+    if (!quest) return;
+
+    // TIGHTENED: count tasks where valid=true (NOT status='done')
+    const coreValidCount = await tx.task.count({
+      where: { quest_id: questId, task_type: 'core', valid: true },
+    });
+    const coreProgress =
+      quest.baseline_task_count > 0
+        ? Math.round((coreValidCount / quest.baseline_task_count) * 100)
+        : 0;
+
+    const totalAdhoc = await tx.task.count({
+      where: { quest_id: questId, task_type: 'adhoc' },
+    });
+    const validAdhoc = await tx.task.count({
+      where: { quest_id: questId, task_type: 'adhoc', valid: true },
+    });
+    const adhocProgress =
+      totalAdhoc > 0 ? Math.round((validAdhoc / totalAdhoc) * 100) : 0;
+
+    // Combined progress (weighted: core carries more weight)
+    const combinedProgress =
+      quest.baseline_task_count > 0
+        ? Math.round(
+            ((coreValidCount + validAdhoc * 0.7) /
+              (quest.baseline_task_count + totalAdhoc * 0.7)) *
+              100,
+          )
+        : 0;
+
+    // IMPORTANT: Do NOT touch quest.status -- status is a separate concern
+    await tx.quest.update({
+      where: { id: questId },
+      data: {
+        core_progress_percent: coreProgress,
+        adhoc_progress_percent: adhocProgress,
+        progress_percent: combinedProgress,
+      },
+    });
+  }
+
+  /**
+   * Recalculate mission progress using VALID tasks (not status='done').
+   */
+  async recalculateMissionProgress(
+    missionId: string,
+    tx: any,
+  ): Promise<void> {
+    const total = await tx.task.count({
+      where: { mission_id: missionId },
+    });
+    const validCount = await tx.task.count({
+      where: { mission_id: missionId, valid: true },
+    });
+    const progress = total > 0 ? Math.round((validCount / total) * 100) : 0;
+
+    // IMPORTANT: Do NOT touch mission.status
+    await tx.mission.update({
+      where: { id: missionId },
+      data: { progress_percent: progress },
+    });
+  }
+
+  /**
+   * Apply or revoke readiness events for a task.
+   * Supports idempotent creation and revocation with recomputation.
+   */
+  async applyReadinessFromTask(
+    taskId: string,
+    isValid: boolean,
+    tx: any,
+  ): Promise<void> {
+    const task = await tx.task.findUnique({
+      where: { id: taskId },
+      select: {
+        id: true,
+        readiness_meter_id: true,
+        readiness_value: true,
+      },
+    });
+
+    if (!task || !task.readiness_meter_id) return;
+
+    if (isValid) {
+      // Check for existing active event (idempotent)
+      const existing = await tx.taskReadinessEvent.findFirst({
+        where: {
+          task_id: taskId,
+          readiness_meter_id: task.readiness_meter_id,
+          revoked_at: null,
+        },
+      });
+
+      if (!existing) {
+        await tx.taskReadinessEvent.create({
+          data: {
+            task_id: taskId,
+            readiness_meter_id: task.readiness_meter_id,
+            value: task.readiness_value,
+            applied: true,
+          },
+        });
+      }
+    } else {
+      // Revoke all active events for this task
+      await tx.taskReadinessEvent.updateMany({
+        where: {
+          task_id: taskId,
+          readiness_meter_id: task.readiness_meter_id,
+          revoked_at: null,
+        },
+        data: {
+          revoked_at: new Date(),
+          applied: false,
+        },
+      });
+    }
+
+    // ALWAYS recompute meter current_value from all active events
+    const sumResult = await tx.taskReadinessEvent.aggregate({
+      where: {
+        readiness_meter_id: task.readiness_meter_id,
+        revoked_at: null,
+      },
+      _sum: { value: true },
+    });
+
+    const total = sumResult._sum.value || 0;
+
+    await tx.readinessMeter.update({
+      where: { id: task.readiness_meter_id },
+      data: { current_value: Math.min(total, 100) },
+    });
+  }
+
+  /**
+   * Validate a task atomically within a transaction.
+   * Sets valid=true only when: status=done + approved evidence + approvals satisfied.
+   * Also recalculates user XP, quest progress, mission progress, and readiness.
+   */
+  async validateTask(
+    taskId: string,
+    tx: any,
+  ): Promise<{ valid: boolean; valid_xp: number }> {
+    const task = await tx.task.findUnique({
+      where: { id: taskId },
+      include: {
+        evidence: true,
+        approvals: true,
+      },
+    });
+
+    if (!task) {
+      throw new NotFoundException(`Task with ID ${taskId} not found`);
+    }
+
+    const hasApprovedEvidence = task.evidence.some(
+      (e: any) => e.approval_status === 'approved',
+    );
+
+    const approvalsSatisfied = task.requires_approval
+      ? task.approvals.every((a: any) => a.status === 'approved')
+      : true;
+
+    const isValid =
+      task.status === 'done' && hasApprovedEvidence && approvalsSatisfied;
+
+    const validXp = isValid ? this.calculateEffectiveXp(task) : 0;
+
+    // Update task: valid, valid_xp, and verified atomically
+    await tx.task.update({
+      where: { id: taskId },
+      data: {
+        valid: isValid,
+        valid_xp: validXp,
+        verified: isValid,
+      },
+    });
+
+    // Cascade: recalculate everything
+    await this.recalculateUserXp(task.owner_user_id, tx);
+    await this.recalculateQuestProgress(task.quest_id, tx);
+    await this.recalculateMissionProgress(task.mission_id, tx);
+    await this.applyReadinessFromTask(taskId, isValid, tx);
+
+    return { valid: isValid, valid_xp: validXp };
+  }
+
+  /**
+   * Approve evidence and trigger the full validation cascade.
+   * Everything runs in a single prisma.$transaction.
+   * Self-approval is blocked (403).
+   */
+  async approveEvidence(
+    evidenceId: string,
+    reviewerId: string,
+  ): Promise<{ valid: boolean; valid_xp: number }> {
+    return this.prisma.$transaction(async (tx: any) => {
+      const evidence = await tx.evidence.findUnique({
+        where: { id: evidenceId },
+      });
+
+      if (!evidence) {
+        throw new NotFoundException(
+          `Evidence with ID ${evidenceId} not found`,
+        );
+      }
+
+      // Self-approval check BEFORE any writes
+      if (evidence.uploaded_by === reviewerId) {
+        throw new ForbiddenException('Cannot approve your own evidence');
+      }
+
+      await tx.evidence.update({
+        where: { id: evidenceId },
+        data: {
+          approval_status: 'approved',
+          reviewed_by: reviewerId,
+          reviewed_at: new Date(),
+        },
+      });
+
+      return this.validateTask(evidence.task_id, tx);
+    });
+  }
+
+  /**
+   * Reject evidence with a required reason, then re-validate the task.
+   * Self-rejection is also blocked (403).
+   */
+  async rejectEvidence(
+    evidenceId: string,
+    reviewerId: string,
+    notes: string,
+  ): Promise<void> {
+    await this.prisma.$transaction(async (tx: any) => {
+      const evidence = await tx.evidence.findUnique({
+        where: { id: evidenceId },
+      });
+
+      if (!evidence) {
+        throw new NotFoundException(
+          `Evidence with ID ${evidenceId} not found`,
+        );
+      }
+
+      // Self-rejection check
+      if (evidence.uploaded_by === reviewerId) {
+        throw new ForbiddenException('Cannot reject your own evidence');
+      }
+
+      await tx.evidence.update({
+        where: { id: evidenceId },
+        data: {
+          approval_status: 'rejected',
+          reviewed_by: reviewerId,
+          reviewed_at: new Date(),
+          notes,
+        },
+      });
+
+      // Re-validate: task may become invalid if this was the only approved evidence
+      await this.validateTask(evidence.task_id, tx);
+    });
+  }
 }
