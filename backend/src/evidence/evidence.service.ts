@@ -319,7 +319,7 @@ export class EvidenceService {
   async validateTask(
     taskId: string,
     tx: any,
-  ): Promise<{ valid: boolean; valid_xp: number }> {
+  ): Promise<{ valid: boolean; valid_xp: number; user: { id: string; xp_total: number; level: number } }> {
     const task = await tx.task.findUnique({
       where: { id: taskId },
       include: {
@@ -361,7 +361,12 @@ export class EvidenceService {
     await this.recalculateMissionProgress(task.mission_id, tx);
     await this.applyReadinessFromTask(taskId, isValid, tx);
 
-    return { valid: isValid, valid_xp: validXp };
+    const updatedUser = await tx.user.findUnique({
+      where: { id: task.owner_user_id },
+      select: { id: true, xp_total: true, level: true },
+    });
+
+    return { valid: isValid, valid_xp: validXp, user: updatedUser };
   }
 
   /**
@@ -373,7 +378,7 @@ export class EvidenceService {
     evidenceId: string,
     reviewerId: string,
     reviewerRoleCode?: string,
-  ): Promise<{ valid: boolean; valid_xp: number }> {
+  ): Promise<{ valid: boolean; valid_xp: number; user: { id: string; xp_total: number; level: number } }> {
     return this.prisma.$transaction(async (tx: any) => {
       const evidence = await tx.evidence.findUnique({
         where: { id: evidenceId },

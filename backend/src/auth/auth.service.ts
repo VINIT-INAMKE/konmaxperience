@@ -65,6 +65,8 @@ export class AuthService {
         email: user.email,
         roleCode: user.role.code,
         roleName: user.role.name,
+        xp_total: user.xp_total,
+        level: user.level,
       },
     };
   }
@@ -103,7 +105,18 @@ export class AuthService {
 
     const accessToken = this.jwtService.sign(payload, { expiresIn: '15m' });
 
-    return { accessToken };
+    return {
+      accessToken,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        roleCode: user.role.code,
+        roleName: user.role.name,
+        xp_total: user.xp_total,
+        level: user.level,
+      },
+    };
   }
 
   async logout(tokenHash: string) {

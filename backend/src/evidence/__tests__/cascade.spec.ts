@@ -66,6 +66,7 @@ describe('EvidenceService - Validation Cascade', () => {
       },
       user: {
         update: jest.fn(),
+        findUnique: jest.fn().mockResolvedValue({ id: 'uploader-1', xp_total: 100, level: 1 }),
       },
       taskReadinessEvent: {
         findFirst: jest.fn(),
@@ -184,7 +185,7 @@ describe('EvidenceService - Validation Cascade', () => {
 
       const result = await (service as any).validateTask('task-1', txMock);
 
-      expect(result).toEqual({ valid: true, valid_xp: 100 });
+      expect(result).toEqual({ valid: true, valid_xp: 100, user: { id: 'uploader-1', xp_total: 100, level: 1 } });
       expect(txMock.task.update).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
@@ -209,7 +210,7 @@ describe('EvidenceService - Validation Cascade', () => {
 
       const result = await (service as any).validateTask('task-1', txMock);
 
-      expect(result).toEqual({ valid: false, valid_xp: 0 });
+      expect(result).toEqual({ valid: false, valid_xp: 0, user: { id: 'uploader-1', xp_total: 100, level: 1 } });
     });
 
     it('sets valid=false when no approved evidence', async () => {
@@ -225,7 +226,7 @@ describe('EvidenceService - Validation Cascade', () => {
 
       const result = await (service as any).validateTask('task-1', txMock);
 
-      expect(result).toEqual({ valid: false, valid_xp: 0 });
+      expect(result).toEqual({ valid: false, valid_xp: 0, user: { id: 'uploader-1', xp_total: 100, level: 1 } });
     });
   });
 

@@ -15,6 +15,10 @@ import { QuestsModule } from './quests/quests.module';
 import { TasksModule } from './tasks/tasks.module';
 import { StorageModule } from './storage/storage.module';
 import { EvidenceModule } from './evidence/evidence.module';
+import { ReadinessModule } from './readiness/readiness.module';
+import { LeaderboardModule } from './leaderboard/leaderboard.module';
+import { KpisModule } from './kpis/kpis.module';
+import { SettingsModule } from './settings/settings.module';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { PermissionsGuard } from './auth/permissions.guard';
 
@@ -33,6 +37,10 @@ import { PermissionsGuard } from './auth/permissions.guard';
     StorageModule,
     EvidenceModule,
     EmailModule,
+    ReadinessModule,
+    LeaderboardModule,
+    KpisModule,
+    SettingsModule,
   ],
   controllers: [AppController],
   providers: [

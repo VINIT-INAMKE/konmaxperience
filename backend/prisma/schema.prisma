@@ -237,6 +237,12 @@ model Kpi {
   tasks         Task[]
 }
 
+model SystemSetting {
+  key        String   @id
+  value      String
+  updated_at DateTime @updatedAt
+}
+
 model Zone {
   id            String  @id @default(uuid())
   name          String

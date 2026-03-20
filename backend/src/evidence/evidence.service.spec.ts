@@ -79,6 +79,7 @@ describe('EvidenceService', () => {
       },
       user: {
         update: jest.fn(),
+        findUnique: jest.fn().mockResolvedValue({ id: 'uploader-1', xp_total: 25, level: 1 }),
       },
       taskReadinessEvent: {
         findFirst: jest.fn(),
@@ -231,7 +232,7 @@ describe('EvidenceService', () => {
 
       const result = await (service as any).validateTask('task-1', txMock);
 
-      expect(result).toEqual({ valid: true, valid_xp: 100 });
+      expect(result).toEqual({ valid: true, valid_xp: 100, user: { id: 'uploader-1', xp_total: 25, level: 1 } });
     });
 
     it('returns valid=false when status != done', async () => {
@@ -248,7 +249,7 @@ describe('EvidenceService', () => {
 
       const result = await (service as any).validateTask('task-1', txMock);
 
-      expect(result).toEqual({ valid: false, valid_xp: 0 });
+      expect(result).toEqual({ valid: false, valid_xp: 0, user: { id: 'uploader-1', xp_total: 25, level: 1 } });
     });
 
     it('returns valid=false when no approved evidence exists', async () => {
@@ -265,7 +266,7 @@ describe('EvidenceService', () => {
 
       const result = await (service as any).validateTask('task-1', txMock);
 
-      expect(result).toEqual({ valid: false, valid_xp: 0 });
+      expect(result).toEqual({ valid: false, valid_xp: 0, user: { id: 'uploader-1', xp_total: 25, level: 1 } });
     });
 
     it('returns valid=false when approval is pending', async () => {
@@ -282,7 +283,7 @@ describe('EvidenceService', () => {
 
       const result = await (service as any).validateTask('task-1', txMock);
 
-      expect(result).toEqual({ valid: false, valid_xp: 0 });
+      expect(result).toEqual({ valid: false, valid_xp: 0, user: { id: 'uploader-1', xp_total: 25, level: 1 } });
     });
 
     it('valid_xp = task.xp for core type', async () => {
