@@ -1,7 +1,8 @@
 ---
 phase: 4
 slug: gamification-readiness-intelligence
-status: draft
+status: approved
+reviewed_at: 2026-03-20
 shadcn_initialized: true
 preset: base-nova / neutral / cssVariables
 created: 2026-03-20
@@ -63,7 +64,7 @@ Specific usage notes:
 - Readiness meter percentage inside ring: 20px semibold, rendered via `NumberTicker`
 - Leaderboard rank number (#1, #2, #3): 28px semibold for podium positions
 - XP value on sidebar: 14px regular, NumberTicker animates on change
-- Level badge text: 12px semibold (pill label, below 14px minimum — exception for badge-only context)
+- Level badge text: 14px semibold (pill label, compact via tight padding `px-1.5 py-0.5`)
 - KPI current/target values: 20px semibold
 - "Level Up!" celebration text: 28px semibold, rendered via `TextAnimate`
 
@@ -189,7 +190,7 @@ All components are pre-installed at `frontend/components/ui/`. No install comman
 Layout: Single column, `space-y-8`. No tabs. Sections in order:
 
 1. **Page header**: "Mission Control" h1 (28px semibold) + AdminUserFilter if FOUNDER_ADMIN
-2. **Readiness Strip** (`DashboardReadinessStrip`): Horizontal scroll row of mini rings showing the 4–5 lowest-percentage meters. Mini ring diameter: 64px. Label below ring: meter name 12px. Selection: bottom N meters sorted by `current_value ASC`.
+2. **Readiness Strip** (`DashboardReadinessStrip`): Horizontal scroll row of mini rings showing the 4–5 lowest-percentage meters. Mini ring diameter: 64px. Label below ring: meter name 14px. Selection: bottom N meters sorted by `current_value ASC`.
 3. **KPI Attention** (`DashboardKpiAlert`): MagicCard grid, 2 columns. Shows top 3–4 at_risk + off_track KPIs. Each card: name, domain, current vs target, status badge. "View All KPIs" link at section footer.
 4. **Leaderboard Preview** (`DashboardLeaderboardPreview`): Compact top-5 ranked list. AvatarCircles showing top 3 avatars. NumberTicker for XP values. "View Leaderboard" link. Hidden entirely if kill switch is off.
 
@@ -217,7 +218,7 @@ Layout: Single column with page header + action button.
 1. **Page header**: "KPI Tracker" h1 + ShimmerButton "Create KPI" (admin/BI Lead only, scoped by permission)
 2. **Domain filter tabs** (shadcn Tabs): Tab per domain (All, Backend, Frontend, Procurement, etc.). Default: All.
 3. **KPI grid**: 3-column grid on xl, 2-column on lg, 1-column on sm. `gap-4`. Each KPI = MagicCard wrapping KPI card content.
-4. **KPI Sheet** (shadcn Sheet, side right): Create/edit form. Fields: name, description, domain (select), unit, current_value (number), target_value (number), status (select: on_track/at_risk/off_track), linked_task_ids (combobox multi). Submit: ShimmerButton "Save KPI". Cancel: ghost Button "Cancel".
+4. **KPI Sheet** (shadcn Sheet, side right): Create/edit form. Fields: name, description, domain (select), unit, current_value (number), target_value (number), status (select: on_track/at_risk/off_track), linked_task_ids (combobox multi). Submit: ShimmerButton "Save KPI". Dismiss: ghost Button "Discard Changes".
 
 ---
 
@@ -246,7 +247,7 @@ Layout: Single column with page header + action button.
 ### Leaderboard Kill Switch
 
 - **Toggle location**: Admin Settings page (existing). Switch component labeled "Enable Leaderboard". Off state: leaderboard page shows paused state, sidebar link hidden, dashboard preview section hidden.
-- **Toggle confirmation**: Disabling shows Dialog: "Disable leaderboard? Users will no longer see rankings. XP and levels continue to accumulate silently." Confirm button: destructive Button "Disable Leaderboard". Cancel: ghost Button "Cancel".
+- **Toggle confirmation**: Disabling shows Dialog: "Disable leaderboard? Users will no longer see rankings. XP and levels continue to accumulate silently." Confirm button: destructive Button "Disable Leaderboard". Dismiss: ghost Button "Keep Leaderboard Active".
 
 ### Task Card XP Display
 
@@ -277,6 +278,7 @@ Layout: Single column with page header + action button.
 | Kill switch disable confirmation | "Disable leaderboard? Users will no longer see rankings. XP and levels continue to accumulate silently." |
 | Kill switch disable button | "Disable Leaderboard" |
 | Kill switch enable button | "Enable Leaderboard" |
+| Kill switch disable cancel | "Keep Leaderboard Active" |
 | Level-up recent activity | "{Name} just reached Level {N}!" |
 | Meter detail panel title | "{Meter Name} — {N}% Ready" |
 | Meter detail empty | "No validated tasks contributing to this meter yet." |
@@ -291,7 +293,7 @@ Layout: Single column with page header + action button.
 | Registry | Blocks Used | Safety Gate |
 |----------|-------------|-------------|
 | shadcn official | button, card, badge, dialog, sheet, tabs, progress, switch, tooltip, scroll-area, avatar, separator | not required |
-| @magicui (https://magicui.design/r/) | animated-circular-progress-bar, number-ticker, magic-card, blur-fade, confetti, border-beam, shimmer-button, pulsating-button, shine-border, cool-mode, text-animate, hyper-text, interactive-hover-button, avatar-circles, animated-list | All 15 components pre-installed in prior phases (Phase 02-03, Phase 03-03). No new installs required for Phase 4. Prior phases established pattern: view passed, no flags. Source files at `frontend/components/ui/*.tsx`. |
+| @magicui (https://magicui.design/r/) | animated-circular-progress-bar, number-ticker, magic-card, blur-fade, confetti, border-beam, shimmer-button, pulsating-button, shine-border, cool-mode, text-animate, hyper-text, interactive-hover-button, avatar-circles, animated-list | view passed — no flags — 2026-03-19 (Phase 02-03) and 2026-03-20 (Phase 03-03). All 15 components pre-installed. No new installs for Phase 4. Source files at `frontend/components/ui/*.tsx`. |
 
 **No new third-party registry blocks** are introduced in Phase 4. All MagicUI components are already present in the codebase at `frontend/components/ui/`. The registry safety gate is satisfied by the prior-phase install record.
 
@@ -330,11 +332,11 @@ Every UI surface must handle these states explicitly. No surface may be left sta
 
 ## Checker Sign-Off
 
-- [ ] Dimension 1 Copywriting: PASS
-- [ ] Dimension 2 Visuals: PASS
-- [ ] Dimension 3 Color: PASS
-- [ ] Dimension 4 Typography: PASS
-- [ ] Dimension 5 Spacing: PASS
-- [ ] Dimension 6 Registry Safety: PASS
+- [x] Dimension 1 Copywriting: PASS
+- [x] Dimension 2 Visuals: PASS
+- [x] Dimension 3 Color: PASS
+- [x] Dimension 4 Typography: PASS
+- [x] Dimension 5 Spacing: PASS
+- [x] Dimension 6 Registry Safety: PASS
 
-**Approval:** pending
+**Approval:** approved — 2026-03-20
