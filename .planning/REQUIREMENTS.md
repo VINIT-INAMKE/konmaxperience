@@ -75,18 +75,18 @@
 
 ### Inventory & Procurement
 
-- [ ] **INV-01**: Inventory stock tracking per ingredient — current quantity, location/zone, min stock level with low-stock alerts
-- [ ] **INV-02**: Stock movement history (in: procurement received, out: production deducted, adjustment: waste/spillage/correction)
-- [ ] **INV-03**: Purchase order workflow — create PO to vendor with items/quantities, track status (draft → ordered → received), auto-update inventory on receive
-- [ ] **INV-04**: Production order — select recipe + quantity, assign zone, on completion auto-deduct ingredients from inventory based on recipe BOM
-- [ ] **INV-05**: Procurement dashboard — pending POs, low stock alerts, vendor spend summary, inventory value
+- [ ] **INV-01**: Two-layer inventory — raw ingredients (what procurement buys) and production items (what kitchen preps). Each tracked separately with current quantity, zone, and min stock level with low-stock alerts
+- [ ] **INV-02**: Stock movement history (in: procurement received, out: kitchen prep deducted from raw, out: customer order deducted from production, adjustment: waste/spillage)
+- [ ] **INV-03**: Purchase order workflow — create PO to vendor with items/quantities, track status (draft → ordered → received), auto-update raw ingredient inventory on receive
+- [ ] **INV-04**: Kitchen prep batch — select recipe + quantity to prep, deducts raw ingredients, adds to production inventory (e.g., prep 20 pizza doughs → -flour/yeast/water from raw, +20 doughs to production)
+- [ ] **INV-05**: Procurement dashboard — pending POs, low stock alerts (both layers), vendor spend summary, inventory value
 
 ### Kitchen & Order Preparation
 
-- [ ] **KITCHEN-01**: Kitchen display showing incoming orders with items to prepare, assigned to zones/stations
+- [ ] **KITCHEN-01**: Kitchen display showing incoming customer orders with items to prepare, assigned to zones/stations
 - [ ] **KITCHEN-02**: Order item status tracking (pending → preparing → ready → served/dispatched) with timestamp per transition
-- [ ] **KITCHEN-03**: When order item moves to "preparing", auto-deduct ingredients from inventory based on recipe BOM
-- [ ] **KITCHEN-04**: Kitchen performance metrics — average prep time per item, orders in queue, items completed today
+- [ ] **KITCHEN-03**: When order item is fulfilled, auto-deduct from production inventory. If production inventory insufficient, alert kitchen to prep more (which deducts raw ingredients)
+- [ ] **KITCHEN-04**: Kitchen performance metrics — average prep time per item, orders in queue, items completed today, production inventory levels
 
 ### Dashboards
 
