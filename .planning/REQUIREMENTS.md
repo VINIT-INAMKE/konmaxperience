@@ -33,7 +33,7 @@
 
 ### Intelligence & Gamification
 
-- [ ] **INTL-01**: 13 readiness meters track real operational readiness (Villa, Backend, Frontend, Procurement, Standardization, Sales, Tech, Talent, Art Experience, Lifestyle Experience, Kitchen, Menu, Inventory)
+- [ ] **INTL-01**: 10 readiness meters track real operational readiness (Villa, Backend, Frontend, Procurement, Standardization, Sales, Tech, Talent, Art Experience, Lifestyle Experience). Additional meters (Kitchen, Menu, Inventory) added when those phases ship.
 - [ ] **INTL-02**: Only valid tasks contribute to readiness meters (event-based, not recalculated)
 - [ ] **INTL-03**: Users earn XP from valid tasks, accumulate levels (1-4)
 - [ ] **INTL-04**: Leaderboard ranks users by valid XP with kill switch option
@@ -119,9 +119,9 @@
 
 ### Notifications v2
 
-- **NOTF-04**: Near level-up nudge (within 20 XP of next level)
-- **NOTF-05**: Quest almost complete nudge (80%+ progress)
-- **NOTF-06**: WhatsApp/Slack integration for notifications
+- **NOTF-V2-01**: Near level-up nudge (within 20 XP of next level)
+- **NOTF-V2-02**: Quest almost complete nudge (80%+ progress)
+- **NOTF-V2-03**: WhatsApp/Slack integration for notifications
 
 ### Advanced Gamification
 

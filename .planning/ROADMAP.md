@@ -127,53 +127,92 @@ Plans:
 - [ ] 06-02: TBD
 - [ ] 06-03: TBD
 
-### Phase 7: Dashboards & Shared Boards
-**Goal**: Admin has a mission-control view of the entire operation, each role user has a personal productivity dashboard, and shared boards provide team-wide visibility into missions, quests, wins, and recent evidence
-**Depends on**: Phase 4, Phase 5, Phase 6
-**Requirements**: DASH-01, DASH-02, DASH-03, DASH-04
+### Phase 7: Recipe & Ingredient Management
+**Goal**: Structured recipes with ingredient BOMs, vendor management, auto-costed recipes, and menu items with pricing — the food production data layer
+**Depends on**: Phase 6 (brands, assets)
+**Requirements**: RECIPE-01, RECIPE-02, RECIPE-03, RECIPE-04, RECIPE-05, RECIPE-06
 **Success Criteria** (what must be TRUE):
-  1. Admin mission control displays: readiness overview across all 10 meters, pending approvals queue, active blockers, recent decisions, ad-hoc task injection shortcut, and leaderboard -- all on one screen
-  2. Role user dashboard displays: my assigned tasks (with status), my active quests (with progress), my uploaded evidence (with approval status), and my contribution meters -- personalized to the logged-in user's role
-  3. Admin can switch to view the dashboard from any role's perspective (seeing what that role user sees) and switch back to mission control
-  4. Shared boards are accessible to all internal users: mission board (all missions with progress), quest board (active quests), wins/milestones feed, and latest evidence feed
+  1. A recipe can be created with structured steps, yield, and linked to a brand, with status workflow (draft → approved → archived)
+  2. Each recipe has a BOM (bill of materials) listing ingredients with quantities and units
+  3. Ingredients have a master list with categories, units, and min stock levels
+  4. Vendors can be created and linked to ingredients with price tracking (effective date)
+  5. Recipe cost auto-calculates from ingredient costs × BOM quantities
+  6. Menu items can be created from approved recipes with selling price, food cost %, and channel availability
 **Plans**: TBD
 
-Plans:
-- [ ] 07-01: TBD
-- [ ] 07-02: TBD
-- [ ] 07-03: TBD
-
-### Phase 8: Notifications
-**Goal**: Users receive timely alerts for deadlines, blockers, and pending approvals so nothing falls through the cracks
-**Depends on**: Phase 2, Phase 3 (state changes that trigger notifications)
-**Requirements**: NOTF-01, NOTF-02, NOTF-03
+### Phase 8: Inventory & Procurement
+**Goal**: Raw ingredient stock tracking with real-time visibility, purchase order workflow from vendor to receiving, and stock movement audit trail
+**Depends on**: Phase 7 (ingredients, vendors)
+**Requirements**: INV-01, INV-02, INV-03, INV-04
 **Success Criteria** (what must be TRUE):
-  1. A user is alerted when any of their tasks is due within 48 hours
-  2. A user is alerted when any of their tasks is blocked by an unresolved dependency
-  3. Admin is alerted when any approval has been pending for more than 24 hours
-  4. Notification delivery failures never block or roll back the core operation that triggered the notification (BullMQ queue isolation)
+  1. Each ingredient has a current stock quantity per zone with min level, and low-stock alerts fire when below minimum
+  2. Every stock change is recorded as a movement (received, prep-deducted, waste, adjustment) with reason and reference
+  3. Purchase orders can be created to vendors with line items, tracked through draft → ordered → received, and auto-update inventory on receive
+  4. Procurement dashboard shows pending POs, low stock alerts, vendor spend, and total inventory value
 **Plans**: TBD
 
-Plans:
-- [ ] 08-01: TBD
-- [ ] 08-02: TBD
-
-### Phase 9: Customer-Facing Layer
-**Goal**: External customers can browse the menu, place orders, leave feedback, and book experience events -- all consuming only approved internal assets, fully separated from the internal ops surface
-**Depends on**: Phase 6 (approved assets to display), Phase 8 (order notifications)
-**Requirements**: CUST-01, CUST-02, CUST-03, CUST-04
+### Phase 9: Kitchen & Prep
+**Goal**: Kitchen prep batch system that bridges raw ingredients to servable items, KDS for real-time order display, menu availability from prep levels, and structured waste tracking
+**Depends on**: Phase 7 (recipes), Phase 8 (raw inventory)
+**Requirements**: KITCHEN-01, KITCHEN-02, KITCHEN-03, KITCHEN-04, KITCHEN-05
 **Success Criteria** (what must be TRUE):
-  1. A customer (no login required) can browse the public menu page showing only food items with approved status from the internal asset library
-  2. A customer can place a delivery or takeaway order online, selecting items from the approved menu with availability re-validated at order submission time
-  3. A customer can rate dishes and leave written feedback after ordering or dining
-  4. A customer can browse upcoming experience events (tastings, workshops, pop-ups) and book a spot
-  5. Customer-facing pages and API endpoints are fully isolated from internal ops data -- a customer request can never access unapproved assets or internal user data
+  1. Kitchen can log prep batches (recipe × quantity) — system deducts raw ingredients per BOM and tracks production quantity remaining
+  2. Kitchen display shows incoming orders grouped by zone/station with real-time updates
+  3. Menu items auto-mark as sold out when prep batch levels are insufficient, and alert kitchen to prep more
+  4. Waste can be logged with structured reason categories and cost impact calculation
+  5. Kitchen metrics display: orders in queue, prep batch levels, average prep time, waste percentage
 **Plans**: TBD
 
-Plans:
-- [ ] 09-01: TBD
-- [ ] 09-02: TBD
-- [ ] 09-03: TBD
+### Phase 10: POS & Orders
+**Goal**: Full POS interface for staff to take orders across all channels (dine-in, takeaway, delivery), with payment tracking, order-to-kitchen flow, and own-delivery dispatch
+**Depends on**: Phase 7 (menu items), Phase 9 (KDS, prep batch deduction)
+**Requirements**: POS-01, POS-02, POS-03, POS-04, POS-05, POS-06
+**Success Criteria** (what must be TRUE):
+  1. Staff can take orders on a POS interface with menu grid, category browsing, quantity adjustment, and order summary
+  2. Orders track channel (dine-in/takeaway/delivery) with channel-specific fields and status flow (placed → preparing → ready → served/dispatched)
+  3. Payment method and status are recorded per order (cash/card/UPI, pending/paid)
+  4. When an order is placed, items appear on KDS; when marked ready on KDS, order status updates; production inventory deducts on fulfillment
+  5. Delivery orders can be assigned to delivery staff with dispatch status tracking
+  6. Order history is searchable with filters and daily revenue summary
+**Plans**: TBD
+
+### Phase 11: Dashboards & Shared Boards
+**Goal**: Comprehensive dashboards for admin mission control, role-specific views, kitchen operations, inventory/procurement, BI analytics, and shared team boards
+**Depends on**: Phase 4, Phase 5, Phase 6, Phase 10 (needs all data sources)
+**Requirements**: DASH-01, DASH-02, DASH-03, DASH-04, DASH-05, DASH-06
+**Success Criteria** (what must be TRUE):
+  1. Admin mission control: readiness meters, pending approvals, active blockers, decisions, leaderboard
+  2. Role user dashboard: my tasks, quests, evidence, contribution meters
+  3. Kitchen dashboard: orders in queue, prep batch levels, station utilization, average prep times, waste today
+  4. Inventory & procurement dashboard: stock levels (raw + production), low stock alerts, PO status, vendor spend
+  5. BI dashboard: revenue (daily/weekly/monthly), food cost %, recipe cost analysis, top-selling items, channel breakdown
+  6. Shared boards: mission board, quest board, wins/milestones, evidence feed
+**Plans**: TBD
+
+### Phase 12: Notifications
+**Goal**: Comprehensive alert system covering task deadlines, blockers, approvals, stock levels, orders, kitchen, and delivery — delivered via BullMQ with guaranteed non-blocking delivery
+**Depends on**: Phase 2, Phase 3, Phase 8, Phase 10 (all event sources)
+**Requirements**: NOTF-01, NOTF-02, NOTF-03, NOTF-04, NOTF-05, NOTF-06, NOTF-07
+**Success Criteria** (what must be TRUE):
+  1. User alerted when task is due within 48 hours
+  2. User alerted when task is blocked by unresolved dependency
+  3. Admin alerted when approval pending more than 24 hours
+  4. Procurement alerted when ingredient drops below min stock level
+  5. Kitchen alerted when new order arrives (KDS push)
+  6. POS staff alerted when order is ready for serving/pickup
+  7. Delivery status updates tracked (dispatched, in-transit, delivered)
+  8. All notification delivery failures are isolated — never block core operations
+**Plans**: TBD
+
+### Phase 13: Customer Experience
+**Goal**: Post-dining feedback collection, experience event booking, and digital menu display — all without customer auth (POS-based operation)
+**Depends on**: Phase 10 (orders), Phase 7 (menu items)
+**Requirements**: CUST-01, CUST-02, CUST-03
+**Success Criteria** (what must be TRUE):
+  1. Customers can submit feedback via QR code or link — rate dishes and leave comments without login
+  2. Experience events can be created internally, displayed publicly with capacity, and booked (name + phone)
+  3. Digital menu display shows current menu with prices, available items, and brand sections (for screens or QR access)
+**Plans**: TBD
 
 ## Progress
 
