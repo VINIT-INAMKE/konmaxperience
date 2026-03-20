@@ -29,6 +29,7 @@ const ROLE_SEEDS: RoleSeed[] = [
       Permission.CREATE_QUEST,
       Permission.CREATE_TASK,
       Permission.UPDATE_ANY_TASK,
+      Permission.UPLOAD_EVIDENCE,
       Permission.APPROVE_EVIDENCE,
       Permission.VERIFY_TASK,
       Permission.CREATE_DECISION,

@@ -22,7 +22,6 @@ export class EvidenceController {
   constructor(private readonly evidenceService: EvidenceService) {}
 
   @Get()
-  @RequiresPermission(Permission.UPLOAD_EVIDENCE)
   async findByTask(@Param('taskId', ParseUUIDPipe) taskId: string) {
     return this.evidenceService.findByTask(taskId);
   }
