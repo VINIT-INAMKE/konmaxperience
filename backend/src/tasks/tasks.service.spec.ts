@@ -385,19 +385,10 @@ describe('TasksService', () => {
       txMock.task.update.mockResolvedValue({ ...mockTask, status: 'done' });
       txMock.quest.findUnique.mockResolvedValue(null); // no quest
 
-      // Mission has 10 tasks, 4 valid (seeded with valid=true for test)
-      txMock.task.findMany.mockResolvedValue([
-        { valid: true },
-        { valid: true },
-        { valid: true },
-        { valid: true },
-        { valid: false },
-        { valid: false },
-        { valid: false },
-        { valid: false },
-        { valid: false },
-        { valid: false },
-      ]);
+      // Mission has 10 tasks, 4 valid — mocked via task.count
+      txMock.task.count
+        .mockResolvedValueOnce(10)  // total tasks in mission
+        .mockResolvedValueOnce(4);  // valid tasks in mission (valid: true)
       txMock.mission.update.mockResolvedValue({});
 
       await service.update('task-1', { status: 'done' }, regularUser);
