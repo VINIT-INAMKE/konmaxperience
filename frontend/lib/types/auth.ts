@@ -18,9 +18,20 @@ export interface LoginResponse {
     email: string;
     roleCode: string;
     roleName: string;
+    xp_total: number;
+    level: number;
   };
 }
 
 export interface RefreshResponse {
   accessToken: string;
+  user: {
+    id: string;
+    name: string;
+    email: string;
+    roleCode: string;
+    roleName: string;
+    xp_total: number;
+    level: number;
+  };
 }

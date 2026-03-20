@@ -44,6 +44,8 @@ export default function OpsLayout({
           email: me.email,
           roleCode: me.roleCode,
           roleName: me.roleName,
+          xp_total: me.xpTotal ?? 0,
+          level: me.level ?? 1,
         });
         setReady(true);
       } catch {
