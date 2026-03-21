@@ -57,10 +57,10 @@
 
 ### Operations Management
 
-- [ ] **OPS-01**: Manage 6+ villa zones with type, owner, and status
-- [ ] **OPS-02**: Manage brands with type (food/art/lifestyle) and status lifecycle (idea to active)
-- [ ] **OPS-03**: Manage sales channels (dine-in, delivery, takeaway, retail, event, workshop, online)
-- [ ] **OPS-04**: Asset library for recipes, SOPs, menus, cost sheets, training docs with status workflow
+- [x] **OPS-01**: Manage 6+ villa zones with type, owner, and status
+- [x] **OPS-02**: Manage brands with type (food/art/lifestyle) and status lifecycle (idea to active)
+- [x] **OPS-03**: Manage sales channels (dine-in, delivery, takeaway, retail, event, workshop, online)
+- [x] **OPS-04**: Asset library for recipes, SOPs, menus, cost sheets, training docs with status workflow
 
 ### Recipe & Ingredient Management
 
@@ -187,10 +187,10 @@
 | GOVN-01 | Phase 5 | Complete |
 | GOVN-02 | Phase 5 | Complete |
 | GOVN-03 | Phase 5 | Complete |
-| OPS-01 | Phase 6 | Pending |
-| OPS-02 | Phase 6 | Pending |
-| OPS-03 | Phase 6 | Pending |
-| OPS-04 | Phase 6 | Pending |
+| OPS-01 | Phase 6 | Complete |
+| OPS-02 | Phase 6 | Complete |
+| OPS-03 | Phase 6 | Complete |
+| OPS-04 | Phase 6 | Complete |
 | RECIPE-01 | Phase 7 | Pending |
 | RECIPE-02 | Phase 7 | Pending |
 | RECIPE-03 | Phase 7 | Pending |
