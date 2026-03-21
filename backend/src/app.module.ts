@@ -30,6 +30,9 @@ import { IngredientsModule } from './ingredients/ingredients.module';
 import { VendorsModule } from './vendors/vendors.module';
 import { RecipesModule } from './recipes/recipes.module';
 import { MenuModule } from './menu/menu.module';
+import { InventoryModule } from './inventory/inventory.module';
+import { PurchaseOrdersModule } from './purchase-orders/purchase-orders.module';
+import { ProcurementModule } from './procurement/procurement.module';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { PermissionsGuard } from './auth/permissions.guard';
 
@@ -63,6 +66,9 @@ import { PermissionsGuard } from './auth/permissions.guard';
     MenuModule,
     RecipesModule,
     VendorsModule,
+    InventoryModule,
+    PurchaseOrdersModule,
+    ProcurementModule,
   ],
   controllers: [AppController],
   providers: [
