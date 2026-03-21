@@ -20,6 +20,10 @@ import {
   ClipboardList,
   ClipboardCheck,
   UserCheck,
+  MapPin,
+  Tag,
+  Radio,
+  FolderOpen,
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
@@ -166,6 +170,13 @@ export function Sidebar() {
     },
   ];
 
+  const operationsNav: NavItem[] = [
+    { label: 'Zones', href: '/operations/zones', icon: <MapPin className="size-4" /> },
+    { label: 'Brands', href: '/operations/brands', icon: <Tag className="size-4" /> },
+    { label: 'Channels', href: '/operations/channels', icon: <Radio className="size-4" /> },
+    { label: 'Assets', href: '/operations/assets', icon: <FolderOpen className="size-4" /> },
+  ];
+
   const adminNav: NavItem[] = [
     {
       label: 'Team',
@@ -242,6 +253,15 @@ export function Sidebar() {
           </span>
         </div>
         {intelligenceNav.map((item) => (
+          <NavLink key={item.label} item={item} active={isActive(item.href)} />
+        ))}
+
+        <div className="pt-3 pb-1 px-2">
+          <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/60">
+            Operations
+          </span>
+        </div>
+        {operationsNav.map((item) => (
           <NavLink key={item.label} item={item} active={isActive(item.href)} />
         ))}
 
