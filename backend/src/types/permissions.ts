@@ -17,6 +17,8 @@ export enum Permission {
   MANAGE_KPIS = 'MANAGE_KPIS',
   MANAGE_DELEGATIONS = 'MANAGE_DELEGATIONS',
   MANAGE_OPS = 'MANAGE_OPS',
+  MANAGE_INVENTORY = 'MANAGE_INVENTORY',
+  MANAGE_PROCUREMENT = 'MANAGE_PROCUREMENT',
 }
 
 export const PERMISSION_DISPLAY_NAMES: Record<Permission, string> = {
@@ -38,6 +40,8 @@ export const PERMISSION_DISPLAY_NAMES: Record<Permission, string> = {
   [Permission.MANAGE_KPIS]: 'Manage KPIs',
   [Permission.MANAGE_DELEGATIONS]: 'Manage approval delegations',
   [Permission.MANAGE_OPS]: 'Manage operations',
+  [Permission.MANAGE_INVENTORY]: 'Manage inventory',
+  [Permission.MANAGE_PROCUREMENT]: 'Manage procurement',
 };
 
 export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
@@ -59,4 +63,6 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   [Permission.MANAGE_KPIS]: 'Create and edit KPI metrics',
   [Permission.MANAGE_DELEGATIONS]: 'Create and deactivate approval delegations between users',
   [Permission.MANAGE_OPS]: 'Create and manage zones, brands, channels, and assets',
+  [Permission.MANAGE_INVENTORY]: 'Track and adjust ingredient stock levels across zones',
+  [Permission.MANAGE_PROCUREMENT]: 'Create and manage purchase orders with vendors',
 };

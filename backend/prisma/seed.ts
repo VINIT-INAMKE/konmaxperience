@@ -89,6 +89,8 @@ const ROLE_SEEDS: RoleSeed[] = [
       Permission.UPLOAD_EVIDENCE,
       Permission.APPROVE_EVIDENCE,
       Permission.VERIFY_TASK,
+      Permission.MANAGE_INVENTORY,
+      Permission.MANAGE_PROCUREMENT,
     ],
     functionDomain: 'procurement',
     userName: 'Procurement Lead User',

@@ -49,6 +49,8 @@ model User {
   delegations_to          ApprovalDelegation[] @relation("DelegationTo")
   delegations_created     ApprovalDelegation[] @relation("DelegationCreator")
   created_recipes         Recipe[]             @relation("RecipeCreator")
+  stockMovements          StockMovement[]      @relation("StockMovementCreator")
+  purchaseOrders          PurchaseOrder[]      @relation("PurchaseOrderer")
 }
 
 model RefreshToken {
@@ -273,14 +275,17 @@ model SystemSetting {
 }
 
 model Zone {
-  id            String   @id @default(uuid())
-  name          String
-  zone_type     String
-  owner_user_id String?
-  owner         User?    @relation(fields: [owner_user_id], references: [id])
-  status        String   @default("planned")
-  notes         String?
-  recipes       Recipe[]
+  id               String            @id @default(uuid())
+  name             String
+  zone_type        String
+  owner_user_id    String?
+  owner            User?             @relation(fields: [owner_user_id], references: [id])
+  status           String            @default("planned")
+  notes            String?
+  recipes          Recipe[]
+  IngredientStocks IngredientStock[]
+  StockMovements   StockMovement[]
+  PurchaseOrders   PurchaseOrder[]
 }
 
 model Brand {
@@ -363,15 +368,18 @@ model RecipeLine {
 }
 
 model Ingredient {
-  id              String       @id @default(uuid())
+  id              String              @id @default(uuid())
   name            String
   category        String
   base_unit       String
   min_stock_level Decimal
-  created_at      DateTime     @default(now())
-  updated_at      DateTime     @updatedAt
+  created_at      DateTime            @default(now())
+  updated_at      DateTime            @updatedAt
   RecipeLines     RecipeLine[]
   VendorPrices    VendorPrice[]
+  IngredientStocks    IngredientStock[]
+  StockMovements      StockMovement[]
+  PurchaseOrderLines  PurchaseOrderLine[]
 }
 
 model UnitConversion {
@@ -384,15 +392,16 @@ model UnitConversion {
 }
 
 model Vendor {
-  id            String        @id @default(uuid())
-  name          String
-  phone         String?
-  email         String?
-  address       String?
-  payment_terms String?
-  status        String        @default("active")
-  created_at    DateTime      @default(now())
-  VendorPrices  VendorPrice[]
+  id             String          @id @default(uuid())
+  name           String
+  phone          String?
+  email          String?
+  address        String?
+  payment_terms  String?
+  status         String          @default("active")
+  created_at     DateTime        @default(now())
+  VendorPrices   VendorPrice[]
+  PurchaseOrders PurchaseOrder[]
 }
 
 model VendorPrice {
@@ -440,4 +449,64 @@ model ChannelModifier {
   status         String  @default("active")
 
   @@unique([channel_type])
+}
+
+model IngredientStock {
+  id               String     @id @default(uuid())
+  ingredient_id    String
+  zone_id          String
+  current_quantity Decimal
+  updated_at       DateTime   @updatedAt
+  ingredient       Ingredient @relation(fields: [ingredient_id], references: [id])
+  zone             Zone       @relation(fields: [zone_id], references: [id])
+
+  @@unique([ingredient_id, zone_id])
+}
+
+model StockMovement {
+  id                String     @id @default(uuid())
+  ingredient_id     String
+  zone_id           String
+  movement_type     String     // "received" | "prep_deducted" | "order_deducted" | "waste" | "adjustment"
+  quantity          Decimal    // in base_unit, signed (+/-)
+  original_quantity Decimal    // in original unit for display
+  unit              String     // original unit for display
+  reason            String?
+  reference_type    String?    // "purchase_order" | "prep_batch" | "order" | "waste_log"
+  reference_id      String?
+  created_by        String
+  created_at        DateTime   @default(now())
+  ingredient        Ingredient @relation(fields: [ingredient_id], references: [id])
+  zone              Zone       @relation(fields: [zone_id], references: [id])
+  creator           User       @relation("StockMovementCreator", fields: [created_by], references: [id])
+}
+
+model PurchaseOrder {
+  id              String              @id @default(uuid())
+  vendor_id       String
+  zone_id         String              // receiving needs a zone for IngredientStock upsert
+  status          String              @default("draft")  // draft | ordered | received | cancelled
+  total_amount    Decimal             @default(0)
+  notes           String?
+  ordered_by      String
+  ordered_at      DateTime?
+  received_at     DateTime?
+  created_at      DateTime            @default(now())
+  updated_at      DateTime            @updatedAt
+  vendor          Vendor              @relation(fields: [vendor_id], references: [id])
+  zone            Zone                @relation(fields: [zone_id], references: [id])
+  ordered_by_user User                @relation("PurchaseOrderer", fields: [ordered_by], references: [id])
+  lines           PurchaseOrderLine[]
+}
+
+model PurchaseOrderLine {
+  id                String        @id @default(uuid())
+  po_id             String
+  ingredient_id     String
+  quantity          Decimal
+  unit              String
+  unit_cost         Decimal
+  received_quantity Decimal?
+  purchase_order    PurchaseOrder @relation(fields: [po_id], references: [id], onDelete: Cascade)
+  ingredient        Ingredient    @relation(fields: [ingredient_id], references: [id])
 }
