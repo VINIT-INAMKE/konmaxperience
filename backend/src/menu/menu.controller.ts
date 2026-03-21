@@ -87,8 +87,14 @@ export class MenuController {
   }
 
   // ----------------------------------------------------------------
-  // Availability (backend-only for Phase 9; D-11 frontend deferred to Phase 10)
+  // Availability
   // ----------------------------------------------------------------
+
+  // IMPORTANT: Batch route BEFORE parameterized route to prevent shadowing
+  @Get('availability')
+  async getAllServingsAvailable() {
+    return this.menuService.getAllServingsAvailable();
+  }
 
   @Get('availability/:menuItemId')
   async getServingsAvailable(

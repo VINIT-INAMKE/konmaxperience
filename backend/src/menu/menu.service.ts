@@ -196,25 +196,30 @@ export class MenuService {
   }
 
   // ----------------------------------------------------------------
-  // Menu Availability (backend-only for Phase 9; D-11 frontend deferred to Phase 10)
+  // Menu Availability
   // ----------------------------------------------------------------
 
-  async getServingsAvailable(
-    menuItemId: string,
+  /**
+   * Compute servings available for a single menu item given its loaded recipe lines.
+   * Shared helper used by both single-item and batch endpoints.
+   */
+  private async computeServings(
+    menuItem: {
+      available: boolean;
+      status: string;
+      recipe: {
+        RecipeLines: Array<{
+          input_type: string;
+          quantity: any;
+          unit: string;
+          ingredient_id: string | null;
+          ingredient: { base_unit: string } | null;
+          source_recipe_id: string | null;
+          source_recipe: { yield_unit: string } | null;
+        }>;
+      };
+    },
   ): Promise<{ available: boolean; servings_remaining: number }> {
-    const menuItem = await this.prisma.menuItem.findUniqueOrThrow({
-      where: { id: menuItemId },
-      include: {
-        recipe: {
-          include: {
-            RecipeLines: {
-              include: { ingredient: true, source_recipe: true },
-            },
-          },
-        },
-      },
-    });
-
     if (!menuItem.available || menuItem.status !== 'active') {
       return { available: false, servings_remaining: 0 };
     }
@@ -223,7 +228,6 @@ export class MenuService {
 
     for (const line of menuItem.recipe.RecipeLines) {
       if (line.input_type === 'ingredient') {
-        // Check raw ingredient stock across all zones
         const stocks = await this.prisma.ingredientStock.findMany({
           where: { ingredient_id: line.ingredient_id! },
         });
@@ -243,7 +247,6 @@ export class MenuService {
       }
 
       if (line.input_type === 'recipe') {
-        // Check active, non-expired prep batches
         const batches = await this.prisma.prepBatch.findMany({
           where: {
             recipe_id: line.source_recipe_id!,
@@ -269,5 +272,52 @@ export class MenuService {
 
     const remaining = minServings === Infinity ? 0 : minServings;
     return { available: remaining > 0, servings_remaining: remaining };
+  }
+
+  async getServingsAvailable(
+    menuItemId: string,
+  ): Promise<{ available: boolean; servings_remaining: number }> {
+    const menuItem = await this.prisma.menuItem.findUniqueOrThrow({
+      where: { id: menuItemId },
+      include: {
+        recipe: {
+          include: {
+            RecipeLines: {
+              include: { ingredient: true, source_recipe: true },
+            },
+          },
+        },
+      },
+    });
+
+    return this.computeServings(menuItem);
+  }
+
+  async getAllServingsAvailable(): Promise<
+    Record<string, { available: boolean; servings_remaining: number }>
+  > {
+    const menuItems = await this.prisma.menuItem.findMany({
+      where: { status: 'active' },
+      include: {
+        recipe: {
+          include: {
+            RecipeLines: {
+              include: { ingredient: true, source_recipe: true },
+            },
+          },
+        },
+      },
+    });
+
+    const result: Record<
+      string,
+      { available: boolean; servings_remaining: number }
+    > = {};
+
+    for (const item of menuItems) {
+      result[item.id] = await this.computeServings(item);
+    }
+
+    return result;
   }
 }
