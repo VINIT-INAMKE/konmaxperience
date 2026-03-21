@@ -17,6 +17,7 @@ Every piece of work must be evidence-backed, approved, and validated before it c
 - [x] Evidence upload, approval workflow, validation cascade (Phase 3)
 - [x] Gamification & Readiness Intelligence — XP, levels, leaderboard, 10 readiness meters, KPIs (Phase 4)
 - [x] Governance & Decision Management — decision logging, approval override/escalation, delegation with audit trail (Phase 5)
+- [x] Operations Management — zones, brands, channels, asset library with upload and status workflow (Phase 6)
 
 ### Active
 
@@ -123,4 +124,4 @@ Complete data model for Phases 7-13 (22 new entities) defined in `docs/superpowe
 | Channel modifier (not per-item pricing) | One modifier per channel, base_price + modifier = final | Confirmed |
 
 ---
-*Last updated: 2026-03-21 after Phase 5 (Governance & Decision Management) completion*
+*Last updated: 2026-03-21 after Phase 6 (Operations Management) completion*
