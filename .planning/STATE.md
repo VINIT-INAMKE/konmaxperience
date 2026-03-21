@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Completed 10-04-PLAN.md
-last_updated: "2026-03-21T17:28:43.564Z"
+stopped_at: Completed 11-01-PLAN.md
+last_updated: "2026-03-21T18:47:36.414Z"
 progress:
   total_phases: 13
   completed_phases: 10
-  total_plans: 43
-  completed_plans: 43
+  total_plans: 48
+  completed_plans: 44
 ---
 
 # Project State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-19)
 
 **Core value:** Every piece of work must be evidence-backed, approved, and validated before it counts -- turning real execution into measurable readiness and progress.
-**Current focus:** Phase 10 — pos-orders
+**Current focus:** Phase 11 — dashboards-shared-boards
 
 ## Current Position
 
-Phase: 11
-Plan: Not started
+Phase: 11 (dashboards-shared-boards) — EXECUTING
+Plan: 2 of 5
 
 ## Performance Metrics
 
@@ -84,6 +84,7 @@ Plan: Not started
 | Phase 10 P02 | 8min | 2 tasks | 5 files |
 | Phase 10 P05 | 3min | 1 tasks | 2 files |
 | Phase 10-pos-orders P04 | 5min | 2 tasks | 6 files |
+| Phase 11 P01 | 5min | 2 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -210,6 +211,9 @@ Recent decisions affecting current work:
 - [Phase 10]: Client-side filter for active deliveries (delivery subset is small, no multi-status backend filter needed)
 - [Phase 10-pos-orders]: OrderStatusBadge dual-variant: single component for order and payment status with UI-SPEC color maps
 - [Phase 10-pos-orders]: Inline PaymentForm in Sheet per UI-SPEC interaction contract (no separate page)
+- [Phase 11]: Food cost % computed dynamically from recipe.computed_cost / base_price (no food_cost_percent column on MenuItem)
+- [Phase 11]: Wins endpoint queries role.name via relation join (User has no roleName field)
+- [Phase 11]: Evidence feed uses uploader relation matching existing Prisma schema relation name
 
 ### Pending Todos
 
@@ -224,6 +228,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-21T17:19:59.948Z
-Stopped at: Completed 10-04-PLAN.md
+Last session: 2026-03-21T18:47:36.408Z
+Stopped at: Completed 11-01-PLAN.md
 Resume file: None

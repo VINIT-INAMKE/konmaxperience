@@ -105,12 +105,12 @@
 
 ### Dashboards
 
-- [ ] **DASH-01**: Admin mission control — readiness overview, pending approvals, blockers, decisions, ad-hoc task injector, leaderboard
+- [x] **DASH-01**: Admin mission control — readiness overview, pending approvals, blockers, decisions, ad-hoc task injector, leaderboard
 - [ ] **DASH-02**: Role user dashboard — my tasks, quests, evidence, contribution meters
 - [ ] **DASH-03**: Kitchen dashboard — orders in queue, prep batch levels, station utilization, average prep times, waste today
-- [ ] **DASH-04**: Inventory & procurement dashboard — stock levels (raw + production), low stock alerts, PO status, vendor spend, inventory value
-- [ ] **DASH-05**: BI dashboard — revenue (daily/weekly/monthly), food cost %, recipe cost analysis, top-selling items, channel breakdown
-- [ ] **DASH-06**: Shared boards — mission board, quest board, wins/milestones, latest evidence feed
+- [x] **DASH-04**: Inventory & procurement dashboard — stock levels (raw + production), low stock alerts, PO status, vendor spend, inventory value
+- [x] **DASH-05**: BI dashboard — revenue (daily/weekly/monthly), food cost %, recipe cost analysis, top-selling items, channel breakdown
+- [x] **DASH-06**: Shared boards — mission board, quest board, wins/milestones, latest evidence feed
 
 ## v2 Requirements
 
@@ -214,12 +214,12 @@
 | POS-04 | Phase 10 | Complete |
 | POS-05 | Phase 10 | Complete |
 | POS-06 | Phase 10 | Complete |
-| DASH-01 | Phase 11 | Pending |
+| DASH-01 | Phase 11 | Complete |
 | DASH-02 | Phase 11 | Pending |
 | DASH-03 | Phase 11 | Pending |
-| DASH-04 | Phase 11 | Pending |
-| DASH-05 | Phase 11 | Pending |
-| DASH-06 | Phase 11 | Pending |
+| DASH-04 | Phase 11 | Complete |
+| DASH-05 | Phase 11 | Complete |
+| DASH-06 | Phase 11 | Complete |
 | NOTF-01 | Phase 12 | Pending |
 | NOTF-02 | Phase 12 | Pending |
 | NOTF-03 | Phase 12 | Pending |
