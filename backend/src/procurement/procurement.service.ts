@@ -105,12 +105,24 @@ export class ProcurementService {
       total_inventory_value += totalQty * pricePerBaseUnit;
     }
 
+    // 5. PO status breakdown
+    const [draft_count, ordered_count, received_count] = await Promise.all([
+      this.prisma.purchaseOrder.count({ where: { status: 'draft' } }),
+      this.prisma.purchaseOrder.count({ where: { status: 'ordered' } }),
+      this.prisma.purchaseOrder.count({ where: { status: 'received' } }),
+    ]);
+
     return {
       pending_po_count,
       low_stock_count,
       vendor_spend_this_month,
       total_inventory_value,
       top_vendors,
+      po_status_breakdown: {
+        draft: draft_count,
+        ordered: ordered_count,
+        received: received_count,
+      },
     };
   }
 }

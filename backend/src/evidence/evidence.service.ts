@@ -12,6 +12,22 @@ import { CreateEvidenceDto } from './dto/create-evidence.dto';
 export class EvidenceService {
   constructor(private readonly prisma: PrismaService) {}
 
+  async getFeed(status?: string, limit = 20, cursor?: string) {
+    const where: Record<string, unknown> = {};
+    if (status) where.approval_status = status;
+    if (cursor) where.created_at = { lt: new Date(cursor) };
+
+    return this.prisma.evidence.findMany({
+      where,
+      include: {
+        task: { select: { title: true } },
+        uploader: { select: { id: true, name: true } },
+      },
+      orderBy: { created_at: 'desc' },
+      take: limit,
+    });
+  }
+
   async findAll(
     filters: { status?: string },
     scopeFilter: Record<string, unknown>,

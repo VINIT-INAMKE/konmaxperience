@@ -47,6 +47,19 @@ export class EvidenceController {
 export class EvidenceReviewController {
   constructor(private readonly evidenceService: EvidenceService) {}
 
+  @Get('feed')
+  async getFeed(
+    @Query('status') status?: string,
+    @Query('limit') limit?: string,
+    @Query('cursor') cursor?: string,
+  ) {
+    return this.evidenceService.getFeed(
+      status || undefined,
+      parseInt(limit || '20', 10),
+      cursor || undefined,
+    );
+  }
+
   @Get()
   @RequiresPermission(Permission.APPROVE_EVIDENCE)
   async findAll(
