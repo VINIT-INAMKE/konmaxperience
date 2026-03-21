@@ -7,6 +7,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateVendorDto } from './dto/create-vendor.dto';
 import { UpdateVendorDto } from './dto/update-vendor.dto';
 import { CreateVendorPriceDto } from './dto/create-vendor-price.dto';
+import { CostCalculatorService } from '../recipes/cost-calculator.service';
 
 const VENDOR_INCLUDE = {
   VendorPrices: {
@@ -17,7 +18,10 @@ const VENDOR_INCLUDE = {
 
 @Injectable()
 export class VendorsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly costCalculatorService: CostCalculatorService,
+  ) {}
 
   async findAll(status?: string) {
     const where: Record<string, unknown> = {};
@@ -123,9 +127,7 @@ export class VendorsService {
     });
   }
 
-  // Stub — CostCalculatorService will be injected in Plan 03
-  async recalculateCostsForIngredient(ingredientId: string) {
-    // Will be implemented when CostCalculatorService is available
-    console.log(`Cost recalculation pending for ingredient ${ingredientId}`);
+  async recalculateCostsForIngredient(ingredientId: string): Promise<void> {
+    await this.costCalculatorService.recalculateForIngredient(ingredientId);
   }
 }
