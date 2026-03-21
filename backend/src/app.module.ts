@@ -28,6 +28,8 @@ import { ChannelsModule } from './channels/channels.module';
 import { AssetsModule } from './assets/assets.module';
 import { IngredientsModule } from './ingredients/ingredients.module';
 import { VendorsModule } from './vendors/vendors.module';
+import { RecipesModule } from './recipes/recipes.module';
+import { MenuModule } from './menu/menu.module';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { PermissionsGuard } from './auth/permissions.guard';
 
@@ -58,6 +60,8 @@ import { PermissionsGuard } from './auth/permissions.guard';
     ChannelsModule,
     AssetsModule,
     IngredientsModule,
+    MenuModule,
+    RecipesModule,
     VendorsModule,
   ],
   controllers: [AppController],
