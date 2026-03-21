@@ -10,3 +10,5 @@ export * from './recipe';
 export * from './ingredient';
 export * from './vendor';
 export * from './menu';
+export * from './inventory';
+export * from './purchase-order';
