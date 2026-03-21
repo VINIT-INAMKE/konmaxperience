@@ -54,6 +54,7 @@ model User {
   prepBatches             PrepBatch[]          @relation("PrepBatchCreator")
   wasteLogs               WasteLog[]           @relation("WasteLogCreator")
   orders                  Order[]              @relation("OrderCreator")
+  notifications           Notification[]
 }
 
 model RefreshToken {
@@ -603,4 +604,22 @@ model Payment {
   notes      String?
   created_at DateTime @default(now())
   order      Order    @relation(fields: [order_id], references: [id])
+}
+
+model Notification {
+  id             String   @id @default(uuid())
+  user_id        String
+  user           User     @relation(fields: [user_id], references: [id])
+  type           String   // task_due | task_blocked | approval_pending | low_stock | new_order | order_ready | delivery_update
+  title          String
+  body           String
+  link_url       String?
+  reference_id   String?  // ID of related entity (task_id, order_id, ingredient_id, approval_id)
+  reference_type String?  // "task" | "order" | "ingredient" | "approval"
+  is_read        Boolean  @default(false)
+  is_email_sent  Boolean  @default(false)
+  created_at     DateTime @default(now())
+
+  @@index([user_id, is_read, created_at(sort: Desc)])
+  @@index([user_id, type, reference_id])
 }

@@ -37,6 +37,9 @@ import { KitchenModule } from './kitchen/kitchen.module';
 import { OrdersModule } from './orders/orders.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { ScheduleModule } from '@nestjs/schedule';
+import { BullModule } from '@nestjs/bullmq';
+import { EventEmitterModule } from '@nestjs/event-emitter';
+import { NotificationsModule } from './notifications/notifications.module';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { PermissionsGuard } from './auth/permissions.guard';
 
@@ -45,6 +48,17 @@ import { PermissionsGuard } from './auth/permissions.guard';
     ConfigModule.forRoot({ isGlobal: true }),
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 100 }]),
     ScheduleModule.forRoot(),
+    EventEmitterModule.forRoot(),
+    BullModule.forRoot({
+      connection: {
+        host: process.env.REDIS_HOST,
+        port: Number(process.env.REDIS_PORT ?? 6380),
+        password: process.env.REDIS_PASSWORD,
+        tls: {},
+        maxRetriesPerRequest: null,
+        enableReadyCheck: false,
+      },
+    }),
     PrismaModule,
     AuthModule,
     PermissionsModule,
@@ -77,6 +91,7 @@ import { PermissionsGuard } from './auth/permissions.guard';
     KitchenModule,
     OrdersModule,
     AnalyticsModule,
+    NotificationsModule,
   ],
   controllers: [AppController],
   providers: [

@@ -14,3 +14,4 @@ export * from './inventory';
 export * from './purchase-order';
 export * from './kitchen';
 export * from './kds';
+export * from './notifications';
