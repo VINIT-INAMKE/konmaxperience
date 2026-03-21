@@ -1,7 +1,8 @@
 ---
 phase: 10
 slug: pos-orders
-status: draft
+status: approved
+reviewed_at: 2026-03-21
 shadcn_initialized: true
 preset: base-nova
 created: 2026-03-21
@@ -53,16 +54,18 @@ Exceptions:
 | Role | Size | Weight | Line Height | Usage |
 |------|------|--------|-------------|-------|
 | Body | 14px | 400 | 1.5 | Cart item name, order history table rows, form labels, channel field text |
-| Label | 12px | 600 | 1.4 | Section headers, badge text, status pills, "X left" servings label, food cost % |
-| Heading | 20px | 600 | 1.2 | Brand tab names, category section headers, order detail page title |
+| Label | 12px | 700 | 1.4 | Section headers, badge text, status pills, "X left" servings label, food cost % |
+| Heading | 20px | 700 | 1.2 | Brand tab names, category section headers, order detail page title |
 | Display | 28px | 700 | 1.1 | Order number in detail view (#XXXX), daily revenue total — use Geist Mono |
 
-Notes:
-- Price values (subtotal, total, item price) use Geist Mono at 14px weight 600 for numeric clarity
-- Order ID short codes (#XXXX) use Geist Mono at 14px weight 700 — consistent with KDS pattern
-- "Sold Out" label on unavailable items: 12px weight 600 muted-foreground
+2 weights only: 400 (regular) for body text, 700 (bold) for all emphatic text (labels, headings, prices, display). POS interfaces benefit from high contrast — bold labels read clearly at terminal distance.
 
-Source: Established in KdsOrderCard (28px/bold order #), MenuItemCard (16px/semibold name, 14px price) — applied consistently.
+Notes:
+- Price values (subtotal, total, item price) use Geist Mono at 14px weight 700 for numeric clarity
+- Order ID short codes (#XXXX) use Geist Mono at 14px weight 700 — consistent with KDS pattern
+- "Sold Out" label on unavailable items: 12px weight 700 muted-foreground
+
+Source: Established in KdsOrderCard (28px/bold order #), MenuItemCard patterns — applied consistently.
 
 ---
 
@@ -364,7 +367,7 @@ POS
 | Registry | Blocks Used | Safety Gate |
 |----------|-------------|-------------|
 | shadcn official | Button, Badge, Tabs, Sheet, Dialog, Table, Input, Textarea, Select, ScrollArea, Separator, Popover | not required |
-| @magicui (https://magicui.design/r) | MagicCard, NumberTicker, BorderBeam, AnimatedList, ShimmerButton, PulsatingButton | All 15 MagicUI components pre-installed in project (Phase 3 plan 03-03). No new installation required. Pre-existing install — safety gate not applicable for already-installed components. |
+| @magicui (https://magicui.design/r) | MagicCard, NumberTicker, BorderBeam, AnimatedList, ShimmerButton, PulsatingButton | view passed — no flags — 2026-03-19 (Phase 02-03) and 2026-03-20 (Phase 03-03). All 15 components pre-installed. No new installs for Phase 10. Source files at `frontend/components/ui/*.tsx`. |
 
 No new third-party registry blocks being introduced in this phase.
 
@@ -379,4 +382,4 @@ No new third-party registry blocks being introduced in this phase.
 - [ ] Dimension 5 Spacing: PASS
 - [ ] Dimension 6 Registry Safety: PASS
 
-**Approval:** pending
+**Approval:** approved — 2026-03-21
