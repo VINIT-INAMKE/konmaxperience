@@ -19,6 +19,8 @@ import { ReadinessModule } from './readiness/readiness.module';
 import { LeaderboardModule } from './leaderboard/leaderboard.module';
 import { KpisModule } from './kpis/kpis.module';
 import { SettingsModule } from './settings/settings.module';
+import { DecisionsModule } from './decisions/decisions.module';
+import { DelegationsModule } from './delegations/delegations.module';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { PermissionsGuard } from './auth/permissions.guard';
 
@@ -41,6 +43,8 @@ import { PermissionsGuard } from './auth/permissions.guard';
     LeaderboardModule,
     KpisModule,
     SettingsModule,
+    DecisionsModule,
+    DelegationsModule,
   ],
   controllers: [AppController],
   providers: [

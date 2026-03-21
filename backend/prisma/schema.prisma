@@ -18,31 +18,36 @@ model Role {
 }
 
 model User {
-  id                  String               @id @default(uuid())
-  name                String
-  email               String               @unique
-  password_hash       String
-  role_id             String
-  role                Role                 @relation(fields: [role_id], references: [id])
-  function            String
-  status              String               @default("active")
-  xp_total            Int                  @default(0)
-  level               Int                  @default(1)
-  streak_days         Int                  @default(0)
-  created_at          DateTime             @default(now())
-  updated_at          DateTime             @updatedAt
-  refresh_tokens      RefreshToken[]
-  reset_tokens        PasswordResetToken[]
-  owned_tasks         Task[]               @relation("TaskOwner")
-  created_tasks       Task[]               @relation("TaskCreator")
-  evidence            Evidence[]
-  reviewed_evidence   Evidence[]           @relation("EvidenceReviewer")
-  approved_approvals  Approval[]           @relation("ApprovalApprover")
-  proposed_decisions  Decision[]           @relation("DecisionProposer")
-  owned_quests        Quest[]
-  owned_zones         Zone[]
-  owned_brands        Brand[]
-  created_assets      Asset[]
+  id                      String               @id @default(uuid())
+  name                    String
+  email                   String               @unique
+  password_hash           String
+  role_id                 String
+  role                    Role                 @relation(fields: [role_id], references: [id])
+  function                String
+  status                  String               @default("active")
+  xp_total                Int                  @default(0)
+  level                   Int                  @default(1)
+  streak_days             Int                  @default(0)
+  created_at              DateTime             @default(now())
+  updated_at              DateTime             @updatedAt
+  refresh_tokens          RefreshToken[]
+  reset_tokens            PasswordResetToken[]
+  owned_tasks             Task[]               @relation("TaskOwner")
+  created_tasks           Task[]               @relation("TaskCreator")
+  evidence                Evidence[]
+  reviewed_evidence       Evidence[]           @relation("EvidenceReviewer")
+  approved_approvals      Approval[]           @relation("ApprovalApprover")
+  overridden_approvals    Approval[]           @relation("ApprovalOverrider")
+  delegated_approvals     Approval[]           @relation("ApprovalDelegate")
+  proposed_decisions      Decision[]           @relation("DecisionProposer")
+  owned_quests            Quest[]
+  owned_zones             Zone[]
+  owned_brands            Brand[]
+  created_assets          Asset[]
+  delegations_from        ApprovalDelegation[] @relation("DelegationFrom")
+  delegations_to          ApprovalDelegation[] @relation("DelegationTo")
+  delegations_created     ApprovalDelegation[] @relation("DelegationCreator")
 }
 
 model RefreshToken {
@@ -145,6 +150,7 @@ model Task {
   approvals            Approval[]           @relation("TaskApprovals")
   readiness_events     TaskReadinessEvent[]
   linked_assets        Asset[]
+  linked_decisions     Decision[]           @relation("DecisionTask")
 
   @@index([owner_user_id, status])
   @@index([quest_id, valid])
@@ -168,18 +174,24 @@ model Evidence {
 }
 
 model Approval {
-  id                 String   @id @default(uuid())
-  entity_type        String
-  entity_id          String
-  task               Task?    @relation("TaskApprovals", fields: [entity_id], references: [id])
-  approval_scope     String
-  required_role_code String
-  approved_by        String?
-  approver           User?    @relation("ApprovalApprover", fields: [approved_by], references: [id])
-  status             String   @default("pending")
-  notes              String?
-  created_at         DateTime @default(now())
-  updated_at         DateTime @updatedAt
+  id                     String    @id @default(uuid())
+  entity_type            String
+  entity_id              String
+  task                   Task?     @relation("TaskApprovals", fields: [entity_id], references: [id])
+  approval_scope         String
+  required_role_code     String
+  approved_by            String?
+  approver               User?     @relation("ApprovalApprover", fields: [approved_by], references: [id])
+  status                 String    @default("pending")
+  notes                  String?
+  override_by            String?
+  overrider              User?     @relation("ApprovalOverrider", fields: [override_by], references: [id])
+  override_reason        String?
+  override_at            DateTime?
+  delegated_from_user_id String?
+  delegated_from_user    User?     @relation("ApprovalDelegate", fields: [delegated_from_user_id], references: [id])
+  created_at             DateTime  @default(now())
+  updated_at             DateTime  @updatedAt
 }
 
 model Decision {
@@ -193,10 +205,26 @@ model Decision {
   final_decision    String?
   status            String   @default("proposed")
   linked_task_id    String?
+  linked_task       Task?    @relation("DecisionTask", fields: [linked_task_id], references: [id])
   linked_mission_id String?
   linked_mission    Mission? @relation("DecisionMission", fields: [linked_mission_id], references: [id])
   created_at        DateTime @default(now())
   updated_at        DateTime @updatedAt
+}
+
+model ApprovalDelegation {
+  id           String   @id @default(uuid())
+  from_user_id String
+  from_user    User     @relation("DelegationFrom", fields: [from_user_id], references: [id])
+  to_user_id   String
+  to_user      User     @relation("DelegationTo", fields: [to_user_id], references: [id])
+  start_date   DateTime
+  end_date     DateTime
+  created_by   String
+  creator      User     @relation("DelegationCreator", fields: [created_by], references: [id])
+  active       Boolean  @default(true)
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
 }
 
 model ReadinessMeter {
