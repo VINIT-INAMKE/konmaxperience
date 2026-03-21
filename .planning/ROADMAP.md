@@ -19,7 +19,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 5: Governance & Decision Management** - Decision logging with types, admin override/escalation on approvals, and approval delegation (completed 2026-03-21)
 - [x] **Phase 6: Operations Management** - Zone management, brand lifecycle, sales channels, and asset library with approval workflow (completed 2026-03-21)
 - [x] **Phase 7: Recipe & Ingredient Management** - Structured recipes with BOM, ingredient master, vendor management, recipe costing, menu items with pricing and food cost % (completed 2026-03-21)
-- [ ] **Phase 8: Inventory & Procurement** - Raw ingredient stock tracking, stock movements, purchase order workflow with vendor prices, low-stock alerts
+- [x] **Phase 8: Inventory & Procurement** - Raw ingredient stock tracking, stock movements, purchase order workflow with vendor prices, low-stock alerts (completed 2026-03-21)
 - [ ] **Phase 9: Kitchen & Prep** - Prep batch system (recipe x qty -> deduct raw, add production), kitchen display (KDS), menu availability based on prep levels, waste logging
 - [ ] **Phase 10: POS & Orders** - Full POS interface for staff, order management (dine-in/takeaway/delivery), payment tracking (method + status), own-delivery dispatch, order -> kitchen flow
 - [ ] **Phase 11: Dashboards & Shared Boards** - Mission control, role dashboards, kitchen metrics, inventory overview, recipe cost analysis, procurement spend
@@ -161,14 +161,14 @@ Plans:
   2. Every stock change is recorded as a movement (received, prep-deducted, waste, adjustment) with reason and reference
   3. Purchase orders can be created to vendors with line items, tracked through draft → ordered → received, and auto-update inventory on receive
   4. Procurement dashboard shows pending POs, low stock alerts, vendor spend, and total inventory value
-**Plans:** 1/5 plans executed
+**Plans:** 5/5 plans complete
 
 Plans:
 - [x] 08-01-PLAN.md — Prisma schema migration (4 new models + zone_id on PO), MANAGE_INVENTORY/MANAGE_PROCUREMENT permissions, seed update, frontend types
 - [x] 08-02-PLAN.md — Backend InventoryModule (stock CRUD, adjustment, movements) + PurchaseOrdersModule (CRUD, receiving $transaction with unit conversion) + ProcurementModule (dashboard queries) + AppModule registration
-- [ ] 08-03-PLAN.md — Frontend /operations/inventory page (stock table, low-stock alert strip, filters) + /operations/inventory/[ingredientId] movement audit trail + stock adjustment Sheet + sidebar nav update
-- [ ] 08-04-PLAN.md — Frontend /operations/purchase-orders page (status tabs) + /operations/purchase-orders/new (full-page PO creation form with inline line items) + /operations/purchase-orders/[id] (detail + receiving)
-- [ ] 08-05-PLAN.md — Frontend /operations/procurement dashboard (4 summary cards, top vendors) + dashboard low-stock widget + ingredient row stock enhancement
+- [x] 08-03-PLAN.md — Frontend /operations/inventory page (stock table, low-stock alert strip, filters) + /operations/inventory/[ingredientId] movement audit trail + stock adjustment Sheet + sidebar nav update
+- [x] 08-04-PLAN.md — Frontend /operations/purchase-orders page (status tabs) + /operations/purchase-orders/new (full-page PO creation form with inline line items) + /operations/purchase-orders/[id] (detail + receiving)
+- [x] 08-05-PLAN.md — Frontend /operations/procurement dashboard (4 summary cards, top vendors) + dashboard low-stock widget + ingredient row stock enhancement
 
 ### Phase 9: Kitchen & Prep
 **Goal**: Kitchen prep batch system that bridges raw ingredients to servable items (deducting both raw ingredients AND source prep batches via FIFO), KDS for real-time order display via polling, menu availability from BOTH prep levels AND raw stock, structured waste tracking with auto-expiry, and kitchen metrics
@@ -250,7 +250,7 @@ Dependencies: Phase 7 (Recipes) depends on Phase 6 (brands/vendors). Phase 8 (In
 | 5. Governance & Decision Management | 4/4 | Complete   | 2026-03-21 |
 | 6. Operations Management | 3/3 | Complete   | 2026-03-21 |
 | 7. Recipe & Ingredient Management | 6/6 | Complete   | 2026-03-21 |
-| 8. Inventory & Procurement | 1/5 | In Progress|  |
+| 8. Inventory & Procurement | 5/5 | Complete   | 2026-03-21 |
 | 9. Kitchen & Prep | 0/0 | Not started | - |
 | 10. POS & Orders | 0/0 | Not started | - |
 | 11. Dashboards & Shared Boards | 0/0 | Not started | - |
