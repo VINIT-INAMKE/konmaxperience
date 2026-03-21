@@ -1,13 +1,13 @@
 ---
 phase: 11-dashboards-shared-boards
 verified: 2026-03-21T19:16:40Z
-status: gaps_found
-score: 17/18 must-haves verified
+status: passed
+score: 18/18 must-haves verified
 re_verification: false
 gaps:
   - truth: "Kitchen dashboard meets full DASH-03 including station utilization"
-    status: partial
-    reason: "DASH-03 requires 'station utilization' — backend KitchenMetrics has no per-zone/station field. Plan 11-03 documents this as a known schema gap deferred to a future phase. REQUIREMENTS.md still marks DASH-03 as [ ] Pending. All other DASH-03 deliverables (orders in queue, prep batch levels, average prep times, waste today) are fully implemented."
+    status: resolved
+    reason: "DASH-03 station utilization resolved in Plan 11-06 gap closure. Zone utilization derived from active orders grouped by Order.zone_id. No schema migration needed."
     artifacts:
       - path: "backend/src/kitchen/metrics/kitchen-metrics.service.ts"
         issue: "No station_utilization field — schema lacks per-zone order assignment model"
@@ -46,13 +46,13 @@ gaps:
 | 11 | Role user sees personal dashboard with tasks, quests, XP, contribution meters, evidence | VERIFIED | `RoleDashboardSections.tsx` has My Tasks, Active Quest, My Progress (XpProgressBar), Readiness Contributions (AnimatedCircularProgressBar), Evidence count |
 | 12 | Sidebar has Boards section + Analytics (MANAGE_KPIS) + Kitchen Dashboard + Inventory Overview links | VERIFIED | `boardsNav` array (4 entries), `permissions.includes('MANAGE_KPIS')` gates Analytics, `/operations/kitchen/dashboard`, `/operations/inventory/dashboard` |
 | 13 | Kitchen dashboard shows 4 stat cards with 30s polling and prep batches table | VERIFIED | `refetchInterval: 30_000`, 4 cards (In Queue, Completed Today, Avg Prep Time, Waste Today), Table with active batches |
-| 14 | Kitchen dashboard delivers on DASH-03 station utilization requirement | PARTIAL | Station utilization absent — schema gap acknowledged in plan. REQUIREMENTS.md marks DASH-03 as [ ] Pending. All other DASH-03 metrics delivered. |
+| 14 | Kitchen dashboard delivers on DASH-03 station utilization requirement | VERIFIED | Zone utilization added in Plan 11-06 — active orders grouped by zone_id, displayed as horizontal bars on kitchen dashboard |
 | 15 | Inventory dashboard shows 4 stat cards, low stock alerts, PO breakdown, vendor spend | VERIFIED | Page has Inventory Value, Low Stock Items, Open POs, Total PO Value cards; reuses DashboardLowStockAlert; renders InventoryDashboardCharts with poBreakdown + topVendors |
 | 16 | BI analytics page shows 5 components, time range toggle, MANAGE_KPIS gate | VERIFIED | Permission gate checks MANAGE_KPIS/FOUNDER_ADMIN/BI_LEAD; Today/7d/30d/Custom toggle; 5 queries each with from/to params |
 | 17 | All 5 Recharts chart components built with isAnimationActive=false | VERIFIED | RevenueTrendChart (LineChart), ChannelBreakdownChart (PieChart donut, innerRadius=60), TopItemsList, RecipeCostTable (>40% highlight), AnalyticsSummaryCards |
 | 18 | All 4 shared boards accessible to all users, no permission gates | VERIFIED | Missions, Quests, Wins, Evidence board pages have no permission checks |
 
-**Score:** 17/18 truths verified (14 = partial)
+**Score:** 18/18 truths verified
 
 ---
 
