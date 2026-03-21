@@ -31,6 +31,8 @@ import {
   PackageSearch,
   ShoppingCart,
   TrendingUp,
+  Monitor,
+  Trash2,
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
@@ -191,6 +193,12 @@ export function Sidebar() {
     { label: 'Procurement', href: '/operations/procurement', icon: <TrendingUp className="size-4" /> },
   ];
 
+  const kitchenNav: NavItem[] = [
+    { label: 'Prep Batches', href: '/operations/kitchen/prep-batches', icon: <ChefHat className="size-4" /> },
+    { label: 'KDS', href: '/operations/kitchen/kds', icon: <Monitor className="size-4" /> },
+    { label: 'Waste Log', href: '/operations/kitchen/waste', icon: <Trash2 className="size-4" /> },
+  ];
+
   const adminNav: NavItem[] = [
     {
       label: 'Team',
@@ -276,6 +284,15 @@ export function Sidebar() {
           </span>
         </div>
         {operationsNav.map((item) => (
+          <NavLink key={item.label} item={item} active={isActive(item.href)} />
+        ))}
+
+        <div className="pt-3 pb-1 px-2">
+          <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/60">
+            Kitchen
+          </span>
+        </div>
+        {kitchenNav.map((item) => (
           <NavLink key={item.label} item={item} active={isActive(item.href)} />
         ))}
 
