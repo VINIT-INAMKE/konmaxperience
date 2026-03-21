@@ -58,6 +58,7 @@ import { NumberTicker } from '@/components/ui/number-ticker';
 import { LevelBadge } from '@/components/ops/gamification/LevelBadge';
 import { XpProgressBar } from '@/components/ops/gamification/XpProgressBar';
 import { LevelUpCelebration } from '@/components/ops/gamification/LevelUpCelebration';
+import { NotificationBell } from '@/components/ops/notifications/NotificationBell';
 
 interface NavItem {
   label: string;
@@ -276,10 +277,11 @@ export function Sidebar() {
   return (
     <aside className="w-[240px] shrink-0 border-r bg-card flex flex-col h-full">
       {/* Top: Logo area */}
-      <div className="px-4 py-4 border-b">
+      <div className="px-4 py-3 border-b flex items-center justify-between">
         <span className="text-sm font-semibold tracking-tight">
           Konma Xperience
         </span>
+        <NotificationBell />
       </div>
 
       {/* Navigation */}
