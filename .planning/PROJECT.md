@@ -18,6 +18,7 @@ Every piece of work must be evidence-backed, approved, and validated before it c
 - [x] Gamification & Readiness Intelligence — XP, levels, leaderboard, 10 readiness meters, KPIs (Phase 4)
 - [x] Governance & Decision Management — decision logging, approval override/escalation, delegation with audit trail (Phase 5)
 - [x] Operations Management — zones, brands, channels, asset library with upload and status workflow (Phase 6)
+- [x] Recipe & Ingredient Management — unified recipes with polymorphic BOM, unit conversion, vendors, recursive cost calculation, menu items with channel pricing (Phase 7)
 
 ### Active
 
@@ -124,4 +125,4 @@ Complete data model for Phases 7-13 (22 new entities) defined in `docs/superpowe
 | Channel modifier (not per-item pricing) | One modifier per channel, base_price + modifier = final | Confirmed |
 
 ---
-*Last updated: 2026-03-21 after Phase 6 (Operations Management) completion*
+*Last updated: 2026-03-21 after Phase 7 (Recipe & Ingredient Management) completion*
