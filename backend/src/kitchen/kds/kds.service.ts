@@ -4,6 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { OrdersService } from '../../orders/orders.service';
 
 export interface KdsOrderItem {
   id: string;
@@ -31,7 +32,10 @@ export interface KdsZoneData {
 
 @Injectable()
 export class KdsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly ordersService: OrdersService,
+  ) {}
 
   async getActiveOrders(): Promise<KdsZoneData[]> {
     const orders = await this.prisma.order.findMany({
@@ -117,30 +121,62 @@ export class KdsService {
       );
     }
 
-    // Update item status
     const updateData: Record<string, unknown> = { status: newStatus };
     if (newStatus === 'ready') {
       updateData.ready_at = new Date();
     }
 
+    // When status is 'ready' — wrap in $transaction with deduction
+    if (newStatus === 'ready') {
+      return this.prisma.$transaction(async (tx) => {
+        // Deduct ingredients/prep batches for this item (atomic)
+        const order = await tx.order.findUniqueOrThrow({
+          where: { id: item.order_id },
+        });
+        await this.ordersService.deductItemIngredients(
+          tx,
+          {
+            id: item.id,
+            order_id: item.order_id,
+            menu_item_id: item.menu_item_id,
+            quantity: item.quantity,
+          },
+          order.created_by,
+        );
+
+        // Update item status
+        const updated = await tx.orderItem.update({
+          where: { id: itemId },
+          data: updateData,
+        });
+
+        // Check if ALL items in order are ready → auto-transition order
+        const allItems = await tx.orderItem.findMany({
+          where: { order_id: item.order_id },
+        });
+        const allReady = allItems.every(
+          (i) => (i.id === itemId ? true : i.status === 'ready'),
+        );
+        if (allReady) {
+          await tx.order.update({
+            where: { id: item.order_id },
+            data: { status: 'ready' },
+          });
+        }
+
+        return {
+          id: updated.id,
+          status: updated.status,
+          ready_at: updated.ready_at,
+        };
+      });
+    }
+
+    // Non-ready transitions — simple update (no transaction needed)
     const updatedItem = await this.prisma.orderItem.update({
       where: { id: itemId },
       data: updateData,
     });
-
-    // Check if ALL items for the same order are 'ready' -> auto-update order status
-    if (newStatus === 'ready') {
-      const allItems = await this.prisma.orderItem.findMany({
-        where: { order_id: item.order_id },
-      });
-      const allReady = allItems.every((i) => i.status === 'ready');
-      if (allReady) {
-        await this.prisma.order.update({
-          where: { id: item.order_id },
-          data: { status: 'ready' },
-        });
-      }
-    }
 
     return {
       id: updatedItem.id,

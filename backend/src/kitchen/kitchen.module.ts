@@ -8,8 +8,10 @@ import { WasteService } from './waste/waste.service';
 import { KitchenMetricsController } from './metrics/kitchen-metrics.controller';
 import { KitchenMetricsService } from './metrics/kitchen-metrics.service';
 import { KitchenExpiryCron } from './expiry/kitchen-expiry.cron';
+import { OrdersModule } from '../orders/orders.module';
 
 @Module({
+  imports: [OrdersModule],
   controllers: [
     PrepBatchesController,
     KdsController,
