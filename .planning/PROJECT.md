@@ -21,6 +21,7 @@ Every piece of work must be evidence-backed, approved, and validated before it c
 - [x] Recipe & Ingredient Management — unified recipes with polymorphic BOM, unit conversion, vendors, recursive cost calculation, menu items with channel pricing (Phase 7)
 - [x] Inventory & Procurement — stock tracking, PO workflow with receiving, movement audit trail, procurement dashboard (Phase 8)
 - [x] Kitchen & Prep — prep batch FIFO deduction, full-screen KDS with polling, waste logging, expiry cron, menu availability, kitchen metrics (Phase 9)
+- [x] POS & Orders — staff POS with split-screen menu/cart, order-to-kitchen-to-deduction flow, payment tracking, delivery dispatch, order history (Phase 10)
 
 ### Active
 
@@ -127,4 +128,4 @@ Complete data model for Phases 7-13 (22 new entities) defined in `docs/superpowe
 | Channel modifier (not per-item pricing) | One modifier per channel, base_price + modifier = final | Confirmed |
 
 ---
-*Last updated: 2026-03-21 after Phase 9 (Kitchen & Prep) completion*
+*Last updated: 2026-03-21 after Phase 10 (POS & Orders) completion*
