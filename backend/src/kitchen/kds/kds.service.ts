@@ -3,6 +3,7 @@ import {
   BadRequestException,
   NotFoundException,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../../prisma/prisma.service';
 import { OrdersService } from '../../orders/orders.service';
 
@@ -35,6 +36,7 @@ export class KdsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly ordersService: OrdersService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async getActiveOrders(): Promise<KdsZoneData[]> {
@@ -128,7 +130,11 @@ export class KdsService {
 
     // When status is 'ready' — wrap in $transaction with deduction
     if (newStatus === 'ready') {
-      return this.prisma.$transaction(async (tx) => {
+      let wasAllReady = false;
+      let orderData: { id: string; channel: string; created_by: string } | null =
+        null;
+
+      const result = await this.prisma.$transaction(async (tx) => {
         // Deduct ingredients/prep batches for this item (atomic)
         const order = await tx.order.findUniqueOrThrow({
           where: { id: item.order_id },
@@ -150,7 +156,7 @@ export class KdsService {
           data: updateData,
         });
 
-        // Check if ALL items in order are ready → auto-transition order
+        // Check if ALL items in order are ready -> auto-transition order
         const allItems = await tx.orderItem.findMany({
           where: { order_id: item.order_id },
         });
@@ -162,6 +168,12 @@ export class KdsService {
             where: { id: item.order_id },
             data: { status: 'ready' },
           });
+          wasAllReady = true;
+          orderData = {
+            id: order.id,
+            channel: order.channel,
+            created_by: order.created_by,
+          };
         }
 
         return {
@@ -170,6 +182,19 @@ export class KdsService {
           ready_at: updated.ready_at,
         };
       });
+
+      // Emit AFTER transaction commits (Pitfall 1 compliance)
+      if (wasAllReady && orderData) {
+        try {
+          this.eventEmitter.emit('order.ready', {
+            orderId: (orderData as { id: string; channel: string; created_by: string }).id,
+            channel: (orderData as { id: string; channel: string; created_by: string }).channel,
+            createdBy: (orderData as { id: string; channel: string; created_by: string }).created_by,
+          });
+        } catch {}
+      }
+
+      return result;
     }
 
     // Non-ready transitions — simple update (no transaction needed)

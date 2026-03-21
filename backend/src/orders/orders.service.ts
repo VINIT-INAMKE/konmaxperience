@@ -4,6 +4,7 @@ import {
   ConflictException,
   NotFoundException,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { RecordPaymentDto } from './dto/record-payment.dto';
@@ -26,13 +27,16 @@ const DELIVERY_STATUS_ORDER = [null, 'picked_up', 'in_transit', 'delivered'];
 
 @Injectable()
 export class OrdersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly eventEmitter: EventEmitter2,
+  ) {}
 
   // ---------------------------------------------------------------
   // Create Order
   // ---------------------------------------------------------------
   async createOrder(dto: CreateOrderDto, userId: string) {
-    return this.prisma.$transaction(async (tx) => {
+    const order = await this.prisma.$transaction(async (tx) => {
       // Compute subtotal from items
       const subtotal = dto.items.reduce(
         (sum, item) => sum + item.unit_price * item.quantity,
@@ -55,7 +59,7 @@ export class OrdersService {
       }
 
       // Create order with items
-      const order = await tx.order.create({
+      const created = await tx.order.create({
         data: {
           channel: dto.channel,
           status: 'placed',
@@ -83,8 +87,21 @@ export class OrdersService {
         include: { items: true, payment: true },
       });
 
-      return order;
+      return created;
     });
+
+    // Fire-and-forget AFTER transaction commits (Pitfall 1 compliance)
+    try {
+      this.eventEmitter.emit('order.placed', {
+        orderId: order.id,
+        channel: order.channel,
+        itemCount: order.items?.length ?? 0,
+        total: String(order.total),
+        createdBy: userId,
+      });
+    } catch {}
+
+    return order;
   }
 
   // ---------------------------------------------------------------
@@ -254,10 +271,22 @@ export class OrdersService {
       updateData.delivery_status = dto.delivery_status;
     }
 
-    return this.prisma.order.update({
+    const updated = await this.prisma.order.update({
       where: { id: orderId },
       data: updateData,
     });
+
+    // Fire-and-forget AFTER update persists (Pitfall 1 compliance)
+    try {
+      this.eventEmitter.emit('delivery.updated', {
+        orderId: order.id,
+        deliveryStatus: dto.delivery_status ?? order.delivery_status,
+        deliveryAddress: order.delivery_address,
+        createdBy: order.created_by,
+      });
+    } catch {}
+
+    return updated;
   }
 
   // ---------------------------------------------------------------

@@ -3,6 +3,7 @@ import {
   ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma/prisma.service';
 import { buildScopeFilter } from '../permissions/scope.filter';
 import { getPermissionsForRole } from '../permissions/permissions.cache';
@@ -12,7 +13,10 @@ import { UpdateTaskDto } from './dto/update-task.dto';
 
 @Injectable()
 export class TasksService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly eventEmitter: EventEmitter2,
+  ) {}
 
   async findAll(
     requestingUser: { id: string; roleCode: string },
@@ -233,6 +237,16 @@ export class TasksService {
 
       return updated;
     });
+
+    // Emit AFTER transaction commits (Pitfall 1 compliance)
+    try {
+      this.eventEmitter.emit('task.blocked', {
+        taskId: id,
+        taskTitle: result.title,
+        ownerUserId: result.owner_user_id,
+        blockedReason: reason,
+      });
+    } catch {}
 
     return result;
   }

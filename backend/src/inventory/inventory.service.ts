@@ -1,11 +1,15 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateStockAdjustmentDto } from './dto/create-stock-adjustment.dto';
 import { convertUnit } from '../common/utils/unit-conversion';
 
 @Injectable()
 export class InventoryService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly eventEmitter: EventEmitter2,
+  ) {}
 
   async findAll() {
     const stocks = await this.prisma.ingredientStock.findMany({
@@ -42,7 +46,7 @@ export class InventoryService {
   }
 
   async adjust(dto: CreateStockAdjustmentDto, userId: string) {
-    return this.prisma.$transaction(async (tx) => {
+    const stock = await this.prisma.$transaction(async (tx) => {
       const ingredient = await tx.ingredient.findUniqueOrThrow({
         where: { id: dto.ingredient_id },
       });
@@ -111,6 +115,25 @@ export class InventoryService {
         },
       });
     });
+
+    // Emit stock.low AFTER transaction commits (Pitfall 1 compliance)
+    if (
+      stock &&
+      Number(stock.current_quantity) < Number(stock.ingredient.min_stock_level)
+    ) {
+      try {
+        this.eventEmitter.emit('stock.low', {
+          ingredientId: stock.ingredient_id,
+          ingredientName: stock.ingredient.name,
+          currentQty: Number(stock.current_quantity),
+          minQty: Number(stock.ingredient.min_stock_level),
+          unit: stock.ingredient.base_unit,
+          zoneId: stock.zone_id,
+        });
+      } catch {}
+    }
+
+    return stock;
   }
 
   async getLowStock() {
