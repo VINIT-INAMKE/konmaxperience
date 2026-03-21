@@ -15,6 +15,7 @@ export enum Permission {
   MANAGE_RBAC = 'MANAGE_RBAC',
   MANAGE_SYSTEM = 'MANAGE_SYSTEM',
   MANAGE_KPIS = 'MANAGE_KPIS',
+  MANAGE_OPS = 'MANAGE_OPS',
 }
 
 export const PERMISSION_DISPLAY_NAMES: Record<Permission, string> = {
@@ -34,6 +35,7 @@ export const PERMISSION_DISPLAY_NAMES: Record<Permission, string> = {
   [Permission.MANAGE_RBAC]: 'Manage permissions',
   [Permission.MANAGE_SYSTEM]: 'Manage system',
   [Permission.MANAGE_KPIS]: 'Manage KPIs',
+  [Permission.MANAGE_OPS]: 'Manage operations',
 };
 
 export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
@@ -53,4 +55,5 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   [Permission.MANAGE_RBAC]: 'Change role permissions from this screen',
   [Permission.MANAGE_SYSTEM]: 'Access system configuration and settings',
   [Permission.MANAGE_KPIS]: 'Create and edit KPI metrics',
+  [Permission.MANAGE_OPS]: 'Create and manage zones, brands, channels, and assets',
 };

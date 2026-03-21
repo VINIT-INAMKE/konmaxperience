@@ -22,6 +22,10 @@ import { SettingsModule } from './settings/settings.module';
 import { DecisionsModule } from './decisions/decisions.module';
 import { DelegationsModule } from './delegations/delegations.module';
 import { ApprovalsModule } from './approvals/approvals.module';
+import { ZonesModule } from './zones/zones.module';
+import { BrandsModule } from './brands/brands.module';
+import { ChannelsModule } from './channels/channels.module';
+import { AssetsModule } from './assets/assets.module';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { PermissionsGuard } from './auth/permissions.guard';
 
@@ -47,6 +51,10 @@ import { PermissionsGuard } from './auth/permissions.guard';
     DecisionsModule,
     DelegationsModule,
     ApprovalsModule,
+    ZonesModule,
+    BrandsModule,
+    ChannelsModule,
+    AssetsModule,
   ],
   controllers: [AppController],
   providers: [

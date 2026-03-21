@@ -148,14 +148,29 @@ const READINESS_METERS = [
 ];
 
 const ZONES = [
-  { name: 'Food Innovation Lab', zone_type: 'food_lab' },
-  { name: 'Production Kitchen', zone_type: 'production_kitchen' },
-  { name: 'Frontend Experience Zone', zone_type: 'experience_zone' },
-  { name: 'Procurement & Storage', zone_type: 'storage' },
-  { name: 'Intelligence & Planning Desk', zone_type: 'ops_desk' },
-  { name: 'Brand Showcase / Experience Space', zone_type: 'brand_showcase' },
-  { name: 'Art Zone', zone_type: 'art_zone' },
-  { name: 'Lifestyle Zone', zone_type: 'lifestyle_zone' },
+  { name: 'Main Kitchen', zone_type: 'kitchen' },
+  { name: 'Prep Station', zone_type: 'kitchen' },
+  { name: 'Dining Hall', zone_type: 'dining' },
+  { name: 'Garden Terrace', zone_type: 'outdoor' },
+  { name: 'Workshop Studio', zone_type: 'workspace' },
+  { name: 'Cold Storage', zone_type: 'storage' },
+  { name: 'Office', zone_type: 'workspace' },
+  { name: 'Lounge', zone_type: 'leisure' },
+];
+
+const BRANDS = [
+  { name: 'Konma Food', brand_type: 'food', status: 'active' },
+  { name: 'Just Craves', brand_type: 'food', status: 'active' },
+];
+
+const CHANNELS = [
+  { name: 'Dine-in', channel_type: 'dine_in', status: 'planned' },
+  { name: 'Delivery', channel_type: 'delivery', status: 'planned' },
+  { name: 'Takeaway', channel_type: 'takeaway', status: 'planned' },
+  { name: 'Retail', channel_type: 'retail', status: 'planned' },
+  { name: 'Event', channel_type: 'event', status: 'planned' },
+  { name: 'Workshop', channel_type: 'workshop', status: 'planned' },
+  { name: 'Online', channel_type: 'online', status: 'planned' },
 ];
 
 async function main() {
@@ -232,6 +247,18 @@ async function main() {
       });
     }
 
+    // Create brands (delete and recreate for idempotency)
+    await tx.brand.deleteMany({});
+    for (const brand of BRANDS) {
+      await tx.brand.create({ data: { name: brand.name, brand_type: brand.brand_type, status: brand.status } });
+    }
+
+    // Create channels (delete and recreate for idempotency)
+    await tx.channel.deleteMany({});
+    for (const channel of CHANNELS) {
+      await tx.channel.create({ data: { name: channel.name, channel_type: channel.channel_type, status: channel.status } });
+    }
+
     // Upsert system settings
     await tx.systemSetting.upsert({
       where: { key: 'leaderboard_enabled' },
@@ -246,6 +273,8 @@ async function main() {
   console.log(`  - ${READINESS_METERS.length} readiness meters`);
   console.log('  - 1 system setting (leaderboard_enabled)');
   console.log(`  - ${ZONES.length} zones`);
+  console.log(`  - ${BRANDS.length} brands`);
+  console.log(`  - ${CHANNELS.length} channels`);
 }
 
 main()

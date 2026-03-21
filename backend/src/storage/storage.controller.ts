@@ -13,6 +13,7 @@ import { getPermissionsForRole } from '../permissions/permissions.cache';
 import { RequiresPermission } from '../common/decorators/permissions.decorator';
 import { Permission } from '../types/permissions';
 import { PresignDto } from './dto/presign.dto';
+import { PresignAssetDto } from './dto/presign-asset.dto';
 
 @Controller('storage')
 export class StorageController {
@@ -57,6 +58,16 @@ export class StorageController {
     );
     const publicUrl = this.storageService.getPublicUrl(key);
 
+    return { presignedUrl, key, publicUrl };
+  }
+
+  @Post('presign-asset')
+  @RequiresPermission(Permission.UPLOAD_EVIDENCE)
+  async presignAsset(@Body() dto: PresignAssetDto) {
+    this.storageService.validatePresignRequest(dto.contentType, dto.fileSize);
+    const key = `assets/${Date.now()}-${dto.filename.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+    const presignedUrl = await this.storageService.generatePresignedPutUrl(key, dto.contentType);
+    const publicUrl = this.storageService.getPublicUrl(key);
     return { presignedUrl, key, publicUrl };
   }
 }
