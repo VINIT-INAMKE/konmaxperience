@@ -41,9 +41,9 @@
 
 ### Governance
 
-- [ ] **GOVN-01**: Decisions can be logged with type (individual, cross-function, strategic), context, and status
-- [ ] **GOVN-02**: Admin/founder can override or escalate any pending approval
-- [ ] **GOVN-03**: Approval delegation when primary approver is unavailable
+- [x] **GOVN-01**: Decisions can be logged with type (individual, cross-function, strategic), context, and status
+- [x] **GOVN-02**: Admin/founder can override or escalate any pending approval
+- [x] **GOVN-03**: Approval delegation when primary approver is unavailable
 
 ### Notifications
 
@@ -184,9 +184,9 @@
 | INTL-03 | Phase 4 | Complete |
 | INTL-04 | Phase 4 | Complete |
 | INTL-05 | Phase 4 | Complete |
-| GOVN-01 | Phase 5 | Pending |
-| GOVN-02 | Phase 5 | Pending |
-| GOVN-03 | Phase 5 | Pending |
+| GOVN-01 | Phase 5 | Complete |
+| GOVN-02 | Phase 5 | Complete |
+| GOVN-03 | Phase 5 | Complete |
 | OPS-01 | Phase 6 | Pending |
 | OPS-02 | Phase 6 | Pending |
 | OPS-03 | Phase 6 | Pending |

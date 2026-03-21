@@ -106,10 +106,10 @@ Plans:
   1. Any authorized user can log a decision with type (individual, cross-function, strategic), context, and status, and approved decisions cannot be deleted
   2. Admin/founder can override or escalate any pending approval that is stalling progress
   3. When a primary approver is unavailable, their approval authority can be delegated to another user, and the delegation is recorded in the audit trail
-**Plans:** 4 plans
+**Plans:** 1/4 plans executed
 
 Plans:
-- [ ] 05-01-PLAN.md — Backend: schema migration (ApprovalDelegation + Approval override fields), Decisions/Approvals/Delegations NestJS modules, frontend types
+- [x] 05-01-PLAN.md — Backend: schema migration (ApprovalDelegation + Approval override fields), Decisions/Approvals/Delegations NestJS modules, frontend types
 - [ ] 05-02-PLAN.md — Frontend: /decisions page (filterable list, MagicCard cards, detail expand, log decision form), sidebar Decisions link
 - [ ] 05-03-PLAN.md — Frontend: approval override UI (OverrideDialog + ApprovalItem modification with override button and attribution)
 - [ ] 05-04-PLAN.md — Frontend: /admin/delegations page (create/view/deactivate delegations), sidebar Delegations link
@@ -232,7 +232,7 @@ Dependencies: Phase 7 (Recipes) depends on Phase 6 (brands/vendors). Phase 8 (In
 | 2. Mission Execution Hierarchy | 4/4 | Complete | 2026-03-19 |
 | 3. Evidence & Validation Cascade | 4/4 | Complete | 2026-03-20 |
 | 4. Gamification & Readiness Intelligence | 4/4 | Complete   | 2026-03-20 |
-| 5. Governance & Decision Management | 0/4 | Planned | - |
+| 5. Governance & Decision Management | 1/4 | In Progress|  |
 | 6. Operations Management | 0/0 | Not started | - |
 | 7. Recipe & Ingredient Management | 0/0 | Not started | - |
 | 8. Inventory & Procurement | 0/0 | Not started | - |
