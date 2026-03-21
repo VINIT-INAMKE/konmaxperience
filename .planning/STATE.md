@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Completed 09-01-PLAN.md
-last_updated: "2026-03-21T13:43:01.529Z"
+stopped_at: Completed 09-03-PLAN.md
+last_updated: "2026-03-21T13:54:36.735Z"
 progress:
   total_phases: 13
   completed_phases: 8
   total_plans: 38
-  completed_plans: 34
+  completed_plans: 36
 ---
 
 # Project State
@@ -24,7 +24,7 @@ See: .planning/PROJECT.md (updated 2026-03-19)
 ## Current Position
 
 Phase: 09 (kitchen-prep) — EXECUTING
-Plan: 2 of 5
+Plan: 4 of 5
 
 ## Performance Metrics
 
@@ -75,6 +75,8 @@ Plan: 2 of 5
 | Phase 08 P02 | 6min | 2 tasks | 13 files |
 | Phase 08-inventory-procurement P03 | 11min | 2 tasks | 6 files |
 | Phase 09 P01 | 5min | 2 tasks | 11 files |
+| Phase 09 P02 | 7min | 2 tasks | 8 files |
+| Phase 09 P03 | 6min | 2 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -179,6 +181,11 @@ Recent decisions affecting current work:
 - [Phase 09]: WasteLog.logged_by nullable (String?) for system-generated expiry entries per Research open question 1
 - [Phase 09]: MANAGE_KITCHEN added to PROCUREMENT_LEAD role (kitchen operations are procurement-adjacent)
 - [Phase 09]: Order/OrderItem models added in Phase 9 so KDS endpoints compile; order creation deferred to Phase 10
+- [Phase 09]: PrepBatch created first in $transaction for StockMovement reference_id; rolls back on deduction failure
+- [Phase 09]: Mock Decimal uses valueOf() pattern for Number() coercion compatibility in jest tests
+- [Phase 09]: KDS item status progression enforced via progressionMap (pending->preparing->ready only)
+- [Phase 09]: waste_percentage = (waste_today_cost / totalCostProduced) * 100 per D-15 / KITCHEN-05
+- [Phase 09]: Menu availability endpoint backend-only for Phase 9; D-11 frontend display deferred to Phase 10
 
 ### Pending Todos
 
@@ -193,6 +200,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-21T13:43:01.524Z
-Stopped at: Completed 09-01-PLAN.md
+Last session: 2026-03-21T13:54:36.725Z
+Stopped at: Completed 09-03-PLAN.md
 Resume file: None
