@@ -26,6 +26,8 @@ import { ZonesModule } from './zones/zones.module';
 import { BrandsModule } from './brands/brands.module';
 import { ChannelsModule } from './channels/channels.module';
 import { AssetsModule } from './assets/assets.module';
+import { IngredientsModule } from './ingredients/ingredients.module';
+import { VendorsModule } from './vendors/vendors.module';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { PermissionsGuard } from './auth/permissions.guard';
 
@@ -55,6 +57,8 @@ import { PermissionsGuard } from './auth/permissions.guard';
     BrandsModule,
     ChannelsModule,
     AssetsModule,
+    IngredientsModule,
+    VendorsModule,
   ],
   controllers: [AppController],
   providers: [
