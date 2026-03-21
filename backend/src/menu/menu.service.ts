@@ -9,6 +9,7 @@ import { UpdateMenuCategoryDto } from './dto/update-menu-category.dto';
 import { CreateMenuItemDto } from './dto/create-menu-item.dto';
 import { UpdateMenuItemDto } from './dto/update-menu-item.dto';
 import { UpsertChannelModifierDto } from './dto/upsert-channel-modifier.dto';
+import { convertUnit } from '../common/utils/unit-conversion';
 
 @Injectable()
 export class MenuService {
@@ -192,5 +193,81 @@ export class MenuService {
         modifier_value: dto.modifier_value,
       },
     });
+  }
+
+  // ----------------------------------------------------------------
+  // Menu Availability (backend-only for Phase 9; D-11 frontend deferred to Phase 10)
+  // ----------------------------------------------------------------
+
+  async getServingsAvailable(
+    menuItemId: string,
+  ): Promise<{ available: boolean; servings_remaining: number }> {
+    const menuItem = await this.prisma.menuItem.findUniqueOrThrow({
+      where: { id: menuItemId },
+      include: {
+        recipe: {
+          include: {
+            RecipeLines: {
+              include: { ingredient: true, source_recipe: true },
+            },
+          },
+        },
+      },
+    });
+
+    if (!menuItem.available || menuItem.status !== 'active') {
+      return { available: false, servings_remaining: 0 };
+    }
+
+    let minServings = Infinity;
+
+    for (const line of menuItem.recipe.RecipeLines) {
+      if (line.input_type === 'ingredient') {
+        // Check raw ingredient stock across all zones
+        const stocks = await this.prisma.ingredientStock.findMany({
+          where: { ingredient_id: line.ingredient_id! },
+        });
+        const totalStock = stocks.reduce(
+          (s, st) => s + Number(st.current_quantity),
+          0,
+        );
+        const neededPerServing = await convertUnit(
+          Number(line.quantity),
+          line.unit,
+          line.ingredient!.base_unit,
+          this.prisma,
+        );
+        if (neededPerServing === null || neededPerServing === 0) continue;
+        const servings = Math.floor(totalStock / neededPerServing);
+        minServings = Math.min(minServings, servings);
+      }
+
+      if (line.input_type === 'recipe') {
+        // Check active, non-expired prep batches
+        const batches = await this.prisma.prepBatch.findMany({
+          where: {
+            recipe_id: line.source_recipe_id!,
+            status: 'active',
+            OR: [{ expires_at: null }, { expires_at: { gt: new Date() } }],
+          },
+        });
+        const totalRemaining = batches.reduce(
+          (s, b) => s + Number(b.quantity_remaining),
+          0,
+        );
+        const neededPerServing = await convertUnit(
+          Number(line.quantity),
+          line.unit,
+          line.source_recipe!.yield_unit,
+          this.prisma,
+        );
+        if (neededPerServing === null || neededPerServing === 0) continue;
+        const servings = Math.floor(totalRemaining / neededPerServing);
+        minServings = Math.min(minServings, servings);
+      }
+    }
+
+    const remaining = minServings === Infinity ? 0 : minServings;
+    return { available: remaining > 0, servings_remaining: remaining };
   }
 }

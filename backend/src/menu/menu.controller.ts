@@ -87,6 +87,17 @@ export class MenuController {
   }
 
   // ----------------------------------------------------------------
+  // Availability (backend-only for Phase 9; D-11 frontend deferred to Phase 10)
+  // ----------------------------------------------------------------
+
+  @Get('availability/:menuItemId')
+  async getServingsAvailable(
+    @Param('menuItemId', ParseUUIDPipe) menuItemId: string,
+  ) {
+    return this.menuService.getServingsAvailable(menuItemId);
+  }
+
+  // ----------------------------------------------------------------
   // Channel Modifiers
   // ----------------------------------------------------------------
 
