@@ -28,6 +28,9 @@ import {
   Salad,
   Truck,
   UtensilsCrossed,
+  PackageSearch,
+  ShoppingCart,
+  TrendingUp,
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
@@ -183,6 +186,9 @@ export function Sidebar() {
     { label: 'Ingredients', href: '/operations/ingredients', icon: <Salad className="size-4" /> },
     { label: 'Vendors', href: '/operations/vendors', icon: <Truck className="size-4" /> },
     { label: 'Menu', href: '/operations/menu', icon: <UtensilsCrossed className="size-4" /> },
+    { label: 'Inventory', href: '/operations/inventory', icon: <PackageSearch className="size-4" /> },
+    { label: 'Purchase Orders', href: '/operations/purchase-orders', icon: <ShoppingCart className="size-4" /> },
+    { label: 'Procurement', href: '/operations/procurement', icon: <TrendingUp className="size-4" /> },
   ];
 
   const adminNav: NavItem[] = [
