@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Completed 12-03-PLAN.md
-last_updated: "2026-03-21T20:49:01.421Z"
+stopped_at: Completed 12-02-PLAN.md
+last_updated: "2026-03-21T20:54:27.021Z"
 progress:
   total_phases: 13
   completed_phases: 10
   total_plans: 53
-  completed_plans: 50
+  completed_plans: 51
 ---
 
 # Project State
@@ -24,7 +24,7 @@ See: .planning/PROJECT.md (updated 2026-03-19)
 ## Current Position
 
 Phase: 12 (notifications) — EXECUTING
-Plan: 3 of 4
+Plan: 4 of 4
 
 ## Performance Metrics
 
@@ -88,6 +88,7 @@ Plan: 3 of 4
 | Phase 11 P02 | 5min | 2 tasks | 7 files |
 | Phase 12 P01 | 7min | 2 tasks | 15 files |
 | Phase 12 P03 | 3min | 2 tasks | 3 files |
+| Phase 12 P02 | 8min | 2 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -225,6 +226,9 @@ Recent decisions affecting current work:
 - [Phase 12]: MailerSend in worker directly (not via EmailService) for notification-specific email templates
 - [Phase 12]: Failure isolation: every job handler wrapped in try/catch, email failures never crash worker
 - [Phase 12]: PopoverTrigger wraps Button directly (no asChild) per base-ui component API
+- [Phase 12]: Event types changed from interfaces to classes for isolatedModules + emitDecoratorMetadata compatibility
+- [Phase 12]: All event emissions use try/catch {} empty-catch for D-03 failure isolation -- EventEmitter failures never affect producing services
+- [Phase 12]: KdsService captures allReady flag inside , emits order.ready outside (Pitfall 1 compliance)
 
 ### Pending Todos
 
@@ -239,6 +243,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-21T20:49:01.415Z
-Stopped at: Completed 12-03-PLAN.md
+Last session: 2026-03-21T20:54:27.016Z
+Stopped at: Completed 12-02-PLAN.md
 Resume file: None
