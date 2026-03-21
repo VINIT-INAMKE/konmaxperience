@@ -54,20 +54,20 @@ Established pattern across all ops pages (source: 12 existing page components):
 
 | Role | Size | Weight | Line Height | Usage |
 |------|------|--------|-------------|-------|
-| Body | 14px (text-sm) | 400 (font-normal) | 1.5 | Notification body text, timestamps, empty state copy |
-| Label | 13px (text-[13px]) | 500 (font-medium) | 1.4 | Notification type label, section nav labels |
+| Micro | 12px (text-xs) | 400 (font-normal) | 1.4 | Timestamps, unread count badge, notification type pill |
+| Body | 14px (text-sm) | 400 (font-normal) | 1.5 | Notification body text, "Mark all as read" action, panel footer link |
+| Label | 14px (text-sm) | 700 (font-bold) | 1.5 | Notification title in panel card, section headings, CTA labels |
 | Heading | 20px (text-[20px]) | 700 (font-bold) | 1.2 | Page heading: "Notifications" |
-| Display | 28px (text-[28px]) | 600 (font-semibold) | 1.2 | Not used on this page — reserved for other ops pages |
 
-Note: Display size (28px font-semibold) is the dominant page-heading pattern in ops pages (decisions, brands, zones, etc.). The Notifications page uses the board-page pattern (20px font-bold) consistent with the `/boards/*` pages which also show feeds/lists.
+Font weight note: Only 2 weights in use — 400 (normal) for body text, timestamps, and muted content; 700 (bold) for titles, labels, CTAs, and headings. Intermediate weights (500, 600) are not used in this phase.
 
 Specific sizes for notification components:
-- Notification title in panel card: `text-sm font-medium` (14px/500)
+- Notification title in panel card: `text-sm font-bold` (14px/700)
 - Notification body/subtitle: `text-sm text-muted-foreground` (14px/400)
 - Timestamp: `text-xs text-muted-foreground` (12px/400)
-- Unread count badge: `text-xs font-medium` (12px/500)
-- Panel "Mark all as read" action: `text-sm font-medium` (14px/500)
-- Notification type pill: `text-[11px] font-medium uppercase tracking-wider` matching section label pattern from Sidebar
+- Unread count badge: `text-xs font-bold` (12px/700)
+- Panel "Mark all as read" action: `text-sm text-muted-foreground` (14px/400)
+- Notification type pill: `text-xs font-bold uppercase tracking-wider` (12px/700)
 
 ---
 
@@ -142,19 +142,19 @@ Modify to flex row:
 `NotificationBell` renders:
 - `PopoverTrigger` wrapping a ghost `Button` with `size-icon` variant, `size-8` dimensions
 - `Bell` icon at `size-4` inside
-- Unread count badge: absolute-positioned, top-0 right-0, `h-4 w-4 rounded-full bg-destructive text-destructive-foreground text-[10px] font-medium` for red dot style. Hidden when count = 0.
+- Unread count badge: absolute-positioned, top-0 right-0, `h-4 w-4 rounded-full bg-destructive text-destructive-foreground text-xs font-bold` for red dot style. Hidden when count = 0.
 - Max displayed count: 9+
 
 ### 2. Notification Popover Panel
 
 - `PopoverContent` with `side="bottom"` `align="end"` `sideOffset={8}` `className="w-80 p-0"`
 - Panel header: `flex items-center justify-between px-4 py-3 border-b`
-  - Left: "Notifications" label at `text-sm font-semibold`
-  - Right: "Mark all as read" ghost button at `text-xs font-medium text-muted-foreground hover:text-foreground` — disabled when unread count = 0
+  - Left: "Notifications" label at `text-sm font-bold`
+  - Right: "Mark all as read" ghost button at `text-xs text-muted-foreground hover:text-foreground` — disabled when unread count = 0
 - Notification list: `ScrollArea` with `max-h-[480px]`
   - Each item: `NotificationItem` component
 - Panel footer: `border-t px-4 py-2`
-  - "View all notifications" link → `/notifications` at `text-sm font-medium`
+  - "View all notifications" link → `/notifications` at `text-sm`
 
 ### 3. NotificationItem Component
 
@@ -167,12 +167,18 @@ Modify to flex row:
     <TypeIcon />  {/* lucide icon, size-4, colored by type */}
   </div>
   <div className="flex-1 min-w-0">
-    <p className="text-sm font-medium truncate">{item.title}</p>
+    <p className="text-sm font-bold truncate">{item.title}</p>
     <p className="text-sm text-muted-foreground line-clamp-2">{item.body}</p>
     <p className="text-xs text-muted-foreground mt-1">{relativeTime}</p>
   </div>
   {!item.is_read && (
-    <div className="mt-1 size-2 rounded-full bg-primary shrink-0" />
+    <button
+      aria-label="Mark as read"
+      className="mt-1 size-4 shrink-0 rounded-full flex items-center justify-center hover:bg-muted"
+      onClick={(e) => { e.stopPropagation(); markRead(item.id); }}
+    >
+      <Check className="size-3" />
+    </button>
   )}
 </div>
 ```
@@ -211,7 +217,7 @@ Structure:
 </main>
 ```
 
-Pagination: "Load more" button at bottom (not infinite scroll) — 20 items per page.
+Pagination: "Load more notifications" button at bottom (not infinite scroll) — 20 items per page.
 
 ---
 
@@ -225,8 +231,9 @@ Pagination: "Load more" button at bottom (not infinite scroll) — 20 items per 
 
 ### Mark as Read
 - Clicking any notification item: fires `PATCH /notifications/:id/read` optimistically (mark is_read=true in cache immediately, rollback on error)
+- Per-item Check button (`aria-label="Mark as read"`): fires `PATCH /notifications/:id/read` without navigating away
 - "Mark all as read": fires `POST /notifications/read-all`, invalidates `['notifications']` and `['notifications', 'unread-count']`
-- Navigation: after marking read, navigate to `item.link_url` using Next.js `router.push()`
+- Navigation: after clicking a notification item (not the Check button), navigate to `item.link_url` using Next.js `router.push()`
 
 ### Full Page Filters
 - Tabs: All / Unread / Tasks / Approvals / Operations
@@ -255,7 +262,7 @@ Pagination: "Load more" button at bottom (not infinite scroll) — 20 items per 
 | Empty state body (page, unread tab) | "You have no unread notifications." |
 | Notification titles by type (7 types) | See table below |
 | Error state | "Could not load notifications. Refresh the page to try again." |
-| Load more button | "Load more" |
+| Load more button | "Load more notifications" |
 | View all link | "View all notifications" |
 
 ### Notification Title Templates (stored in DB, generated by worker)
@@ -293,6 +300,7 @@ Every UI surface must handle these states:
 - Unread badge: `aria-label={`${count} unread notifications`}` on the badge span
 - Notification panel: `role="region"` `aria-label="Recent notifications"`
 - Notification items: keyboard navigable, `Enter`/`Space` triggers navigation + mark-read
+- Per-item Check button: `aria-label="Mark as read"` — allows marking individual items read without navigating away
 - Empty state BellOff icon: `aria-hidden="true"` (decorative)
 - All type icons in NotificationItem: `aria-hidden="true"` (decorative — title text is sufficient)
 
@@ -303,7 +311,7 @@ Every UI surface must handle these states:
 | Registry | Blocks Used | Safety Gate |
 |----------|-------------|-------------|
 | shadcn official | badge, popover, button, tabs, scroll-area, separator, skeleton | not required |
-| @magicui | animated-list, blur-fade (already installed) | view passed — already in codebase |
+| @magicui | animated-list, blur-fade (already installed) | view passed — no flags — 2026-03-19 (Phase 02-03) and 2026-03-20 (Phase 03-03). All components pre-installed. |
 | None (third-party) | No new third-party blocks | not applicable |
 
 No new registry additions. All required components are already installed in `frontend/components/ui/`.
