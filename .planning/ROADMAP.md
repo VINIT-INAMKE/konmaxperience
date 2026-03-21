@@ -161,10 +161,10 @@ Plans:
   2. Every stock change is recorded as a movement (received, prep-deducted, waste, adjustment) with reason and reference
   3. Purchase orders can be created to vendors with line items, tracked through draft → ordered → received, and auto-update inventory on receive
   4. Procurement dashboard shows pending POs, low stock alerts, vendor spend, and total inventory value
-**Plans:** 5 plans
+**Plans:** 1/5 plans executed
 
 Plans:
-- [ ] 08-01-PLAN.md — Prisma schema migration (4 new models + zone_id on PO), MANAGE_INVENTORY/MANAGE_PROCUREMENT permissions, seed update, frontend types
+- [x] 08-01-PLAN.md — Prisma schema migration (4 new models + zone_id on PO), MANAGE_INVENTORY/MANAGE_PROCUREMENT permissions, seed update, frontend types
 - [ ] 08-02-PLAN.md — Backend InventoryModule (stock CRUD, adjustment, movements) + PurchaseOrdersModule (CRUD, receiving $transaction with unit conversion) + ProcurementModule (dashboard queries) + AppModule registration
 - [ ] 08-03-PLAN.md — Frontend /operations/inventory page (stock table, low-stock alert strip, filters) + /operations/inventory/[ingredientId] movement audit trail + stock adjustment Sheet + sidebar nav update
 - [ ] 08-04-PLAN.md — Frontend /operations/purchase-orders page (status tabs) + /operations/purchase-orders/new (full-page PO creation form with inline line items) + /operations/purchase-orders/[id] (detail + receiving)
@@ -250,7 +250,7 @@ Dependencies: Phase 7 (Recipes) depends on Phase 6 (brands/vendors). Phase 8 (In
 | 5. Governance & Decision Management | 4/4 | Complete   | 2026-03-21 |
 | 6. Operations Management | 3/3 | Complete   | 2026-03-21 |
 | 7. Recipe & Ingredient Management | 6/6 | Complete   | 2026-03-21 |
-| 8. Inventory & Procurement | 0/5 | Planning complete | - |
+| 8. Inventory & Procurement | 1/5 | In Progress|  |
 | 9. Kitchen & Prep | 0/0 | Not started | - |
 | 10. POS & Orders | 0/0 | Not started | - |
 | 11. Dashboards & Shared Boards | 0/0 | Not started | - |

@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Phase 8 plans verified
-last_updated: "2026-03-21T11:47:27.882Z"
+stopped_at: Completed 08-01-PLAN.md
+last_updated: "2026-03-21T11:55:36.872Z"
 progress:
   total_phases: 13
   completed_phases: 7
   total_plans: 33
-  completed_plans: 28
+  completed_plans: 29
 ---
 
 # Project State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-19)
 
 **Core value:** Every piece of work must be evidence-backed, approved, and validated before it counts -- turning real execution into measurable readiness and progress.
-**Current focus:** Phase 07 — recipe-ingredient-management
+**Current focus:** Phase 08 — inventory-procurement
 
 ## Current Position
 
-Phase: 8
-Plan: Not started
+Phase: 08 (inventory-procurement) — EXECUTING
+Plan: 2 of 5
 
 ## Performance Metrics
 
@@ -71,6 +71,7 @@ Plan: Not started
 | Phase 07-recipe-ingredient-management P04 | 5min | 2 tasks | 10 files |
 | Phase 07-recipe-ingredient-management P06 | 6min | 2 tasks | 6 files |
 | Phase 07-recipe-ingredient-management P05 | 14min | 2 tasks | 10 files |
+| Phase 08-inventory-procurement P01 | 7min | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -165,6 +166,8 @@ Recent decisions affecting current work:
 - [Phase 07-05]: Wizard state hoisted to RecipeWizard parent — setStep/details/bomLines live there, steps receive props to prevent back navigation data loss
 - [Phase 07-05]: RecipeDependencyTree recursive depth prop drives paddingLeft (depth * 16px) for visual nesting
 - [Phase 07-05]: BomLineRow queries conditionally enabled by input_type to prevent unnecessary API calls on initial render
+- [Phase 08-01]: No FK from StockMovement to IngredientStock — service layer joins via ingredient_id+zone_id to avoid over-coupling
+- [Phase 08-01]: zone_id on PurchaseOrder so receiving flow knows where to upsert IngredientStock
 
 ### Pending Todos
 
@@ -179,6 +182,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-21T11:47:27.876Z
-Stopped at: Phase 8 plans verified
-Resume file: .planning/phases/08-inventory-procurement/08-01-PLAN.md
+Last session: 2026-03-21T11:55:36.866Z
+Stopped at: Completed 08-01-PLAN.md
+Resume file: None
