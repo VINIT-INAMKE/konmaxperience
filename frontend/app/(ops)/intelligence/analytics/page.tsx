@@ -1,0 +1,204 @@
+'use client';
+
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { BlurFade } from '@/components/ui/blur-fade';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { AnalyticsSummaryCards } from '@/components/ops/analytics/AnalyticsSummaryCards';
+import { RevenueTrendChart } from '@/components/ops/analytics/RevenueTrendChart';
+import { TopItemsList } from '@/components/ops/analytics/TopItemsList';
+import { ChannelBreakdownChart } from '@/components/ops/analytics/ChannelBreakdownChart';
+import { RecipeCostTable } from '@/components/ops/analytics/RecipeCostTable';
+import { apiClient } from '@/lib/api-client';
+import { useAuthStore } from '@/lib/stores/auth-store';
+import { RoleCode } from '@/lib/types/roles';
+import type {
+  AnalyticsSummary,
+  RevenuePoint,
+  TopItem,
+  ChannelRevenue,
+  RecipeCostRow,
+} from '@/lib/types/analytics';
+import { ShieldAlert } from 'lucide-react';
+
+type TimeRange = 'today' | '7d' | '30d' | 'custom';
+
+function computeDateRange(
+  timeRange: TimeRange,
+  customFrom: string,
+  customTo: string,
+): { from: string; to: string } {
+  const now = new Date();
+  const today = now.toISOString().split('T')[0];
+  let from: string;
+  let to: string = today;
+
+  if (timeRange === 'today') {
+    from = today;
+  } else if (timeRange === '7d') {
+    const d = new Date(now);
+    d.setDate(d.getDate() - 6);
+    from = d.toISOString().split('T')[0];
+  } else if (timeRange === '30d') {
+    const d = new Date(now);
+    d.setDate(d.getDate() - 29);
+    from = d.toISOString().split('T')[0];
+  } else {
+    from = customFrom;
+    to = customTo;
+  }
+
+  return { from, to };
+}
+
+export default function AnalyticsPage() {
+  const user = useAuthStore((s) => s.user);
+  const permissions = useAuthStore((s) => s.permissions);
+
+  const isAuthorized =
+    permissions.includes('MANAGE_KPIS') ||
+    user?.roleCode === RoleCode.FOUNDER_ADMIN ||
+    user?.roleCode === ('BI_LEAD' as RoleCode);
+
+  const [timeRange, setTimeRange] = useState<TimeRange>('7d');
+  const [customFrom, setCustomFrom] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 6);
+    return d.toISOString().split('T')[0];
+  });
+  const [customTo, setCustomTo] = useState(() =>
+    new Date().toISOString().split('T')[0],
+  );
+
+  const { from, to } = computeDateRange(timeRange, customFrom, customTo);
+
+  const { data: summary, isLoading: summaryLoading } = useQuery({
+    queryKey: ['analytics', 'summary', from, to],
+    queryFn: () => apiClient.get<AnalyticsSummary>(`/analytics/summary?from=${from}&to=${to}`),
+    enabled: isAuthorized,
+  });
+
+  const { data: revenue, isLoading: revenueLoading } = useQuery({
+    queryKey: ['analytics', 'revenue', from, to],
+    queryFn: () => apiClient.get<RevenuePoint[]>(`/analytics/revenue?from=${from}&to=${to}`),
+    enabled: isAuthorized,
+  });
+
+  const { data: topItems } = useQuery({
+    queryKey: ['analytics', 'top-items', from, to],
+    queryFn: () => apiClient.get<TopItem[]>(`/analytics/top-items?from=${from}&to=${to}`),
+    enabled: isAuthorized,
+  });
+
+  const { data: channels } = useQuery({
+    queryKey: ['analytics', 'channels', from, to],
+    queryFn: () => apiClient.get<ChannelRevenue[]>(`/analytics/channels?from=${from}&to=${to}`),
+    enabled: isAuthorized,
+  });
+
+  const { data: recipeCosts } = useQuery({
+    queryKey: ['analytics', 'recipe-costs', from, to],
+    queryFn: () => apiClient.get<RecipeCostRow[]>(`/analytics/recipe-costs?from=${from}&to=${to}`),
+    enabled: isAuthorized,
+  });
+
+  if (!isAuthorized) {
+    return (
+      <BlurFade>
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <Card className="max-w-md">
+            <CardContent className="p-8 text-center space-y-4">
+              <ShieldAlert className="size-12 mx-auto text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">
+                Access restricted. BI analytics requires the Analytics permission.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      </BlurFade>
+    );
+  }
+
+  return (
+    <BlurFade>
+      <div className="space-y-8">
+        {/* Header: title + time range toggle */}
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <h1 className="text-2xl font-semibold">Analytics</h1>
+          <div className="flex items-center gap-2">
+            {(['today', '7d', '30d'] as const).map((range) => (
+              <Button
+                key={range}
+                variant={timeRange === range ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setTimeRange(range)}
+              >
+                {range === 'today' ? 'Today' : range === '7d' ? '7 days' : '30 days'}
+              </Button>
+            ))}
+            <Popover>
+              <PopoverTrigger
+                className={`inline-flex items-center justify-center rounded-md text-sm font-medium h-8 px-3 border ${
+                  timeRange === 'custom'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'border-input bg-background hover:bg-accent hover:text-accent-foreground'
+                }`}
+              >
+                Custom
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-4 space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-bold">From</label>
+                    <input
+                      type="date"
+                      value={customFrom}
+                      onChange={(e) => setCustomFrom(e.target.value)}
+                      className="mt-1 block w-full rounded-md border bg-background px-2 py-1 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold">To</label>
+                    <input
+                      type="date"
+                      value={customTo}
+                      onChange={(e) => setCustomTo(e.target.value)}
+                      className="mt-1 block w-full rounded-md border bg-background px-2 py-1 text-sm"
+                    />
+                  </div>
+                </div>
+                <Button
+                  size="sm"
+                  onClick={() => setTimeRange('custom')}
+                >
+                  Apply Range
+                </Button>
+              </PopoverContent>
+            </Popover>
+          </div>
+        </div>
+
+        {/* Summary cards */}
+        <AnalyticsSummaryCards summary={summary} isLoading={summaryLoading} />
+
+        {/* Revenue trend — full width */}
+        <RevenueTrendChart data={revenue ?? []} isLoading={revenueLoading} />
+
+        {/* Top items + Channel donut — 3/5 + 2/5 */}
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+          <div className="lg:col-span-3">
+            <TopItemsList data={topItems ?? []} />
+          </div>
+          <div className="lg:col-span-2">
+            <ChannelBreakdownChart data={channels ?? []} />
+          </div>
+        </div>
+
+        {/* Recipe cost table — full width */}
+        <RecipeCostTable data={recipeCosts ?? []} />
+      </div>
+    </BlurFade>
+  );
+}
