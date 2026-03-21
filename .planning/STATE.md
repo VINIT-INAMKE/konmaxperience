@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Phase 7 plans verified
-last_updated: "2026-03-21T10:20:31.304Z"
+stopped_at: Completed 07-02-PLAN.md
+last_updated: "2026-03-21T10:33:39.476Z"
 progress:
   total_phases: 13
   completed_phases: 6
   total_plans: 28
-  completed_plans: 22
+  completed_plans: 24
 ---
 
 # Project State
@@ -24,7 +24,7 @@ See: .planning/PROJECT.md (updated 2026-03-19)
 ## Current Position
 
 Phase: 07 (recipe-ingredient-management) — EXECUTING
-Plan: 2 of 6
+Plan: 3 of 6
 
 ## Performance Metrics
 
@@ -66,6 +66,7 @@ Plan: 2 of 6
 | Phase 06-operations-management P01 | 5min | 1 tasks | 30 files |
 | Phase 06-operations-management P02 | 5min | 2 tasks | 11 files |
 | Phase 06-operations-management P03 | 5min | 2 tasks | 11 files |
+| Phase 07-recipe-ingredient-management P02 | 8min | 2 tasks | 13 files |
 
 ## Accumulated Context
 
@@ -144,6 +145,10 @@ Recent decisions affecting current work:
 - [Phase 06-02]: Status Select only shown in edit mode — new zones/brands use server-default status (planned/idea), preventing accidental override on creation
 - [Phase 06-03]: AssetUploadZone uses onFileReady callback pattern — parent AssetForm owns POST /assets to keep upload and record creation separate
 - [Phase 06-03]: TooltipTrigger (base-ui) does not accept asChild — Switch wrapped directly inside TooltipTrigger without asChild prop
+- [Phase 07-02]: Vendor delete blocked when VendorPrice records exist (same usage-safe pattern as Ingredient delete)
+- [Phase 07-02]: VendorsController places GET /prices/ingredient/:id before GET /:id to prevent NestJS route shadowing on ParseUUIDPipe
+- [Phase 07-02]: recalculateCostsForIngredient is a stub (console.log only) — CostCalculatorService wired in Plan 03
+- [Phase 07-02]: unit-conversion.ts uses module-level cache (not class-level) so it works from any service context without DI circular concerns
 
 ### Pending Todos
 
@@ -158,6 +163,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-21T10:14:23.823Z
-Stopped at: Phase 7 plans verified
-Resume file: .planning/phases/07-recipe-ingredient-management/07-01-PLAN.md
+Last session: 2026-03-21T10:33:39.471Z
+Stopped at: Completed 07-02-PLAN.md
+Resume file: None
