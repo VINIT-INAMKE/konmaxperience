@@ -43,11 +43,11 @@ Declared values (multiples of 4 only):
 
 Exceptions:
 - Kanban column min-width: 240px (usability minimum for card content)
-- Timeline feed item left indent: 20px (aligns with connector line visual)
+- Timeline feed item left indent: 24px (aligns with connector line visual)
 - Chart container min-height: 200px (Recharts render requirement)
 - Evidence feed thumbnail: 64px x 64px square (consistent aspect ratio)
 
-Source: Spacing scale established Phase 1 and confirmed Phase 10 UI-SPEC. No exceptions to the 4-point rule.
+Source: Spacing scale established Phase 1 and confirmed Phase 10 UI-SPEC. All exception values are multiples of 4.
 
 ---
 
@@ -85,7 +85,7 @@ All values are CSS custom properties from `frontend/app/globals.css`. Reference 
 
 Accent (`--primary`) reserved for:
 1. Active time-range toggle button (Today / 7d / 30d active state on BI dashboard)
-2. Primary CTA buttons ("Add Task" in ad-hoc injector, "Apply" in date range picker)
+2. Primary CTA buttons ("Add Task" in ad-hoc injector, "Apply Range" in date range picker)
 3. Mission card progress bar fill
 4. Quest board kanban "In Progress" column header accent marker (left border, 3px)
 
@@ -296,7 +296,7 @@ Vertical timeline feed:
 - Dot: 8px circle with status color (see color contract)
 - Entry text: Body/14px weight 400; "who" and "when" in muted-foreground
 - Reverse chronological order (newest first)
-- Pagination: "Load more" button at bottom (not infinite scroll — simpler to implement)
+- Pagination: "Load more entries" button at bottom (not infinite scroll — simpler to implement)
 
 ### `/boards/evidence` — Evidence Feed (D-15)
 
@@ -321,7 +321,7 @@ Scrollable card feed:
 - Each card: standard Card component, flex row — 64x64 thumbnail left (rounded-md, `object-cover`), content right
 - Non-image evidence types (doc, video, link, note): placeholder icon (`FileText`, `Video`, `Link`, `StickyNote` from lucide) inside 64x64 gray square
 - Click card: navigates to the task detail page for the related task (not a modal)
-- Most recent first; "Load more" at bottom
+- Most recent first; "Load more evidence" at bottom
 
 ---
 
@@ -334,7 +334,7 @@ Components to use in this phase:
 | `Card`, `CardContent`, `CardHeader` | shadcn official | All stat cards, widget containers, mission cards, evidence feed cards |
 | `Tabs` | shadcn official | BI time range toggle (Today/7d/30d/Custom), quest board filter tabs |
 | `Badge` | shadcn official | KPI status, evidence approval status, quest count in kanban, milestone type |
-| `Button` | shadcn official | "Load more" (boards), "Apply" (date range), "Add Task" (ad-hoc injector), time range toggle |
+| `Button` | shadcn official | "Load more entries" / "Load more evidence" / "Load more quests" (boards), "Apply Range" (date range), "Add Task" (ad-hoc injector), time range toggle |
 | `Progress` | shadcn official | Mission card progress bar, quest card progress bar, role user dashboard quest progress |
 | `Table` | shadcn official | Recipe cost analysis, active prep batches, inventory stock levels |
 | `Select` | shadcn official | Mission filter, assignee filter on quest board, evidence status filter |
@@ -404,7 +404,7 @@ MagicUI components NOT used in this phase: BorderBeam, AnimatedList, ShimmerButt
 1. Default on page load: 7d
 2. Toggle tabs: Today | 7d | 30d | Custom
 3. Switching tab immediately refetches all 4 queries (summary cards + revenue trend + top items + channel breakdown + recipe table) — all invalidate on `timeRange` state change
-4. Custom: opens a Popover with a date range calendar. "Apply" button closes Popover and triggers refetch with `from` and `to` params.
+4. Custom: opens a Popover with a date range calendar. "Apply Range" button closes Popover and triggers refetch with `from` and `to` params.
 5. Active tab: `--primary` background (per accent contract)
 
 ### BI Dashboard: Revenue Trend Chart
@@ -438,13 +438,13 @@ MagicUI components NOT used in this phase: BorderBeam, AnimatedList, ShimmerButt
 1. Default: all statuses, most recent first
 2. Status filter: All | Pending | Approved | Rejected — client-side filter (evidence set is bounded)
 3. Thumbnail: if evidence type is `photo`, shows `<img>` from evidence URL with `loading="lazy"` (no presigned URL needed — thumbnail-only, public CDN assumed)
-4. "Load more" loads next 20 records (cursor-based or offset pagination — planner decides)
+4. "Load more evidence" loads next 20 records (cursor-based or offset pagination — planner decides)
 
 ### Wins/Milestones Timeline
 
 1. Events sources: completed quests + validated tasks + level-ups (three separate query endpoints)
 2. Merged and sorted by timestamp client-side before rendering
-3. "Load more" adds 20 more entries
+3. "Load more entries" adds 20 more entries
 4. No filters in v1 — show all team members
 
 ---
@@ -463,7 +463,7 @@ MagicUI components NOT used in this phase: BorderBeam, AnimatedList, ShimmerButt
 | Wins page title | "Wins & Milestones" |
 | Evidence feed page title | "Evidence Feed" |
 | Primary CTA (ad-hoc injector) | "Add Task" |
-| Primary CTA (date range apply) | "Apply" |
+| Primary CTA (date range apply) | "Apply Range" |
 | Stat card: revenue | "Total Revenue" |
 | Stat card: food cost | "Avg Food Cost" |
 | Stat card: order count | "Total Orders" |
@@ -485,7 +485,9 @@ MagicUI components NOT used in this phase: BorderBeam, AnimatedList, ShimmerButt
 | Empty: recipe cost table (no data) | "No recipe cost data available. Ensure recipes have vendor prices." |
 | Error: data fetch failed | "Could not load data. Refresh the page to try again." |
 | Error: task add failed | "Could not add task. Try again." |
-| "Load more" button | "Load more" |
+| "Load more" button (wins timeline) | "Load more entries" |
+| "Load more" button (evidence feed) | "Load more evidence" |
+| "Load more" button (quest board) | "Load more quests" |
 | Revenue trend section heading | "Revenue Trend" |
 | Top items section heading | "Top Selling Items" |
 | Channel breakdown heading | "Revenue by Channel" |
