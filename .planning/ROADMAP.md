@@ -187,7 +187,7 @@ Plans:
 - [x] 09-01-PLAN.md — Prisma schema (PrepBatch, WasteLog, Order, OrderItem, Payment), @nestjs/schedule install, MANAGE_KITCHEN permission, frontend types
 - [x] 09-02-PLAN.md — Backend PrepBatch CRUD with FIFO deduction logic ($transaction) + deduction preview endpoint
 - [x] 09-03-PLAN.md — Backend KDS endpoints + WasteLog CRUD + kitchen metrics + expiry cron + menu availability endpoint
-- [ ] 09-04-PLAN.md — Frontend Prep Batches page (FIFO table, 3-step wizard with deduction preview) + sidebar Kitchen section
+- [x] 09-04-PLAN.md — Frontend Prep Batches page (FIFO table, 3-step wizard with deduction preview) + sidebar Kitchen section
 - [ ] 09-05-PLAN.md — Frontend KDS full-screen page (zone columns, 5s polling, elapsed timer, status tapping) + Waste Log page
 
 ### Phase 10: POS & Orders
