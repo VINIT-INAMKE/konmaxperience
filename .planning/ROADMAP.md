@@ -138,10 +138,10 @@ Plans:
   1. A recipe can be created with steps, yield, shelf_life_hours, brand, zone, and status workflow — no type distinction (prep or assembly determined by usage)
   2. Each RecipeLine is either a raw ingredient or the output of another recipe (polymorphic BOM), supporting unlimited chaining depth
   3. Ingredients have a master list with category, base_unit, and min stock level
-  4. UnitConversion table converts between compatible units (kg↔g, L↔ml, dozen↔pieces) — all stock operations in base_unit
+  4. UnitConversion table converts between compatible units (kg<>g, L<>ml, dozen<>pieces) — all stock operations in base_unit
   5. Vendors can be created and linked to ingredients with historical price tracking (VendorPrice with effective_date)
   6. Recipe cost auto-calculates recursively — ingredient costs from best vendor price, prep item costs from source recipe cost prorated. Cached in computed_cost.
-  7. Menu items created from approved recipes with base_price, food cost %, manual availability toggle, MenuCategory (Brand → Category → Item), and ChannelModifier for per-channel price adjustments
+  7. Menu items created from approved recipes with base_price, food cost %, manual availability toggle, MenuCategory (Brand > Category > Item), and ChannelModifier for per-channel price adjustments
 **Plans:** 6/6 plans complete
 
 Plans:
@@ -159,7 +159,7 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. Each ingredient has a current stock quantity per zone with min level, and low-stock alerts fire when below minimum
   2. Every stock change is recorded as a movement (received, prep-deducted, waste, adjustment) with reason and reference
-  3. Purchase orders can be created to vendors with line items, tracked through draft → ordered → received, and auto-update inventory on receive
+  3. Purchase orders can be created to vendors with line items, tracked through draft > ordered > received, and auto-update inventory on receive
   4. Procurement dashboard shows pending POs, low stock alerts, vendor spend, and total inventory value
 **Plans:** 5/5 plans complete
 
@@ -175,24 +175,31 @@ Plans:
 **Depends on**: Phase 7 (recipes, ingredients, unit conversion), Phase 8 (raw inventory, stock movements)
 **Requirements**: KITCHEN-01, KITCHEN-02, KITCHEN-03, KITCHEN-04, KITCHEN-05, KITCHEN-06
 **Success Criteria** (what must be TRUE):
-  1. Kitchen can log prep batches (recipe × quantity) — deducts raw ingredients from IngredientStock AND source prep items from other PrepBatches (FIFO), all in single $transaction
-  2. Kitchen display (KDS) polls for orders every 5 seconds, grouped by zone, cook updates item status (pending → preparing → ready)
+  1. Kitchen can log prep batches (recipe x quantity) — deducts raw ingredients from IngredientStock AND source prep items from other PrepBatches (FIFO), all in single $transaction
+  2. Kitchen display (KDS) polls for orders every 5 seconds, grouped by zone, cook updates item status (pending > preparing > ready)
   3. Menu availability checks BOTH PrepBatch levels AND raw IngredientStock for each RecipeLine — shows servings remaining on POS, auto-marks sold out when any input insufficient
   4. Waste logged with structured reasons (spoilage/over_prep/cooking_error/expired/other) and auto-calculated cost impact
   5. Kitchen metrics: orders in queue, prep batch levels, average prep time, waste percentage
   6. PrepBatch expiry: auto-calculated from recipe.shelf_life_hours, expired batches excluded from availability, hourly cron marks expired + auto-creates waste entries
-**Plans**: TBD
+**Plans:** 5 plans
+
+Plans:
+- [ ] 09-01-PLAN.md — Prisma schema (PrepBatch, WasteLog, Order, OrderItem, Payment), @nestjs/schedule install, MANAGE_KITCHEN permission, frontend types
+- [ ] 09-02-PLAN.md — Backend PrepBatch CRUD with FIFO deduction logic ($transaction) + deduction preview endpoint
+- [ ] 09-03-PLAN.md — Backend KDS endpoints + WasteLog CRUD + kitchen metrics + expiry cron + menu availability endpoint
+- [ ] 09-04-PLAN.md — Frontend Prep Batches page (FIFO table, 3-step wizard with deduction preview) + sidebar Kitchen section
+- [ ] 09-05-PLAN.md — Frontend KDS full-screen page (zone columns, 5s polling, elapsed timer, status tapping) + Waste Log page
 
 ### Phase 10: POS & Orders
 **Goal**: Full POS interface for staff to take orders across all channels (dine-in, takeaway, delivery), with payment tracking (single record + notes for splits), order-to-kitchen-to-deduction flow (deduct on "ready"), and own-delivery dispatch (plain name string, no rider entity)
 **Depends on**: Phase 7 (menu items, channel modifiers), Phase 9 (KDS, prep batch deduction logic)
 **Requirements**: POS-01, POS-02, POS-03, POS-04, POS-05, POS-06
 **Success Criteria** (what must be TRUE):
-  1. Staff can take orders on POS with Brand → Category → Items grid, servings-remaining indicator, quantity adjustment, order summary, channel selector
-  2. Orders track channel with channel-specific fields (table_number, customer_phone, delivery_address, delivery_assigned_to) and status flow (placed → preparing → ready → served/dispatched/cancelled)
+  1. Staff can take orders on POS with Brand > Category > Items grid, servings-remaining indicator, quantity adjustment, order summary, channel selector
+  2. Orders track channel with channel-specific fields (table_number, customer_phone, delivery_address, delivery_assigned_to) and status flow (placed > preparing > ready > served/dispatched/cancelled)
   3. Single Payment per order: method (cash/card/UPI), status (pending/paid/refunded), amount, notes field for split description
-  4. Order → kitchen → deduction: items appear on KDS on placement, cook marks ready → DEDUCTION (PrepBatch.quantity_remaining decremented via FIFO + IngredientStock decremented for direct-use items + StockMovements created) → when all items ready → order ready
-  5. Delivery: delivery_assigned_to (plain name string), delivery_status (picked_up → in_transit → delivered)
+  4. Order > kitchen > deduction: items appear on KDS on placement, cook marks ready > DEDUCTION (PrepBatch.quantity_remaining decremented via FIFO + IngredientStock decremented for direct-use items + StockMovements created) > when all items ready > order ready
+  5. Delivery: delivery_assigned_to (plain name string), delivery_status (picked_up > in_transit > delivered)
   6. Order history searchable with filters (date, channel, status, payment), daily revenue summary
 **Plans**: TBD
 
@@ -237,7 +244,7 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11 → 12 → 13
+Phases execute in numeric order: 1 > 2 > 3 > 4 > 5 > 6 > 7 > 8 > 9 > 10 > 11 > 12 > 13
 
 Dependencies: Phase 7 (Recipes) depends on Phase 6 (brands/vendors). Phase 8 (Inventory) depends on Phase 7 (ingredients). Phase 9 (Kitchen) depends on Phase 7+8 (recipes + inventory). Phase 10 (POS) depends on Phase 7+9 (menu items + KDS). Phase 13 (Customer) depends on Phase 10 (orders exist).
 
@@ -251,7 +258,7 @@ Dependencies: Phase 7 (Recipes) depends on Phase 6 (brands/vendors). Phase 8 (In
 | 6. Operations Management | 3/3 | Complete   | 2026-03-21 |
 | 7. Recipe & Ingredient Management | 6/6 | Complete   | 2026-03-21 |
 | 8. Inventory & Procurement | 5/5 | Complete   | 2026-03-21 |
-| 9. Kitchen & Prep | 0/0 | Not started | - |
+| 9. Kitchen & Prep | 0/5 | Planned | - |
 | 10. POS & Orders | 0/0 | Not started | - |
 | 11. Dashboards & Shared Boards | 0/0 | Not started | - |
 | 12. Notifications | 0/0 | Not started | - |
