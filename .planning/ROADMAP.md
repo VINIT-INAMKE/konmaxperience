@@ -165,7 +165,7 @@ Plans:
 
 Plans:
 - [x] 08-01-PLAN.md — Prisma schema migration (4 new models + zone_id on PO), MANAGE_INVENTORY/MANAGE_PROCUREMENT permissions, seed update, frontend types
-- [ ] 08-02-PLAN.md — Backend InventoryModule (stock CRUD, adjustment, movements) + PurchaseOrdersModule (CRUD, receiving $transaction with unit conversion) + ProcurementModule (dashboard queries) + AppModule registration
+- [x] 08-02-PLAN.md — Backend InventoryModule (stock CRUD, adjustment, movements) + PurchaseOrdersModule (CRUD, receiving $transaction with unit conversion) + ProcurementModule (dashboard queries) + AppModule registration
 - [ ] 08-03-PLAN.md — Frontend /operations/inventory page (stock table, low-stock alert strip, filters) + /operations/inventory/[ingredientId] movement audit trail + stock adjustment Sheet + sidebar nav update
 - [ ] 08-04-PLAN.md — Frontend /operations/purchase-orders page (status tabs) + /operations/purchase-orders/new (full-page PO creation form with inline line items) + /operations/purchase-orders/[id] (detail + receiving)
 - [ ] 08-05-PLAN.md — Frontend /operations/procurement dashboard (4 summary cards, top vendors) + dashboard low-stock widget + ingredient row stock enhancement

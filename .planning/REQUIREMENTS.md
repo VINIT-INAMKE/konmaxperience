@@ -77,7 +77,7 @@
 - [x] **INV-01**: Raw ingredient stock tracking — IngredientStock per ingredient per zone in base_unit, min stock level triggers low-stock alert
 - [x] **INV-02**: Stock movement audit trail — every change logged as StockMovement (received/prep_deducted/order_deducted/waste/adjustment) with quantity, reason, reference to PO/PrepBatch/Order/WasteLog
 - [x] **INV-03**: Purchase order workflow — PO to vendor with line items (ingredient + qty + unit_cost), status (draft → ordered → received), partial receiving supported (received_qty can differ from ordered), auto-update IngredientStock on receive with unit conversion
-- [ ] **INV-04**: Procurement dashboard — pending POs, low stock alerts, vendor spend summary, ingredient price trends, total inventory value
+- [x] **INV-04**: Procurement dashboard — pending POs, low stock alerts, vendor spend summary, ingredient price trends, total inventory value
 
 ### Kitchen & Prep
 
@@ -201,7 +201,7 @@
 | INV-01 | Phase 8 | Complete |
 | INV-02 | Phase 8 | Complete |
 | INV-03 | Phase 8 | Complete |
-| INV-04 | Phase 8 | Pending |
+| INV-04 | Phase 8 | Complete |
 | KITCHEN-01 | Phase 9 | Pending |
 | KITCHEN-02 | Phase 9 | Pending |
 | KITCHEN-03 | Phase 9 | Pending |

@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Completed 08-01-PLAN.md
-last_updated: "2026-03-21T11:55:36.872Z"
+stopped_at: Completed 08-02-PLAN.md
+last_updated: "2026-03-21T12:05:16.772Z"
 progress:
   total_phases: 13
   completed_phases: 7
   total_plans: 33
-  completed_plans: 29
+  completed_plans: 30
 ---
 
 # Project State
@@ -24,7 +24,7 @@ See: .planning/PROJECT.md (updated 2026-03-19)
 ## Current Position
 
 Phase: 08 (inventory-procurement) — EXECUTING
-Plan: 2 of 5
+Plan: 3 of 5
 
 ## Performance Metrics
 
@@ -72,6 +72,7 @@ Plan: 2 of 5
 | Phase 07-recipe-ingredient-management P06 | 6min | 2 tasks | 6 files |
 | Phase 07-recipe-ingredient-management P05 | 14min | 2 tasks | 10 files |
 | Phase 08-inventory-procurement P01 | 7min | 2 tasks | 8 files |
+| Phase 08 P02 | 6min | 2 tasks | 13 files |
 
 ## Accumulated Context
 
@@ -168,6 +169,9 @@ Recent decisions affecting current work:
 - [Phase 07-05]: BomLineRow queries conditionally enabled by input_type to prevent unnecessary API calls on initial render
 - [Phase 08-01]: No FK from StockMovement to IngredientStock — service layer joins via ingredient_id+zone_id to avoid over-coupling
 - [Phase 08-01]: zone_id on PurchaseOrder so receiving flow knows where to upsert IngredientStock
+- [Phase 08]: PO receiving uses Decimal from @prisma/client/runtime/library for precise total_amount accumulation
+- [Phase 08]: Low-stock filter uses application-level Number() comparison per Research Pitfall 4 (Prisma Decimal fields cannot be compared in WHERE)
+- [Phase 08]: convertUnit() receives tx (transaction client) inside all  blocks per Research Pitfall 2
 
 ### Pending Todos
 
@@ -182,6 +186,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-21T11:55:36.866Z
-Stopped at: Completed 08-01-PLAN.md
+Last session: 2026-03-21T12:05:16.766Z
+Stopped at: Completed 08-02-PLAN.md
 Resume file: None
