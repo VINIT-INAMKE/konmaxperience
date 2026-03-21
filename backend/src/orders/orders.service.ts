@@ -9,6 +9,7 @@ import { CreateOrderDto } from './dto/create-order.dto';
 import { RecordPaymentDto } from './dto/record-payment.dto';
 import { UpdateDeliveryDto } from './dto/update-delivery.dto';
 import { OrderFiltersDto } from './dto/order-filters.dto';
+import { convertUnit } from '../common/utils/unit-conversion';
 
 /** Valid order status transitions (non-cancellation) */
 const STATUS_TRANSITIONS: Record<string, string[]> = {
@@ -290,5 +291,148 @@ export class OrdersService {
       total_revenue: totalRevenue,
       average_order_value: averageOrderValue,
     };
+  }
+
+  // ---------------------------------------------------------------
+  // Deduct Item Ingredients (called from KDS within $transaction)
+  // ---------------------------------------------------------------
+  /**
+   * Deduct stock for an order item when marked "ready" on KDS.
+   * Handles both ingredient-type (IngredientStock decrement + StockMovement)
+   * and recipe-type (FIFO PrepBatch decrement) RecipeLines.
+   * CRITICAL: tx must be the Prisma transaction client, NOT this.prisma.
+   */
+  async deductItemIngredients(
+    tx: any,
+    orderItem: {
+      id: string;
+      order_id: string;
+      menu_item_id: string;
+      quantity: number;
+    },
+    userId: string,
+  ): Promise<void> {
+    // 1. Load MenuItem with Recipe and RecipeLines
+    const menuItem = await tx.menuItem.findUniqueOrThrow({
+      where: { id: orderItem.menu_item_id },
+      include: {
+        recipe: {
+          include: {
+            RecipeLines: { include: { ingredient: true, source_recipe: true } },
+          },
+        },
+      },
+    });
+
+    const recipe = menuItem.recipe;
+
+    // Get zone_id from the order itself
+    const order = await tx.order.findUniqueOrThrow({
+      where: { id: orderItem.order_id },
+    });
+    const zoneId = order.zone_id;
+
+    // 2. For each serving (orderItem.quantity), deduct each RecipeLine
+    for (let serving = 0; serving < orderItem.quantity; serving++) {
+      for (const line of recipe.RecipeLines) {
+        const needed = Number(line.quantity);
+
+        if (line.input_type === 'ingredient' && line.ingredient) {
+          // Deduct raw ingredient from IngredientStock
+          // CRITICAL: pass tx (not this.prisma) per Research Pitfall 2
+          const neededBase = await convertUnit(
+            needed,
+            line.unit,
+            line.ingredient.base_unit,
+            tx,
+          );
+          if (neededBase === null) {
+            throw new BadRequestException(
+              `No unit conversion from ${line.unit} to ${line.ingredient.base_unit}`,
+            );
+          }
+
+          const stock = await tx.ingredientStock.findFirst({
+            where: { ingredient_id: line.ingredient_id, zone_id: zoneId },
+          });
+          if (!stock || Number(stock.current_quantity) < neededBase) {
+            throw new BadRequestException(
+              `Insufficient stock for ${line.ingredient.name}`,
+            );
+          }
+
+          await tx.ingredientStock.update({
+            where: { id: stock.id },
+            data: { current_quantity: { decrement: neededBase } },
+          });
+
+          await tx.stockMovement.create({
+            data: {
+              ingredient_id: line.ingredient_id,
+              zone_id: zoneId,
+              movement_type: 'order_deducted',
+              quantity: -neededBase,
+              original_quantity: needed,
+              unit: line.unit,
+              reason: 'Order item deduction',
+              reference_type: 'order',
+              reference_id: orderItem.order_id,
+              created_by: userId,
+            },
+          });
+        }
+
+        if (line.input_type === 'recipe' && line.source_recipe) {
+          // FIFO deduct from PrepBatches — same pattern as PrepBatchesService
+          const batches = await tx.prepBatch.findMany({
+            where: {
+              recipe_id: line.source_recipe_id,
+              status: 'active',
+              OR: [
+                { expires_at: null },
+                { expires_at: { gt: new Date() } },
+              ],
+            },
+            orderBy: { created_at: 'asc' }, // FIFO — oldest first
+          });
+
+          // Convert needed to batch yield unit — pass tx (Pitfall 2)
+          let remainingNeed = await convertUnit(
+            needed,
+            line.unit,
+            line.source_recipe.yield_unit,
+            tx,
+          );
+          if (remainingNeed === null) {
+            throw new BadRequestException(
+              `No unit conversion from ${line.unit} to ${line.source_recipe.yield_unit}`,
+            );
+          }
+
+          for (const batch of batches) {
+            if (remainingNeed <= 0) break;
+            const batchRemaining = Number(batch.quantity_remaining);
+            const deduct = Math.min(batchRemaining, remainingNeed);
+            const newRemaining = batchRemaining - deduct;
+
+            await tx.prepBatch.update({
+              where: { id: batch.id },
+              data: {
+                quantity_remaining: { decrement: deduct },
+                ...(newRemaining <= 0 ? { status: 'depleted' } : {}),
+              },
+            });
+
+            remainingNeed -= deduct;
+          }
+
+          if (remainingNeed > 0) {
+            throw new BadRequestException(
+              `Insufficient prep batch stock for ${line.source_recipe.name}`,
+            );
+          }
+        }
+      }
+    }
   }
 }
