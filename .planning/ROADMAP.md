@@ -201,12 +201,12 @@ Plans:
   4. Order > kitchen > deduction: items appear on KDS on placement, cook marks ready > DEDUCTION (PrepBatch.quantity_remaining decremented via FIFO + IngredientStock decremented for direct-use items + StockMovements created) > when all items ready > order ready
   5. Delivery: delivery_assigned_to (plain name string), delivery_status (picked_up > in_transit > delivered)
   6. Order history searchable with filters (date, channel, status, payment), daily revenue summary
-**Plans:** 1/5 plans executed
+**Plans:** 3/5 plans executed
 
 Plans:
 - [x] 10-01-PLAN.md — Backend OrdersModule (CRUD, payment, delivery, history, daily summary), MANAGE_POS permission, batch availability endpoint, frontend types
-- [ ] 10-02-PLAN.md — Backend KDS deduction hook (extend updateItemStatus with $transaction + FIFO deduction on ready)
-- [ ] 10-03-PLAN.md — Frontend POS page (split-screen menu grid + cart sidebar, servings badges, channel selector, terminal mode)
+- [x] 10-02-PLAN.md — Backend KDS deduction hook (extend updateItemStatus with $transaction + FIFO deduction on ready)
+- [x] 10-03-PLAN.md — Frontend POS page (split-screen menu grid + cart sidebar, servings badges, channel selector, terminal mode)
 - [ ] 10-04-PLAN.md — Frontend Order History page (filters, daily revenue summary, order detail Sheet, payment recording, cancel order)
 - [ ] 10-05-PLAN.md — Frontend Delivery Queue page (inline assignment, status progression)
 
@@ -266,7 +266,7 @@ Dependencies: Phase 7 (Recipes) depends on Phase 6 (brands/vendors). Phase 8 (In
 | 7. Recipe & Ingredient Management | 6/6 | Complete   | 2026-03-21 |
 | 8. Inventory & Procurement | 5/5 | Complete   | 2026-03-21 |
 | 9. Kitchen & Prep | 0/5 | Planned | - |
-| 10. POS & Orders | 1/5 | In Progress|  |
+| 10. POS & Orders | 3/5 | In Progress|  |
 | 11. Dashboards & Shared Boards | 0/0 | Not started | - |
 | 12. Notifications | 0/0 | Not started | - |
 | 13. Customer Experience | 0/0 | Not started | - |

@@ -90,7 +90,7 @@
 
 ### POS & Orders
 
-- [ ] **POS-01**: Full POS interface — Brand → Category → Items menu grid, tap to add, quantity adjustment, order summary sidebar, channel selector (dine-in/takeaway/delivery), servings-remaining indicator per item
+- [x] **POS-01**: Full POS interface — Brand → Category → Items menu grid, tap to add, quantity adjustment, order summary sidebar, channel selector (dine-in/takeaway/delivery), servings-remaining indicator per item
 - [x] **POS-02**: Order management — Order with channel-specific fields (table_number for dine-in, customer_phone for takeaway, delivery_address + delivery_assigned_to string for delivery), status flow (placed → preparing → ready → served/dispatched/cancelled)
 - [x] **POS-03**: Payment tracking — single Payment per order with method (cash/card/UPI), status (pending/paid/refunded), amount, notes field for split description. No gateway integration.
 - [ ] **POS-04**: Order → kitchen → deduction flow — order placed → items appear on KDS → cook marks preparing → cook marks ready → DEDUCTION HAPPENS (PrepBatch.quantity_remaining decremented, IngredientStock decremented for direct-use items, StockMovements created) → when all items ready → order status = ready
@@ -208,7 +208,7 @@
 | KITCHEN-04 | Phase 9 | Complete |
 | KITCHEN-05 | Phase 9 | Complete |
 | KITCHEN-06 | Phase 9 | Complete |
-| POS-01 | Phase 10 | Pending |
+| POS-01 | Phase 10 | Complete |
 | POS-02 | Phase 10 | Complete |
 | POS-03 | Phase 10 | Complete |
 | POS-04 | Phase 10 | Pending |
