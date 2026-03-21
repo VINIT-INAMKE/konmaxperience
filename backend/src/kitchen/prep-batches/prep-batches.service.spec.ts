@@ -11,6 +11,9 @@ jest.mock('../../common/utils/unit-conversion', () => ({
 import { convertUnit } from '../../common/utils/unit-conversion';
 const mockConvertUnit = convertUnit as jest.MockedFunction<typeof convertUnit>;
 
+/** Mock Prisma Decimal — supports Number() via valueOf() */
+const dec = (n: number) => ({ valueOf: () => n, toNumber: () => n });
+
 // Build a mock transaction object that mirrors Prisma client
 const createMockTx = () => ({
   recipe: {
@@ -70,7 +73,7 @@ describe('PrepBatchesService', () => {
 
       const recipe = {
         id: 'recipe-1',
-        yield_qty: { toNumber: () => 1 },
+        yield_qty: dec(1),
         yield_unit: 'portions',
         shelf_life_hours: 24,
         RecipeLines: [
@@ -78,7 +81,7 @@ describe('PrepBatchesService', () => {
             input_type: 'ingredient',
             ingredient_id: 'ing-1',
             source_recipe_id: null,
-            quantity: { toNumber: () => 100 },
+            quantity: dec(100),
             unit: 'g',
             ingredient: { id: 'ing-1', name: 'Flour', base_unit: 'g' },
             source_recipe: null,
@@ -87,7 +90,7 @@ describe('PrepBatchesService', () => {
       };
       mockTx.recipe.findUnique.mockResolvedValue(recipe);
       mockTx.ingredientStock.findUnique.mockResolvedValue({
-        current_quantity: { toNumber: () => 500 },
+        current_quantity: dec(500),
       });
       mockTx.ingredientStock.update.mockResolvedValue({});
       mockTx.stockMovement.create.mockResolvedValue({});
@@ -123,7 +126,7 @@ describe('PrepBatchesService', () => {
 
       const recipe = {
         id: 'recipe-1',
-        yield_qty: { toNumber: () => 1 },
+        yield_qty: dec(1),
         yield_unit: 'portions',
         shelf_life_hours: null,
         RecipeLines: [
@@ -131,7 +134,7 @@ describe('PrepBatchesService', () => {
             input_type: 'recipe',
             ingredient_id: null,
             source_recipe_id: 'sub-recipe-1',
-            quantity: { toNumber: () => 50 },
+            quantity: dec(50),
             unit: 'ml',
             ingredient: null,
             source_recipe: { id: 'sub-recipe-1', name: 'Sauce', yield_unit: 'ml' },
@@ -142,8 +145,8 @@ describe('PrepBatchesService', () => {
 
       // Two FIFO batches: oldest has 30ml, newest has 100ml
       // Need 50 * 2 = 100ml total
-      const batch1 = { id: 'old-batch', quantity_remaining: { toNumber: () => 30 }, unit: 'ml', created_at: new Date('2026-01-01') };
-      const batch2 = { id: 'new-batch', quantity_remaining: { toNumber: () => 100 }, unit: 'ml', created_at: new Date('2026-01-02') };
+      const batch1 = { id: 'old-batch', quantity_remaining: dec(30), unit: 'ml', created_at: new Date('2026-01-01') };
+      const batch2 = { id: 'new-batch', quantity_remaining: dec(100), unit: 'ml', created_at: new Date('2026-01-02') };
       mockTx.prepBatch.findMany.mockResolvedValue([batch1, batch2]);
       mockTx.prepBatch.update.mockResolvedValue({});
 
@@ -183,7 +186,7 @@ describe('PrepBatchesService', () => {
 
       const recipe = {
         id: 'recipe-1',
-        yield_qty: { toNumber: () => 1 },
+        yield_qty: dec(1),
         yield_unit: 'portions',
         shelf_life_hours: null,
         RecipeLines: [
@@ -191,7 +194,7 @@ describe('PrepBatchesService', () => {
             input_type: 'recipe',
             ingredient_id: null,
             source_recipe_id: 'sub-recipe-1',
-            quantity: { toNumber: () => 50 },
+            quantity: dec(50),
             unit: 'ml',
             ingredient: null,
             source_recipe: { id: 'sub-recipe-1', name: 'Sauce', yield_unit: 'ml' },
@@ -201,7 +204,7 @@ describe('PrepBatchesService', () => {
       mockTx.recipe.findUnique.mockResolvedValue(recipe);
 
       // Single batch with exactly enough (100ml = 50*2)
-      const batch = { id: 'exact-batch', quantity_remaining: { toNumber: () => 100 }, unit: 'ml', created_at: new Date() };
+      const batch = { id: 'exact-batch', quantity_remaining: dec(100), unit: 'ml', created_at: new Date() };
       mockTx.prepBatch.findMany.mockResolvedValue([batch]);
       mockTx.prepBatch.update.mockResolvedValue({});
 
@@ -225,7 +228,7 @@ describe('PrepBatchesService', () => {
 
       const recipe = {
         id: 'recipe-1',
-        yield_qty: { toNumber: () => 1 },
+        yield_qty: dec(1),
         yield_unit: 'portions',
         shelf_life_hours: null,
         RecipeLines: [
@@ -233,7 +236,7 @@ describe('PrepBatchesService', () => {
             input_type: 'ingredient',
             ingredient_id: 'ing-1',
             source_recipe_id: null,
-            quantity: { toNumber: () => 100 },
+            quantity: dec(100),
             unit: 'g',
             ingredient: { id: 'ing-1', name: 'Flour', base_unit: 'g' },
             source_recipe: null,
@@ -243,7 +246,7 @@ describe('PrepBatchesService', () => {
       mockTx.recipe.findUnique.mockResolvedValue(recipe);
       // Only 50g available, need 200g (100 * 2 multiplier)
       mockTx.ingredientStock.findUnique.mockResolvedValue({
-        current_quantity: { toNumber: () => 50 },
+        current_quantity: dec(50),
       });
 
       mockTx.prepBatch.create.mockResolvedValue({ id: 'batch-1' });
@@ -262,7 +265,7 @@ describe('PrepBatchesService', () => {
 
       const recipe = {
         id: 'recipe-1',
-        yield_qty: { toNumber: () => 1 },
+        yield_qty: dec(1),
         yield_unit: 'portions',
         shelf_life_hours: null,
         RecipeLines: [
@@ -270,7 +273,7 @@ describe('PrepBatchesService', () => {
             input_type: 'recipe',
             ingredient_id: null,
             source_recipe_id: 'sub-recipe-1',
-            quantity: { toNumber: () => 50 },
+            quantity: dec(50),
             unit: 'ml',
             ingredient: null,
             source_recipe: { id: 'sub-recipe-1', name: 'Sauce', yield_unit: 'ml' },
@@ -280,7 +283,7 @@ describe('PrepBatchesService', () => {
       mockTx.recipe.findUnique.mockResolvedValue(recipe);
 
       // Only 20ml available in batches, need 100ml
-      const batch = { id: 'small-batch', quantity_remaining: { toNumber: () => 20 }, unit: 'ml', created_at: new Date() };
+      const batch = { id: 'small-batch', quantity_remaining: dec(20), unit: 'ml', created_at: new Date() };
       mockTx.prepBatch.findMany.mockResolvedValue([batch]);
       mockTx.prepBatch.update.mockResolvedValue({});
 
@@ -300,7 +303,7 @@ describe('PrepBatchesService', () => {
 
       const recipe = {
         id: 'recipe-1',
-        yield_qty: { toNumber: () => 1 },
+        yield_qty: dec(1),
         yield_unit: 'portions',
         shelf_life_hours: null,
         RecipeLines: [
@@ -308,7 +311,7 @@ describe('PrepBatchesService', () => {
             input_type: 'recipe',
             ingredient_id: null,
             source_recipe_id: 'sub-recipe-1',
-            quantity: { toNumber: () => 10 },
+            quantity: dec(10),
             unit: 'ml',
             ingredient: null,
             source_recipe: { id: 'sub-recipe-1', name: 'Sauce', yield_unit: 'ml' },
@@ -318,7 +321,7 @@ describe('PrepBatchesService', () => {
       mockTx.recipe.findUnique.mockResolvedValue(recipe);
 
       // Return fresh batch only (expired ones excluded by WHERE clause)
-      const freshBatch = { id: 'fresh', quantity_remaining: { toNumber: () => 100 }, unit: 'ml', created_at: new Date() };
+      const freshBatch = { id: 'fresh', quantity_remaining: dec(100), unit: 'ml', created_at: new Date() };
       mockTx.prepBatch.findMany.mockResolvedValue([freshBatch]);
       mockTx.prepBatch.update.mockResolvedValue({});
 
@@ -349,14 +352,14 @@ describe('PrepBatchesService', () => {
 
       const recipe = {
         id: 'recipe-1',
-        yield_qty: { toNumber: () => 1 },
+        yield_qty: dec(1),
         yield_unit: 'portions',
         RecipeLines: [
           {
             input_type: 'ingredient',
             ingredient_id: 'ing-1',
             source_recipe_id: null,
-            quantity: { toNumber: () => 100 },
+            quantity: dec(100),
             unit: 'g',
             ingredient: { id: 'ing-1', name: 'Flour', base_unit: 'g' },
             source_recipe: null,
@@ -365,7 +368,7 @@ describe('PrepBatchesService', () => {
             input_type: 'recipe',
             ingredient_id: null,
             source_recipe_id: 'sub-recipe-1',
-            quantity: { toNumber: () => 50 },
+            quantity: dec(50),
             unit: 'ml',
             ingredient: null,
             source_recipe: { id: 'sub-recipe-1', name: 'Sauce', yield_unit: 'ml' },
@@ -376,11 +379,11 @@ describe('PrepBatchesService', () => {
       // Preview uses this.prisma directly, not tx
       mockPrisma.recipe.findUnique.mockResolvedValue(recipe);
       mockPrisma.ingredientStock.findUnique = jest.fn().mockResolvedValue({
-        current_quantity: { toNumber: () => 300 },
+        current_quantity: dec(300),
       });
       mockPrisma.prepBatch.findMany.mockResolvedValue([
-        { quantity_remaining: { toNumber: () => 40 } },
-        { quantity_remaining: { toNumber: () => 80 } },
+        { quantity_remaining: dec(40) },
+        { quantity_remaining: dec(80) },
       ]);
 
       const result = await service.previewDeductions(dto);
