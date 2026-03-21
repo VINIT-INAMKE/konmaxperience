@@ -51,6 +51,9 @@ model User {
   created_recipes         Recipe[]             @relation("RecipeCreator")
   stockMovements          StockMovement[]      @relation("StockMovementCreator")
   purchaseOrders          PurchaseOrder[]      @relation("PurchaseOrderer")
+  prepBatches             PrepBatch[]          @relation("PrepBatchCreator")
+  wasteLogs               WasteLog[]           @relation("WasteLogCreator")
+  orders                  Order[]              @relation("OrderCreator")
 }
 
 model RefreshToken {
@@ -286,6 +289,9 @@ model Zone {
   IngredientStocks IngredientStock[]
   StockMovements   StockMovement[]
   PurchaseOrders   PurchaseOrder[]
+  prepBatches      PrepBatch[]
+  wasteLogs        WasteLog[]
+  orders           Order[]
 }
 
 model Brand {
@@ -350,6 +356,7 @@ model Recipe {
   SourceLines       RecipeLine[] @relation("SourceRecipeLines")
   MenuItems         MenuItem[]
   linked_assets     Asset[]
+  prepBatches       PrepBatch[]
 }
 
 model RecipeLine {
@@ -380,6 +387,7 @@ model Ingredient {
   IngredientStocks    IngredientStock[]
   StockMovements      StockMovement[]
   PurchaseOrderLines  PurchaseOrderLine[]
+  wasteLogs           WasteLog[]
 }
 
 model UnitConversion {
@@ -439,6 +447,7 @@ model MenuItem {
   updated_at  DateTime     @updatedAt
   recipe      Recipe       @relation(fields: [recipe_id], references: [id])
   category    MenuCategory @relation(fields: [category_id], references: [id])
+  orderItems  OrderItem[]
 }
 
 model ChannelModifier {
@@ -509,4 +518,89 @@ model PurchaseOrderLine {
   received_quantity Decimal?
   purchase_order    PurchaseOrder @relation(fields: [po_id], references: [id], onDelete: Cascade)
   ingredient        Ingredient    @relation(fields: [ingredient_id], references: [id])
+}
+
+model PrepBatch {
+  id                 String    @id @default(uuid())
+  recipe_id          String
+  zone_id            String
+  quantity_produced  Decimal
+  quantity_remaining Decimal
+  unit               String
+  prepared_by        String
+  expires_at         DateTime?
+  status             String    @default("active") // active | depleted | expired
+  created_at         DateTime  @default(now())
+  recipe             Recipe    @relation(fields: [recipe_id], references: [id])
+  zone               Zone      @relation(fields: [zone_id], references: [id])
+  creator            User      @relation("PrepBatchCreator", fields: [prepared_by], references: [id])
+  wasteLogs          WasteLog[]
+}
+
+model WasteLog {
+  id             String      @id @default(uuid())
+  waste_type     String      // "ingredient" | "prep_batch"
+  ingredient_id  String?
+  prep_batch_id  String?
+  quantity       Decimal
+  unit           String
+  reason         String      // "spoilage" | "over_prep" | "cooking_error" | "expired" | "other"
+  reason_notes   String?
+  cost_impact    Decimal
+  logged_by      String?     // nullable for system-generated expiry entries
+  zone_id        String
+  created_at     DateTime    @default(now())
+  ingredient     Ingredient? @relation(fields: [ingredient_id], references: [id])
+  prep_batch     PrepBatch?  @relation(fields: [prep_batch_id], references: [id])
+  zone           Zone        @relation(fields: [zone_id], references: [id])
+  creator        User?       @relation("WasteLogCreator", fields: [logged_by], references: [id])
+}
+
+model Order {
+  id                      String      @id @default(uuid())
+  channel                 String      // "dine_in" | "takeaway" | "delivery"
+  status                  String      @default("placed") // placed | preparing | ready | served | dispatched | cancelled
+  table_number            String?
+  customer_name           String?
+  customer_phone          String?
+  delivery_address        String?
+  delivery_assigned_to    String?
+  delivery_status         String?
+  subtotal                Decimal
+  channel_modifier_amount Decimal     @default(0)
+  total                   Decimal
+  notes                   String?
+  created_by              String
+  zone_id                 String
+  created_at              DateTime    @default(now())
+  updated_at              DateTime    @updatedAt
+  creator                 User        @relation("OrderCreator", fields: [created_by], references: [id])
+  zone                    Zone        @relation(fields: [zone_id], references: [id])
+  items                   OrderItem[]
+  payment                 Payment?
+}
+
+model OrderItem {
+  id           String    @id @default(uuid())
+  order_id     String
+  menu_item_id String
+  quantity     Int
+  unit_price   Decimal
+  item_notes   String?
+  status       String    @default("pending") // pending | preparing | ready
+  ready_at     DateTime?
+  created_at   DateTime  @default(now())
+  order        Order     @relation(fields: [order_id], references: [id], onDelete: Cascade)
+  menu_item    MenuItem  @relation(fields: [menu_item_id], references: [id])
+}
+
+model Payment {
+  id         String   @id @default(uuid())
+  order_id   String   @unique
+  method     String   // "cash" | "card" | "upi"
+  amount     Decimal
+  status     String   @default("pending") // pending | paid | refunded
+  notes      String?
+  created_at DateTime @default(now())
+  order      Order    @relation(fields: [order_id], references: [id])
 }
