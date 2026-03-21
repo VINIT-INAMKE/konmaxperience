@@ -1,0 +1,193 @@
+'use client';
+
+import { useState, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { BlurFade } from '@/components/ui/blur-fade';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { DailyRevenueSummary } from '@/components/ops/pos/DailyRevenueSummary';
+import { OrderHistoryTable } from '@/components/ops/pos/OrderHistoryTable';
+import { OrderDetailSheet } from '@/components/ops/pos/OrderDetailSheet';
+import { apiClient } from '@/lib/api-client';
+import type { Order, DailySummary } from '@/lib/types/orders';
+import type { OrderStatus, OrderChannel, PaymentMethod } from '@/lib/types/kds';
+
+function todayStr(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function buildQueryString(filters: {
+  dateFrom: string;
+  dateTo: string;
+  channel: string;
+  status: string;
+  paymentMethod: string;
+  search: string;
+}): string {
+  const params = new URLSearchParams();
+  if (filters.dateFrom) params.set('date_from', filters.dateFrom);
+  if (filters.dateTo) params.set('date_to', filters.dateTo);
+  if (filters.channel) params.set('channel', filters.channel);
+  if (filters.status) params.set('status', filters.status);
+  if (filters.paymentMethod) params.set('payment_method', filters.paymentMethod);
+  if (filters.search) params.set('search', filters.search);
+  return params.toString();
+}
+
+export default function OrderHistoryPage() {
+  const [dateFrom, setDateFrom] = useState(todayStr());
+  const [dateTo, setDateTo] = useState(todayStr());
+  const [channel, setChannel] = useState('');
+  const [status, setStatus] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState('');
+  const [search, setSearch] = useState('');
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+
+  const filters = useMemo(
+    () => ({ dateFrom, dateTo, channel, status, paymentMethod, search }),
+    [dateFrom, dateTo, channel, status, paymentMethod, search],
+  );
+
+  const dateStr = todayStr();
+
+  const { data: summary, isLoading: summaryLoading } = useQuery({
+    queryKey: ['orders', 'daily-summary', dateStr],
+    queryFn: () =>
+      apiClient.get<DailySummary>('/orders/daily-summary?date=' + dateStr),
+  });
+
+  const { data: orders, isLoading: ordersLoading } = useQuery({
+    queryKey: ['orders', filters],
+    queryFn: () =>
+      apiClient.get<Order[]>('/orders?' + buildQueryString(filters)),
+  });
+
+  const { data: orderDetail } = useQuery({
+    queryKey: ['orders', selectedOrder?.id],
+    queryFn: () =>
+      apiClient.get<Order>('/orders/' + selectedOrder!.id),
+    enabled: !!selectedOrder,
+  });
+
+  return (
+    <BlurFade>
+      <div className="space-y-6">
+        {/* Page header */}
+        <h1 className="text-xl font-semibold">Order History</h1>
+
+        {/* Daily revenue summary */}
+        <DailyRevenueSummary summary={summary} isLoading={summaryLoading} />
+
+        {/* Filter bar */}
+        <div className="flex items-end gap-3 flex-wrap">
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-muted-foreground">From</label>
+            <Input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              className="w-36"
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-muted-foreground">To</label>
+            <Input
+              type="date"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              className="w-36"
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-muted-foreground">Channel</label>
+            <Select
+              value={channel}
+              onValueChange={(v: string | null) => setChannel(v ?? '')}
+            >
+              <SelectTrigger className="w-32">
+                <SelectValue placeholder="All" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">All</SelectItem>
+                <SelectItem value="dine_in">Dine-In</SelectItem>
+                <SelectItem value="takeaway">Takeaway</SelectItem>
+                <SelectItem value="delivery">Delivery</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-muted-foreground">Status</label>
+            <Select
+              value={status}
+              onValueChange={(v: string | null) => setStatus(v ?? '')}
+            >
+              <SelectTrigger className="w-32">
+                <SelectValue placeholder="All" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">All</SelectItem>
+                <SelectItem value="placed">Placed</SelectItem>
+                <SelectItem value="preparing">Preparing</SelectItem>
+                <SelectItem value="ready">Ready</SelectItem>
+                <SelectItem value="served">Served</SelectItem>
+                <SelectItem value="dispatched">Dispatched</SelectItem>
+                <SelectItem value="cancelled">Cancelled</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-muted-foreground">Payment</label>
+            <Select
+              value={paymentMethod}
+              onValueChange={(v: string | null) => setPaymentMethod(v ?? '')}
+            >
+              <SelectTrigger className="w-28">
+                <SelectValue placeholder="All" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">All</SelectItem>
+                <SelectItem value="cash">Cash</SelectItem>
+                <SelectItem value="card">Card</SelectItem>
+                <SelectItem value="upi">UPI</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1 flex-1 min-w-[180px]">
+            <label className="text-xs font-bold text-muted-foreground">Search</label>
+            <Input
+              type="text"
+              placeholder="Search by order #"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+        </div>
+
+        {/* Orders table */}
+        <OrderHistoryTable
+          orders={orders ?? []}
+          isLoading={ordersLoading}
+          onSelectOrder={setSelectedOrder}
+        />
+
+        {/* Order detail Sheet */}
+        <OrderDetailSheet
+          order={orderDetail ?? selectedOrder}
+          open={!!selectedOrder}
+          onOpenChange={(open) => {
+            if (!open) setSelectedOrder(null);
+          }}
+          onOrderUpdated={() => {
+            setSelectedOrder(null);
+          }}
+        />
+      </div>
+    </BlurFade>
+  );
+}
