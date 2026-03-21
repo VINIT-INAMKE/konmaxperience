@@ -7,12 +7,14 @@ import { AdminUserFilter } from '@/components/ops/AdminUserFilter';
 import { DashboardReadinessStrip } from '@/components/ops/dashboard/DashboardReadinessStrip';
 import { DashboardKpiAlert } from '@/components/ops/dashboard/DashboardKpiAlert';
 import { DashboardLeaderboardPreview } from '@/components/ops/dashboard/DashboardLeaderboardPreview';
+import { DashboardLowStockAlert } from '@/components/ops/dashboard/DashboardLowStockAlert';
 import { apiClient } from '@/lib/api-client';
 import { useAuthStore } from '@/lib/stores/auth-store';
 import { RoleCode } from '@/lib/types/roles';
 import type { ReadinessMeter } from '@/lib/types/readiness';
 import type { Kpi } from '@/lib/types/kpi';
 import type { LeaderboardResponse } from '@/lib/types/leaderboard';
+import type { IngredientStock } from '@/lib/types/inventory';
 
 function ReadinessStripSkeleton() {
   return (
@@ -88,13 +90,22 @@ export default function DashboardPage() {
     queryFn: () => apiClient.get<LeaderboardResponse>('/leaderboard'),
   });
 
+  const {
+    data: lowStockItems,
+    isLoading: lowStockLoading,
+  } = useQuery({
+    queryKey: ['inventory', 'low-stock'],
+    queryFn: () => apiClient.get<IngredientStock[]>('/inventory/low-stock'),
+  });
+
   // Determine if each section has visible content
   const hasLowMeters = meters && meters.length > 0;
   const hasAlertKpis = kpis && kpis.some((k) => k.status !== 'on_track');
   const hasLeaderboard = leaderboard && leaderboard.enabled && leaderboard.users.length > 0;
+  const hasLowStock = lowStockItems && lowStockItems.length > 0;
 
-  const allDataLoaded = !metersLoading && !kpisLoading && !leaderboardLoading;
-  const allSectionsEmpty = allDataLoaded && !hasLowMeters && !hasAlertKpis && !hasLeaderboard;
+  const allDataLoaded = !metersLoading && !kpisLoading && !leaderboardLoading && !lowStockLoading;
+  const allSectionsEmpty = allDataLoaded && !hasLowMeters && !hasAlertKpis && !hasLeaderboard && !hasLowStock;
 
   return (
     <BlurFade>
@@ -133,7 +144,18 @@ export default function DashboardPage() {
           </section>
         )}
 
-        {/* Section 3: Leaderboard Preview */}
+        {/* Section 3: Low Stock Alerts */}
+        {(lowStockLoading || hasLowStock) && (
+          <section className="space-y-3">
+            {lowStockLoading ? (
+              <div className="animate-pulse h-24 bg-muted/30 rounded-lg" />
+            ) : (
+              lowStockItems && <DashboardLowStockAlert lowStockItems={lowStockItems} />
+            )}
+          </section>
+        )}
+
+        {/* Section 4: Leaderboard Preview */}
         {(leaderboardLoading || (leaderboard && leaderboard.enabled)) && (
           <section>
             {leaderboardLoading ? (

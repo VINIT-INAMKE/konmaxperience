@@ -23,6 +23,7 @@ import { useAuthStore } from '@/lib/stores/auth-store';
 import { RoleCode } from '@/lib/types/roles';
 import type { Ingredient, IngredientCategory } from '@/lib/types/ingredient';
 import { INGREDIENT_CATEGORIES, INGREDIENT_CATEGORY_LABELS } from '@/lib/types/ingredient';
+import type { IngredientStock } from '@/lib/types/inventory';
 
 type CategoryFilter = 'all' | IngredientCategory;
 
@@ -46,6 +47,22 @@ export default function IngredientsPage() {
     queryKey: ['ingredients'],
     queryFn: () => apiClient.get<Ingredient[]>('/ingredients'),
   });
+
+  const { data: stocks } = useQuery({
+    queryKey: ['inventory'],
+    queryFn: () => apiClient.get<IngredientStock[]>('/inventory'),
+  });
+
+  const stockByIngredient = useMemo(() => {
+    if (!stocks) return {} as Record<string, IngredientStock>;
+    return stocks.reduce<Record<string, IngredientStock>>((acc, s) => {
+      // If multiple stocks for same ingredient, keep the first (or the one with lowest quantity)
+      if (!acc[s.ingredient_id] || s.current_quantity < acc[s.ingredient_id].current_quantity) {
+        acc[s.ingredient_id] = s;
+      }
+      return acc;
+    }, {});
+  }, [stocks]);
 
   const filteredIngredients = useMemo(() => {
     if (!ingredients) return [];
@@ -168,6 +185,9 @@ export default function IngredientsPage() {
                     Min Stock Level
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    Stock
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
@@ -177,6 +197,7 @@ export default function IngredientsPage() {
                   <IngredientRow
                     key={ingredient.id}
                     ingredient={ingredient}
+                    stock={stockByIngredient[ingredient.id] ?? null}
                     isAdmin={isAdmin}
                     onEdit={handleEditClick}
                     onDelete={(i) => setDeletingIngredient(i)}

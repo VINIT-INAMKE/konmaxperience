@@ -1,0 +1,189 @@
+'use client';
+
+import { useState, useMemo } from 'react';
+import Link from 'next/link';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
+import { BlurFade } from '@/components/ui/blur-fade';
+import { Button } from '@/components/ui/button';
+import { ShimmerButton } from '@/components/ui/shimmer-button';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { PurchaseOrderRow } from '@/components/ops/operations/purchase-orders/PurchaseOrderRow';
+import { apiClient } from '@/lib/api-client';
+import type { PurchaseOrder, PurchaseOrderStatus } from '@/lib/types/purchase-order';
+
+type StatusFilter = 'all' | PurchaseOrderStatus;
+
+export default function PurchaseOrdersPage() {
+  const queryClient = useQueryClient();
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [cancellingPo, setCancellingPo] = useState<PurchaseOrder | null>(null);
+
+  const {
+    data: purchaseOrders,
+    isLoading,
+    isError,
+  } = useQuery({
+    queryKey: ['purchase-orders'],
+    queryFn: () => apiClient.get<PurchaseOrder[]>('/purchase-orders'),
+  });
+
+  const cancelMutation = useMutation({
+    mutationFn: (poId: string) =>
+      apiClient.post(`/purchase-orders/${poId}/cancel`),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['purchase-orders'] });
+      toast.success('Purchase order cancelled.');
+      setCancellingPo(null);
+    },
+    onError: () => toast.error('Failed to cancel purchase order.'),
+  });
+
+  const filteredPOs = useMemo(() => {
+    if (!purchaseOrders) return [];
+    if (statusFilter === 'all') return purchaseOrders;
+    return purchaseOrders.filter((po) => po.status === statusFilter);
+  }, [purchaseOrders, statusFilter]);
+
+  const emptyMessage =
+    statusFilter === 'all'
+      ? 'No purchase orders yet. Create your first purchase order to start tracking procurement.'
+      : `No ${statusFilter} purchase orders.`;
+
+  return (
+    <BlurFade>
+      <div className="space-y-6">
+        {/* Page header */}
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <h1 className="text-xl font-semibold">Purchase Orders</h1>
+          <Link href="/operations/purchase-orders/new">
+            <ShimmerButton
+              shimmerColor="#4ade80"
+              className="h-9 text-sm px-4"
+            >
+              New Purchase Order
+            </ShimmerButton>
+          </Link>
+        </div>
+
+        {/* Status tabs */}
+        <Tabs
+          value={statusFilter}
+          onValueChange={(v) => setStatusFilter(v as StatusFilter)}
+        >
+          <TabsList>
+            <TabsTrigger value="all">All</TabsTrigger>
+            <TabsTrigger value="draft">Draft</TabsTrigger>
+            <TabsTrigger value="ordered">Ordered</TabsTrigger>
+            <TabsTrigger value="received">Received</TabsTrigger>
+            <TabsTrigger value="cancelled">Cancelled</TabsTrigger>
+          </TabsList>
+        </Tabs>
+
+        {/* Loading / Error */}
+        {isLoading && (
+          <div className="text-sm text-muted-foreground">
+            Loading purchase orders...
+          </div>
+        )}
+        {isError && (
+          <div className="text-sm text-destructive">
+            Something went wrong. Refresh the page or try again in a moment.
+          </div>
+        )}
+
+        {/* Empty state */}
+        {!isLoading && !isError && filteredPOs.length === 0 && (
+          <div className="py-16 text-center space-y-3">
+            <p className="text-sm text-muted-foreground">{emptyMessage}</p>
+          </div>
+        )}
+
+        {/* PO Table */}
+        {!isLoading && !isError && filteredPOs.length > 0 && (
+          <div className="rounded-lg border overflow-hidden">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b bg-muted/40">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    Vendor
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    Items
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    Total
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    Ordered At
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredPOs.map((po) => (
+                  <PurchaseOrderRow
+                    key={po.id}
+                    po={po}
+                    onCancel={setCancellingPo}
+                  />
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* Cancel PO confirmation Dialog */}
+        <Dialog
+          open={!!cancellingPo}
+          onOpenChange={(open) => {
+            if (!open) setCancellingPo(null);
+          }}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Cancel Purchase Order</DialogTitle>
+              <DialogDescription>
+                Cancel this purchase order? This cannot be undone. Any ordered
+                items will not be received.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setCancellingPo(null)}
+                disabled={cancelMutation.isPending}
+              >
+                Keep Order
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => {
+                  if (cancellingPo) {
+                    cancelMutation.mutate(cancellingPo.id);
+                  }
+                }}
+                disabled={cancelMutation.isPending}
+              >
+                {cancelMutation.isPending ? 'Cancelling...' : 'Cancel Order'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+    </BlurFade>
+  );
+}

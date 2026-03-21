@@ -2,7 +2,9 @@
 
 import { Pencil, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
 import type { Ingredient, IngredientCategory } from '@/lib/types/ingredient';
+import type { IngredientStock } from '@/lib/types/inventory';
 
 const CATEGORY_COLORS: Record<IngredientCategory, string> = {
   dairy: 'bg-blue-500/15 text-blue-400',
@@ -24,12 +26,14 @@ const CATEGORY_LABELS: Record<IngredientCategory, string> = {
 
 interface IngredientRowProps {
   ingredient: Ingredient;
+  stock?: IngredientStock | null;
   onEdit: (ingredient: Ingredient) => void;
   onDelete: (ingredient: Ingredient) => void;
   isAdmin: boolean;
 }
 
-export function IngredientRow({ ingredient, onEdit, onDelete, isAdmin }: IngredientRowProps) {
+export function IngredientRow({ ingredient, stock, onEdit, onDelete, isAdmin }: IngredientRowProps) {
+  const isLowStock = stock && stock.current_quantity < ingredient.min_stock_level;
   return (
     <tr className="border-b last:border-b-0 hover:bg-muted/30 transition-colors">
       <td className="px-4 py-3 text-sm font-medium">{ingredient.name}</td>
@@ -43,6 +47,29 @@ export function IngredientRow({ ingredient, onEdit, onDelete, isAdmin }: Ingredi
       </td>
       <td className="px-4 py-3 text-sm text-muted-foreground">
         {ingredient.min_stock_level} {ingredient.base_unit}
+      </td>
+      <td className="px-4 py-3">
+        {stock ? (
+          <div className="flex items-center gap-2">
+            <span className={`font-mono text-xs ${isLowStock ? 'text-amber-500' : 'text-muted-foreground'}`}>
+              {stock.current_quantity} {ingredient.base_unit}
+            </span>
+            {isLowStock && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger>
+                    <Badge className="text-xs border-0 bg-amber-500/15 text-amber-500">Low Stock</Badge>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    Below minimum of {ingredient.min_stock_level} {ingredient.base_unit}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+          </div>
+        ) : (
+          <span className="font-mono text-xs text-muted-foreground">&mdash;</span>
+        )}
       </td>
       <td className="px-4 py-3">
         <div className="flex items-center gap-1">
