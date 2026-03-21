@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Completed 06-01-PLAN.md
-last_updated: "2026-03-21T09:20:24.544Z"
+stopped_at: Completed 06-02-PLAN.md
+last_updated: "2026-03-21T09:28:29.378Z"
 progress:
   total_phases: 13
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 22
-  completed_plans: 20
+  completed_plans: 22
 ---
 
 # Project State
@@ -24,7 +24,7 @@ See: .planning/PROJECT.md (updated 2026-03-19)
 ## Current Position
 
 Phase: 06 (operations-management) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 
 ## Performance Metrics
 
@@ -64,6 +64,8 @@ Plan: 2 of 3
 | Phase 05 P02 | 5min | 2 tasks | 8 files |
 | Phase 05-governance-decision-management P04 | 4min | 2 tasks | 5 files |
 | Phase 06-operations-management P01 | 5min | 1 tasks | 30 files |
+| Phase 06-operations-management P02 | 5min | 2 tasks | 11 files |
+| Phase 06-operations-management P03 | 5min | 2 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -137,6 +139,11 @@ Recent decisions affecting current work:
 - [Phase 06-01]: MANAGE_OPS gates create/delete for zones/brands/channels; PATCH uses service-level ownership check (no decorator) for zones/brands; creator-only in_review transition for assets
 - [Phase 06-01]: ChannelsModule has no delete endpoint — channels are reference data per UI-SPEC
 - [Phase 06-01]: presign-asset endpoint reuses UPLOAD_EVIDENCE permission and StorageService methods — no new service code needed
+- [Phase 06-02]: ZoneForm and BrandForm accept optional zone/brand prop — single component handles create and edit, useEffect repopulates on prop change
+- [Phase 06-02]: Operations nav section not admin-gated — visible to all authenticated users, operationsNav array between intelligenceNav and adminNav in Sidebar
+- [Phase 06-02]: Status Select only shown in edit mode — new zones/brands use server-default status (planned/idea), preventing accidental override on creation
+- [Phase 06-03]: AssetUploadZone uses onFileReady callback pattern — parent AssetForm owns POST /assets to keep upload and record creation separate
+- [Phase 06-03]: TooltipTrigger (base-ui) does not accept asChild — Switch wrapped directly inside TooltipTrigger without asChild prop
 
 ### Pending Todos
 
@@ -151,6 +158,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-21T09:20:24.538Z
-Stopped at: Completed 06-01-PLAN.md
+Last session: 2026-03-21T09:28:12.474Z
+Stopped at: Completed 06-02-PLAN.md
 Resume file: None

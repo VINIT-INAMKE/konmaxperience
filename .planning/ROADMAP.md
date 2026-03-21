@@ -17,7 +17,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 3: Evidence & Validation Cascade** - Evidence upload via presigned URLs, approval workflow, and the complete task validation engine (the architectural heart) (completed 2026-03-20)
 - [x] **Phase 4: Gamification & Readiness Intelligence** - XP from valid tasks, levels, leaderboard, 10 readiness meters (event-sourced), and KPI tracking (completed 2026-03-20)
 - [x] **Phase 5: Governance & Decision Management** - Decision logging with types, admin override/escalation on approvals, and approval delegation (completed 2026-03-21)
-- [ ] **Phase 6: Operations Management** - Zone management, brand lifecycle, sales channels, and asset library with approval workflow
+- [x] **Phase 6: Operations Management** - Zone management, brand lifecycle, sales channels, and asset library with approval workflow (completed 2026-03-21)
 - [ ] **Phase 7: Recipe & Ingredient Management** - Structured recipes with BOM, ingredient master, vendor management, recipe costing, menu items with pricing and food cost %
 - [ ] **Phase 8: Inventory & Procurement** - Raw ingredient stock tracking, stock movements, purchase order workflow with vendor prices, low-stock alerts
 - [ ] **Phase 9: Kitchen & Prep** - Prep batch system (recipe x qty -> deduct raw, add production), kitchen display (KDS), menu availability based on prep levels, waste logging
@@ -123,12 +123,12 @@ Plans:
   2. Brands can be created with type (food/art/lifestyle) and progress through a status lifecycle (idea to active)
   3. Sales channels (dine-in, delivery, takeaway, retail, event, workshop, online) can be created and managed with activation status
   4. Assets (recipes, SOPs, menus, cost sheets, training docs) can be created, uploaded, and moved through a status workflow; only assets with approved status are candidates for customer-facing display
-**Plans:** 1/3 plans executed
+**Plans:** 3/3 plans complete
 
 Plans:
 - [x] 06-01-PLAN.md — Backend: MANAGE_OPS permission, Zones/Brands/Channels/Assets NestJS modules, presign-asset endpoint, seed update, unit tests
-- [ ] 06-02-PLAN.md — Frontend: Zone/Brand types, sidebar Operations section, /operations/zones page, /operations/brands page
-- [ ] 06-03-PLAN.md — Frontend: Channel/Asset types, /operations/channels page, /operations/assets page with upload zone
+- [x] 06-02-PLAN.md — Frontend: Zone/Brand types, sidebar Operations section, /operations/zones page, /operations/brands page
+- [x] 06-03-PLAN.md — Frontend: Channel/Asset types, /operations/channels page, /operations/assets page with upload zone
 
 ### Phase 7: Recipe & Ingredient Management
 **Goal**: Unified recipe system with polymorphic BOM (raw ingredients + recipe outputs), unit conversion, vendor management, recursive cost calculation, and menu items with channel-aware pricing — the food production data layer
@@ -233,7 +233,7 @@ Dependencies: Phase 7 (Recipes) depends on Phase 6 (brands/vendors). Phase 8 (In
 | 3. Evidence & Validation Cascade | 4/4 | Complete | 2026-03-20 |
 | 4. Gamification & Readiness Intelligence | 4/4 | Complete   | 2026-03-20 |
 | 5. Governance & Decision Management | 4/4 | Complete   | 2026-03-21 |
-| 6. Operations Management | 1/3 | In Progress|  |
+| 6. Operations Management | 3/3 | Complete   | 2026-03-21 |
 | 7. Recipe & Ingredient Management | 0/0 | Not started | - |
 | 8. Inventory & Procurement | 0/0 | Not started | - |
 | 9. Kitchen & Prep | 0/0 | Not started | - |
