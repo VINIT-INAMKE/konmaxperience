@@ -18,7 +18,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 4: Gamification & Readiness Intelligence** - XP from valid tasks, levels, leaderboard, 10 readiness meters (event-sourced), and KPI tracking (completed 2026-03-20)
 - [x] **Phase 5: Governance & Decision Management** - Decision logging with types, admin override/escalation on approvals, and approval delegation (completed 2026-03-21)
 - [x] **Phase 6: Operations Management** - Zone management, brand lifecycle, sales channels, and asset library with approval workflow (completed 2026-03-21)
-- [ ] **Phase 7: Recipe & Ingredient Management** - Structured recipes with BOM, ingredient master, vendor management, recipe costing, menu items with pricing and food cost %
+- [x] **Phase 7: Recipe & Ingredient Management** - Structured recipes with BOM, ingredient master, vendor management, recipe costing, menu items with pricing and food cost % (completed 2026-03-21)
 - [ ] **Phase 8: Inventory & Procurement** - Raw ingredient stock tracking, stock movements, purchase order workflow with vendor prices, low-stock alerts
 - [ ] **Phase 9: Kitchen & Prep** - Prep batch system (recipe x qty -> deduct raw, add production), kitchen display (KDS), menu availability based on prep levels, waste logging
 - [ ] **Phase 10: POS & Orders** - Full POS interface for staff, order management (dine-in/takeaway/delivery), payment tracking (method + status), own-delivery dispatch, order -> kitchen flow
@@ -142,14 +142,14 @@ Plans:
   5. Vendors can be created and linked to ingredients with historical price tracking (VendorPrice with effective_date)
   6. Recipe cost auto-calculates recursively — ingredient costs from best vendor price, prep item costs from source recipe cost prorated. Cached in computed_cost.
   7. Menu items created from approved recipes with base_price, food cost %, manual availability toggle, MenuCategory (Brand → Category → Item), and ChannelModifier for per-channel price adjustments
-**Plans:** 4/6 plans executed
+**Plans:** 6/6 plans complete
 
 Plans:
 - [x] 07-01-PLAN.md — Prisma schema migration (9 new models + Asset.linked_recipe_id), UnitConversion seed, frontend shared types
 - [x] 07-02-PLAN.md — Backend Ingredients module (CRUD, category filter, usage-safe delete) + Vendors module (CRUD, VendorPrice management) + shared unit conversion utility
 - [x] 07-03-PLAN.md — Backend Recipes module (CRUD, BOM upsert, CostCalculator with cycle guard) + Menu module (categories, items, channel modifiers) + vendor cost wiring
 - [x] 07-04-PLAN.md — Frontend sidebar update (4 nav items) + /operations/ingredients page + /operations/vendors page with detail Sheet and price history
-- [ ] 07-05-PLAN.md — Frontend /operations/recipes page (card grid) + 3-step RecipeWizard + /operations/recipes/[id] detail with dependency tree
+- [x] 07-05-PLAN.md — Frontend /operations/recipes page (card grid) + 3-step RecipeWizard + /operations/recipes/[id] detail with dependency tree
 - [x] 07-06-PLAN.md — Frontend /operations/menu page (brand tabs, category sections, menu item cards, food cost %, channel modifier table)
 
 ### Phase 8: Inventory & Procurement
@@ -242,7 +242,7 @@ Dependencies: Phase 7 (Recipes) depends on Phase 6 (brands/vendors). Phase 8 (In
 | 4. Gamification & Readiness Intelligence | 4/4 | Complete   | 2026-03-20 |
 | 5. Governance & Decision Management | 4/4 | Complete   | 2026-03-21 |
 | 6. Operations Management | 3/3 | Complete   | 2026-03-21 |
-| 7. Recipe & Ingredient Management | 4/6 | In Progress|  |
+| 7. Recipe & Ingredient Management | 6/6 | Complete   | 2026-03-21 |
 | 8. Inventory & Procurement | 0/0 | Not started | - |
 | 9. Kitchen & Prep | 0/0 | Not started | - |
 | 10. POS & Orders | 0/0 | Not started | - |

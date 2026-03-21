@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Completed 07-06-PLAN.md
-last_updated: "2026-03-21T10:57:00.160Z"
+stopped_at: Completed 07-05-PLAN.md
+last_updated: "2026-03-21T10:59:49.103Z"
 progress:
   total_phases: 13
-  completed_phases: 6
+  completed_phases: 7
   total_plans: 28
-  completed_plans: 27
+  completed_plans: 28
 ---
 
 # Project State
@@ -70,6 +70,7 @@ Plan: 6 of 6
 | Phase 07-recipe-ingredient-management P03 | 4min | 2 tasks | 18 files |
 | Phase 07-recipe-ingredient-management P04 | 5min | 2 tasks | 10 files |
 | Phase 07-recipe-ingredient-management P06 | 6min | 2 tasks | 6 files |
+| Phase 07-recipe-ingredient-management P05 | 14min | 2 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -161,6 +162,9 @@ Recent decisions affecting current work:
 - [Phase 07-06]: ChannelModifierTable uses POST /menu/channel-modifiers for upsert semantics — no separate PUT needed from frontend
 - [Phase 07-06]: effectiveBrandId pattern: selectedBrandId || brands[0]?.id avoids useState initialization race with async brands query
 - [Phase 07-06]: MenuItemForm queries /recipes?status=approved — only approved recipes surfaced; backend enforces same guard returning 400
+- [Phase 07-05]: Wizard state hoisted to RecipeWizard parent — setStep/details/bomLines live there, steps receive props to prevent back navigation data loss
+- [Phase 07-05]: RecipeDependencyTree recursive depth prop drives paddingLeft (depth * 16px) for visual nesting
+- [Phase 07-05]: BomLineRow queries conditionally enabled by input_type to prevent unnecessary API calls on initial render
 
 ### Pending Todos
 
@@ -175,6 +179,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-21T10:57:00.155Z
-Stopped at: Completed 07-06-PLAN.md
+Last session: 2026-03-21T10:59:49.094Z
+Stopped at: Completed 07-05-PLAN.md
 Resume file: None
