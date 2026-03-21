@@ -243,10 +243,10 @@ Plans:
   6. POS staff alerted when order is ready for serving/pickup
   7. Delivery status updates tracked (dispatched, in-transit, delivered)
   8. All notification delivery failures are isolated — never block core operations
-**Plans:** 4 plans
+**Plans:** 1/4 plans executed
 
 Plans:
-- [ ] 12-01-PLAN.md — Backend foundation: Prisma Notification model, npm installs (BullMQ, ioredis, event-emitter), NotificationsModule (service, controller, worker), event types, AppModule wiring, frontend types, unit tests
+- [x] 12-01-PLAN.md — Backend foundation: Prisma Notification model, npm installs (BullMQ, ioredis, event-emitter), NotificationsModule (service, controller, worker), event types, AppModule wiring, frontend types, unit tests
 - [ ] 12-02-PLAN.md — Backend triggers: NotificationsCron (hourly task due + approval scan), NotificationsListener (5 event handlers), cleanup cron, event emissions in OrdersService/KdsService/InventoryService/TasksService
 - [ ] 12-03-PLAN.md — Frontend: NotificationBell component (popover panel, 30s polling, mark-read) + NotificationItem component + Sidebar header integration
 - [ ] 12-04-PLAN.md — Frontend: /notifications page (tab filters, load-more pagination, empty states) + Sonner toast for order-ready (NOTF-06)
@@ -281,5 +281,5 @@ Dependencies: Phase 7 (Recipes) depends on Phase 6 (brands/vendors). Phase 8 (In
 | 9. Kitchen & Prep | 0/5 | Planned | - |
 | 10. POS & Orders | 5/5 | Complete    | 2026-03-21 |
 | 11. Dashboards & Shared Boards | 5/5 | Complete    | 2026-03-21 |
-| 12. Notifications | 0/4 | Planned | - |
+| 12. Notifications | 1/4 | In Progress|  |
 | 13. Customer Experience | 0/0 | Not started | - |

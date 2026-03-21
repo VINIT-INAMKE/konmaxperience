@@ -47,13 +47,13 @@
 
 ### Notifications
 
-- [ ] **NOTF-01**: Alert user when task is due within 48 hours
-- [ ] **NOTF-02**: Alert user when task is blocked by unresolved dependency
-- [ ] **NOTF-03**: Alert admin when approval is pending more than 24 hours
-- [ ] **NOTF-04**: Low stock alert when ingredient drops below min level
-- [ ] **NOTF-05**: New order alert to kitchen (KDS push or sound)
-- [ ] **NOTF-06**: Order ready alert to POS staff
-- [ ] **NOTF-07**: Delivery dispatched / delivered status update
+- [x] **NOTF-01**: Alert user when task is due within 48 hours
+- [x] **NOTF-02**: Alert user when task is blocked by unresolved dependency
+- [x] **NOTF-03**: Alert admin when approval is pending more than 24 hours
+- [x] **NOTF-04**: Low stock alert when ingredient drops below min level
+- [x] **NOTF-05**: New order alert to kitchen (KDS push or sound)
+- [x] **NOTF-06**: Order ready alert to POS staff
+- [x] **NOTF-07**: Delivery dispatched / delivered status update
 
 ### Operations Management
 
@@ -220,13 +220,13 @@
 | DASH-04 | Phase 11 | Complete |
 | DASH-05 | Phase 11 | Complete |
 | DASH-06 | Phase 11 | Complete |
-| NOTF-01 | Phase 12 | Pending |
-| NOTF-02 | Phase 12 | Pending |
-| NOTF-03 | Phase 12 | Pending |
-| NOTF-04 | Phase 12 | Pending |
-| NOTF-05 | Phase 12 | Pending |
-| NOTF-06 | Phase 12 | Pending |
-| NOTF-07 | Phase 12 | Pending |
+| NOTF-01 | Phase 12 | Complete |
+| NOTF-02 | Phase 12 | Complete |
+| NOTF-03 | Phase 12 | Complete |
+| NOTF-04 | Phase 12 | Complete |
+| NOTF-05 | Phase 12 | Complete |
+| NOTF-06 | Phase 12 | Complete |
+| NOTF-07 | Phase 12 | Complete |
 | CUST-01 | Phase 13 | Pending |
 | CUST-02 | Phase 13 | Pending |
 | CUST-03 | Phase 13 | Pending |

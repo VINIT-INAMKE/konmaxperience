@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Completed 11-02-PLAN.md
-last_updated: "2026-03-21T19:18:41.476Z"
+stopped_at: Completed 12-01-PLAN.md
+last_updated: "2026-03-21T20:42:10.756Z"
 progress:
   total_phases: 13
-  completed_phases: 11
-  total_plans: 48
-  completed_plans: 48
+  completed_phases: 10
+  total_plans: 53
+  completed_plans: 49
 ---
 
 # Project State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-19)
 
 **Core value:** Every piece of work must be evidence-backed, approved, and validated before it counts -- turning real execution into measurable readiness and progress.
-**Current focus:** Phase 11 — dashboards-shared-boards
+**Current focus:** Phase 12 — notifications
 
 ## Current Position
 
-Phase: 12
-Plan: Not started
+Phase: 12 (notifications) — EXECUTING
+Plan: 2 of 4
 
 ## Performance Metrics
 
@@ -86,6 +86,7 @@ Plan: Not started
 | Phase 10-pos-orders P04 | 5min | 2 tasks | 6 files |
 | Phase 11 P01 | 5min | 2 tasks | 10 files |
 | Phase 11 P02 | 5min | 2 tasks | 7 files |
+| Phase 12 P01 | 7min | 2 tasks | 15 files |
 
 ## Accumulated Context
 
@@ -217,6 +218,11 @@ Recent decisions affecting current work:
 - [Phase 11]: Evidence feed uses uploader relation matching existing Prisma schema relation name
 - [Phase 11]: Admin widgets own their React Query hooks (self-contained) rather than page-level data fetching
 - [Phase 11]: Role-relevant readiness meters selected by matching meter name to role domain keywords with fallback to lowest-value
+- [Phase 12]: BullMQ worker in providers array (monolith, not separate process)
+- [Phase 12]: shouldNotify deduplication: 24h for task_due/approval_pending, 4h for low_stock, immediate for task_blocked
+- [Phase 12]: Critical email for 4 types (task_due, task_blocked, approval_pending, low_stock); other 3 in-app only
+- [Phase 12]: MailerSend in worker directly (not via EmailService) for notification-specific email templates
+- [Phase 12]: Failure isolation: every job handler wrapped in try/catch, email failures never crash worker
 
 ### Pending Todos
 
@@ -231,6 +237,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-21T18:48:09.393Z
-Stopped at: Completed 11-02-PLAN.md
+Last session: 2026-03-21T20:42:10.746Z
+Stopped at: Completed 12-01-PLAN.md
 Resume file: None
