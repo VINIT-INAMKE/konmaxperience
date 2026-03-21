@@ -12,3 +12,5 @@ export * from './vendor';
 export * from './menu';
 export * from './inventory';
 export * from './purchase-order';
+export * from './kitchen';
+export * from './kds';
