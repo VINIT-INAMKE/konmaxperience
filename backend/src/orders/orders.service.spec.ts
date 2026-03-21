@@ -7,6 +7,14 @@ import {
 import { OrdersService } from './orders.service';
 import { PrismaService } from '../prisma/prisma.service';
 
+// Mock convertUnit — return same value (unit conversion tested separately)
+jest.mock('../common/utils/unit-conversion', () => ({
+  convertUnit: jest.fn().mockResolvedValue(null),
+}));
+
+import { convertUnit } from '../common/utils/unit-conversion';
+const mockConvertUnit = convertUnit as jest.MockedFunction<typeof convertUnit>;
+
 /** Mock Prisma Decimal -- supports Number() via valueOf() */
 const dec = (n: number) => ({ valueOf: () => n, toNumber: () => n });
 
@@ -426,6 +434,323 @@ describe('OrdersService', () => {
       const call = mockPrisma.order.findMany.mock.calls[0][0];
       expect(call.where.created_at).toBeDefined();
       expect(call.where.status).toEqual({ not: 'cancelled' });
+    });
+  });
+
+  // ---------------------------------------------------------------
+  // deductItemIngredients
+  // ---------------------------------------------------------------
+  describe('deductItemIngredients', () => {
+    const orderItem = {
+      id: 'oi-1',
+      order_id: 'order-1',
+      menu_item_id: 'mi-1',
+      quantity: 1,
+    };
+
+    const makeDeductionTx = () => ({
+      menuItem: { findUniqueOrThrow: jest.fn() },
+      order: { findUniqueOrThrow: jest.fn() },
+      ingredientStock: { findFirst: jest.fn(), update: jest.fn() },
+      stockMovement: { create: jest.fn() },
+      prepBatch: { findMany: jest.fn(), update: jest.fn() },
+    });
+
+    beforeEach(() => {
+      // Default: convertUnit returns same value (identity)
+      mockConvertUnit.mockResolvedValue(null);
+    });
+
+    it('deducts ingredient-type RecipeLine from IngredientStock', async () => {
+      const tx = makeDeductionTx();
+      mockConvertUnit.mockResolvedValue(100); // 100g
+
+      tx.menuItem.findUniqueOrThrow.mockResolvedValue({
+        id: 'mi-1',
+        recipe: {
+          id: 'recipe-1',
+          RecipeLines: [
+            {
+              input_type: 'ingredient',
+              ingredient_id: 'ing-1',
+              ingredient: { id: 'ing-1', name: 'Flour', base_unit: 'g' },
+              source_recipe_id: null,
+              source_recipe: null,
+              quantity: dec(100),
+              unit: 'g',
+            },
+          ],
+        },
+      });
+      tx.order.findUniqueOrThrow.mockResolvedValue({
+        id: 'order-1',
+        zone_id: 'zone-1',
+      });
+      tx.ingredientStock.findFirst.mockResolvedValue({
+        id: 'stock-1',
+        current_quantity: dec(500),
+      });
+
+      await service.deductItemIngredients(tx, orderItem, 'user-1');
+
+      expect(tx.ingredientStock.update).toHaveBeenCalledWith({
+        where: { id: 'stock-1' },
+        data: { current_quantity: { decrement: 100 } },
+      });
+    });
+
+    it('deducts recipe-type RecipeLine from PrepBatches via FIFO', async () => {
+      const tx = makeDeductionTx();
+      mockConvertUnit.mockResolvedValue(2); // 2 yield units
+
+      tx.menuItem.findUniqueOrThrow.mockResolvedValue({
+        id: 'mi-1',
+        recipe: {
+          id: 'recipe-1',
+          RecipeLines: [
+            {
+              input_type: 'recipe',
+              ingredient_id: null,
+              ingredient: null,
+              source_recipe_id: 'sr-1',
+              source_recipe: {
+                id: 'sr-1',
+                name: 'Dough',
+                yield_unit: 'portion',
+              },
+              quantity: dec(2),
+              unit: 'portion',
+            },
+          ],
+        },
+      });
+      tx.order.findUniqueOrThrow.mockResolvedValue({
+        id: 'order-1',
+        zone_id: 'zone-1',
+      });
+      // FIFO: oldest batch (batch-1) has 1 portion, second (batch-2) has 3 portions
+      tx.prepBatch.findMany.mockResolvedValue([
+        { id: 'batch-1', quantity_remaining: dec(1), created_at: new Date('2026-03-20') },
+        { id: 'batch-2', quantity_remaining: dec(3), created_at: new Date('2026-03-21') },
+      ]);
+
+      await service.deductItemIngredients(tx, orderItem, 'user-1');
+
+      // Should deduct 1 from batch-1 (depleting it) and 1 from batch-2
+      expect(tx.prepBatch.update).toHaveBeenCalledTimes(2);
+      expect(tx.prepBatch.update).toHaveBeenCalledWith({
+        where: { id: 'batch-1' },
+        data: { quantity_remaining: { decrement: 1 }, status: 'depleted' },
+      });
+      expect(tx.prepBatch.update).toHaveBeenCalledWith({
+        where: { id: 'batch-2' },
+        data: { quantity_remaining: { decrement: 1 } },
+      });
+    });
+
+    it('marks PrepBatch as depleted when quantity_remaining reaches 0', async () => {
+      const tx = makeDeductionTx();
+      mockConvertUnit.mockResolvedValue(5); // need exactly 5
+
+      tx.menuItem.findUniqueOrThrow.mockResolvedValue({
+        id: 'mi-1',
+        recipe: {
+          id: 'recipe-1',
+          RecipeLines: [
+            {
+              input_type: 'recipe',
+              ingredient_id: null,
+              ingredient: null,
+              source_recipe_id: 'sr-1',
+              source_recipe: {
+                id: 'sr-1',
+                name: 'Sauce',
+                yield_unit: 'ml',
+              },
+              quantity: dec(5),
+              unit: 'ml',
+            },
+          ],
+        },
+      });
+      tx.order.findUniqueOrThrow.mockResolvedValue({
+        id: 'order-1',
+        zone_id: 'zone-1',
+      });
+      tx.prepBatch.findMany.mockResolvedValue([
+        { id: 'batch-1', quantity_remaining: dec(5), created_at: new Date('2026-03-20') },
+      ]);
+
+      await service.deductItemIngredients(tx, orderItem, 'user-1');
+
+      expect(tx.prepBatch.update).toHaveBeenCalledWith({
+        where: { id: 'batch-1' },
+        data: { quantity_remaining: { decrement: 5 }, status: 'depleted' },
+      });
+    });
+
+    it('creates StockMovement with type order_deducted for ingredient deductions', async () => {
+      const tx = makeDeductionTx();
+      mockConvertUnit.mockResolvedValue(200);
+
+      tx.menuItem.findUniqueOrThrow.mockResolvedValue({
+        id: 'mi-1',
+        recipe: {
+          id: 'recipe-1',
+          RecipeLines: [
+            {
+              input_type: 'ingredient',
+              ingredient_id: 'ing-1',
+              ingredient: { id: 'ing-1', name: 'Sugar', base_unit: 'g' },
+              source_recipe_id: null,
+              source_recipe: null,
+              quantity: dec(200),
+              unit: 'g',
+            },
+          ],
+        },
+      });
+      tx.order.findUniqueOrThrow.mockResolvedValue({
+        id: 'order-1',
+        zone_id: 'zone-1',
+      });
+      tx.ingredientStock.findFirst.mockResolvedValue({
+        id: 'stock-1',
+        current_quantity: dec(1000),
+      });
+
+      await service.deductItemIngredients(tx, orderItem, 'user-1');
+
+      expect(tx.stockMovement.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          ingredient_id: 'ing-1',
+          zone_id: 'zone-1',
+          movement_type: 'order_deducted',
+          quantity: -200,
+          original_quantity: 200,
+          unit: 'g',
+          reference_type: 'order',
+          reference_id: 'order-1',
+          created_by: 'user-1',
+        }),
+      });
+    });
+
+    it('throws BadRequestException when IngredientStock insufficient', async () => {
+      const tx = makeDeductionTx();
+      mockConvertUnit.mockResolvedValue(500);
+
+      tx.menuItem.findUniqueOrThrow.mockResolvedValue({
+        id: 'mi-1',
+        recipe: {
+          id: 'recipe-1',
+          RecipeLines: [
+            {
+              input_type: 'ingredient',
+              ingredient_id: 'ing-1',
+              ingredient: { id: 'ing-1', name: 'Butter', base_unit: 'g' },
+              source_recipe_id: null,
+              source_recipe: null,
+              quantity: dec(500),
+              unit: 'g',
+            },
+          ],
+        },
+      });
+      tx.order.findUniqueOrThrow.mockResolvedValue({
+        id: 'order-1',
+        zone_id: 'zone-1',
+      });
+      // Only 100g available, need 500g
+      tx.ingredientStock.findFirst.mockResolvedValue({
+        id: 'stock-1',
+        current_quantity: dec(100),
+      });
+
+      await expect(
+        service.deductItemIngredients(tx, orderItem, 'user-1'),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('throws BadRequestException when PrepBatch stock insufficient', async () => {
+      const tx = makeDeductionTx();
+      mockConvertUnit.mockResolvedValue(10); // need 10 portions
+
+      tx.menuItem.findUniqueOrThrow.mockResolvedValue({
+        id: 'mi-1',
+        recipe: {
+          id: 'recipe-1',
+          RecipeLines: [
+            {
+              input_type: 'recipe',
+              ingredient_id: null,
+              ingredient: null,
+              source_recipe_id: 'sr-1',
+              source_recipe: {
+                id: 'sr-1',
+                name: 'Base',
+                yield_unit: 'portion',
+              },
+              quantity: dec(10),
+              unit: 'portion',
+            },
+          ],
+        },
+      });
+      tx.order.findUniqueOrThrow.mockResolvedValue({
+        id: 'order-1',
+        zone_id: 'zone-1',
+      });
+      // Only 3 portions available total
+      tx.prepBatch.findMany.mockResolvedValue([
+        { id: 'batch-1', quantity_remaining: dec(3), created_at: new Date('2026-03-20') },
+      ]);
+
+      await expect(
+        service.deductItemIngredients(tx, orderItem, 'user-1'),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('deducts 3x the per-serving amount when quantity=3', async () => {
+      const tx = makeDeductionTx();
+      mockConvertUnit.mockResolvedValue(50); // 50g per serving
+
+      tx.menuItem.findUniqueOrThrow.mockResolvedValue({
+        id: 'mi-1',
+        recipe: {
+          id: 'recipe-1',
+          RecipeLines: [
+            {
+              input_type: 'ingredient',
+              ingredient_id: 'ing-1',
+              ingredient: { id: 'ing-1', name: 'Rice', base_unit: 'g' },
+              source_recipe_id: null,
+              source_recipe: null,
+              quantity: dec(50),
+              unit: 'g',
+            },
+          ],
+        },
+      });
+      tx.order.findUniqueOrThrow.mockResolvedValue({
+        id: 'order-1',
+        zone_id: 'zone-1',
+      });
+      tx.ingredientStock.findFirst.mockResolvedValue({
+        id: 'stock-1',
+        current_quantity: dec(1000),
+      });
+
+      // quantity=3 means 3 servings
+      await service.deductItemIngredients(
+        tx,
+        { ...orderItem, quantity: 3 },
+        'user-1',
+      );
+
+      // Should have 3 update calls (one per serving) each decrementing 50g
+      expect(tx.ingredientStock.update).toHaveBeenCalledTimes(3);
+      expect(tx.stockMovement.create).toHaveBeenCalledTimes(3);
     });
   });
 });
