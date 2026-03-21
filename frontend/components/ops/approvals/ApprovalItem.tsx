@@ -8,6 +8,7 @@ import {
   Link as LinkIcon,
   FileEdit,
   Loader2,
+  AlertCircle,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatDistanceToNow, parseISO } from 'date-fns';
@@ -23,7 +24,10 @@ import { CoolMode } from '@/components/ui/cool-mode';
 import { PulsatingButton } from '@/components/ui/pulsating-button';
 import { AvatarCircles } from '@/components/ui/avatar-circles';
 import { RejectionDialog } from '@/components/ops/evidence/RejectionDialog';
+import { OverrideDialog } from './OverrideDialog';
 import { apiClient } from '@/lib/api-client';
+import { useAuthStore } from '@/lib/stores/auth-store';
+import { RoleCode } from '@/lib/types/roles';
 import type { Evidence, EvidenceType } from '@/lib/types/evidence';
 
 const TYPE_ICONS: Record<EvidenceType, typeof Image> = {
@@ -48,6 +52,13 @@ interface ApprovalEvidence extends Evidence {
     quest?: { id: string; title: string } | null;
     mission?: { id: string; title: string } | null;
   };
+  // Override fields (present when this evidence was approved via override)
+  override_by?: string | null;
+  override_reason?: string | null;
+  override_at?: string | null;
+  overrider?: { id: string; name: string } | null;
+  delegated_from_user_id?: string | null;
+  delegated_from_user?: { id: string; name: string } | null;
 }
 
 interface ApprovalItemProps {
@@ -59,6 +70,10 @@ export function ApprovalItem({ evidence, onAction }: ApprovalItemProps) {
   const [isApproving, setIsApproving] = useState(false);
   const [isRejecting, setIsRejecting] = useState(false);
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
+  const [overrideDialogOpen, setOverrideDialogOpen] = useState(false);
+
+  const user = useAuthStore((s) => s.user);
+  const isAdmin = user?.roleCode === RoleCode.FOUNDER_ADMIN;
 
   const Icon = TYPE_ICONS[evidence.type] || FileText;
   const displayName = getDisplayName(evidence);
@@ -131,6 +146,28 @@ export function ApprovalItem({ evidence, onAction }: ApprovalItemProps) {
       >
         Reject
       </InteractiveHoverButton>
+      {isAdmin && (
+        <>
+          <div className="w-px h-4 bg-border" />
+          {isPendingLong ? (
+            <PulsatingButton
+              pulseColor="#f59e0b"
+              duration="2s"
+              className="h-8 px-3 text-xs bg-transparent border border-amber-500/30 text-amber-400 shadow-none"
+              onClick={() => setOverrideDialogOpen(true)}
+            >
+              Override
+            </PulsatingButton>
+          ) : (
+            <InteractiveHoverButton
+              className="h-8 px-3 text-xs border-amber-500/30"
+              onClick={() => setOverrideDialogOpen(true)}
+            >
+              Override
+            </InteractiveHoverButton>
+          )}
+        </>
+      )}
     </div>
   );
 
@@ -211,6 +248,34 @@ export function ApprovalItem({ evidence, onAction }: ApprovalItemProps) {
             actionButtons
           )}
         </div>
+
+        {/* Override attribution row */}
+        {evidence.override_reason && (
+          <div className="flex items-center gap-2 text-sm">
+            <AlertCircle className="size-3 text-amber-400 shrink-0" />
+            <span className="text-muted-foreground italic text-[14px]">
+              Overridden by {evidence.overrider?.name || 'Admin'} &mdash;{' '}
+              {evidence.override_reason}
+            </span>
+            {evidence.override_at && (
+              <span className="text-muted-foreground text-[13px] ml-auto shrink-0">
+                {formatDistanceToNow(parseISO(evidence.override_at), {
+                  addSuffix: true,
+                })}
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* Delegation attribution row */}
+        {evidence.delegated_from_user_id && evidence.delegated_from_user && (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <span className="text-[14px]">
+              Approved by {evidence.reviewer?.name || 'Unknown'} (on behalf of{' '}
+              {evidence.delegated_from_user.name})
+            </span>
+          </div>
+        )}
       </CardContent>
 
       <RejectionDialog
@@ -219,6 +284,15 @@ export function ApprovalItem({ evidence, onAction }: ApprovalItemProps) {
         onReject={handleReject}
         isSubmitting={isRejecting}
       />
+
+      {isAdmin && (
+        <OverrideDialog
+          open={overrideDialogOpen}
+          onOpenChange={setOverrideDialogOpen}
+          evidenceId={evidence.id}
+          onOverridden={onAction}
+        />
+      )}
     </Card>
   );
 }
