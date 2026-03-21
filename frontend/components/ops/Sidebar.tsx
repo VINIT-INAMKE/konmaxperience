@@ -19,6 +19,7 @@ import {
   Settings,
   ClipboardList,
   ClipboardCheck,
+  UserCheck,
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
@@ -180,6 +181,11 @@ export function Sidebar() {
       label: 'Blockers',
       href: '/admin/blockers',
       icon: <AlertTriangle className="size-4" />,
+    },
+    {
+      label: 'Delegations',
+      href: '/admin/delegations',
+      icon: <UserCheck className="size-4" />,
     },
     {
       label: 'Settings',
