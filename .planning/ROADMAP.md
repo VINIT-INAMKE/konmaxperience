@@ -16,7 +16,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 2: Mission Execution Hierarchy** - Mission/quest/task CRUD with types, ad-hoc injection, dependencies, blockers, and progress calculation (completed 2026-03-19)
 - [x] **Phase 3: Evidence & Validation Cascade** - Evidence upload via presigned URLs, approval workflow, and the complete task validation engine (the architectural heart) (completed 2026-03-20)
 - [x] **Phase 4: Gamification & Readiness Intelligence** - XP from valid tasks, levels, leaderboard, 10 readiness meters (event-sourced), and KPI tracking (completed 2026-03-20)
-- [ ] **Phase 5: Governance & Decision Management** - Decision logging with types, admin override/escalation on approvals, and approval delegation
+- [x] **Phase 5: Governance & Decision Management** - Decision logging with types, admin override/escalation on approvals, and approval delegation (completed 2026-03-21)
 - [ ] **Phase 6: Operations Management** - Zone management, brand lifecycle, sales channels, and asset library with approval workflow
 - [ ] **Phase 7: Recipe & Ingredient Management** - Structured recipes with BOM, ingredient master, vendor management, recipe costing, menu items with pricing and food cost %
 - [ ] **Phase 8: Inventory & Procurement** - Raw ingredient stock tracking, stock movements, purchase order workflow with vendor prices, low-stock alerts
@@ -106,13 +106,13 @@ Plans:
   1. Any authorized user can log a decision with type (individual, cross-function, strategic), context, and status, and approved decisions cannot be deleted
   2. Admin/founder can override or escalate any pending approval that is stalling progress
   3. When a primary approver is unavailable, their approval authority can be delegated to another user, and the delegation is recorded in the audit trail
-**Plans:** 3/4 plans executed
+**Plans:** 4/4 plans complete
 
 Plans:
 - [x] 05-01-PLAN.md — Backend: schema migration (ApprovalDelegation + Approval override fields), Decisions/Approvals/Delegations NestJS modules, frontend types
 - [x] 05-02-PLAN.md — Frontend: /decisions page (filterable list, MagicCard cards, detail expand, log decision form), sidebar Decisions link
 - [x] 05-03-PLAN.md — Frontend: approval override UI (OverrideDialog + ApprovalItem modification with override button and attribution)
-- [ ] 05-04-PLAN.md — Frontend: /admin/delegations page (create/view/deactivate delegations), sidebar Delegations link
+- [x] 05-04-PLAN.md — Frontend: /admin/delegations page (create/view/deactivate delegations), sidebar Delegations link
 
 ### Phase 6: Operations Management
 **Goal**: The team can manage the villa's physical zones, brands, sales channels, and operational assets (recipes, SOPs, menus, cost sheets) through their full lifecycle -- producing the approved assets that the customer-facing layer will consume
@@ -232,7 +232,7 @@ Dependencies: Phase 7 (Recipes) depends on Phase 6 (brands/vendors). Phase 8 (In
 | 2. Mission Execution Hierarchy | 4/4 | Complete | 2026-03-19 |
 | 3. Evidence & Validation Cascade | 4/4 | Complete | 2026-03-20 |
 | 4. Gamification & Readiness Intelligence | 4/4 | Complete   | 2026-03-20 |
-| 5. Governance & Decision Management | 3/4 | In Progress|  |
+| 5. Governance & Decision Management | 4/4 | Complete   | 2026-03-21 |
 | 6. Operations Management | 0/0 | Not started | - |
 | 7. Recipe & Ingredient Management | 0/0 | Not started | - |
 | 8. Inventory & Procurement | 0/0 | Not started | - |

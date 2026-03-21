@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Completed 05-02-PLAN.md
-last_updated: "2026-03-21T08:20:11.667Z"
+stopped_at: Completed 05-04-PLAN.md
+last_updated: "2026-03-21T08:25:06.579Z"
 progress:
   total_phases: 13
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 19
-  completed_plans: 18
+  completed_plans: 19
 ---
 
 # Project State
@@ -62,6 +62,7 @@ Plan: 4 of 4
 | Phase 05-governance-decision-management P01 | 6min | 2 tasks | 22 files |
 | Phase 05-governance-decision-management P03 | 2min | 2 tasks | 2 files |
 | Phase 05 P02 | 5min | 2 tasks | 8 files |
+| Phase 05-governance-decision-management P04 | 4min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -129,6 +130,9 @@ Recent decisions affecting current work:
 - [Phase 05-03]: OverrideDialog rendered conditionally (isAdmin guard) to avoid DOM overhead for non-admin users
 - [Phase 05-02]: Inline decision detail expand below card in list flow — not a separate page (consistent with Phase 4 MeterDetailPanel pattern)
 - [Phase 05-02]: Sidebar Decisions badge uses string count rather than NumberTicker JSX to avoid changing the shared NavItem interface
+- [Phase 05-04]: Delegation expiry determined by both active flag AND end_date < now — past-end-date active delegations shown as expired in UI
+- [Phase 05-04]: DelegationForm resets toUserId when fromUserId changes to prevent same-user delegation
+- [Phase 05-04]: Deactivate has no confirmation dialog per UI-SPEC — low-stakes administrative action, single click
 
 ### Pending Todos
 
@@ -143,6 +147,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-21T08:20:11.660Z
-Stopped at: Completed 05-02-PLAN.md
+Last session: 2026-03-21T08:25:06.574Z
+Stopped at: Completed 05-04-PLAN.md
 Resume file: None
