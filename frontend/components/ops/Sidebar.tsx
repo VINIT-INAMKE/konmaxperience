@@ -24,6 +24,10 @@ import {
   Tag,
   Radio,
   FolderOpen,
+  ChefHat,
+  Salad,
+  Truck,
+  UtensilsCrossed,
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
@@ -175,6 +179,10 @@ export function Sidebar() {
     { label: 'Brands', href: '/operations/brands', icon: <Tag className="size-4" /> },
     { label: 'Channels', href: '/operations/channels', icon: <Radio className="size-4" /> },
     { label: 'Assets', href: '/operations/assets', icon: <FolderOpen className="size-4" /> },
+    { label: 'Recipes', href: '/operations/recipes', icon: <ChefHat className="size-4" /> },
+    { label: 'Ingredients', href: '/operations/ingredients', icon: <Salad className="size-4" /> },
+    { label: 'Vendors', href: '/operations/vendors', icon: <Truck className="size-4" /> },
+    { label: 'Menu', href: '/operations/menu', icon: <UtensilsCrossed className="size-4" /> },
   ];
 
   const adminNav: NavItem[] = [
