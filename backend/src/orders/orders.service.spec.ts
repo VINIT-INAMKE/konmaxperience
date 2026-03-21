@@ -1,0 +1,431 @@
+import { Test, TestingModule } from '@nestjs/testing';
+import {
+  BadRequestException,
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common';
+import { OrdersService } from './orders.service';
+import { PrismaService } from '../prisma/prisma.service';
+
+/** Mock Prisma Decimal -- supports Number() via valueOf() */
+const dec = (n: number) => ({ valueOf: () => n, toNumber: () => n });
+
+const createMockTx = () => ({
+  channelModifier: {
+    findFirst: jest.fn(),
+  },
+  order: {
+    create: jest.fn(),
+  },
+});
+
+const mockPrisma = {
+  order: {
+    findMany: jest.fn(),
+    findUnique: jest.fn(),
+    update: jest.fn(),
+  },
+  payment: {
+    findFirst: jest.fn(),
+    create: jest.fn(),
+  },
+  $transaction: jest.fn(),
+};
+
+describe('OrdersService', () => {
+  let service: OrdersService;
+
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        OrdersService,
+        { provide: PrismaService, useValue: mockPrisma },
+      ],
+    }).compile();
+
+    service = module.get<OrdersService>(OrdersService);
+    jest.clearAllMocks();
+  });
+
+  // ---------------------------------------------------------------
+  // createOrder
+  // ---------------------------------------------------------------
+  describe('createOrder', () => {
+    const userId = 'user-1';
+    const baseDto = {
+      channel: 'dine_in' as const,
+      zone_id: 'zone-1',
+      items: [
+        { menu_item_id: 'mi-1', quantity: 2, unit_price: 150 },
+        { menu_item_id: 'mi-2', quantity: 1, unit_price: 200 },
+      ],
+      table_number: 'T5',
+    };
+
+    it('creates order with channel modifier (fixed)', async () => {
+      const mockTx = createMockTx();
+      mockPrisma.$transaction.mockImplementation(async (cb: any) => cb(mockTx));
+
+      mockTx.channelModifier.findFirst.mockResolvedValue({
+        id: 'cm-1',
+        channel_type: 'dine_in',
+        modifier_type: 'fixed',
+        modifier_value: dec(50),
+        status: 'active',
+      });
+
+      const expectedOrder = {
+        id: 'order-1',
+        channel: 'dine_in',
+        status: 'placed',
+        subtotal: dec(500),
+        channel_modifier_amount: dec(50),
+        total: dec(550),
+        items: [],
+        payment: null,
+      };
+      mockTx.order.create.mockResolvedValue(expectedOrder);
+
+      const result = await service.createOrder(baseDto, userId);
+
+      expect(mockTx.channelModifier.findFirst).toHaveBeenCalledWith({
+        where: { channel_type: 'dine_in', status: 'active' },
+      });
+
+      expect(mockTx.order.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            channel: 'dine_in',
+            status: 'placed',
+            subtotal: 500,
+            channel_modifier_amount: 50,
+            total: 550,
+            zone_id: 'zone-1',
+            created_by: 'user-1',
+          }),
+          include: { items: true, payment: true },
+        }),
+      );
+      expect(result).toBe(expectedOrder);
+    });
+
+    it('sets channel_modifier_amount=0 when no modifier exists', async () => {
+      const mockTx = createMockTx();
+      mockPrisma.$transaction.mockImplementation(async (cb: any) => cb(mockTx));
+
+      mockTx.channelModifier.findFirst.mockResolvedValue(null);
+
+      const expectedOrder = {
+        id: 'order-2',
+        subtotal: dec(500),
+        channel_modifier_amount: dec(0),
+        total: dec(500),
+      };
+      mockTx.order.create.mockResolvedValue(expectedOrder);
+
+      await service.createOrder(baseDto, userId);
+
+      expect(mockTx.order.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            subtotal: 500,
+            channel_modifier_amount: 0,
+            total: 500,
+          }),
+        }),
+      );
+    });
+
+    it('stores delivery_address and customer_phone for delivery channel', async () => {
+      const mockTx = createMockTx();
+      mockPrisma.$transaction.mockImplementation(async (cb: any) => cb(mockTx));
+      mockTx.channelModifier.findFirst.mockResolvedValue(null);
+
+      const deliveryDto = {
+        ...baseDto,
+        channel: 'delivery' as const,
+        delivery_address: '42 Main St',
+        customer_phone: '+911234567890',
+      };
+
+      const expectedOrder = { id: 'order-3' };
+      mockTx.order.create.mockResolvedValue(expectedOrder);
+
+      await service.createOrder(deliveryDto, userId);
+
+      expect(mockTx.order.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            channel: 'delivery',
+            delivery_address: '42 Main St',
+            customer_phone: '+911234567890',
+          }),
+        }),
+      );
+    });
+
+    it('applies percentage modifier correctly', async () => {
+      const mockTx = createMockTx();
+      mockPrisma.$transaction.mockImplementation(async (cb: any) => cb(mockTx));
+
+      mockTx.channelModifier.findFirst.mockResolvedValue({
+        id: 'cm-2',
+        channel_type: 'delivery',
+        modifier_type: 'percentage',
+        modifier_value: dec(10),
+        status: 'active',
+      });
+
+      const expectedOrder = { id: 'order-4' };
+      mockTx.order.create.mockResolvedValue(expectedOrder);
+
+      // subtotal = 2*150 + 1*200 = 500; 10% of 500 = 50
+      await service.createOrder(baseDto, userId);
+
+      expect(mockTx.order.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            subtotal: 500,
+            channel_modifier_amount: 50,
+            total: 550,
+          }),
+        }),
+      );
+    });
+  });
+
+  // ---------------------------------------------------------------
+  // getOrders
+  // ---------------------------------------------------------------
+  describe('getOrders', () => {
+    it('filters by channel', async () => {
+      mockPrisma.order.findMany.mockResolvedValue([]);
+
+      await service.getOrders({ channel: 'dine_in' });
+
+      expect(mockPrisma.order.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ channel: 'dine_in' }),
+        }),
+      );
+    });
+
+    it('filters by date_from and date_to', async () => {
+      mockPrisma.order.findMany.mockResolvedValue([]);
+
+      await service.getOrders({
+        date_from: '2026-03-20',
+        date_to: '2026-03-21',
+      });
+
+      const call = mockPrisma.order.findMany.mock.calls[0][0];
+      expect(call.where.created_at).toBeDefined();
+      expect(call.where.created_at.gte).toBeDefined();
+      expect(call.where.created_at.lte).toBeDefined();
+    });
+
+    it('filters by payment_method', async () => {
+      mockPrisma.order.findMany.mockResolvedValue([]);
+
+      await service.getOrders({ payment_method: 'upi' });
+
+      expect(mockPrisma.order.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            payment: { method: 'upi' },
+          }),
+        }),
+      );
+    });
+  });
+
+  // ---------------------------------------------------------------
+  // updateOrderStatus
+  // ---------------------------------------------------------------
+  describe('updateOrderStatus', () => {
+    it('allows placed -> preparing', async () => {
+      mockPrisma.order.findUnique.mockResolvedValue({
+        id: 'o-1',
+        status: 'placed',
+      });
+      mockPrisma.order.update.mockResolvedValue({
+        id: 'o-1',
+        status: 'preparing',
+      });
+
+      const result = await service.updateOrderStatus('o-1', 'preparing');
+      expect(result.status).toBe('preparing');
+    });
+
+    it('throws on invalid transition placed -> ready', async () => {
+      mockPrisma.order.findUnique.mockResolvedValue({
+        id: 'o-1',
+        status: 'placed',
+      });
+
+      await expect(
+        service.updateOrderStatus('o-1', 'ready'),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('allows cancellation from non-terminal status', async () => {
+      mockPrisma.order.findUnique.mockResolvedValue({
+        id: 'o-1',
+        status: 'preparing',
+      });
+      mockPrisma.order.update.mockResolvedValue({
+        id: 'o-1',
+        status: 'cancelled',
+      });
+
+      const result = await service.updateOrderStatus('o-1', 'cancelled');
+      expect(result.status).toBe('cancelled');
+    });
+
+    it('does not allow cancellation from terminal status', async () => {
+      mockPrisma.order.findUnique.mockResolvedValue({
+        id: 'o-1',
+        status: 'served',
+      });
+
+      await expect(
+        service.updateOrderStatus('o-1', 'cancelled'),
+      ).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  // ---------------------------------------------------------------
+  // recordPayment
+  // ---------------------------------------------------------------
+  describe('recordPayment', () => {
+    it('creates payment record with status=paid', async () => {
+      mockPrisma.payment.findFirst.mockResolvedValue(null);
+
+      const expectedPayment = {
+        id: 'pay-1',
+        order_id: 'o-1',
+        method: 'cash',
+        amount: dec(550),
+        status: 'paid',
+        notes: null,
+      };
+      mockPrisma.payment.create.mockResolvedValue(expectedPayment);
+
+      const result = await service.recordPayment('o-1', {
+        method: 'cash',
+        amount: 550,
+      });
+
+      expect(mockPrisma.payment.create).toHaveBeenCalledWith({
+        data: {
+          order_id: 'o-1',
+          method: 'cash',
+          amount: 550,
+          status: 'paid',
+          notes: undefined,
+        },
+      });
+      expect(result).toBe(expectedPayment);
+    });
+
+    it('throws 409 when payment already exists', async () => {
+      mockPrisma.payment.findFirst.mockResolvedValue({
+        id: 'pay-existing',
+        order_id: 'o-1',
+      });
+
+      await expect(
+        service.recordPayment('o-1', { method: 'card', amount: 550 }),
+      ).rejects.toThrow(ConflictException);
+    });
+  });
+
+  // ---------------------------------------------------------------
+  // updateDelivery
+  // ---------------------------------------------------------------
+  describe('updateDelivery', () => {
+    it('sets delivery_assigned_to and delivery_status', async () => {
+      mockPrisma.order.findUnique.mockResolvedValue({
+        id: 'o-1',
+        delivery_status: null,
+      });
+      mockPrisma.order.update.mockResolvedValue({
+        id: 'o-1',
+        delivery_assigned_to: 'driver-1',
+        delivery_status: 'picked_up',
+      });
+
+      const result = await service.updateDelivery('o-1', {
+        delivery_assigned_to: 'driver-1',
+        delivery_status: 'picked_up',
+      });
+
+      expect(result.delivery_assigned_to).toBe('driver-1');
+      expect(result.delivery_status).toBe('picked_up');
+    });
+
+    it('validates delivery_status progression (null -> picked_up ok)', async () => {
+      mockPrisma.order.findUnique.mockResolvedValue({
+        id: 'o-1',
+        delivery_status: null,
+      });
+      mockPrisma.order.update.mockResolvedValue({
+        id: 'o-1',
+        delivery_status: 'picked_up',
+      });
+
+      // Should not throw
+      await service.updateDelivery('o-1', { delivery_status: 'picked_up' });
+    });
+
+    it('rejects invalid delivery_status progression (null -> delivered)', async () => {
+      mockPrisma.order.findUnique.mockResolvedValue({
+        id: 'o-1',
+        delivery_status: null,
+      });
+
+      await expect(
+        service.updateDelivery('o-1', { delivery_status: 'delivered' }),
+      ).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  // ---------------------------------------------------------------
+  // getDailySummary
+  // ---------------------------------------------------------------
+  describe('getDailySummary', () => {
+    it('returns totalOrders, totalRevenue, averageOrderValue for a date', async () => {
+      mockPrisma.order.findMany.mockResolvedValue([
+        {
+          id: 'o-1',
+          total: dec(500),
+          status: 'served',
+          payment: { status: 'paid' },
+        },
+        {
+          id: 'o-2',
+          total: dec(300),
+          status: 'placed',
+          payment: { status: 'paid' },
+        },
+        {
+          id: 'o-3',
+          total: dec(200),
+          status: 'ready',
+          payment: null,
+        },
+      ]);
+
+      const result = await service.getDailySummary('2026-03-20');
+
+      expect(result.total_orders).toBe(3);
+      expect(result.total_revenue).toBe(800); // o-1 + o-2 paid
+      expect(result.average_order_value).toBeCloseTo(800 / 3);
+
+      // Verify date range was computed
+      const call = mockPrisma.order.findMany.mock.calls[0][0];
+      expect(call.where.created_at).toBeDefined();
+      expect(call.where.status).toEqual({ not: 'cancelled' });
+    });
+  });
+});
