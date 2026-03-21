@@ -188,7 +188,7 @@ Plans:
 - [x] 09-02-PLAN.md — Backend PrepBatch CRUD with FIFO deduction logic ($transaction) + deduction preview endpoint
 - [x] 09-03-PLAN.md — Backend KDS endpoints + WasteLog CRUD + kitchen metrics + expiry cron + menu availability endpoint
 - [x] 09-04-PLAN.md — Frontend Prep Batches page (FIFO table, 3-step wizard with deduction preview) + sidebar Kitchen section
-- [ ] 09-05-PLAN.md — Frontend KDS full-screen page (zone columns, 5s polling, elapsed timer, status tapping) + Waste Log page
+- [x] 09-05-PLAN.md — Frontend KDS full-screen page (zone columns, 5s polling, elapsed timer, status tapping) + Waste Log page
 
 ### Phase 10: POS & Orders
 **Goal**: Full POS interface for staff to take orders across all channels (dine-in, takeaway, delivery), with payment tracking (single record + notes for splits), order-to-kitchen-to-deduction flow (deduct on "ready"), and own-delivery dispatch (plain name string, no rider entity)

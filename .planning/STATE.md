@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Completed 09-04-PLAN.md
-last_updated: "2026-03-21T14:04:32.656Z"
+stopped_at: Completed 09-05-PLAN.md
+last_updated: "2026-03-21T14:06:09.266Z"
 progress:
   total_phases: 13
-  completed_phases: 8
+  completed_phases: 9
   total_plans: 38
-  completed_plans: 37
+  completed_plans: 38
 ---
 
 # Project State
@@ -78,6 +78,7 @@ Plan: 5 of 5
 | Phase 09 P02 | 7min | 2 tasks | 8 files |
 | Phase 09 P03 | 6min | 2 tasks | 11 files |
 | Phase 09 P04 | 5min | 2 tasks | 10 files |
+| Phase 09 P05 | 7min | 2 tasks | 13 files |
 
 ## Accumulated Context
 
@@ -188,6 +189,9 @@ Recent decisions affecting current work:
 - [Phase 09]: waste_percentage = (waste_today_cost / totalCostProduced) * 100 per D-15 / KITCHEN-05
 - [Phase 09]: Menu availability endpoint backend-only for Phase 9; D-11 frontend display deferred to Phase 10
 - [Phase 09]: TooltipTrigger renders directly without asChild per Phase 03-03 decision -- disabled button uses styled TooltipTrigger element
+- [Phase 09]: KDS uses CSS fixed overlay (z-50) to cover sidebar -- no separate layout segment needed
+- [Phase 09]: New order detection seeds seenOrderIds on first load to prevent all orders flashing as new
+- [Phase 09]: KDS metrics bar polls at 10s (separate from 5s order polling) to reduce API load
 
 ### Pending Todos
 
@@ -202,6 +206,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-21T14:04:32.649Z
-Stopped at: Completed 09-04-PLAN.md
+Last session: 2026-03-21T14:06:09.261Z
+Stopped at: Completed 09-05-PLAN.md
 Resume file: None
