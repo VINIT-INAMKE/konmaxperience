@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard,
+  LayoutGrid,
   Rocket,
   CheckCircle,
   Users,
@@ -33,6 +34,8 @@ import {
   TrendingUp,
   Monitor,
   Trash2,
+  Medal,
+  Eye,
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
@@ -70,6 +73,7 @@ export function Sidebar() {
   const user = useAuthStore((s) => s.user);
   const levelUpEvent = useAuthStore((s) => s.levelUpEvent);
   const clearLevelUpEvent = useAuthStore((s) => s.clearLevelUpEvent);
+  const permissions = useAuthStore((s) => s.permissions);
   const isAdmin = user?.roleCode === RoleCode.FOUNDER_ADMIN;
   const [adHocOpen, setAdHocOpen] = useState(false);
   const [showLevelGlow, setShowLevelGlow] = useState(false);
@@ -157,6 +161,13 @@ export function Sidebar() {
     },
   ];
 
+  const boardsNav: NavItem[] = [
+    { label: 'Missions', href: '/boards/missions', icon: <Rocket className="size-4" /> },
+    { label: 'Quests', href: '/boards/quests', icon: <CheckCircle className="size-4" /> },
+    { label: 'Wins', href: '/boards/wins', icon: <Medal className="size-4" /> },
+    { label: 'Evidence Feed', href: '/boards/evidence', icon: <Eye className="size-4" /> },
+  ];
+
   const intelligenceNav: NavItem[] = [
     {
       label: 'Readiness',
@@ -177,6 +188,15 @@ export function Sidebar() {
       href: '/kpis',
       icon: <BarChart3 className="size-4" />,
     },
+    ...(permissions.includes('MANAGE_KPIS')
+      ? [
+          {
+            label: 'Analytics',
+            href: '/intelligence/analytics',
+            icon: <TrendingUp className="size-4" />,
+          },
+        ]
+      : []),
   ];
 
   const operationsNav: NavItem[] = [
@@ -189,11 +209,13 @@ export function Sidebar() {
     { label: 'Vendors', href: '/operations/vendors', icon: <Truck className="size-4" /> },
     { label: 'Menu', href: '/operations/menu', icon: <UtensilsCrossed className="size-4" /> },
     { label: 'Inventory', href: '/operations/inventory', icon: <PackageSearch className="size-4" /> },
+    { label: 'Inventory Overview', href: '/operations/inventory/dashboard', icon: <BarChart3 className="size-4" /> },
     { label: 'Purchase Orders', href: '/operations/purchase-orders', icon: <ShoppingCart className="size-4" /> },
     { label: 'Procurement', href: '/operations/procurement', icon: <TrendingUp className="size-4" /> },
   ];
 
   const kitchenNav: NavItem[] = [
+    { label: 'Dashboard', href: '/operations/kitchen/dashboard', icon: <LayoutDashboard className="size-4" /> },
     { label: 'Prep Batches', href: '/operations/kitchen/prep-batches', icon: <ChefHat className="size-4" /> },
     { label: 'KDS', href: '/operations/kitchen/kds', icon: <Monitor className="size-4" /> },
     { label: 'Waste Log', href: '/operations/kitchen/waste', icon: <Trash2 className="size-4" /> },
@@ -272,6 +294,15 @@ export function Sidebar() {
           </span>
         </div>
         {workNav.map((item) => (
+          <NavLink key={item.label} item={item} active={isActive(item.href)} />
+        ))}
+
+        <div className="pt-3 pb-1 px-2">
+          <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/60">
+            Boards
+          </span>
+        </div>
+        {boardsNav.map((item) => (
           <NavLink key={item.label} item={item} active={isActive(item.href)} />
         ))}
 
