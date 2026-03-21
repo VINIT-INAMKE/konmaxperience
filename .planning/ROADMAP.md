@@ -142,13 +142,13 @@ Plans:
   5. Vendors can be created and linked to ingredients with historical price tracking (VendorPrice with effective_date)
   6. Recipe cost auto-calculates recursively — ingredient costs from best vendor price, prep item costs from source recipe cost prorated. Cached in computed_cost.
   7. Menu items created from approved recipes with base_price, food cost %, manual availability toggle, MenuCategory (Brand → Category → Item), and ChannelModifier for per-channel price adjustments
-**Plans:** 3/6 plans executed
+**Plans:** 4/6 plans executed
 
 Plans:
 - [x] 07-01-PLAN.md — Prisma schema migration (9 new models + Asset.linked_recipe_id), UnitConversion seed, frontend shared types
 - [x] 07-02-PLAN.md — Backend Ingredients module (CRUD, category filter, usage-safe delete) + Vendors module (CRUD, VendorPrice management) + shared unit conversion utility
 - [x] 07-03-PLAN.md — Backend Recipes module (CRUD, BOM upsert, CostCalculator with cycle guard) + Menu module (categories, items, channel modifiers) + vendor cost wiring
-- [ ] 07-04-PLAN.md — Frontend sidebar update (4 nav items) + /operations/ingredients page + /operations/vendors page with detail Sheet and price history
+- [x] 07-04-PLAN.md — Frontend sidebar update (4 nav items) + /operations/ingredients page + /operations/vendors page with detail Sheet and price history
 - [ ] 07-05-PLAN.md — Frontend /operations/recipes page (card grid) + 3-step RecipeWizard + /operations/recipes/[id] detail with dependency tree
 - [ ] 07-06-PLAN.md — Frontend /operations/menu page (brand tabs, category sections, menu item cards, food cost %, channel modifier table)
 
@@ -242,7 +242,7 @@ Dependencies: Phase 7 (Recipes) depends on Phase 6 (brands/vendors). Phase 8 (In
 | 4. Gamification & Readiness Intelligence | 4/4 | Complete   | 2026-03-20 |
 | 5. Governance & Decision Management | 4/4 | Complete   | 2026-03-21 |
 | 6. Operations Management | 3/3 | Complete   | 2026-03-21 |
-| 7. Recipe & Ingredient Management | 3/6 | In Progress|  |
+| 7. Recipe & Ingredient Management | 4/6 | In Progress|  |
 | 8. Inventory & Procurement | 0/0 | Not started | - |
 | 9. Kitchen & Prep | 0/0 | Not started | - |
 | 10. POS & Orders | 0/0 | Not started | - |
