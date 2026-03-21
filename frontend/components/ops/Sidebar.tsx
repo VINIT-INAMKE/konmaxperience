@@ -199,6 +199,12 @@ export function Sidebar() {
     { label: 'Waste Log', href: '/operations/kitchen/waste', icon: <Trash2 className="size-4" /> },
   ];
 
+  const posNav: NavItem[] = [
+    { label: 'Take Order', href: '/pos', icon: <ShoppingCart className="size-4" /> },
+    { label: 'Order History', href: '/pos/orders', icon: <ClipboardList className="size-4" /> },
+    { label: 'Delivery Queue', href: '/pos/delivery', icon: <Truck className="size-4" /> },
+  ];
+
   const adminNav: NavItem[] = [
     {
       label: 'Team',
@@ -293,6 +299,15 @@ export function Sidebar() {
           </span>
         </div>
         {kitchenNav.map((item) => (
+          <NavLink key={item.label} item={item} active={isActive(item.href)} />
+        ))}
+
+        <div className="pt-3 pb-1 px-2">
+          <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/60">
+            POS
+          </span>
+        </div>
+        {posNav.map((item) => (
           <NavLink key={item.label} item={item} active={isActive(item.href)} />
         ))}
 
