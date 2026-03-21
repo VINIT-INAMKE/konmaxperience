@@ -44,6 +44,36 @@ export default function KitchenDashboardPage() {
 
         <KitchenMetricsCards metrics={metrics} isLoading={metricsLoading} />
 
+        {/* Zone Utilization */}
+        {metrics && metrics.zone_utilization && metrics.zone_utilization.length > 0 && (
+          <section className="space-y-3">
+            <h2 className="text-sm font-bold">Zone Utilization</h2>
+            <Card>
+              <div className="p-4 space-y-3">
+                {metrics.zone_utilization.map((zone) => (
+                  <div key={zone.zone_name} className="flex items-center gap-3">
+                    <span className="text-sm w-32 truncate">{zone.zone_name}</span>
+                    <div className="flex-1 h-2 rounded-full bg-muted">
+                      <div
+                        className="h-full rounded-full bg-primary"
+                        style={{
+                          width: `${Math.min(
+                            (zone.active_orders / Math.max(...metrics.zone_utilization.map((z) => z.active_orders))) * 100,
+                            100,
+                          )}%`,
+                        }}
+                      />
+                    </div>
+                    <span className="font-mono font-bold text-sm w-8 text-right">
+                      {zone.active_orders}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          </section>
+        )}
+
         <section className="space-y-3">
           <h2 className="text-sm font-bold">Active Prep Batches</h2>
           <Card>

@@ -1,6 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 
+export interface ZoneUtilization {
+  zone_name: string;
+  active_orders: number;
+}
+
 export interface KitchenMetrics {
   orders_in_queue: number;
   items_completed_today: number;
@@ -8,6 +13,7 @@ export interface KitchenMetrics {
   waste_today_cost: number;
   waste_percentage: number;
   average_prep_time_minutes: number | null;
+  zone_utilization: ZoneUtilization[];
 }
 
 @Injectable()
@@ -91,6 +97,26 @@ export class KitchenMetricsService {
       ) / 10;
     }
 
+    // 7. Zone utilization: active orders grouped by zone
+    const zoneOrders = await this.prisma.order.groupBy({
+      by: ['zone_id'],
+      where: { status: { in: ['placed', 'preparing'] } },
+      _count: { id: true },
+    });
+
+    const zones = zoneOrders.length > 0
+      ? await this.prisma.zone.findMany({
+          where: { id: { in: zoneOrders.map((z) => z.zone_id) } },
+          select: { id: true, name: true },
+        })
+      : [];
+
+    const zoneMap = new Map(zones.map((z) => [z.id, z.name]));
+    const zone_utilization: ZoneUtilization[] = zoneOrders.map((z) => ({
+      zone_name: zoneMap.get(z.zone_id) ?? 'Unknown',
+      active_orders: z._count.id,
+    }));
+
     return {
       orders_in_queue,
       items_completed_today,
@@ -98,6 +124,7 @@ export class KitchenMetricsService {
       waste_today_cost,
       waste_percentage,
       average_prep_time_minutes,
+      zone_utilization,
     };
   }
 }

@@ -67,6 +67,11 @@ export interface ProcurementSummary {
   };
 }
 
+export interface ZoneUtilization {
+  zone_name: string;
+  active_orders: number;
+}
+
 export interface KitchenMetrics {
   orders_in_queue: number;
   items_completed_today: number;
@@ -74,4 +79,5 @@ export interface KitchenMetrics {
   waste_today_cost: number;
   waste_percentage: number;
   average_prep_time_minutes: number | null;
+  zone_utilization: ZoneUtilization[];
 }
