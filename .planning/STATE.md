@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Completed 10-03-PLAN.md
-last_updated: "2026-03-21T17:08:56.590Z"
+stopped_at: Completed 10-02-PLAN.md
+last_updated: "2026-03-21T17:09:22.547Z"
 progress:
   total_phases: 13
   completed_phases: 9
@@ -202,6 +202,9 @@ Recent decisions affecting current work:
 - [Phase 10]: Local cart state until submission — no API calls between taps for fast 30-second order flow
 - [Phase 10]: AnimatedListItem used directly (not AnimatedList wrapper) per Research Pitfall 4 for POS cart
 - [Phase 10]: Kitchen zone as default zone_id for orders — queries zones, picks first kitchen-type
+- [Phase 10]: Deduction called BEFORE item status update in $transaction so rollback prevents status advance on failure
+- [Phase 10]: KitchenModule imports OrdersModule for cross-module DI (KdsService accesses OrdersService)
+- [Phase 10]: Non-ready KDS transitions skip $transaction for performance (only ready-path is transactional)
 
 ### Pending Todos
 
@@ -216,6 +219,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-21T17:08:27.482Z
-Stopped at: Completed 10-03-PLAN.md
+Last session: 2026-03-21T17:09:22.540Z
+Stopped at: Completed 10-02-PLAN.md
 Resume file: None
