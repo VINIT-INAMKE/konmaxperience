@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Completed 07-02-PLAN.md
-last_updated: "2026-03-21T10:33:39.476Z"
+stopped_at: Completed 07-03-PLAN.md
+last_updated: "2026-03-21T10:41:20.304Z"
 progress:
   total_phases: 13
   completed_phases: 6
   total_plans: 28
-  completed_plans: 24
+  completed_plans: 25
 ---
 
 # Project State
@@ -24,7 +24,7 @@ See: .planning/PROJECT.md (updated 2026-03-19)
 ## Current Position
 
 Phase: 07 (recipe-ingredient-management) — EXECUTING
-Plan: 3 of 6
+Plan: 4 of 6
 
 ## Performance Metrics
 
@@ -67,6 +67,7 @@ Plan: 3 of 6
 | Phase 06-operations-management P02 | 5min | 2 tasks | 11 files |
 | Phase 06-operations-management P03 | 5min | 2 tasks | 11 files |
 | Phase 07-recipe-ingredient-management P02 | 8min | 2 tasks | 13 files |
+| Phase 07-recipe-ingredient-management P03 | 4min | 2 tasks | 18 files |
 
 ## Accumulated Context
 
@@ -149,6 +150,9 @@ Recent decisions affecting current work:
 - [Phase 07-02]: VendorsController places GET /prices/ingredient/:id before GET /:id to prevent NestJS route shadowing on ParseUUIDPipe
 - [Phase 07-02]: recalculateCostsForIngredient is a stub (console.log only) — CostCalculatorService wired in Plan 03
 - [Phase 07-02]: unit-conversion.ts uses module-level cache (not class-level) so it works from any service context without DI circular concerns
+- [Phase 07-03]: BOM upsert uses delete-then-createMany in $transaction — atomic, predictable, no partial state
+- [Phase 07-03]: CostCalculatorService exported from RecipesModule; VendorsModule imports RecipesModule — clean cross-module DI without circular dependency
+- [Phase 07-03]: Approved-recipe guard in MenuService.createItem throws 400 with explicit message directing user to change recipe status
 
 ### Pending Todos
 
@@ -163,6 +167,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-21T10:33:39.471Z
-Stopped at: Completed 07-02-PLAN.md
+Last session: 2026-03-21T10:41:20.299Z
+Stopped at: Completed 07-03-PLAN.md
 Resume file: None

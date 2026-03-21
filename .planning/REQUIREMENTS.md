@@ -64,13 +64,13 @@
 
 ### Recipe & Ingredient Management
 
-- [ ] **RECIPE-01**: Unified recipe entity — name, description, prep steps, cooking method, yield qty + unit, portion size, shelf_life_hours, linked to brand + zone, status (draft → approved → archived). No type distinction — any recipe can be prep or final dish.
-- [ ] **RECIPE-02**: Polymorphic BOM (RecipeLine) — each line is either a raw ingredient (ingredient_id) or output of another recipe (source_recipe_id), with quantity, unit, and prep notes. Supports unlimited chaining depth.
+- [x] **RECIPE-01**: Unified recipe entity — name, description, prep steps, cooking method, yield qty + unit, portion size, shelf_life_hours, linked to brand + zone, status (draft → approved → archived). No type distinction — any recipe can be prep or final dish.
+- [x] **RECIPE-02**: Polymorphic BOM (RecipeLine) — each line is either a raw ingredient (ingredient_id) or output of another recipe (source_recipe_id), with quantity, unit, and prep notes. Supports unlimited chaining depth.
 - [x] **RECIPE-03**: Ingredient master list with name, category, base_unit (canonical unit for stock tracking), min stock level
 - [x] **RECIPE-04**: Unit conversion system — UnitConversion table (kg↔g, L↔ml, dozen↔pieces). All stock in base_unit, recipes/POs use any compatible unit, system converts automatically.
 - [x] **RECIPE-05**: Vendor management — Vendor entity with contact info + VendorPrice tracking per ingredient with effective dates. Current price = latest by date.
-- [ ] **RECIPE-06**: Recursive recipe cost calculation — ingredient cost from best vendor price × BOM qty; prep item cost from source recipe cost prorated by usage. Cached in computed_cost field, recalculated on save or price change.
-- [ ] **RECIPE-07**: Menu items — MenuItem from approved recipe with base_price, food cost %, manual availability toggle, image_url. MenuCategory for Brand → Category → Items hierarchy. ChannelModifier for per-channel price adjustments (base_price + modifier).
+- [x] **RECIPE-06**: Recursive recipe cost calculation — ingredient cost from best vendor price × BOM qty; prep item cost from source recipe cost prorated by usage. Cached in computed_cost field, recalculated on save or price change.
+- [x] **RECIPE-07**: Menu items — MenuItem from approved recipe with base_price, food cost %, manual availability toggle, image_url. MenuCategory for Brand → Category → Items hierarchy. ChannelModifier for per-channel price adjustments (base_price + modifier).
 
 ### Inventory & Procurement
 
@@ -191,13 +191,13 @@
 | OPS-02 | Phase 6 | Complete |
 | OPS-03 | Phase 6 | Complete |
 | OPS-04 | Phase 6 | Complete |
-| RECIPE-01 | Phase 7 | Pending |
-| RECIPE-02 | Phase 7 | Pending |
+| RECIPE-01 | Phase 7 | Complete |
+| RECIPE-02 | Phase 7 | Complete |
 | RECIPE-03 | Phase 7 | Complete |
 | RECIPE-04 | Phase 7 | Complete |
 | RECIPE-05 | Phase 7 | Complete |
-| RECIPE-06 | Phase 7 | Pending |
-| RECIPE-07 | Phase 7 | Pending |
+| RECIPE-06 | Phase 7 | Complete |
+| RECIPE-07 | Phase 7 | Complete |
 | INV-01 | Phase 8 | Pending |
 | INV-02 | Phase 8 | Pending |
 | INV-03 | Phase 8 | Pending |
