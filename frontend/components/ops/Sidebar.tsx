@@ -18,10 +18,12 @@ import {
   BarChart3,
   Settings,
   ClipboardList,
+  ClipboardCheck,
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import type { Evidence } from '@/lib/types/evidence';
+import type { Decision } from '@/lib/types/decisions';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -94,6 +96,13 @@ export function Sidebar() {
   });
   const pendingCount = pendingEvidence?.length ?? 0;
 
+  // Fetch proposed decisions count for badge
+  const { data: proposedDecisions } = useQuery({
+    queryKey: ['decisions', 'proposed-count'],
+    queryFn: () => apiClient.get<Decision[]>('/decisions?status=proposed'),
+  });
+  const proposedCount = proposedDecisions?.length ?? 0;
+
   // Fetch leaderboard kill switch setting
   const { data: leaderboardSetting } = useQuery({
     queryKey: ['settings', 'leaderboard_enabled'],
@@ -124,6 +133,13 @@ export function Sidebar() {
       icon: <CheckCircle className="size-4" />,
       badge: pendingCount > 0 ? String(pendingCount) : undefined,
       badgeClassName: 'text-amber-400 bg-amber-950 border-amber-500/20',
+    },
+    {
+      label: 'Decisions',
+      href: '/decisions',
+      icon: <ClipboardCheck className="size-4" />,
+      badge: proposedCount > 0 ? String(proposedCount) : undefined,
+      badgeClassName: 'text-blue-400 bg-blue-950 border-blue-500/20',
     },
   ];
 
