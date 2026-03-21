@@ -1,7 +1,8 @@
 ---
 phase: 9
 slug: kitchen-prep
-status: draft
+status: approved
+reviewed_at: 2026-03-21
 shadcn_initialized: true
 preset: base-nova / neutral / cssVariables
 created: 2026-03-21
@@ -45,7 +46,7 @@ Exceptions:
 - KDS touch targets: minimum 48px height on all tappable order item rows (kitchen tablet)
 - KDS order card minimum width: 280px (readable at distance on kitchen monitor)
 - Wizard step indicator: 32px × 32px step circles
-- Elapsed timer display: minimum 40px height (large legible numbers)
+- Elapsed timer display: minimum 48px height (large legible numbers, matches touch target standard)
 
 Source: D-05 (large touch targets, kitchen monitor), project-wide 8-point scale
 
@@ -69,11 +70,12 @@ Source: Matches existing page pattern (`text-xl font-semibold` = 20px/600 for pa
 | Role | Size | Weight | Line Height |
 |------|------|--------|-------------|
 | Order number | 28px | 700 (bold) | 1.1 |
-| Item name | 18px | 600 (semibold) | 1.3 |
-| Item status | 14px | 500 (medium) | 1.4 |
+| Item name | 18px | 400 (regular) | 1.3 |
+| Zone column header | 18px | 700 (bold) | 1.2 |
 | Elapsed timer | 24px | 700 (bold) | 1.0 |
-| Zone column header | 16px | 600 (semibold) | 1.2 |
-| Customer label | 14px | 400 (regular) | 1.4 |
+| Item status / Customer label | 14px | 400 (regular) | 1.4 |
+
+KDS type scale: 4 sizes (14/18/24/28), 2 weights (400/700). Zone header differentiated from item name by weight only.
 
 Source: D-05 (high contrast, large text, touch-optimized for kitchen monitor)
 
@@ -204,7 +206,7 @@ Full viewport (100vw × 100vh), dark background oklch(0.10 0 0)
   Fixed top bar: "Kitchen Display" label + metrics (orders in queue, completed today) + Exit button
   Scrollable zone columns grid (CSS grid, auto-fit minmax 280px)
     KdsZoneColumn (one per active zone)
-      Zone name header (16px semibold, sticky)
+      Zone name header (18px bold, sticky)
       Scrollable order card list
         KdsOrderCard
           Order # (28px bold) + customer label (14px)
@@ -371,4 +373,4 @@ Source: D-05 (Claude's Discretion — implementation approach), D-03 (sidebar st
 - [ ] Dimension 5 Spacing: PASS
 - [ ] Dimension 6 Registry Safety: PASS
 
-**Approval:** pending
+**Approval:** approved — 2026-03-21
