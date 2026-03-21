@@ -150,7 +150,7 @@ Plans:
 - [x] 07-03-PLAN.md — Backend Recipes module (CRUD, BOM upsert, CostCalculator with cycle guard) + Menu module (categories, items, channel modifiers) + vendor cost wiring
 - [x] 07-04-PLAN.md — Frontend sidebar update (4 nav items) + /operations/ingredients page + /operations/vendors page with detail Sheet and price history
 - [ ] 07-05-PLAN.md — Frontend /operations/recipes page (card grid) + 3-step RecipeWizard + /operations/recipes/[id] detail with dependency tree
-- [ ] 07-06-PLAN.md — Frontend /operations/menu page (brand tabs, category sections, menu item cards, food cost %, channel modifier table)
+- [x] 07-06-PLAN.md — Frontend /operations/menu page (brand tabs, category sections, menu item cards, food cost %, channel modifier table)
 
 ### Phase 8: Inventory & Procurement
 **Goal**: Raw ingredient stock tracking with real-time visibility, purchase order workflow from vendor to receiving, and stock movement audit trail

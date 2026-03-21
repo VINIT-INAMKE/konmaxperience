@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Completed 07-04-PLAN.md
-last_updated: "2026-03-21T10:42:43.074Z"
+stopped_at: Completed 07-06-PLAN.md
+last_updated: "2026-03-21T10:57:00.160Z"
 progress:
   total_phases: 13
   completed_phases: 6
   total_plans: 28
-  completed_plans: 26
+  completed_plans: 27
 ---
 
 # Project State
@@ -24,7 +24,7 @@ See: .planning/PROJECT.md (updated 2026-03-19)
 ## Current Position
 
 Phase: 07 (recipe-ingredient-management) — EXECUTING
-Plan: 5 of 6
+Plan: 6 of 6
 
 ## Performance Metrics
 
@@ -69,6 +69,7 @@ Plan: 5 of 6
 | Phase 07-recipe-ingredient-management P02 | 8min | 2 tasks | 13 files |
 | Phase 07-recipe-ingredient-management P03 | 4min | 2 tasks | 18 files |
 | Phase 07-recipe-ingredient-management P04 | 5min | 2 tasks | 10 files |
+| Phase 07-recipe-ingredient-management P06 | 6min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -157,6 +158,9 @@ Recent decisions affecting current work:
 - [Phase 07-04]: VendorCard is a table row (not card) — UI-SPEC specifies vendors as table, naming follows PLAN.md spec
 - [Phase 07-04]: VendorPriceForm uses Select for ingredient (not Combobox) — adequate for MVP given small ingredient list
 - [Phase 07-04]: base-ui Select onValueChange returns string | null — wrapper pattern (v) => setState(v ?? '') required for string state
+- [Phase 07-06]: ChannelModifierTable uses POST /menu/channel-modifiers for upsert semantics — no separate PUT needed from frontend
+- [Phase 07-06]: effectiveBrandId pattern: selectedBrandId || brands[0]?.id avoids useState initialization race with async brands query
+- [Phase 07-06]: MenuItemForm queries /recipes?status=approved — only approved recipes surfaced; backend enforces same guard returning 400
 
 ### Pending Todos
 
@@ -171,6 +175,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-21T10:42:43.068Z
-Stopped at: Completed 07-04-PLAN.md
+Last session: 2026-03-21T10:57:00.155Z
+Stopped at: Completed 07-06-PLAN.md
 Resume file: None
