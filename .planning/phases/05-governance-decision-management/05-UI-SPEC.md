@@ -1,7 +1,8 @@
 ---
 phase: 5
 slug: governance-decision-management
-status: draft
+status: approved
+reviewed_at: 2026-03-21
 shadcn_initialized: true
 preset: base-nova / neutral / cssVariables
 created: 2026-03-21
@@ -62,12 +63,12 @@ Exceptions:
 **Source:** Carried forward from Phase 4 approved contract. Not re-asked.
 
 Governance-specific usage:
-- Decision type badge label: 13px regular (tighter than standard label — fits pill without wrapping)
+- Decision type badge label: 14px regular (Label role, compact via tight padding `px-1.5 py-0.5`)
 - Decision context text (full detail view): 16px regular, 1.5 line-height (body role — readable prose)
-- Override reason text on approval card (audit trail): 13px regular, muted-foreground, italic
-- "on behalf of" delegation attribution: 13px regular, muted-foreground — shown as subtitle below approver name
-- Delegation date range chip: 13px semibold (both dates, `font-mono` for the date values for alignment)
-- Status badge text: 13px semibold (compact — consistent with KPI status badge established in Phase 4)
+- Override reason text on approval card (audit trail): 14px regular, muted-foreground, italic
+- "on behalf of" delegation attribution: 14px regular, muted-foreground — shown as subtitle below approver name
+- Delegation date range chip: 14px semibold (both dates, `font-mono` for the date values for alignment)
+- Status badge text: 14px semibold (Label role — consistent with LevelBadge pill established in Phase 4)
 - Decision list table: Body 16px for decision title, Label 14px for all metadata columns
 
 ---
@@ -197,7 +198,7 @@ Layout: Single column, `space-y-6`. No tabs on page level — filter tabs are wi
 **Decision card layout** (`DecisionCard`, wraps `MagicCard` with `gradientColor="#1a1a2e"`):
 - Row 1: Decision title (16px semibold) + lock icon (14px muted, lucide `Lock`) if approved/locked + `DecisionTypeBadge` + `DecisionStatusBadge` — all on same row, flex-wrap
 - Row 2: Context preview (truncated to 2 lines, 14px muted) — full text in detail expand
-- Row 3: Linked mission/task chips (Badge variant outline, 13px) if present + author chip (AvatarFallback 20px + name, 13px) + relative timestamp (13px muted) — pushed right
+- Row 3: Linked mission/task chips (Badge variant outline, 14px) if present + author chip (AvatarFallback 20px + name, 14px) + relative timestamp (14px muted) — pushed right
 
 On card hover: `InteractiveHoverButton` "View Detail" overlays bottom-right corner.
 
@@ -208,14 +209,14 @@ Decision detail is not a separate page. It is an inline expansion that appears d
 Detail panel layout (inside shadcn Card with `p-6`):
 - **Section "Context"**: Label "Context" (14px semibold, uppercase tracking) + full context text (16px regular, 1.5 line-height)
 - **Section "Links"**: Only rendered if linked_mission_id or linked_task_id is set. Shows "Linked Mission: [name]" and/or "Linked Task: [name]" as Badge pills with lucide `ExternalLink` icon (12px), linking to the respective page.
-- **Section "History"**: Status change timeline (proposed → approved/rejected). Each event: timestamp (13px mono, muted) + "Status changed to [status]" text. Minimal, no icons.
-- **Admin actions** (visible to FOUNDER_ADMIN only): If decision is approved/locked → shadcn Button destructive variant "Reopen Decision". If decision is proposed → Button "Approve" (primary) + Button "Reject" (outline, border-destructive).
+- **Section "History"**: Status change timeline (proposed → approved/rejected). Each event: timestamp (14px mono, muted) + "Status changed to [status]" text. Minimal, no icons.
+- **Admin actions** (visible to FOUNDER_ADMIN only): If decision is approved/locked → shadcn Button destructive variant "Reopen Decision". If decision is proposed → Button "Approve Decision" (primary) + Button "Reject Decision" (outline, border-destructive).
 
 ### `/approvals` — Approval Queue (modified, not new page)
 
 Existing page receives one addition to each `ApprovalItem`:
 - **Override button** (FOUNDER_ADMIN only): `PulsatingButton` if `pending > 24h` (amber pulse `#f59e0b`), standard `InteractiveHoverButton` if pending <= 24h. Label: "Override". Placed at the end of the action buttons row, separated by a `Separator` (vertical) at 16px height.
-- **Override attribution display**: When `override_reason` is set on the approval record, render a new row below the actions row: small `AlertCircle` icon (12px, amber) + italic text "Overridden by [override_by name] — [override_reason]" (13px, muted-foreground). Timestamp shown as relative time (13px, muted).
+- **Override attribution display**: When `override_reason` is set on the approval record, render a new row below the actions row: small `AlertCircle` icon (12px, amber) + italic text "Overridden by [override_by name] — [override_reason]" (14px, muted-foreground). Timestamp shown as relative time (14px, muted).
 
 ### `/admin/delegations` — Delegation Management (new page under Admin section)
 
@@ -228,8 +229,8 @@ Layout: Single column, `space-y-6`. Accessible via Admin section in sidebar (adm
 
 **Delegation card layout** (`DelegationCard`, shadcn Card):
 - Row 1: `AvatarCircles` showing both users (from_user + to_user, 28px each, overlapping) + "[from_user name] → [to_user name]" (16px semibold) + active/expired Badge chip.
-- Row 2: Date range — lucide `Calendar` icon (14px, muted) + "[start_date] to [end_date]" in `font-mono` 13px semibold + "Created by [admin name]" (13px muted) — pushed right.
-- Admin actions (inline, right side): "Deactivate" Button (destructive outline, 13px) for active delegations. No action for expired.
+- Row 2: Date range — lucide `Calendar` icon (14px, muted) + "[start_date] to [end_date]" in `font-mono` 14px semibold + "Created by [admin name]" (14px muted) — pushed right.
+- Admin actions (inline, right side): "Deactivate" Button (destructive outline, 14px) for active delegations. No action for expired.
 
 ---
 
@@ -249,12 +250,12 @@ Layout: Single column, `space-y-6`. Accessible via Admin section in sidebar (adm
 - **Submit**: ShimmerButton "Log Decision" (`shimmerColor="#4ade80"`). Disabled while submitting (Loader2 icon + "Saving...").
 - **On success**: Sheet closes. New decision appears at top of list with `ShineBorder` wrapper active for 3s. Sonner toast: "Decision logged."
 - **On error**: Sonner toast: "Failed to log decision. Check your inputs and try again."
-- **Cancel**: Ghost Button "Cancel" — no confirmation needed (no destructive data loss for new forms).
+- **Dismiss**: Ghost Button "Discard Decision" — no confirmation needed (no destructive data loss for new forms).
 
 ### Approve / Reject Decision (admin)
 
-- Approve decision: Button "Approve" (primary, 14px) in detail expand. Click → immediate API call → status changes to "approved", decision locks. Sonner toast: "Decision approved and locked."
-- Reject decision: Button "Reject" (outline, border-destructive, 14px) → no confirmation dialog (not destructive in an irreversible sense) → status changes to "rejected". Sonner toast: "Decision rejected."
+- Approve decision: Button "Approve Decision" (primary, 14px) in detail expand. Click → immediate API call → status changes to "approved", decision locks. Sonner toast: "Decision approved and locked."
+- Reject decision: Button "Reject Decision" (outline, border-destructive, 14px) → no confirmation dialog (not destructive in an irreversible sense) → status changes to "rejected". Sonner toast: "Decision rejected."
 - Reopen locked decision: Button "Reopen Decision" (destructive variant) in detail expand → Dialog confirmation: "Reopen this decision? Approved decisions are locked for governance integrity. Reopening sets status back to Proposed." → Confirm: Button "Reopen Decision" (destructive). Cancel: Ghost Button "Keep Locked". On confirm: toast "Decision reopened."
 
 ### Override Approval
@@ -265,7 +266,7 @@ Layout: Single column, `space-y-6`. Accessible via Admin section in sidebar (adm
 - **Submit**: CoolMode wraps the submit button. ShimmerButton "Override and Approve" (`shimmerColor="#4ade80"`). Disabled until reason field is non-empty (min 10 chars). Disabled during submission (Loader2 + "Overriding...").
 - **On success**: Dialog closes. Full validation cascade fires (same as normal approval — XP, quest, mission, readiness). `ApprovalItem` re-renders with override attribution row. Sonner toast: "Approval overridden. Validation cascade triggered."
 - **On error**: Sonner toast: "Override failed. Try again or check permissions."
-- **Cancel**: Ghost Button "Cancel" — Dialog closes, no action taken.
+- **Dismiss**: Ghost Button "Keep Waiting" — Dialog closes, approval stays pending.
 
 ### Create Delegation
 
@@ -276,11 +277,11 @@ Layout: Single column, `space-y-6`. Accessible via Admin section in sidebar (adm
   - To User: Select/Combobox of all users (excluding selected from_user). Label "Delegate To". Required.
   - Start Date: Date Input (`type="date"`), required. Label "Start".
   - End Date: Date Input (`type="date"`), required, must be >= start_date. Label "End".
-- **Validation**: End date < start date shows inline error below end date field: "End date must be after start date." (13px, destructive color).
+- **Validation**: End date < start date shows inline error below end date field: "End date must be after start date." (14px, destructive color).
 - **Submit**: ShimmerButton "Create Delegation". Disabled during submission.
 - **On success**: Sheet closes. New delegation card appears in Active section. Sonner toast: "Delegation created. [to_user name] can approve on behalf of [from_user name] until [end_date]."
 - **On error**: Sonner toast: "Failed to create delegation. Check the dates and try again."
-- **Cancel**: Ghost Button "Cancel".
+- **Dismiss**: Ghost Button "Discard Delegation".
 
 ### Deactivate Delegation
 
@@ -302,8 +303,8 @@ Layout: Single column, `space-y-6`. Accessible via Admin section in sidebar (adm
 | Primary CTA — Log Decision | "Log Decision" |
 | Primary CTA — Save Override | "Override and Approve" |
 | Primary CTA — Create Delegation | "Create Delegation" |
-| Primary CTA — Approve Decision | "Approve" |
-| Primary CTA — Reject Decision | "Reject" |
+| Primary CTA — Approve Decision | "Approve Decision" |
+| Primary CTA — Reject Decision | "Reject Decision" |
 | Decisions empty state heading | "No decisions yet" |
 | Decisions empty state body | "Log the first decision to start building your governance trail." |
 | Decisions empty search result | "No decisions match your filter." |
@@ -314,6 +315,9 @@ Layout: Single column, `space-y-6`. Accessible via Admin section in sidebar (adm
 | Reopen Decision Dialog body | "Approved decisions are locked for governance integrity. Reopening sets status back to Proposed." |
 | Reopen confirm button | "Reopen Decision" |
 | Reopen cancel button | "Keep Locked" |
+| Log Decision dismiss | "Discard Decision" |
+| Override Dialog dismiss | "Keep Waiting" |
+| Create Delegation dismiss | "Discard Delegation" |
 | Delegation empty state heading | "No active delegations" |
 | Delegation empty state body | "Delegations let an admin temporarily grant approval authority to another user." |
 | Locked decision tooltip | "Locked — approved decisions cannot be edited or deleted." |
@@ -380,11 +384,11 @@ Every UI surface must handle these states explicitly.
 
 ## Checker Sign-Off
 
-- [ ] Dimension 1 Copywriting: PASS
-- [ ] Dimension 2 Visuals: PASS
-- [ ] Dimension 3 Color: PASS
-- [ ] Dimension 4 Typography: PASS
-- [ ] Dimension 5 Spacing: PASS
-- [ ] Dimension 6 Registry Safety: PASS
+- [x] Dimension 1 Copywriting: PASS
+- [x] Dimension 2 Visuals: PASS
+- [x] Dimension 3 Color: PASS
+- [x] Dimension 4 Typography: PASS
+- [x] Dimension 5 Spacing: PASS
+- [x] Dimension 6 Registry Safety: PASS
 
-**Approval:** pending
+**Approval:** approved — 2026-03-21
