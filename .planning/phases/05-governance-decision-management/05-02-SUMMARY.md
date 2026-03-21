@@ -116,3 +116,8 @@ None - no external service configuration required.
 - /decisions page fully functional with real API integration
 - Sidebar shows Decisions link with live proposed count badge
 - Ready for Phase 05-04 delegations page and any remaining Phase 05 plans
+
+## Self-Check: PASSED
+- All 8 files created/modified confirmed on disk
+- Both task commits (3e3320b, a6d3db9) verified in git log
+- TypeScript check passes with no errors

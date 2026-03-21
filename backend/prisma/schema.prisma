@@ -48,6 +48,7 @@ model User {
   delegations_from        ApprovalDelegation[] @relation("DelegationFrom")
   delegations_to          ApprovalDelegation[] @relation("DelegationTo")
   delegations_created     ApprovalDelegation[] @relation("DelegationCreator")
+  created_recipes         Recipe[]             @relation("RecipeCreator")
 }
 
 model RefreshToken {
@@ -272,24 +273,27 @@ model SystemSetting {
 }
 
 model Zone {
-  id            String  @id @default(uuid())
+  id            String   @id @default(uuid())
   name          String
   zone_type     String
   owner_user_id String?
-  owner         User?   @relation(fields: [owner_user_id], references: [id])
-  status        String  @default("planned")
+  owner         User?    @relation(fields: [owner_user_id], references: [id])
+  status        String   @default("planned")
   notes         String?
+  recipes       Recipe[]
 }
 
 model Brand {
-  id            String  @id @default(uuid())
-  name          String
-  brand_type    String
-  status        String  @default("idea")
-  owner_user_id String?
-  owner         User?   @relation(fields: [owner_user_id], references: [id])
-  notes         String?
-  assets        Asset[]
+  id               String         @id @default(uuid())
+  name             String
+  brand_type       String
+  status           String         @default("idea")
+  owner_user_id    String?
+  owner            User?          @relation(fields: [owner_user_id], references: [id])
+  notes            String?
+  assets           Asset[]
+  recipes          Recipe[]
+  menu_categories  MenuCategory[]
 }
 
 model Channel {
@@ -300,16 +304,140 @@ model Channel {
 }
 
 model Asset {
-  id              String   @id @default(uuid())
+  id               String   @id @default(uuid())
+  name             String
+  asset_type       String
+  linked_task_id   String?
+  linked_task      Task?    @relation(fields: [linked_task_id], references: [id])
+  linked_brand_id  String?
+  linked_brand     Brand?   @relation(fields: [linked_brand_id], references: [id])
+  linked_recipe_id String?
+  linked_recipe    Recipe?  @relation(fields: [linked_recipe_id], references: [id])
+  url              String
+  status           String   @default("draft")
+  created_by       String
+  creator          User     @relation(fields: [created_by], references: [id])
+  created_at       DateTime @default(now())
+}
+
+model Recipe {
+  id                String       @id @default(uuid())
+  name              String
+  description       String
+  prep_steps        String
+  cooking_method    String
+  yield_qty         Decimal
+  yield_unit        String
+  portion_size      String
+  shelf_life_hours  Int?
+  brand_id          String?
+  zone_id           String?
+  image_url         String?
+  computed_cost     Decimal?
+  status            String       @default("draft")
+  created_by        String
+  created_at        DateTime     @default(now())
+  updated_at        DateTime     @updatedAt
+  brand             Brand?       @relation(fields: [brand_id], references: [id])
+  zone              Zone?        @relation(fields: [zone_id], references: [id])
+  creator           User         @relation("RecipeCreator", fields: [created_by], references: [id])
+  RecipeLines       RecipeLine[] @relation("RecipeLines")
+  SourceLines       RecipeLine[] @relation("SourceRecipeLines")
+  MenuItems         MenuItem[]
+  linked_assets     Asset[]
+}
+
+model RecipeLine {
+  id               String      @id @default(uuid())
+  recipe_id        String
+  input_type       String
+  ingredient_id    String?
+  source_recipe_id String?
+  quantity         Decimal
+  unit             String
+  prep_notes       String?
+  sort_order       Int         @default(0)
+  recipe           Recipe      @relation("RecipeLines", fields: [recipe_id], references: [id])
+  ingredient       Ingredient? @relation(fields: [ingredient_id], references: [id])
+  source_recipe    Recipe?     @relation("SourceRecipeLines", fields: [source_recipe_id], references: [id])
+}
+
+model Ingredient {
+  id              String       @id @default(uuid())
   name            String
-  asset_type      String
-  linked_task_id  String?
-  linked_task     Task?    @relation(fields: [linked_task_id], references: [id])
-  linked_brand_id String?
-  linked_brand    Brand?   @relation(fields: [linked_brand_id], references: [id])
-  url             String
-  status          String   @default("draft")
-  created_by      String
-  creator         User     @relation(fields: [created_by], references: [id])
-  created_at      DateTime @default(now())
+  category        String
+  base_unit       String
+  min_stock_level Decimal
+  created_at      DateTime     @default(now())
+  updated_at      DateTime     @updatedAt
+  RecipeLines     RecipeLine[]
+  VendorPrices    VendorPrice[]
+}
+
+model UnitConversion {
+  id        String  @id @default(uuid())
+  from_unit String
+  to_unit   String
+  factor    Decimal
+
+  @@unique([from_unit, to_unit])
+}
+
+model Vendor {
+  id            String        @id @default(uuid())
+  name          String
+  phone         String?
+  email         String?
+  address       String?
+  payment_terms String?
+  status        String        @default("active")
+  created_at    DateTime      @default(now())
+  VendorPrices  VendorPrice[]
+}
+
+model VendorPrice {
+  id             String     @id @default(uuid())
+  vendor_id      String
+  ingredient_id  String
+  price          Decimal
+  unit           String
+  effective_date DateTime
+  created_at     DateTime   @default(now())
+  vendor         Vendor     @relation(fields: [vendor_id], references: [id])
+  ingredient     Ingredient @relation(fields: [ingredient_id], references: [id])
+}
+
+model MenuCategory {
+  id         String     @id @default(uuid())
+  name       String
+  brand_id   String
+  sort_order Int        @default(0)
+  status     String     @default("active")
+  brand      Brand      @relation(fields: [brand_id], references: [id])
+  MenuItems  MenuItem[]
+}
+
+model MenuItem {
+  id          String       @id @default(uuid())
+  recipe_id   String
+  category_id String
+  name        String
+  base_price  Decimal
+  image_url   String?
+  available   Boolean      @default(true)
+  status      String       @default("active")
+  created_at  DateTime     @default(now())
+  updated_at  DateTime     @updatedAt
+  recipe      Recipe       @relation(fields: [recipe_id], references: [id])
+  category    MenuCategory @relation(fields: [category_id], references: [id])
+}
+
+model ChannelModifier {
+  id             String  @id @default(uuid())
+  channel_type   String
+  modifier_type  String
+  modifier_value Decimal
+  status         String  @default("active")
+
+  @@unique([channel_type])
 }

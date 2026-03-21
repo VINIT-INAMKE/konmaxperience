@@ -173,6 +173,15 @@ const CHANNELS = [
   { name: 'Online', channel_type: 'online', status: 'planned' },
 ];
 
+const UNIT_CONVERSIONS = [
+  { from_unit: 'kg',     to_unit: 'g',      factor: 1000    },
+  { from_unit: 'g',      to_unit: 'kg',     factor: 0.001   },
+  { from_unit: 'L',      to_unit: 'ml',     factor: 1000    },
+  { from_unit: 'ml',     to_unit: 'L',      factor: 0.001   },
+  { from_unit: 'dozen',  to_unit: 'pieces', factor: 12      },
+  { from_unit: 'pieces', to_unit: 'dozen',  factor: 0.08333 },
+];
+
 async function main() {
   console.log('Seeding database...');
 
@@ -259,6 +268,12 @@ async function main() {
       await tx.channel.create({ data: { name: channel.name, channel_type: channel.channel_type, status: channel.status } });
     }
 
+    // Seed unit conversions
+    await tx.unitConversion.deleteMany({});
+    for (const uc of UNIT_CONVERSIONS) {
+      await tx.unitConversion.create({ data: uc });
+    }
+
     // Upsert system settings
     await tx.systemSetting.upsert({
       where: { key: 'leaderboard_enabled' },
@@ -275,6 +290,7 @@ async function main() {
   console.log(`  - ${ZONES.length} zones`);
   console.log(`  - ${BRANDS.length} brands`);
   console.log(`  - ${CHANNELS.length} channels`);
+  console.log(`  - ${UNIT_CONVERSIONS.length} unit conversions`);
 }
 
 main()

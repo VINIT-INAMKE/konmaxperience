@@ -133,6 +133,12 @@ None beyond the two auto-fixed TypeScript prop errors above.
 ## Known Stubs
 None — all data is wired to real API endpoints (/channels, /assets, /storage/presign-asset, /brands).
 
+## Self-Check: PASSED
+
+- All 11 created files confirmed present on disk
+- Commits 507d4eb and b0e86d6 confirmed in git log
+- TypeScript compiles clean (npx tsc --noEmit exits 0)
+
 ## Next Phase Readiness
 - Channels page: ready for demo — table, toggle, CRUD sheet all wired
 - Assets page: ready for demo — upload flow, status workflow, filters all wired
