@@ -33,6 +33,7 @@ import { MenuModule } from './menu/menu.module';
 import { InventoryModule } from './inventory/inventory.module';
 import { PurchaseOrdersModule } from './purchase-orders/purchase-orders.module';
 import { ProcurementModule } from './procurement/procurement.module';
+import { KitchenModule } from './kitchen/kitchen.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { PermissionsGuard } from './auth/permissions.guard';
@@ -71,6 +72,7 @@ import { PermissionsGuard } from './auth/permissions.guard';
     InventoryModule,
     PurchaseOrdersModule,
     ProcurementModule,
+    KitchenModule,
   ],
   controllers: [AppController],
   providers: [
