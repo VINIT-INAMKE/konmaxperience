@@ -21,6 +21,7 @@ import { KpisModule } from './kpis/kpis.module';
 import { SettingsModule } from './settings/settings.module';
 import { DecisionsModule } from './decisions/decisions.module';
 import { DelegationsModule } from './delegations/delegations.module';
+import { ApprovalsModule } from './approvals/approvals.module';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { PermissionsGuard } from './auth/permissions.guard';
 
@@ -45,6 +46,7 @@ import { PermissionsGuard } from './auth/permissions.guard';
     SettingsModule,
     DecisionsModule,
     DelegationsModule,
+    ApprovalsModule,
   ],
   controllers: [AppController],
   providers: [
