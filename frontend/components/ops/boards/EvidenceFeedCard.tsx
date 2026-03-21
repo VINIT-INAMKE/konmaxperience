@@ -1,0 +1,99 @@
+'use client';
+
+import Link from 'next/link';
+import { formatDistanceToNow } from 'date-fns';
+import { FileText, Video, Link as LinkIcon, StickyNote } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import type { EvidenceFeedEntry } from '@/lib/types/analytics';
+
+const STATUS_STYLES: Record<
+  EvidenceFeedEntry['approval_status'],
+  string
+> = {
+  approved: 'bg-emerald-500/15 text-emerald-700',
+  pending: 'bg-amber-500/15 text-amber-600',
+  rejected: 'bg-destructive/10 text-destructive',
+};
+
+const STATUS_LABELS: Record<EvidenceFeedEntry['approval_status'], string> = {
+  approved: 'Approved',
+  pending: 'Pending',
+  rejected: 'Rejected',
+};
+
+function EvidenceThumbnail({
+  type,
+  url,
+}: {
+  type: EvidenceFeedEntry['type'];
+  url: string;
+}) {
+  const iconClasses = 'size-6 text-muted-foreground';
+  const wrapperClasses =
+    'size-16 rounded-md overflow-hidden flex-shrink-0 bg-muted flex items-center justify-center';
+
+  if (type === 'photo') {
+    return (
+      <div className="size-16 rounded-md overflow-hidden flex-shrink-0">
+        <img
+          src={url}
+          alt=""
+          className="size-full object-cover"
+          loading="lazy"
+        />
+      </div>
+    );
+  }
+
+  const Icon =
+    type === 'video'
+      ? Video
+      : type === 'doc'
+        ? FileText
+        : type === 'link'
+          ? LinkIcon
+          : StickyNote;
+
+  return (
+    <div className={wrapperClasses}>
+      <Icon className={iconClasses} />
+    </div>
+  );
+}
+
+interface EvidenceFeedCardProps {
+  evidence: EvidenceFeedEntry;
+}
+
+export function EvidenceFeedCard({ evidence }: EvidenceFeedCardProps) {
+  return (
+    <Link href="/missions" className="block">
+      <div className="flex gap-4 rounded-lg border bg-card p-4">
+        <EvidenceThumbnail type={evidence.type} url={evidence.url} />
+
+        <div className="flex-1 min-w-0 space-y-1">
+          <div className="flex items-start justify-between gap-2">
+            <p className="text-sm font-bold truncate">
+              {evidence.task?.title ?? 'Unknown task'}
+            </p>
+            <Badge
+              variant="secondary"
+              className={STATUS_STYLES[evidence.approval_status]}
+            >
+              {STATUS_LABELS[evidence.approval_status]}
+            </Badge>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Uploaded by {evidence.uploader?.name ?? 'Unknown'} &middot;{' '}
+            {formatDistanceToNow(new Date(evidence.created_at), {
+              addSuffix: true,
+            })}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Evidence type: {evidence.type}
+          </p>
+        </div>
+      </div>
+    </Link>
+  );
+}
