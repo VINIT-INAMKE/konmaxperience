@@ -83,9 +83,9 @@
 
 - [x] **KITCHEN-01**: Prep batch system — select recipe × quantity, auto-deducts inputs per BOM (raw ingredients from IngredientStock, prep items from other PrepBatches via FIFO), creates PrepBatch with quantity_remaining. All in single $transaction.
 - [x] **KITCHEN-02**: Kitchen display (KDS) — polls for orders with status placed/preparing every 5 seconds, grouped by zone. Cook taps to update item status (pending → preparing → ready).
-- [ ] **KITCHEN-03**: Menu availability — checks BOTH PrepBatch levels AND raw IngredientStock for each RecipeLine. Shows servings remaining on POS. Auto-marks "sold out" when any input insufficient. Alerts kitchen to prep more.
+- [x] **KITCHEN-03**: Menu availability — checks BOTH PrepBatch levels AND raw IngredientStock for each RecipeLine. Shows servings remaining on POS. Auto-marks "sold out" when any input insufficient. Alerts kitchen to prep more.
 - [x] **KITCHEN-04**: Waste logging — WasteLog with type (ingredient/prep_batch), structured reason (spoilage/over_prep/cooking_error/expired/other), auto-calculated cost impact. Expired PrepBatches auto-create waste entries via scheduled job.
-- [ ] **KITCHEN-05**: Kitchen metrics — orders in queue, prep batch levels, average prep time, waste percentage, items completed today
+- [x] **KITCHEN-05**: Kitchen metrics — orders in queue, prep batch levels, average prep time, waste percentage, items completed today
 - [x] **KITCHEN-06**: PrepBatch expiry — shelf_life_hours on Recipe, expires_at auto-set on PrepBatch creation, expired batches excluded from availability, hourly cron marks expired + logs waste
 
 ### POS & Orders
@@ -204,9 +204,9 @@
 | INV-04 | Phase 8 | Complete |
 | KITCHEN-01 | Phase 9 | Complete |
 | KITCHEN-02 | Phase 9 | Complete |
-| KITCHEN-03 | Phase 9 | Pending |
+| KITCHEN-03 | Phase 9 | Complete |
 | KITCHEN-04 | Phase 9 | Complete |
-| KITCHEN-05 | Phase 9 | Pending |
+| KITCHEN-05 | Phase 9 | Complete |
 | KITCHEN-06 | Phase 9 | Complete |
 | POS-01 | Phase 10 | Pending |
 | POS-02 | Phase 10 | Pending |
