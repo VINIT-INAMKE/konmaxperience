@@ -1,7 +1,8 @@
 ---
 phase: 7
 slug: recipe-ingredient-management
-status: draft
+status: approved
+reviewed_at: 2026-03-21
 shadcn_initialized: true
 preset: base-nova / neutral / cssVariables
 created: 2026-03-21
@@ -42,9 +43,9 @@ Declared values (multiples of 4 only). Source: established in prior phases, cont
 | 3xl | 64px | Page-level spacing (unused in dense data pages) |
 
 Exceptions:
-- BOM line row height minimum 44px (touch target for Add/Remove line actions)
+- BOM line row height minimum 48px (touch target for Add/Remove line actions)
 - Wizard step indicator: 32px step circles
-- Food cost % badge: 28px height for legibility at small sizes
+- Food cost % badge: 32px height for legibility at small sizes
 
 ---
 
@@ -55,11 +56,11 @@ Source: Established tokens from globals.css + prior phase patterns. Font: Geist 
 | Role | Size | Weight | Line Height | Usage |
 |------|------|--------|-------------|-------|
 | Body | 14px | 400 | 1.5 | Table rows, BOM line text, form help text, price history rows |
-| Label | 12px | 500 | 1.4 | Badge text, form field labels, category pill text, step sub-labels |
+| Label | 12px | 600 | 1.4 | Badge text, form field labels, category pill text, step sub-labels |
 | Heading | 16px | 600 | 1.3 | Card titles (recipe name, vendor name, ingredient name), sheet titles, section headings |
 | Display | 20px | 600 | 1.2 | Page headings (Recipes, Ingredients, Vendors, Menu), wizard step headings |
 
-Note: Only 2 weights declared — regular (400) and semibold (600). The 500 label weight maps to `font-medium` in Tailwind and is used only for uppercase/small-caps contexts. No additional weights.
+Note: 2 weights declared — regular (400) and semibold (600). Labels use semibold for visual distinction at small sizes.
 
 ---
 
@@ -252,7 +253,7 @@ BOM line table with columns: Type | Item | Quantity | Unit | Prep Notes | Remove
 - Prep Notes: Input (optional, placeholder: "trimmed and diced")
 - Remove: Trash icon button (destructive hover)
 
-"Add Line" button below table (outline style, full width). Minimum touch target 44px height.
+"Add Line" button below table (outline style, full width). Minimum touch target 48px height.
 
 CTA: "Next: Review & Cost" (primary, enabled even with 0 lines — warn but don't block)
 
@@ -382,14 +383,14 @@ No new third-party registry blocks introduced in Phase 7. All component sources 
 
 ## Checker Sign-Off
 
-- [ ] Dimension 1 Copywriting: PASS
-- [ ] Dimension 2 Visuals: PASS
-- [ ] Dimension 3 Color: PASS
-- [ ] Dimension 4 Typography: PASS
-- [ ] Dimension 5 Spacing: PASS
-- [ ] Dimension 6 Registry Safety: PASS
+- [x] Dimension 1 Copywriting: PASS
+- [x] Dimension 2 Visuals: PASS (FLAG: icon-only accessibility — non-blocking)
+- [x] Dimension 3 Color: PASS
+- [x] Dimension 4 Typography: PASS
+- [x] Dimension 5 Spacing: PASS
+- [x] Dimension 6 Registry Safety: PASS
 
-**Approval:** pending
+**Approval:** approved — 2026-03-21
 
 ---
 
