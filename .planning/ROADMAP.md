@@ -259,7 +259,12 @@ Plans:
   1. Customers can submit feedback via QR code or link — rate dishes and leave comments without login
   2. Experience events can be created internally, displayed publicly with capacity, and booked (name + phone)
   3. Digital menu display shows current menu with prices, available items, and brand sections (for screens or QR access)
-**Plans**: TBD
+**Plans:** 3 plans
+
+Plans:
+- [ ] 13-01-PLAN.md — Backend: Prisma schema (Feedback, Event, EventBooking), FeedbackModule + EventsModule, QR endpoint, @Public() on menu GETs, frontend types, unit tests
+- [ ] 13-02-PLAN.md — Frontend: (public) route group layout, feedback page (star rating + confetti thank-you), events listing + detail + booking, digital menu display
+- [ ] 13-03-PLAN.md — Frontend: ops feedback page (stats card, filters, table), ops events CRUD page (Sheet form, booking list, delete dialog), sidebar update
 
 ## Progress
 
@@ -282,4 +287,4 @@ Dependencies: Phase 7 (Recipes) depends on Phase 6 (brands/vendors). Phase 8 (In
 | 10. POS & Orders | 5/5 | Complete    | 2026-03-21 |
 | 11. Dashboards & Shared Boards | 5/5 | Complete    | 2026-03-21 |
 | 12. Notifications | 4/4 | Complete    | 2026-03-22 |
-| 13. Customer Experience | 0/0 | Not started | - |
+| 13. Customer Experience | 0/3 | Planned | - |
