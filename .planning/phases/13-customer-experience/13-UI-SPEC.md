@@ -284,7 +284,7 @@ Accent reserved for: active star rating fill, primary submit/CTA buttons, "Avail
 
 1. **Create/Edit**: Sheet slides in from right. All fields in Sheet. Same single-component create/edit pattern as ZoneForm/BrandForm (source: Phase 6 decision).
 2. **Bookings**: "View Bookings" button on each event row opens BookingListSheet. Sheet shows name, phone, guests, booked-at for each booking. Read-only.
-3. **Delete**: Requires confirmation Dialog. Dialog copy: "This will permanently remove the event and all its bookings." Two buttons: "Cancel" (secondary) + "Delete Event" (destructive variant).
+3. **Delete**: Requires confirmation Dialog. Dialog copy: "This will permanently remove the event and all its bookings." Two buttons: "Keep Event" (secondary) + "Delete Event" (destructive variant).
 4. **Capacity fill**: Progress indicator on event row showing `booked_guests / capacity` (e.g., "12 / 40"). Visual progress bar thin (4px height, `h-1`) below the numbers.
 
 ---
