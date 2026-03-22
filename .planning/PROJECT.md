@@ -110,6 +110,17 @@ Complete data model for Phases 7-13 (22 new entities) defined in `docs/superpowe
 - **Domain Focus**: Food-first for v1. Art and lifestyle domains deferred.
 - **Auth**: JWT-based with role-based permissions (8 distinct roles)
 
+## Current Milestone: v1.1 User Guide System
+
+**Goal:** In-app, admin-editable user guide/manual with role-based access — each team member sees a polished walkthrough of exactly what they can do and how.
+
+**Target features:**
+- Admin CMS for creating/editing guide content (rich text + image uploads via R2)
+- Feature-area sections containing step-by-step workflow walkthroughs
+- Role-to-section mapping — users see only their role's guides
+- Admin/tech access to all guide pages
+- Rich, polished UI with MagicUI components (not static docs)
+
 ## Key Decisions
 
 | Decision | Rationale | Outcome |
@@ -127,5 +138,22 @@ Complete data model for Phases 7-13 (22 new entities) defined in `docs/superpowe
 | Single payment + notes | No gateway, just recording method + amount + split notes | Confirmed |
 | Channel modifier (not per-item pricing) | One modifier per channel, base_price + modifier = final | Confirmed |
 
+## Evolution
+
+This document evolves at phase transitions and milestone boundaries.
+
+**After each phase transition** (via `/gsd:transition`):
+1. Requirements invalidated? → Move to Out of Scope with reason
+2. Requirements validated? → Move to Validated with phase reference
+3. New requirements emerged? → Add to Active
+4. Decisions to log? → Add to Key Decisions
+5. "What This Is" still accurate? → Update if drifted
+
+**After each milestone** (via `/gsd:complete-milestone`):
+1. Full review of all sections
+2. Core Value check — still the right priority?
+3. Audit Out of Scope — reasons still valid?
+4. Update Context with current state
+
 ---
-*Last updated: 2026-03-21 after Phase 10 (POS & Orders) completion*
+*Last updated: 2026-03-22 after milestone v1.1 started*
