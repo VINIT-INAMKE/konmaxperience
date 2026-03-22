@@ -56,11 +56,11 @@ Plans:
   1. User navigating to /guide sees only guide sections assigned to their role, with no visibility of other roles' sections
   2. User can click into a section and read pages rendered with styled headings, lists, images, and callout blocks using MagicUI components
   3. A persistent sidebar shows the section tree with page links, allowing navigation without returning to the index
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 15-01: TBD
-- [ ] 15-02: TBD
+- [ ] 15-01-PLAN.md -- Dependencies, types, sidebar nav, section index page (/guide), and section detail page (/guide/[sectionSlug])
+- [ ] 15-02-PLAN.md -- Page reading view with Tiptap prose renderer, callout blocks, page header, and sidebar navigation overlay
 
 ### Phase 16: Admin CMS
 **Goal**: Admins can author and edit rich guide content with inline images, callout blocks, and publish controls through a polished editor UI
@@ -103,7 +103,7 @@ Phases execute in numeric order: 14 -> 14.x -> 15 -> 15.x -> 16 -> 16.x -> 17 ->
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 14. Foundation | v1.1 | 2/2 | Complete    | 2026-03-22 |
-| 15. Reader View | v1.1 | 0/? | Not started | - |
+| 15. Reader View | v1.1 | 0/2 | Not started | - |
 | 16. Admin CMS | v1.1 | 0/? | Not started | - |
 | 17. Search, Preview, and Content Seeding | v1.1 | 0/? | Not started | - |
 | 18. Data Export | v1.1 | 0/? | Not started | - |
