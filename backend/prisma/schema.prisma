@@ -757,3 +757,40 @@ model EventBooking {
   guests         Int
   created_at     DateTime @default(now())
 }
+
+model GuideSection {
+  id           String      @id @default(uuid())
+  title        String
+  slug         String      @unique
+  description  String?
+  icon         String?
+  accent_color String?
+  sort_order   Int         @default(0)
+  role_codes   String[]
+  status       String      @default("draft")
+  created_at   DateTime    @default(now())
+  updated_at   DateTime    @updatedAt
+  pages        GuidePage[]
+
+  @@index([status])
+  @@index([sort_order])
+}
+
+model GuidePage {
+  id                  String       @id @default(uuid())
+  section_id          String
+  section             GuideSection @relation(fields: [section_id], references: [id], onDelete: Cascade)
+  title               String
+  slug                String
+  sort_order          Int          @default(0)
+  content             String       @db.Text
+  summary             String?
+  estimated_read_time Int?
+  status              String       @default("draft")
+  created_at          DateTime     @default(now())
+  updated_at          DateTime     @updatedAt
+
+  @@unique([section_id, slug])
+  @@index([section_id, sort_order])
+  @@index([status])
+}
