@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { apiClient } from '@/lib/api-client';
 import type { Notification, NotificationUnreadCount } from '@/lib/types/notifications';
 import { Bell, BellOff } from 'lucide-react';
@@ -29,6 +30,35 @@ export function NotificationBell() {
     staleTime: 25_000,
   });
   const unreadCount = unreadData?.count ?? 0;
+
+  // Order-ready Sonner toast (NOTF-06 only, per UI-SPEC)
+  const prevUnreadRef = useRef<number>(0);
+  const [seeded, setSeeded] = useState(false);
+
+  // Seed the previous unread count on first data load to prevent initial toast flood
+  useEffect(() => {
+    if (!seeded && unreadData !== undefined) {
+      prevUnreadRef.current = unreadCount;
+      setSeeded(true);
+    }
+  }, [unreadCount, seeded, unreadData]);
+
+  // When unread count increases after seeding, check if latest is order_ready
+  useEffect(() => {
+    if (!seeded) return;
+    if (unreadCount > prevUnreadRef.current && unreadCount > 0) {
+      apiClient
+        .get<Notification[]>('/notifications?limit=1')
+        .then((items) => {
+          if (items[0]?.type === 'order_ready' && !items[0].is_read) {
+            const shortId = items[0].reference_id?.slice(-6).toUpperCase() ?? '';
+            toast.success(`Order #${shortId} is ready`, { duration: 5000 });
+          }
+        })
+        .catch(() => {}); // silent failure per D-03
+    }
+    prevUnreadRef.current = unreadCount;
+  }, [unreadCount, seeded]);
 
   // Fetch recent notifications when panel opens
   const { data: notifications, isLoading } = useQuery<Notification[]>({
