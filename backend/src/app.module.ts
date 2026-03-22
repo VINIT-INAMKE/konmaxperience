@@ -50,27 +50,14 @@ import { PermissionsGuard } from './auth/permissions.guard';
     ScheduleModule.forRoot(),
     EventEmitterModule.forRoot(),
     BullModule.forRoot({
-      connection: (() => {
-        const url = process.env.UPSTASH_REDIS_REST_URL;
-        if (url) {
-          const parsed = new URL(url);
-          return {
-            host: parsed.hostname,
-            port: Number(parsed.port) || 6379,
-            password: parsed.password || process.env.UPSTASH_REDIS_REST_TOKEN,
-            tls: {},
-            maxRetriesPerRequest: null,
-            enableReadyCheck: false,
-          };
-        }
-        return {
-          host: process.env.REDIS_HOST ?? 'localhost',
-          port: Number(process.env.REDIS_PORT ?? 6379),
-          password: process.env.REDIS_PASSWORD,
-          maxRetriesPerRequest: null,
-          enableReadyCheck: false,
-        };
-      })(),
+      connection: {
+        host: process.env.UPSTASH_REDIS_ENDPOINT,
+        port: Number(process.env.UPSTASH_REDIS_PORT ?? 6379),
+        password: process.env.UPSTASH_REDIS_PASSWORD,
+        tls: {},
+        maxRetriesPerRequest: null,
+        enableReadyCheck: false,
+      },
     }),
     PrismaModule,
     AuthModule,
