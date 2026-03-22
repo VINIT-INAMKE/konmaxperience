@@ -85,14 +85,14 @@ Plans:
   1. User can type a search query and see matching guide pages filtered to their visible sections, with results appearing within 500ms
   2. Admin can select any role from a preview dropdown and see the guide index filtered exactly as that role would see it
   3. On fresh deployment, every major feature area (Kitchen, POS, Inventory, Recipes, Missions, Evidence, and others) has a pre-written guide section with step-by-step walkthroughs
-  4. Seeded sections are correctly mapped to the roles that use those features (e.g., Kitchen guides visible to PRODUCTION_LEAD)
+  4. Seeded sections are correctly mapped to the roles that use those features (e.g., Kitchen guides visible to BACKEND_LEAD)
   5. Admin can edit any seeded content through the CMS editor -- seeded content is not read-only or special-cased
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 17-01: TBD
-- [ ] 17-02: TBD
-- [ ] 17-03: TBD
+- [ ] 17-01-PLAN.md -- Backend search infrastructure: Prisma migration with tsvector trigger and GIN index, search endpoint with role filtering, unit tests, shadcn Command install
+- [ ] 17-02-PLAN.md -- Frontend search overlay (Cmd+K CommandDialog), preview-as-role dropdown with amber banner, search triggers, guide layout
+- [ ] 17-03-PLAN.md -- Content seeding: expand seed.ts from 5 sections/8 pages to 12 sections/39+ pages of real walkthrough content
 
 ## Progress
 
@@ -104,7 +104,7 @@ Phases execute in numeric order: 14 -> 14.x -> 15 -> 15.x -> 16 -> 16.x -> 17 ->
 | 14. Foundation | v1.1 | 2/2 | Complete    | 2026-03-22 |
 | 15. Reader View | v1.1 | 2/2 | Complete    | 2026-03-22 |
 | 16. Admin CMS | v1.1 | 2/2 | Complete    | 2026-03-22 |
-| 17. Search, Preview, and Content Seeding | v1.1 | 0/? | Not started | - |
+| 17. Search, Preview, and Content Seeding | v1.1 | 0/3 | Not started | - |
 | 18. Data Export | v1.1 | 0/? | Not started | - |
 | 19. Master Data Import | v1.1 | 0/? | Not started | - |
 | 20. Operations Import | v1.1 | 0/? | Not started | - |
