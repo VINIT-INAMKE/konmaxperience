@@ -81,7 +81,7 @@ Additional type sizes specific to this phase:
 - Search input text: 16px / weight 400 — `CommandInput` inherits shadcn default
 - Result page title: 14px / weight 600 — slightly heavier than body to distinguish title from snippet
 - Result snippet text: 13px / weight 400 / `text-muted-foreground` / line-height 1.4 — compact to allow more results in viewport
-- Keyboard shortcut badge text: 11px / weight 500 / `text-muted-foreground` — `Cmd K` indicator in trigger button
+- Keyboard shortcut badge text: 11px / weight 600 / `text-muted-foreground` — `Cmd K` indicator in trigger button
 - Empty results text: 14px / weight 400 / `text-muted-foreground`
 
 Final type scale for this phase: **11, 13, 14, 16px** used within the two UI surfaces. Weights: 400 (regular) and 600 (semibold). Consistent with Phase 15/16.
@@ -145,7 +145,7 @@ CommandDialog (max-w-[560px], centered horizontally, top-20%)
 │       ├── [content column, flex-1 min-w-0]
 │       │   ├── Page title (14px / weight 600 / truncate)
 │       │   └── Snippet (13px / text-muted-foreground / line-clamp-2) — match highlighted in accent color
-│       └── Section badge (Badge variant="secondary", 12px, truncate, max-w-[120px])
+│       └── Section badge (Badge variant="secondary", 11px, truncate, max-w-[120px])
 └── [footer bar] — "Esc to close" hint (11px / text-muted-foreground) + Kbd badge
 ```
 
@@ -153,7 +153,7 @@ Footer bar: `flex items-center justify-between px-3 py-2 border-t text-[11px] te
 - Left: `↑↓ to navigate · ↵ to open`
 - Right: `Esc to close` with `<Kbd>Esc</Kbd>` badge
 
-`Kbd` badge styling: `inline-flex items-center px-2 py-1 rounded border bg-muted text-[11px] font-mono font-medium`
+`Kbd` badge styling: `inline-flex items-center px-2 py-1 rounded border bg-muted text-[11px] font-mono font-semibold`
 
 ### Preview-as-Role Banner
 
@@ -410,7 +410,7 @@ No third-party registry blocks required for Phase 17. `cmdk` is an official depe
   </CommandList>
   <div className="flex items-center justify-between px-3 py-2 border-t text-[11px] text-muted-foreground bg-muted/30">
     <span>↑↓ to navigate · ↵ to open</span>
-    <span>Esc <Kbd className="inline-flex items-center px-2 py-1 rounded border bg-muted text-[11px] font-mono font-medium">Esc</Kbd> to close</span>
+    <span>Esc <Kbd className="inline-flex items-center px-2 py-1 rounded border bg-muted text-[11px] font-mono font-semibold">Esc</Kbd> to close</span>
   </div>
 </CommandDialog>
 ```
@@ -434,7 +434,7 @@ Query debounce: 300ms. Minimum 2 chars before firing. Uses `useQuery` with `enab
       // snippet is DOMPurify-sanitized by backend before transmission
     />
   </div>
-  <Badge variant="secondary" className="text-[12px] max-w-[120px] truncate shrink-0">
+  <Badge variant="secondary" className="text-[11px] max-w-[120px] truncate shrink-0">
     {result.sectionTitle}
   </Badge>
 </CommandItem>
