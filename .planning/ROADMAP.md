@@ -45,7 +45,7 @@
 **Plans**: 2 plans
 
 Plans:
-- [ ] 14-01-PLAN.md -- Infrastructure: Prisma schema, migration, MANAGE_GUIDE permission, GuidesModule scaffold, presign-guide endpoint
+- [x] 14-01-PLAN.md -- Infrastructure: Prisma schema, migration, MANAGE_GUIDE permission, GuidesModule scaffold, presign-guide endpoint
 - [ ] 14-02-PLAN.md -- Implementation: DTOs, GuidesService CRUD with role filtering and XSS sanitization, GuidesController endpoints, unit tests
 
 ### Phase 15: Reader View
@@ -102,7 +102,7 @@ Phases execute in numeric order: 14 -> 14.x -> 15 -> 15.x -> 16 -> 16.x -> 17 ->
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 14. Foundation | v1.1 | 0/2 | Planning complete | - |
+| 14. Foundation | v1.1 | 1/2 | In Progress|  |
 | 15. Reader View | v1.1 | 0/? | Not started | - |
 | 16. Admin CMS | v1.1 | 0/? | Not started | - |
 | 17. Search, Preview, and Content Seeding | v1.1 | 0/? | Not started | - |

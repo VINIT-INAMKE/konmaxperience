@@ -9,11 +9,11 @@ Requirements for milestone v1.1 — User Guide System. Each maps to roadmap phas
 
 ### Guide Infrastructure
 
-- [ ] **GUIDE-01**: Admin can create, edit, and delete guide sections (top-level categories like Kitchen, POS, Inventory)
-- [ ] **GUIDE-02**: Admin can create, edit, and delete guide pages within sections
+- [x] **GUIDE-01**: Admin can create, edit, and delete guide sections (top-level categories like Kitchen, POS, Inventory)
+- [x] **GUIDE-02**: Admin can create, edit, and delete guide pages within sections
 - [ ] **GUIDE-03**: Admin can assign roles to sections — mapped roles see the section, unmapped don't
 - [ ] **GUIDE-04**: Admin can set page status to draft or published — drafts visible only to admin/tech
-- [ ] **GUIDE-05**: Admin can reorder sections and pages via sort position
+- [x] **GUIDE-05**: Admin can reorder sections and pages via sort position
 
 ### Rich Text Editor
 
@@ -61,11 +61,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| GUIDE-01 | Phase 14 | Pending |
-| GUIDE-02 | Phase 14 | Pending |
+| GUIDE-01 | Phase 14 | Complete |
+| GUIDE-02 | Phase 14 | Complete |
 | GUIDE-03 | Phase 14 | Pending |
 | GUIDE-04 | Phase 14 | Pending |
-| GUIDE-05 | Phase 14 | Pending |
+| GUIDE-05 | Phase 14 | Complete |
 | EDIT-01 | Phase 16 | Pending |
 | EDIT-02 | Phase 16 | Pending |
 | EDIT-03 | Phase 16 | Pending |
