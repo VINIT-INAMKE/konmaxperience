@@ -23,7 +23,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 9: Kitchen & Prep** - Prep batch system (recipe x qty -> deduct raw, add production), kitchen display (KDS), menu availability based on prep levels, waste logging
 - [x] **Phase 10: POS & Orders** - Full POS interface for staff, order management (dine-in/takeaway/delivery), payment tracking (method + status), own-delivery dispatch, order -> kitchen flow (completed 2026-03-21)
 - [x] **Phase 11: Dashboards & Shared Boards** - Mission control, role dashboards, kitchen metrics, inventory overview, recipe cost analysis, procurement spend (completed 2026-03-21)
-- [ ] **Phase 12: Notifications** - BullMQ alerts for tasks, stock levels, orders, kitchen, approvals, delivery
+- [x] **Phase 12: Notifications** - BullMQ alerts for tasks, stock levels, orders, kitchen, approvals, delivery (completed 2026-03-22)
 - [ ] **Phase 13: Customer Experience** - Post-dining feedback (QR/link), experience event booking with capacity, digital menu display (non-interactive)
 
 ## Phase Details
@@ -243,13 +243,13 @@ Plans:
   6. POS staff alerted when order is ready for serving/pickup
   7. Delivery status updates tracked (dispatched, in-transit, delivered)
   8. All notification delivery failures are isolated — never block core operations
-**Plans:** 3/4 plans executed
+**Plans:** 4/4 plans complete
 
 Plans:
 - [x] 12-01-PLAN.md — Backend foundation: Prisma Notification model, npm installs (BullMQ, ioredis, event-emitter), NotificationsModule (service, controller, worker), event types, AppModule wiring, frontend types, unit tests
 - [x] 12-02-PLAN.md — Backend triggers: NotificationsCron (hourly task due + approval scan), NotificationsListener (5 event handlers), cleanup cron, event emissions in OrdersService/KdsService/InventoryService/TasksService
 - [x] 12-03-PLAN.md — Frontend: NotificationBell component (popover panel, 30s polling, mark-read) + NotificationItem component + Sidebar header integration
-- [ ] 12-04-PLAN.md — Frontend: /notifications page (tab filters, load-more pagination, empty states) + Sonner toast for order-ready (NOTF-06)
+- [x] 12-04-PLAN.md — Frontend: /notifications page (tab filters, load-more pagination, empty states) + Sonner toast for order-ready (NOTF-06)
 
 ### Phase 13: Customer Experience
 **Goal**: Post-dining feedback collection, experience event booking, and digital menu display — all without customer auth (POS-based operation)
@@ -281,5 +281,5 @@ Dependencies: Phase 7 (Recipes) depends on Phase 6 (brands/vendors). Phase 8 (In
 | 9. Kitchen & Prep | 0/5 | Planned | - |
 | 10. POS & Orders | 5/5 | Complete    | 2026-03-21 |
 | 11. Dashboards & Shared Boards | 5/5 | Complete    | 2026-03-21 |
-| 12. Notifications | 3/4 | In Progress|  |
+| 12. Notifications | 4/4 | Complete   | 2026-03-22 |
 | 13. Customer Experience | 0/0 | Not started | - |
