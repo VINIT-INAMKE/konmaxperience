@@ -39,6 +39,7 @@ import {
   Eye,
   MessageSquare,
   CalendarDays,
+  BookOpen,
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
@@ -151,6 +152,11 @@ export function Sidebar({ onNavigate }: SidebarProps = {}) {
       label: 'Dashboard',
       href: '/dashboard',
       icon: <LayoutDashboard className="size-4" />,
+    },
+    {
+      label: 'Guide',
+      href: '/guide',
+      icon: <BookOpen className="size-4" />,
     },
   ];
 
