@@ -312,6 +312,11 @@ export function Sidebar({ onNavigate }: SidebarProps = {}) {
           { label: 'Settings', href: '/admin/settings', icon: <Settings className="size-4" /> },
         ]
       : []),
+    ...(can('MANAGE_GUIDE')
+      ? [
+          { label: 'Guide Management', href: '/admin/guide', icon: <BookOpen className="size-4" /> },
+        ]
+      : []),
   ];
 
   function getInitials(name: string): string {
