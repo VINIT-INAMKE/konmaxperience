@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Completed 13-01-PLAN.md
-last_updated: "2026-03-22T09:38:33.172Z"
+stopped_at: Completed 13-02-PLAN.md
+last_updated: "2026-03-22T09:51:20.251Z"
 progress:
   total_phases: 13
-  completed_phases: 11
+  completed_phases: 12
   total_plans: 56
-  completed_plans: 53
+  completed_plans: 55
 ---
 
 # Project State
@@ -24,7 +24,7 @@ See: .planning/PROJECT.md (updated 2026-03-19)
 ## Current Position
 
 Phase: 13 (customer-experience) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 
 ## Performance Metrics
 
@@ -91,6 +91,8 @@ Plan: 2 of 3
 | Phase 12 P02 | 8min | 2 tasks | 11 files |
 | Phase 12 P04 | 4min | 2 tasks | 2 files |
 | Phase 13 P01 | 11min | 2 tasks | 23 files |
+| Phase 13 P02 | 7min | 2 tasks | 13 files |
+| Phase 13 P03 | 8min | 2 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -235,6 +237,10 @@ Recent decisions affecting current work:
 - [Phase 13]: UpdateEventDto defined manually (no @nestjs/mapped-types) since package not installed in project
 - [Phase 13]: @Public() on brands GET and 3 menu GET endpoints for public digital menu access
 - [Phase 13]: QR code encodes frontend URL /feedback/:orderId with 256px width
+- [Phase 13]: Public layout uses 'light' CSS class wrapper to override global dark theme for customer-facing pages
+- [Phase 13]: Inline error messages on all public forms (no toast) per UI-SPEC interaction contract
+- [Phase 13]: Menu availability uses refetchInterval 60s, full map fetched once, filtered client-side on brand tab change
+- [Phase 13]: z.number() with register valueAsNumber for zod v4 + react-hook-form compatibility
 
 ### Pending Todos
 
@@ -249,6 +255,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-22T09:38:33.154Z
-Stopped at: Completed 13-01-PLAN.md
+Last session: 2026-03-22T09:50:47.883Z
+Stopped at: Completed 13-02-PLAN.md
 Resume file: None

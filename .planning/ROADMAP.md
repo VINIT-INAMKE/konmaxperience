@@ -24,7 +24,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 10: POS & Orders** - Full POS interface for staff, order management (dine-in/takeaway/delivery), payment tracking (method + status), own-delivery dispatch, order -> kitchen flow (completed 2026-03-21)
 - [x] **Phase 11: Dashboards & Shared Boards** - Mission control, role dashboards, kitchen metrics, inventory overview, recipe cost analysis, procurement spend (completed 2026-03-21)
 - [x] **Phase 12: Notifications** - BullMQ alerts for tasks, stock levels, orders, kitchen, approvals, delivery (completed 2026-03-22)
-- [ ] **Phase 13: Customer Experience** - Post-dining feedback (QR/link), experience event booking with capacity, digital menu display (non-interactive)
+- [x] **Phase 13: Customer Experience** - Post-dining feedback (QR/link), experience event booking with capacity, digital menu display (non-interactive) (completed 2026-03-22)
 
 ## Phase Details
 
@@ -259,12 +259,12 @@ Plans:
   1. Customers can submit feedback via QR code or link — rate dishes and leave comments without login
   2. Experience events can be created internally, displayed publicly with capacity, and booked (name + phone)
   3. Digital menu display shows current menu with prices, available items, and brand sections (for screens or QR access)
-**Plans:** 1/3 plans executed
+**Plans:** 3/3 plans complete
 
 Plans:
 - [x] 13-01-PLAN.md — Backend: Prisma schema (Feedback, Event, EventBooking), FeedbackModule + EventsModule, QR endpoint, @Public() on menu GETs, frontend types, unit tests
-- [ ] 13-02-PLAN.md — Frontend: (public) route group layout, feedback page (star rating + confetti thank-you), events listing + detail + booking, digital menu display
-- [ ] 13-03-PLAN.md — Frontend: ops feedback page (stats card, filters, table), ops events CRUD page (Sheet form, booking list, delete dialog), sidebar update
+- [x] 13-02-PLAN.md — Frontend: (public) route group layout, feedback page (star rating + confetti thank-you), events listing + detail + booking, digital menu display
+- [x] 13-03-PLAN.md — Frontend: ops feedback page (stats card, filters, table), ops events CRUD page (Sheet form, booking list, delete dialog), sidebar update
 
 ## Progress
 
@@ -287,4 +287,4 @@ Dependencies: Phase 7 (Recipes) depends on Phase 6 (brands/vendors). Phase 8 (In
 | 10. POS & Orders | 5/5 | Complete    | 2026-03-21 |
 | 11. Dashboards & Shared Boards | 5/5 | Complete    | 2026-03-21 |
 | 12. Notifications | 4/4 | Complete    | 2026-03-22 |
-| 13. Customer Experience | 1/3 | In Progress|  |
+| 13. Customer Experience | 3/3 | Complete   | 2026-03-22 |
