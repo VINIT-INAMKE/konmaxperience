@@ -39,12 +39,11 @@
   3. Draft pages are excluded from non-admin API responses; admin sees both draft and published
   4. Sections and pages respect sort_order in API responses (ascending)
   5. Content containing `<script>` or `javascript:` hrefs is stripped on save and never stored in the database
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 14-01: TBD
-- [ ] 14-02: TBD
-- [ ] 14-03: TBD
+- [ ] 14-01-PLAN.md -- Infrastructure: Prisma schema, migration, MANAGE_GUIDE permission, GuidesModule scaffold, presign-guide endpoint
+- [ ] 14-02-PLAN.md -- Implementation: DTOs, GuidesService CRUD with role filtering and XSS sanitization, GuidesController endpoints, unit tests
 
 ### Phase 15: Reader View
 **Goal**: Authenticated team members can browse and read guide pages filtered to their role in a polished, navigable UI
@@ -100,7 +99,7 @@ Phases execute in numeric order: 14 -> 14.x -> 15 -> 15.x -> 16 -> 16.x -> 17
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 14. Foundation | v1.1 | 0/? | Not started | - |
+| 14. Foundation | v1.1 | 0/2 | Planning complete | - |
 | 15. Reader View | v1.1 | 0/? | Not started | - |
 | 16. Admin CMS | v1.1 | 0/? | Not started | - |
 | 17. Search, Preview, and Content Seeding | v1.1 | 0/? | Not started | - |
