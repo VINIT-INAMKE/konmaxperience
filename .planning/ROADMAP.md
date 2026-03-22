@@ -24,7 +24,7 @@
 
 - [x] **Phase 14: Foundation** - Schema, backend API, role filtering, and security hardening (completed 2026-03-22)
 - [x] **Phase 15: Reader View** - Staff-facing guide experience with role-gated content (completed 2026-03-22)
-- [ ] **Phase 16: Admin CMS** - Tiptap rich text editor with image upload and content management UI
+- [x] **Phase 16: Admin CMS** - Tiptap rich text editor with image upload and content management UI (completed 2026-03-22)
 - [ ] **Phase 17: Search, Preview, and Content Seeding** - Full-text search, admin preview-as-role, and real guide content generated from codebase
 - [ ] **Phase 18: Data Export** - CSV/XLSX export for 22 report types across all modules
 - [ ] **Phase 19: Master Data Import** - Bulk import for ingredients, vendors, and vendor pricing
@@ -75,7 +75,7 @@ Plans:
 
 Plans:
 - [x] 16-01-PLAN.md -- Admin guide management page with section list, CRUD forms, reorder, and sidebar nav entry
-- [ ] 16-02-PLAN.md -- Tiptap rich text editor with toolbar, bubble menu, image upload, callouts, autosave, and publish workflow
+- [x] 16-02-PLAN.md -- Tiptap rich text editor with toolbar, bubble menu, image upload, callouts, autosave, and publish workflow
 
 ### Phase 17: Search, Preview, and Content Seeding
 **Goal**: Users can search across their visible guides, admins can preview content as any role, and the system ships with real guide content covering all major feature areas
@@ -103,7 +103,7 @@ Phases execute in numeric order: 14 -> 14.x -> 15 -> 15.x -> 16 -> 16.x -> 17 ->
 |-------|-----------|----------------|--------|-----------|
 | 14. Foundation | v1.1 | 2/2 | Complete    | 2026-03-22 |
 | 15. Reader View | v1.1 | 2/2 | Complete    | 2026-03-22 |
-| 16. Admin CMS | v1.1 | 1/2 | In Progress|  |
+| 16. Admin CMS | v1.1 | 2/2 | Complete   | 2026-03-22 |
 | 17. Search, Preview, and Content Seeding | v1.1 | 0/? | Not started | - |
 | 18. Data Export | v1.1 | 0/? | Not started | - |
 | 19. Master Data Import | v1.1 | 0/? | Not started | - |

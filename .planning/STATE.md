@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: User Guide & Data Management
 status: unknown
-stopped_at: Completed 16-01-PLAN.md
-last_updated: "2026-03-22T18:38:57.844Z"
+stopped_at: Completed 16-02-PLAN.md
+last_updated: "2026-03-22T18:54:20.084Z"
 progress:
   total_phases: 7
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 6
-  completed_plans: 5
+  completed_plans: 6
 ---
 
 # Project State
@@ -51,6 +51,7 @@ Plan: 2 of 2
 | Phase 15 P01 | 7min | 3 tasks | 10 files |
 | Phase 15 P02 | 8min | 3 tasks | 9 files |
 | Phase 16 P01 | 6min | 2 tasks | 8 files |
+| Phase 16 P02 | 10min | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -75,6 +76,9 @@ Recent decisions affecting current work:
 - [Phase 15]: Two-query data fetching: shared sections cache + page-by-ID to avoid slug-based endpoint pitfall
 - [Phase 15]: DOMPurify sanitizes generateHTML output before Tiptap editor content as defense-in-depth
 - [Phase 16]: Sort-order reorder via Promise.all of two PATCH calls swapping adjacent sort_order values
+- [Phase 16]: BubbleMenuPlugin registered programmatically via editor.registerPlugin (Tiptap v3 changed BubbleMenu from React component to Extension)
+- [Phase 16]: GuideEditorClient fetches page data client-side via React Query (avoids auth cookie forwarding in SSR)
+- [Phase 16]: Content hash uses SHA-256 of getHTML() not getJSON() for autosave (Tiptap v3 JSON is non-deterministic)
 
 ### Roadmap Evolution
 
@@ -92,6 +96,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-22T18:38:57.839Z
-Stopped at: Completed 16-01-PLAN.md
+Last session: 2026-03-22T18:54:20.079Z
+Stopped at: Completed 16-02-PLAN.md
 Resume file: None

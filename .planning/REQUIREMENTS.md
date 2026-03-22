@@ -18,8 +18,8 @@ Requirements for milestone v1.1 — User Guide System. Each maps to roadmap phas
 ### Rich Text Editor
 
 - [x] **EDIT-01**: Admin can edit page content with Tiptap rich text editor (headings, lists, bold/italic/underline, links)
-- [ ] **EDIT-02**: Admin can upload and embed images inline via R2 presigned URLs
-- [ ] **EDIT-03**: Admin can insert styled callout blocks (tip, warning, info) within page content
+- [x] **EDIT-02**: Admin can upload and embed images inline via R2 presigned URLs
+- [x] **EDIT-03**: Admin can insert styled callout blocks (tip, warning, info) within page content
 - [x] **EDIT-04**: Content is sanitized server-side on save (DOMPurify) to prevent XSS
 
 ### Reader Experience
@@ -67,8 +67,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | GUIDE-04 | Phase 14 | Complete |
 | GUIDE-05 | Phase 14 | Complete |
 | EDIT-01 | Phase 16 | Complete |
-| EDIT-02 | Phase 16 | Pending |
-| EDIT-03 | Phase 16 | Pending |
+| EDIT-02 | Phase 16 | Complete |
+| EDIT-03 | Phase 16 | Complete |
 | EDIT-04 | Phase 14 | Complete |
 | READ-01 | Phase 15 | Complete |
 | READ-02 | Phase 15 | Complete |
