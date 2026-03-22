@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Completed 12-04-PLAN.md
-last_updated: "2026-03-22T08:22:38.618Z"
+stopped_at: Completed 13-01-PLAN.md
+last_updated: "2026-03-22T09:38:33.172Z"
 progress:
   total_phases: 13
   completed_phases: 11
-  total_plans: 53
-  completed_plans: 52
+  total_plans: 56
+  completed_plans: 53
 ---
 
 # Project State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-19)
 
 **Core value:** Every piece of work must be evidence-backed, approved, and validated before it counts -- turning real execution into measurable readiness and progress.
-**Current focus:** Phase 12 — notifications
+**Current focus:** Phase 13 — customer-experience
 
 ## Current Position
 
-Phase: 13
-Plan: Not started
+Phase: 13 (customer-experience) — EXECUTING
+Plan: 2 of 3
 
 ## Performance Metrics
 
@@ -90,6 +90,7 @@ Plan: Not started
 | Phase 12 P03 | 3min | 2 tasks | 3 files |
 | Phase 12 P02 | 8min | 2 tasks | 11 files |
 | Phase 12 P04 | 4min | 2 tasks | 2 files |
+| Phase 13 P01 | 11min | 2 tasks | 23 files |
 
 ## Accumulated Context
 
@@ -231,6 +232,9 @@ Recent decisions affecting current work:
 - [Phase 12]: All event emissions use try/catch {} empty-catch for D-03 failure isolation -- EventEmitter failures never affect producing services
 - [Phase 12]: KdsService captures allReady flag inside , emits order.ready outside (Pitfall 1 compliance)
 - [Phase 12]: Optional sidebar nav item skipped -- bell panel View all notifications link provides sufficient /notifications access
+- [Phase 13]: UpdateEventDto defined manually (no @nestjs/mapped-types) since package not installed in project
+- [Phase 13]: @Public() on brands GET and 3 menu GET endpoints for public digital menu access
+- [Phase 13]: QR code encodes frontend URL /feedback/:orderId with 256px width
 
 ### Pending Todos
 
@@ -245,6 +249,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-22T08:00:56.711Z
-Stopped at: Completed 12-04-PLAN.md
+Last session: 2026-03-22T09:38:33.154Z
+Stopped at: Completed 13-01-PLAN.md
 Resume file: None

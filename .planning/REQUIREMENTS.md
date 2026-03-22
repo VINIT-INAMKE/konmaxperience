@@ -99,9 +99,9 @@
 
 ### Customer Experience
 
-- [ ] **CUST-01**: Post-dining feedback via QR code or link — Feedback entity with optional order_id, rating (1-5), comment, customer name/phone. No auth required.
-- [ ] **CUST-02**: Experience event management — Event entity created internally (title, type, date, capacity, price, zone, brand), public display, EventBooking (name + phone + guests), capacity enforcement (auto-full when bookings >= capacity)
-- [ ] **CUST-03**: Digital menu display (non-interactive) — shows current menu with prices, available items, brand sections. For display screens or QR access.
+- [x] **CUST-01**: Post-dining feedback via QR code or link — Feedback entity with optional order_id, rating (1-5), comment, customer name/phone. No auth required.
+- [x] **CUST-02**: Experience event management — Event entity created internally (title, type, date, capacity, price, zone, brand), public display, EventBooking (name + phone + guests), capacity enforcement (auto-full when bookings >= capacity)
+- [x] **CUST-03**: Digital menu display (non-interactive) — shows current menu with prices, available items, brand sections. For display screens or QR access.
 
 ### Dashboards
 
@@ -227,9 +227,9 @@
 | NOTF-05 | Phase 12 | Complete |
 | NOTF-06 | Phase 12 | Complete |
 | NOTF-07 | Phase 12 | Complete |
-| CUST-01 | Phase 13 | Pending |
-| CUST-02 | Phase 13 | Pending |
-| CUST-03 | Phase 13 | Pending |
+| CUST-01 | Phase 13 | Complete |
+| CUST-02 | Phase 13 | Complete |
+| CUST-03 | Phase 13 | Complete |
 
 **Coverage:**
 - v1 requirements: 70 total
