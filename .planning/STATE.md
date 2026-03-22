@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: User Guide & Data Management
 status: unknown
-stopped_at: Phase 15 UI-SPEC approved
-last_updated: "2026-03-22T16:41:01.443Z"
+stopped_at: Completed 15-01-PLAN.md
+last_updated: "2026-03-22T17:20:29.240Z"
 progress:
   total_phases: 7
   completed_phases: 1
-  total_plans: 2
-  completed_plans: 2
+  total_plans: 4
+  completed_plans: 3
 ---
 
 # Project State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-22)
 
 **Core value:** Every piece of work must be evidence-backed, approved, and validated before it counts -- turning real execution into measurable readiness and progress.
-**Current focus:** Phase 14 — foundation
+**Current focus:** Phase 15 — reader-view
 
 ## Current Position
 
-Phase: 18
-Plan: Not started
+Phase: 15 (reader-view) — EXECUTING
+Plan: 2 of 2
 
 ## Performance Metrics
 
@@ -48,6 +48,7 @@ Plan: Not started
 *Updated after each plan completion*
 | Phase 14 P01 | 11min | 3 tasks | 9 files |
 | Phase 14 P02 | 8min | 3 tasks | 9 files |
+| Phase 15 P01 | 7min | 3 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -66,6 +67,8 @@ Recent decisions affecting current work:
 - [Phase 14]: DOMPurify default import works in NestJS with esModuleInterop: true
 - [Phase 14]: 404 returned for inaccessible guide pages instead of 403 to prevent information disclosure
 - [Phase 14]: Prisma has operator used for role_codes array membership filtering
+- [Phase 15]: DynamicIcon extracted to shared component for Lucide icon name resolution across guide pages
+- [Phase 15]: Guide section detail page reuses same TanStack Query cache key as index page for instant navigation
 
 ### Roadmap Evolution
 
@@ -83,6 +86,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-22T16:41:01.427Z
-Stopped at: Phase 15 UI-SPEC approved
-Resume file: .planning/phases/15-reader-view/15-UI-SPEC.md
+Last session: 2026-03-22T17:20:29.232Z
+Stopped at: Completed 15-01-PLAN.md
+Resume file: None
