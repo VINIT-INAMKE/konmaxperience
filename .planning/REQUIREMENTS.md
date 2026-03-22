@@ -61,30 +61,30 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| GUIDE-01 | — | Pending |
-| GUIDE-02 | — | Pending |
-| GUIDE-03 | — | Pending |
-| GUIDE-04 | — | Pending |
-| GUIDE-05 | — | Pending |
-| EDIT-01 | — | Pending |
-| EDIT-02 | — | Pending |
-| EDIT-03 | — | Pending |
-| EDIT-04 | — | Pending |
-| READ-01 | — | Pending |
-| READ-02 | — | Pending |
-| READ-03 | — | Pending |
-| READ-04 | — | Pending |
-| READ-05 | — | Pending |
-| SEED-01 | — | Pending |
-| SEED-02 | — | Pending |
-| SEED-03 | — | Pending |
-| SEED-04 | — | Pending |
+| GUIDE-01 | Phase 14 | Pending |
+| GUIDE-02 | Phase 14 | Pending |
+| GUIDE-03 | Phase 14 | Pending |
+| GUIDE-04 | Phase 14 | Pending |
+| GUIDE-05 | Phase 14 | Pending |
+| EDIT-01 | Phase 16 | Pending |
+| EDIT-02 | Phase 16 | Pending |
+| EDIT-03 | Phase 16 | Pending |
+| EDIT-04 | Phase 14 | Pending |
+| READ-01 | Phase 15 | Pending |
+| READ-02 | Phase 15 | Pending |
+| READ-03 | Phase 17 | Pending |
+| READ-04 | Phase 17 | Pending |
+| READ-05 | Phase 15 | Pending |
+| SEED-01 | Phase 17 | Pending |
+| SEED-02 | Phase 17 | Pending |
+| SEED-03 | Phase 17 | Pending |
+| SEED-04 | Phase 17 | Pending |
 
 **Coverage:**
 - v1.1 requirements: 18 total
-- Mapped to phases: 0
-- Unmapped: 18 ⚠️
+- Mapped to phases: 18
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-22*
-*Last updated: 2026-03-22 after initial definition*
+*Last updated: 2026-03-22 after roadmap creation*
