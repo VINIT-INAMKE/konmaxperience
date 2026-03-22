@@ -281,5 +281,5 @@ Dependencies: Phase 7 (Recipes) depends on Phase 6 (brands/vendors). Phase 8 (In
 | 9. Kitchen & Prep | 0/5 | Planned | - |
 | 10. POS & Orders | 5/5 | Complete    | 2026-03-21 |
 | 11. Dashboards & Shared Boards | 5/5 | Complete    | 2026-03-21 |
-| 12. Notifications | 4/4 | Complete   | 2026-03-22 |
+| 12. Notifications | 4/4 | Complete    | 2026-03-22 |
 | 13. Customer Experience | 0/0 | Not started | - |
