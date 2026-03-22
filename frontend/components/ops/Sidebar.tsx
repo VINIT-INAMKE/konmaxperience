@@ -36,6 +36,8 @@ import {
   Trash2,
   Medal,
   Eye,
+  MessageSquare,
+  CalendarDays,
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
@@ -213,6 +215,8 @@ export function Sidebar() {
     { label: 'Inventory Overview', href: '/operations/inventory/dashboard', icon: <BarChart3 className="size-4" /> },
     { label: 'Purchase Orders', href: '/operations/purchase-orders', icon: <ShoppingCart className="size-4" /> },
     { label: 'Procurement', href: '/operations/procurement', icon: <TrendingUp className="size-4" /> },
+    { label: 'Feedback', href: '/operations/feedback', icon: <MessageSquare className="size-4" /> },
+    { label: 'Events', href: '/operations/events', icon: <CalendarDays className="size-4" /> },
   ];
 
   const kitchenNav: NavItem[] = [
