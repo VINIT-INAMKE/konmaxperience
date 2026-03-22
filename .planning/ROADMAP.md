@@ -71,12 +71,11 @@ Plans:
   2. Admin can upload an image from the editor toolbar, see it appear inline in the content, and confirm it renders in the reader view
   3. Admin can insert styled callout blocks (tip, warning, info) that render distinctly in both editor and reader views
   4. Tiptap editor bundle does not appear in the reader view's JavaScript bundle (verified via build analysis or network tab)
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 16-01: TBD
-- [ ] 16-02: TBD
-- [ ] 16-03: TBD
+- [ ] 16-01-PLAN.md -- Admin guide management page with section list, CRUD forms, reorder, and sidebar nav entry
+- [ ] 16-02-PLAN.md -- Tiptap rich text editor with toolbar, bubble menu, image upload, callouts, autosave, and publish workflow
 
 ### Phase 17: Search, Preview, and Content Seeding
 **Goal**: Users can search across their visible guides, admins can preview content as any role, and the system ships with real guide content covering all major feature areas
@@ -104,7 +103,7 @@ Phases execute in numeric order: 14 -> 14.x -> 15 -> 15.x -> 16 -> 16.x -> 17 ->
 |-------|-----------|----------------|--------|-----------|
 | 14. Foundation | v1.1 | 2/2 | Complete    | 2026-03-22 |
 | 15. Reader View | v1.1 | 2/2 | Complete    | 2026-03-22 |
-| 16. Admin CMS | v1.1 | 0/? | Not started | - |
+| 16. Admin CMS | v1.1 | 0/2 | Not started | - |
 | 17. Search, Preview, and Content Seeding | v1.1 | 0/? | Not started | - |
 | 18. Data Export | v1.1 | 0/? | Not started | - |
 | 19. Master Data Import | v1.1 | 0/? | Not started | - |
