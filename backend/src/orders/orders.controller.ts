@@ -42,6 +42,12 @@ export class OrdersController {
     return this.ordersService.getDailySummary(targetDate);
   }
 
+  @Get(':id/qr')
+  @RequiresPermission(Permission.MANAGE_POS)
+  async getOrderQr(@Param('id', ParseUUIDPipe) id: string) {
+    return this.ordersService.generateQr(id);
+  }
+
   @Get(':id')
   @RequiresPermission(Permission.MANAGE_POS)
   async getOrderById(@Param('id', ParseUUIDPipe) id: string) {

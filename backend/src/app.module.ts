@@ -40,6 +40,8 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { BullModule } from '@nestjs/bullmq';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { NotificationsModule } from './notifications/notifications.module';
+import { FeedbackModule } from './feedback/feedback.module';
+import { EventsModule } from './events/events.module';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { PermissionsGuard } from './auth/permissions.guard';
 
@@ -88,6 +90,8 @@ import { PermissionsGuard } from './auth/permissions.guard';
     OrdersModule,
     AnalyticsModule,
     NotificationsModule,
+    FeedbackModule,
+    EventsModule,
   ],
   controllers: [AppController],
   providers: [

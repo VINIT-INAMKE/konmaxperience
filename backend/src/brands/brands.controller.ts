@@ -12,6 +12,7 @@ import {
 } from '@nestjs/common';
 import express from 'express';
 import { BrandsService } from './brands.service';
+import { Public } from '../common/decorators/public.decorator';
 import { RequiresPermission } from '../common/decorators/permissions.decorator';
 import { Permission } from '../types/permissions';
 import { CreateBrandDto } from './dto/create-brand.dto';
@@ -22,6 +23,7 @@ export class BrandsController {
   constructor(private readonly brandsService: BrandsService) {}
 
   @Get()
+  @Public()
   async findAll(@Query('status') status?: string) {
     return this.brandsService.findAll(status);
   }

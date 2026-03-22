@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import * as QRCode from 'qrcode';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { RecordPaymentDto } from './dto/record-payment.dto';
@@ -320,6 +321,22 @@ export class OrdersService {
       total_revenue: totalRevenue,
       average_order_value: averageOrderValue,
     };
+  }
+
+  // ---------------------------------------------------------------
+  // Generate QR Code for Feedback
+  // ---------------------------------------------------------------
+  async generateQr(orderId: string): Promise<{ qr_data_url: string }> {
+    // Verify order exists
+    await this.prisma.order.findUniqueOrThrow({ where: { id: orderId } });
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const url = `${frontendUrl}/feedback/${orderId}`;
+    const dataUrl = await QRCode.toDataURL(url, {
+      width: 256,
+      margin: 2,
+      color: { dark: '#000000', light: '#ffffff' },
+    });
+    return { qr_data_url: dataUrl };
   }
 
   // ---------------------------------------------------------------

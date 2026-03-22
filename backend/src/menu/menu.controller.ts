@@ -11,6 +11,7 @@ import {
   ParseUUIDPipe,
 } from '@nestjs/common';
 import { MenuService } from './menu.service';
+import { Public } from '../common/decorators/public.decorator';
 import { RequiresPermission } from '../common/decorators/permissions.decorator';
 import { Permission } from '../types/permissions';
 import { CreateMenuCategoryDto } from './dto/create-menu-category.dto';
@@ -28,6 +29,7 @@ export class MenuController {
   // ----------------------------------------------------------------
 
   @Get('categories')
+  @Public()
   async findCategories(@Query('brand_id') brand_id?: string) {
     return this.menuService.findCategories(brand_id);
   }
@@ -58,6 +60,7 @@ export class MenuController {
   // ----------------------------------------------------------------
 
   @Get('items')
+  @Public()
   async findItems(
     @Query('category_id') category_id?: string,
     @Query('brand_id') brand_id?: string,
@@ -92,6 +95,7 @@ export class MenuController {
 
   // IMPORTANT: Batch route BEFORE parameterized route to prevent shadowing
   @Get('availability')
+  @Public()
   async getAllServingsAvailable() {
     return this.menuService.getAllServingsAvailable();
   }

@@ -293,6 +293,7 @@ model Zone {
   prepBatches      PrepBatch[]
   wasteLogs        WasteLog[]
   orders           Order[]
+  events           Event[]
 }
 
 model Brand {
@@ -306,6 +307,7 @@ model Brand {
   assets           Asset[]
   recipes          Recipe[]
   menu_categories  MenuCategory[]
+  events           Event[]
 }
 
 model Channel {
@@ -579,6 +581,7 @@ model Order {
   zone                    Zone        @relation(fields: [zone_id], references: [id])
   items                   OrderItem[]
   payment                 Payment?
+  feedbacks               Feedback[]
 }
 
 model OrderItem {
@@ -622,4 +625,44 @@ model Notification {
 
   @@index([user_id, is_read, created_at(sort: Desc)])
   @@index([user_id, type, reference_id])
+}
+
+model Feedback {
+  id             String   @id @default(uuid())
+  order_id       String?
+  order          Order?   @relation(fields: [order_id], references: [id])
+  rating         Int      // 1-5
+  comment        String?
+  customer_name  String?
+  customer_phone String?
+  created_at     DateTime @default(now())
+}
+
+model Event {
+  id          String         @id @default(uuid())
+  title       String
+  event_type  String         // "dining" | "workshop" | "pop_up" | "tasting" | "other"
+  date        DateTime
+  capacity    Int
+  price       Decimal
+  zone_id     String?
+  brand_id    String?
+  description String?
+  image_url   String?
+  status      String         @default("upcoming") // upcoming | past | cancelled
+  created_at  DateTime       @default(now())
+  updated_at  DateTime       @updatedAt
+  zone        Zone?          @relation(fields: [zone_id], references: [id])
+  brand       Brand?         @relation(fields: [brand_id], references: [id])
+  bookings    EventBooking[]
+}
+
+model EventBooking {
+  id             String   @id @default(uuid())
+  event_id       String
+  event          Event    @relation(fields: [event_id], references: [id], onDelete: Cascade)
+  customer_name  String
+  customer_phone String
+  guests         Int
+  created_at     DateTime @default(now())
 }
