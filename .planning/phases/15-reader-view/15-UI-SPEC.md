@@ -54,9 +54,11 @@ Exceptions:
 | Role | Size | Weight | Line Height | Usage |
 |------|------|--------|-------------|-------|
 | Body / Prose | 16px | 400 (regular) | 1.75 | Page content paragraphs, list items |
-| Label / UI text | 14px | 400 (regular) | 1.5 | Card metadata (page count, read time), nav labels, breadcrumbs |
+| Label / UI text | 14px | 400 (regular) | 1.5 | Card metadata (page count, read time), nav labels, breadcrumbs, page header metadata row |
 | Heading (page title) | 24px | 600 (semibold) | 1.2 | Page `<h1>` in reading view |
 | Display (section title) | 20px | 600 (semibold) | 1.2 | Section index card title, section page `<h2>` |
+
+Final type scale: **14, 16, 20, 24px** — 4 sizes, 2 weights (400, 600).
 
 Prose content headings (from Tiptap/rendered HTML):
 - h2: 20px / weight 600 / line-height 1.2
@@ -112,7 +114,7 @@ Callout block colors (rendered from Tiptap content):
   - Section icon (Lucide, 32×32, colored with `accent_color`)
   - Section title (20px / semibold)
   - Section description (14px / regular / `text-muted-foreground`)
-  - Page count + estimated read time badge: `"8 pages · ~25 min read"` (12px / `text-muted-foreground`)
+  - Page count + estimated read time badge: `"8 pages · ~25 min read"` (14px / `text-muted-foreground`)
   - MagicCard wrapper (gradient border glow on hover)
   - BorderBeam on hover (duration 6s, colors from `BEAM_FROM`/`BEAM_TO` in `brand-colors.ts`)
   - Card background tint: section `accent_color` at 10% opacity on hover
@@ -139,14 +141,15 @@ Callout block colors (rendered from Tiptap content):
 
 - **Prose container:** `max-w-[720px] mx-auto w-full px-6 py-16`
 - **Page header block:**
-  - Breadcrumb: `{Section Title} / {Page Title}` (12px / `text-muted-foreground`, chevron separator)
+  - Breadcrumb: `{Section Title} / {Page Title}` (14px / `text-muted-foreground`, chevron separator)
   - Page title: 24px / semibold (`h1`)
   - Summary: 16px / regular / `text-muted-foreground` (page `summary` field)
-  - Metadata row: estimated read time + last updated date (12px / `text-muted-foreground`)
+  - Metadata row: estimated read time + last updated date (14px / `text-muted-foreground`)
   - Separator (`<hr>` styled as `border-border`) before prose content
 - **Prose content:**
   - Rendered via read-only Tiptap instance (`editable: false`) with `@tiptap/react`, `StarterKit`, `Image` extensions
   - `immediatelyRender: false` to prevent hydration mismatch
+  - `isomorphic-dompurify` applied to `generateHTML()` output before passing to Tiptap content prop — defense-in-depth per D-07 (alongside server-side sanitization from Phase 14)
   - Prose typography class applied to the editor div: body 16px / line-height 1.75
   - Inline images: `max-w-full` within prose container, `rounded-lg` border, `my-6` vertical spacing
   - Lists: `pl-6`, `space-y-1`
@@ -186,10 +189,11 @@ Components to use or create for this phase:
 | Section index page title | `Your Guide` | Role-personalized framing — not "All Guides" |
 | Section index subtitle | `Resources for your role. Browse a section to get started.` | Visible below page title when sections exist |
 | Empty state heading | `No guides yet` | Shown when user's role has zero sections |
+| Empty state illustration | Large `BookOpen` Lucide icon (size-16, `text-muted-foreground/40`), centered above heading | Per D-15 — visual anchor for empty state |
 | Empty state body | `No guides have been set up for your role yet. Check back soon.` | No CTA (user cannot create guides in this phase) |
-| Section card CTA label | `Open` | On hover/focus — verb only, no object (card is self-descriptive) |
+| Section card CTA label | `Open Section` | On hover/focus — verb + noun for clarity |
 | Section page title | `{Section.title}` | Dynamic — section title from API |
-| Page breadcrumb format | `{Section.title} / {Page.title}` | Chevron Right icon (Lucide 12px) as separator |
+| Page breadcrumb format | `{Section.title} / {Page.title}` | Chevron Right icon (Lucide 14px) as separator |
 | Read time display | `~{n} min read` | Displayed in page header metadata row |
 | Last updated display | `Updated {relative date}` | e.g. "Updated 3 days ago" — use `date-fns/formatDistanceToNow` |
 | Guide sidebar close button aria-label | `Close guide navigation` | Accessibility requirement |
@@ -287,7 +291,7 @@ No new third-party registry blocks are required for Phase 15. All MagicUI compon
       <h2 className="text-[20px] font-semibold leading-[1.2]">{section.title}</h2>
     </div>
     <p className="text-[14px] text-muted-foreground leading-[1.5]">{section.description}</p>
-    <span className="text-[12px] text-muted-foreground">
+    <span className="text-[14px] text-muted-foreground">
       {section.pageCount} pages · ~{section.estimatedMinutes} min read
     </span>
   </div>
@@ -300,7 +304,7 @@ No new third-party registry blocks are required for Phase 15. All MagicUI compon
 - `useEditor({ extensions: [StarterKit, Image, ...calloutExtensions], editable: false, immediatelyRender: false, content: parsedJson })`
 - Outer div: `class="prose prose-neutral dark:prose-invert max-w-none text-[16px] leading-[1.75]"`
 - Tiptap `<EditorContent>` inside the outer div
-- DOMPurify not required (read-only Tiptap instance does not use `dangerouslySetInnerHTML`)
+- `isomorphic-dompurify` sanitizes `generateHTML()` output before it is passed to the Tiptap `content` prop — defense-in-depth per D-07, alongside server-side sanitization from Phase 14
 
 ### GuideCalloutBlock (Tiptap custom node extension)
 
