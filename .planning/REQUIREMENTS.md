@@ -107,7 +107,7 @@
 
 - [x] **DASH-01**: Admin mission control — readiness overview, pending approvals, blockers, decisions, ad-hoc task injector, leaderboard
 - [x] **DASH-02**: Role user dashboard — my tasks, quests, evidence, contribution meters
-- [ ] **DASH-03**: Kitchen dashboard — orders in queue, prep batch levels, station utilization, average prep times, waste today
+- [x] **DASH-03**: Kitchen dashboard — orders in queue, prep batch levels, station utilization, average prep times, waste today
 - [x] **DASH-04**: Inventory & procurement dashboard — stock levels (raw + production), low stock alerts, PO status, vendor spend, inventory value
 - [x] **DASH-05**: BI dashboard — revenue (daily/weekly/monthly), food cost %, recipe cost analysis, top-selling items, channel breakdown
 - [x] **DASH-06**: Shared boards — mission board, quest board, wins/milestones, latest evidence feed

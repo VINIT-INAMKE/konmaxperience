@@ -20,6 +20,7 @@ export enum Permission {
   MANAGE_INVENTORY = 'MANAGE_INVENTORY',
   MANAGE_PROCUREMENT = 'MANAGE_PROCUREMENT',
   MANAGE_KITCHEN = 'MANAGE_KITCHEN',
+  MANAGE_POS = 'MANAGE_POS',
 }
 
 export const PERMISSION_DISPLAY_NAMES: Record<Permission, string> = {
@@ -44,6 +45,7 @@ export const PERMISSION_DISPLAY_NAMES: Record<Permission, string> = {
   [Permission.MANAGE_INVENTORY]: 'Manage inventory',
   [Permission.MANAGE_PROCUREMENT]: 'Manage procurement',
   [Permission.MANAGE_KITCHEN]: 'Manage kitchen operations',
+  [Permission.MANAGE_POS]: 'Manage POS & orders',
 };
 
 export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
@@ -68,4 +70,5 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   [Permission.MANAGE_INVENTORY]: 'Track and adjust ingredient stock levels across zones',
   [Permission.MANAGE_PROCUREMENT]: 'Create and manage purchase orders with vendors',
   [Permission.MANAGE_KITCHEN]: 'Create prep batches, update KDS item status, log waste, and view kitchen metrics',
+  [Permission.MANAGE_POS]: 'Take orders, record payments, manage delivery dispatch',
 };
