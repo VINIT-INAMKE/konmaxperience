@@ -1,14 +1,15 @@
 'use client';
 
-import { use } from 'react';
+import { use, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
-import { ArrowLeft, ChevronRight, FileText } from 'lucide-react';
+import { ArrowLeft, BookOpen, ChevronRight, FileText } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
 import { apiClient } from '@/lib/api-client';
 import type { GuideSection } from '@/lib/types/guides';
 import { DynamicIcon } from '@/components/ops/guide/DynamicIcon';
+import { GuideSidebarSheet } from '@/components/ops/guide/GuideSidebarSheet';
 
 export default function SectionPage({
   params,
@@ -16,6 +17,7 @@ export default function SectionPage({
   params: Promise<{ sectionSlug: string }>;
 }) {
   const { sectionSlug } = use(params);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const {
     data: sections,
@@ -89,13 +91,22 @@ export default function SectionPage({
 
   return (
     <div className="space-y-4">
-      <Link
-        href="/guide"
-        className="inline-flex items-center gap-1 text-[14px] text-muted-foreground hover:text-foreground transition-colors"
-      >
-        <ArrowLeft className="size-4" />
-        Back to Guide
-      </Link>
+      <div className="flex items-center gap-2">
+        <Link
+          href="/guide"
+          className="inline-flex items-center gap-1 text-[14px] text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <ArrowLeft className="size-4" />
+          Back to Guide
+        </Link>
+        <button
+          onClick={() => setSidebarOpen(true)}
+          aria-label="Open guide navigation"
+          className="size-9 rounded-md border border-border hover:bg-muted flex items-center justify-center ml-auto"
+        >
+          <BookOpen className="size-4" />
+        </button>
+      </div>
 
       <div className="flex items-center gap-3">
         <div
@@ -155,6 +166,13 @@ export default function SectionPage({
           ))}
         </div>
       )}
+
+      <GuideSidebarSheet
+        open={sidebarOpen}
+        onOpenChange={setSidebarOpen}
+        sections={sections ?? []}
+        activeSectionSlug={sectionSlug}
+      />
     </div>
   );
 }
