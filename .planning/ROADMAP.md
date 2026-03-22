@@ -74,7 +74,7 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 16-01-PLAN.md -- Admin guide management page with section list, CRUD forms, reorder, and sidebar nav entry
+- [x] 16-01-PLAN.md -- Admin guide management page with section list, CRUD forms, reorder, and sidebar nav entry
 - [ ] 16-02-PLAN.md -- Tiptap rich text editor with toolbar, bubble menu, image upload, callouts, autosave, and publish workflow
 
 ### Phase 17: Search, Preview, and Content Seeding
@@ -103,7 +103,7 @@ Phases execute in numeric order: 14 -> 14.x -> 15 -> 15.x -> 16 -> 16.x -> 17 ->
 |-------|-----------|----------------|--------|-----------|
 | 14. Foundation | v1.1 | 2/2 | Complete    | 2026-03-22 |
 | 15. Reader View | v1.1 | 2/2 | Complete    | 2026-03-22 |
-| 16. Admin CMS | v1.1 | 0/2 | Not started | - |
+| 16. Admin CMS | v1.1 | 1/2 | In Progress|  |
 | 17. Search, Preview, and Content Seeding | v1.1 | 0/? | Not started | - |
 | 18. Data Export | v1.1 | 0/? | Not started | - |
 | 19. Master Data Import | v1.1 | 0/? | Not started | - |

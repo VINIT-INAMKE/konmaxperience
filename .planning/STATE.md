@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: User Guide & Data Management
 status: unknown
-stopped_at: Phase 16 UI-SPEC approved
-last_updated: "2026-03-22T18:04:58.897Z"
+stopped_at: Completed 16-01-PLAN.md
+last_updated: "2026-03-22T18:38:57.844Z"
 progress:
   total_phases: 7
   completed_phases: 2
-  total_plans: 4
-  completed_plans: 4
+  total_plans: 6
+  completed_plans: 5
 ---
 
 # Project State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-22)
 
 **Core value:** Every piece of work must be evidence-backed, approved, and validated before it counts -- turning real execution into measurable readiness and progress.
-**Current focus:** Phase 15 — reader-view
+**Current focus:** Phase 16 — admin-cms
 
 ## Current Position
 
-Phase: 18
-Plan: Not started
+Phase: 16 (admin-cms) — EXECUTING
+Plan: 2 of 2
 
 ## Performance Metrics
 
@@ -50,6 +50,7 @@ Plan: Not started
 | Phase 14 P02 | 8min | 3 tasks | 9 files |
 | Phase 15 P01 | 7min | 3 tasks | 10 files |
 | Phase 15 P02 | 8min | 3 tasks | 9 files |
+| Phase 16 P01 | 6min | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -73,6 +74,7 @@ Recent decisions affecting current work:
 - [Phase 15]: GuideProseRenderer dynamically imported with ssr:false to prevent Tiptap SSR crash
 - [Phase 15]: Two-query data fetching: shared sections cache + page-by-ID to avoid slug-based endpoint pitfall
 - [Phase 15]: DOMPurify sanitizes generateHTML output before Tiptap editor content as defense-in-depth
+- [Phase 16]: Sort-order reorder via Promise.all of two PATCH calls swapping adjacent sort_order values
 
 ### Roadmap Evolution
 
@@ -90,6 +92,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-22T18:04:58.891Z
-Stopped at: Phase 16 UI-SPEC approved
-Resume file: .planning/phases/16-admin-cms/16-UI-SPEC.md
+Last session: 2026-03-22T18:38:57.839Z
+Stopped at: Completed 16-01-PLAN.md
+Resume file: None
