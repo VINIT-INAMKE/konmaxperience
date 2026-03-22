@@ -62,7 +62,7 @@ Exceptions:
 - Search overlay width: `max-w-[560px] w-full` — wider than a standard dialog to allow readable result snippets. Centered horizontally, positioned at 20% from top of viewport.
 - Search overlay max-height: `max-h-[420px]` — scrollable result list within this bound.
 - Preview banner: `px-4 py-2` (16px/8px) — compact inline strip, not a full-height panel.
-- Kbd badge: `px-1.5 py-0.5 text-[11px]` (6px/2px) — standard keyboard shortcut badge sizing.
+- Kbd badge: `px-2 py-1 text-[11px]` (8px/4px) — standard keyboard shortcut badge sizing, grid-conforming.
 
 ---
 
@@ -153,7 +153,7 @@ Footer bar: `flex items-center justify-between px-3 py-2 border-t text-[11px] te
 - Left: `↑↓ to navigate · ↵ to open`
 - Right: `Esc to close` with `<Kbd>Esc</Kbd>` badge
 
-`Kbd` badge styling: `inline-flex items-center px-1.5 py-0.5 rounded border bg-muted text-[11px] font-mono font-medium`
+`Kbd` badge styling: `inline-flex items-center px-2 py-1 rounded border bg-muted text-[11px] font-mono font-medium`
 
 ### Preview-as-Role Banner
 
@@ -410,7 +410,7 @@ No third-party registry blocks required for Phase 17. `cmdk` is an official depe
   </CommandList>
   <div className="flex items-center justify-between px-3 py-2 border-t text-[11px] text-muted-foreground bg-muted/30">
     <span>↑↓ to navigate · ↵ to open</span>
-    <span>Esc <Kbd>Esc</Kbd> to close</span>
+    <span>Esc <Kbd className="inline-flex items-center px-2 py-1 rounded border bg-muted text-[11px] font-mono font-medium">Esc</Kbd> to close</span>
   </div>
 </CommandDialog>
 ```
