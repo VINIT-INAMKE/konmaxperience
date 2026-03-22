@@ -22,6 +22,7 @@ Every piece of work must be evidence-backed, approved, and validated before it c
 - [x] Inventory & Procurement — stock tracking, PO workflow with receiving, movement audit trail, procurement dashboard (Phase 8)
 - [x] Kitchen & Prep — prep batch FIFO deduction, full-screen KDS with polling, waste logging, expiry cron, menu availability, kitchen metrics (Phase 9)
 - [x] POS & Orders — staff POS with split-screen menu/cart, order-to-kitchen-to-deduction flow, payment tracking, delivery dispatch, order history (Phase 10)
+- [x] Guide Foundation — GuideSection/GuidePage Prisma models, MANAGE_GUIDE permission, GuidesModule with CRUD API, role-based filtering, XSS sanitization, presign-guide endpoint (Phase 14)
 
 ### Active
 
@@ -159,4 +160,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-03-22 after milestone v1.1 started*
+*Last updated: 2026-03-22 after Phase 14 (Foundation) completion*
