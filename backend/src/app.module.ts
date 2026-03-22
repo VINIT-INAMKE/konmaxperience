@@ -50,14 +50,10 @@ import { PermissionsGuard } from './auth/permissions.guard';
     ScheduleModule.forRoot(),
     EventEmitterModule.forRoot(),
     BullModule.forRoot({
-      connection: {
-        host: process.env.UPSTASH_REDIS_ENDPOINT,
-        port: Number(process.env.UPSTASH_REDIS_PORT ?? 6379),
-        password: process.env.UPSTASH_REDIS_TOKEN,
-        tls: {},
+      connection: new (require('ioredis'))(process.env.UPSTASH_REDIS_URL, {
         maxRetriesPerRequest: null,
         enableReadyCheck: false,
-      },
+      }),
     }),
     PrismaModule,
     AuthModule,
