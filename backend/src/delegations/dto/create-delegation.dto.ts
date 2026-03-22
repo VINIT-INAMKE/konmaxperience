@@ -1,12 +1,10 @@
-import { IsString, IsNotEmpty, IsDateString } from 'class-validator';
+import { IsUUID, IsDateString } from 'class-validator';
 
 export class CreateDelegationDto {
-  @IsString()
-  @IsNotEmpty()
+  @IsUUID()
   from_user_id: string;
 
-  @IsString()
-  @IsNotEmpty()
+  @IsUUID()
   to_user_id: string;
 
   @IsDateString()

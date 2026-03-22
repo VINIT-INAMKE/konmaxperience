@@ -36,10 +36,29 @@ export class UsersService {
     });
   }
 
+  private stripSensitive(user: any) {
+    if (!user) return user;
+    const { password_hash, ...safe } = user;
+    return safe;
+  }
+
   async findOne(id: string) {
     const user = await this.prisma.user.findUnique({
       where: { id },
-      include: { role: true },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        function: true,
+        status: true,
+        xp_total: true,
+        level: true,
+        streak_days: true,
+        role_id: true,
+        created_at: true,
+        updated_at: true,
+        role: true,
+      },
     });
 
     if (!user) {
@@ -50,9 +69,10 @@ export class UsersService {
   }
 
   async create(dto: CreateUserDto, createdByUserId: string) {
-    // Validate email uniqueness
+    // Validate email uniqueness — only need existence check
     const existing = await this.prisma.user.findUnique({
       where: { email: dto.email },
+      select: { id: true },
     });
     if (existing) {
       throw new ConflictException('A user with this email already exists');
@@ -66,11 +86,13 @@ export class UsersService {
       .digest('hex');
 
     // Hash placeholder password -- user will set real password via email link
-    const placeholderHash = await bcrypt.hash('KonmaSetup!', 12);
+    const placeholder = crypto.randomBytes(32).toString('hex');
+    const placeholderHash = await bcrypt.hash(placeholder, 12);
 
-    // Look up the role to get the function field
+    // Look up the role to get the function field — only need the code
     const role = await this.prisma.role.findUnique({
       where: { id: dto.roleId },
+      select: { id: true, code: true },
     });
     if (!role) {
       throw new NotFoundException(`Role with ID ${dto.roleId} not found`);
@@ -103,18 +125,25 @@ export class UsersService {
     // Send setup email after transaction commits (side effect -- cannot roll back email)
     await this.emailService.sendPasswordSetup(dto.email, setupToken, dto.name);
 
-    return user;
+    return this.stripSensitive(user);
   }
 
   async update(id: string, dto: { name?: string; status?: string }) {
-    const existing = await this.prisma.user.findUnique({ where: { id } });
+    const existing = await this.prisma.user.findUnique({
+      where: { id },
+      select: { id: true, status: true },
+    });
     if (!existing) {
       throw new NotFoundException(`User with ID ${id} not found`);
     }
 
+    const { name, status } = dto;
     const updated = await this.prisma.user.update({
       where: { id },
-      data: dto,
+      data: {
+        ...(name !== undefined && { name }),
+        ...(status !== undefined && { status }),
+      },
       include: { role: true },
     });
 
@@ -127,11 +156,14 @@ export class UsersService {
       this.logger.log(`Revoked all refresh tokens for deactivated user ${id}`);
     }
 
-    return updated;
+    return this.stripSensitive(updated);
   }
 
   async triggerPasswordReset(id: string) {
-    const user = await this.prisma.user.findUnique({ where: { id } });
+    const user = await this.prisma.user.findUnique({
+      where: { id },
+      select: { id: true, email: true, name: true },
+    });
     if (!user) {
       throw new NotFoundException(`User with ID ${id} not found`);
     }
@@ -154,23 +186,27 @@ export class UsersService {
   }
 
   async deactivate(id: string) {
-    const user = await this.prisma.user.findUnique({ where: { id } });
+    const user = await this.prisma.user.findUnique({
+      where: { id },
+      select: { id: true },
+    });
     if (!user) {
       throw new NotFoundException(`User with ID ${id} not found`);
     }
 
-    const updated = await this.prisma.user.update({
-      where: { id },
-      data: { status: 'inactive' },
-      include: { role: true },
-    });
+    // Parallelize user update and token revocation (independent writes)
+    const [updated] = await Promise.all([
+      this.prisma.user.update({
+        where: { id },
+        data: { status: 'inactive' },
+        include: { role: true },
+      }),
+      this.prisma.refreshToken.updateMany({
+        where: { user_id: id, revoked_at: null },
+        data: { revoked_at: new Date() },
+      }),
+    ]);
 
-    // Revoke all refresh tokens
-    await this.prisma.refreshToken.updateMany({
-      where: { user_id: id, revoked_at: null },
-      data: { revoked_at: new Date() },
-    });
-
-    return updated;
+    return this.stripSensitive(updated);
   }
 }

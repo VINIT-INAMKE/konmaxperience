@@ -30,6 +30,7 @@ export function RecipeCostTable({ data }: RecipeCostTableProps) {
             No recipe cost data available. Ensure recipes have vendor prices.
           </p>
         ) : (
+          <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -75,6 +76,7 @@ export function RecipeCostTable({ data }: RecipeCostTableProps) {
               })}
             </TableBody>
           </Table>
+          </div>
         )}
       </CardContent>
     </Card>

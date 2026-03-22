@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { AlertCircle } from 'lucide-react';
-import { BlurFade } from '@/components/ui/blur-fade';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { ReadinessGrid } from '@/components/ops/readiness/ReadinessGrid';
@@ -26,11 +25,10 @@ export default function ReadinessPage() {
   const isEmpty = !isLoading && !isError && (!meters || meters.length === 0);
 
   return (
-    <BlurFade>
       <div className="space-y-6">
         {/* Header */}
         <div>
-          <h1 className="text-xl font-semibold">Readiness Intelligence</h1>
+          <h1 className="text-2xl font-bold">Readiness Intelligence</h1>
           <p className="text-sm text-muted-foreground mt-1">
             All values derived from validated task completions
           </p>
@@ -84,6 +82,5 @@ export default function ReadinessPage() {
           />
         )}
       </div>
-    </BlurFade>
   );
 }

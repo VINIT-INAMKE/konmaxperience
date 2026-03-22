@@ -20,7 +20,6 @@ import {
 } from '@/components/ui/tooltip';
 import { ShimmerButton } from '@/components/ui/shimmer-button';
 import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button';
-import { CoolMode } from '@/components/ui/cool-mode';
 import { PulsatingButton } from '@/components/ui/pulsating-button';
 import { AvatarCircles } from '@/components/ui/avatar-circles';
 import { RejectionDialog } from '@/components/ops/evidence/RejectionDialog';
@@ -98,10 +97,10 @@ export function ApprovalItem({ evidence, onAction }: ApprovalItemProps) {
     setIsApproving(true);
     try {
       await apiClient.post(`/evidence/${evidence.id}/approve`);
-      toast.success('Evidence approved.');
+      toast.success('Approved!');
       onAction();
     } catch {
-      toast.error('Failed to approve evidence.');
+      toast.error('Couldn\'t approve that — try again.');
     } finally {
       setIsApproving(false);
     }
@@ -111,11 +110,11 @@ export function ApprovalItem({ evidence, onAction }: ApprovalItemProps) {
     setIsRejecting(true);
     try {
       await apiClient.post(`/evidence/${evidence.id}/reject`, { notes });
-      toast.error('Evidence rejected.');
+      toast.success('Feedback sent.');
       setRejectDialogOpen(false);
       onAction();
     } catch {
-      toast.error('Failed to reject evidence.');
+      toast.error('Couldn\'t send feedback — try again.');
     } finally {
       setIsRejecting(false);
     }
@@ -123,8 +122,7 @@ export function ApprovalItem({ evidence, onAction }: ApprovalItemProps) {
 
   const actionButtons = (
     <div className="flex items-center gap-2">
-      <CoolMode>
-        <ShimmerButton
+      <ShimmerButton
           className="h-8 text-xs"
           shimmerColor="#4ade80"
           onClick={() => void handleApprove()}
@@ -139,7 +137,6 @@ export function ApprovalItem({ evidence, onAction }: ApprovalItemProps) {
             'Approve'
           )}
         </ShimmerButton>
-      </CoolMode>
       <InteractiveHoverButton
         className="h-8 px-3 text-xs border-red-500/30 hover:bg-red-950"
         onClick={() => setRejectDialogOpen(true)}
@@ -180,12 +177,12 @@ export function ApprovalItem({ evidence, onAction }: ApprovalItemProps) {
             {evidence.task?.title || 'Unknown task'}
           </span>
           {evidence.task?.quest && (
-            <span className="text-[13px] text-muted-foreground">
+            <span className="text-xs text-muted-foreground">
               {evidence.task.quest.title}
             </span>
           )}
           {evidence.task?.mission && (
-            <span className="text-[13px] text-muted-foreground">
+            <span className="text-xs text-muted-foreground">
               {evidence.task.mission.title}
             </span>
           )}
@@ -213,11 +210,11 @@ export function ApprovalItem({ evidence, onAction }: ApprovalItemProps) {
               avatarUrls={uploaderAvatars}
               className="[&_img]:h-6 [&_img]:w-6"
             />
-            <span className="text-[13px] text-muted-foreground">
+            <span className="text-xs text-muted-foreground">
               {evidence.uploader?.name || 'Unknown'}
             </span>
           </div>
-          <span className="text-[13px] text-muted-foreground shrink-0">
+          <span className="text-xs text-muted-foreground shrink-0">
             Submitted:{' '}
             {formatDistanceToNow(parseISO(evidence.created_at), {
               addSuffix: true,
@@ -253,12 +250,12 @@ export function ApprovalItem({ evidence, onAction }: ApprovalItemProps) {
         {evidence.override_reason && (
           <div className="flex items-center gap-2 text-sm">
             <AlertCircle className="size-3 text-amber-400 shrink-0" />
-            <span className="text-muted-foreground italic text-[14px]">
+            <span className="text-muted-foreground italic text-sm">
               Overridden by {evidence.overrider?.name || 'Admin'} &mdash;{' '}
               {evidence.override_reason}
             </span>
             {evidence.override_at && (
-              <span className="text-muted-foreground text-[13px] ml-auto shrink-0">
+              <span className="text-muted-foreground text-xs ml-auto shrink-0">
                 {formatDistanceToNow(parseISO(evidence.override_at), {
                   addSuffix: true,
                 })}
@@ -270,7 +267,7 @@ export function ApprovalItem({ evidence, onAction }: ApprovalItemProps) {
         {/* Delegation attribution row */}
         {evidence.delegated_from_user_id && evidence.delegated_from_user && (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <span className="text-[14px]">
+            <span className="text-sm">
               Approved by {evidence.reviewer?.name || 'Unknown'} (on behalf of{' '}
               {evidence.delegated_from_user.name})
             </span>

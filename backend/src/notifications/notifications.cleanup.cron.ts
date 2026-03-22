@@ -13,18 +13,13 @@ export class NotificationsCleanupCron {
     try {
       const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
-      // Delete read notifications older than 30 days first (per D-13)
-      const readDeleted = await this.prisma.notification.deleteMany({
-        where: { is_read: true, created_at: { lt: cutoff } },
-      });
-
-      // Then delete all (including unread) older than 30 days
-      const allDeleted = await this.prisma.notification.deleteMany({
+      // Delete all notifications older than 30 days (read and unread)
+      const deleted = await this.prisma.notification.deleteMany({
         where: { created_at: { lt: cutoff } },
       });
 
       this.logger.log(
-        `Cleanup: ${readDeleted.count} read + ${allDeleted.count} remaining old notifications deleted`,
+        `Cleanup: ${deleted.count} old notifications deleted`,
       );
     } catch (error) {
       this.logger.error(

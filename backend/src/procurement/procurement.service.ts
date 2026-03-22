@@ -1,42 +1,63 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { convertUnit } from '../common/utils/unit-conversion';
+import { loadConversions } from '../common/utils/unit-conversion';
 
 @Injectable()
 export class ProcurementService {
   constructor(private readonly prisma: PrismaService) {}
 
   async getSummary() {
-    // 1. Pending PO count (draft or ordered)
-    const pending_po_count = await this.prisma.purchaseOrder.count({
-      where: { status: { in: ['draft', 'ordered'] } },
-    });
-
-    // 2. Low stock count — application-level filter (Pitfall 4: use Number() for Decimal)
-    const allStocks = await this.prisma.ingredientStock.findMany({
-      include: { ingredient: { select: { min_stock_level: true } } },
-    });
-    const low_stock_count = allStocks.filter(
-      (s) => Number(s.current_quantity) < Number(s.ingredient.min_stock_level),
-    ).length;
-
-    // 3. Vendor spend this month + top vendors
     const monthStart = new Date(
       new Date().getFullYear(),
       new Date().getMonth(),
       1,
     );
-    const monthPOs = await this.prisma.purchaseOrder.findMany({
-      where: {
-        status: { in: ['ordered', 'received'] },
-        ordered_at: { gte: monthStart },
-      },
-      include: {
-        lines: true,
-        vendor: { select: { id: true, name: true } },
-      },
-    });
 
+    // Run all independent queries in parallel
+    const [
+      pending_po_count,
+      allStocks,
+      monthPOs,
+      poStatusCounts,
+    ] = await Promise.all([
+      // 1. Pending PO count (draft or ordered)
+      this.prisma.purchaseOrder.count({
+        where: { status: { in: ['draft', 'ordered'] } },
+      }),
+      // 2 + 4. Fetch ALL stocks once (used for low_stock_count AND inventory value)
+      this.prisma.ingredientStock.findMany({
+        include: {
+          ingredient: {
+            select: { id: true, base_unit: true, min_stock_level: true },
+          },
+        },
+      }),
+      // 3. Vendor spend this month + top vendors
+      this.prisma.purchaseOrder.findMany({
+        where: {
+          status: { in: ['ordered', 'received'] },
+          ordered_at: { gte: monthStart },
+        },
+        select: {
+          status: true,
+          vendor_id: true,
+          vendor: { select: { id: true, name: true } },
+          lines: { select: { quantity: true, received_quantity: true, unit_cost: true } },
+        },
+      }),
+      // 5. PO status breakdown via groupBy
+      this.prisma.purchaseOrder.groupBy({
+        by: ['status'],
+        _count: { id: true },
+      }),
+    ]);
+
+    // 2. Low stock count from the single fetch
+    const low_stock_count = allStocks.filter(
+      (s) => Number(s.current_quantity) < Number(s.ingredient.min_stock_level),
+    ).length;
+
+    // 3. Vendor spend aggregation
     let vendor_spend_this_month = 0;
     const vendorSpendMap = new Map<
       string,
@@ -70,47 +91,70 @@ export class ProcurementService {
       .sort((a, b) => b.spend - a.spend)
       .slice(0, 3);
 
-    // 4. Total inventory value — sum of (current_quantity * latest VendorPrice) per ingredient
-    const stocks = await this.prisma.ingredientStock.findMany({
-      include: { ingredient: true },
-    });
-    const ingredientIds = [...new Set(stocks.map((s) => s.ingredient_id))];
+    // 4. Total inventory value — reuse allStocks from step 2
+    const ingredientIds = [...new Set(allStocks.map((s) => s.ingredient_id))];
     let total_inventory_value = 0;
 
-    for (const ingId of ingredientIds) {
-      const latestPrice = await this.prisma.vendorPrice.findFirst({
-        where: { ingredient_id: ingId },
+    if (ingredientIds.length > 0) {
+      // Batch-fetch all vendor prices in one query to avoid N+1
+      const allPrices = await this.prisma.vendorPrice.findMany({
+        where: { ingredient_id: { in: ingredientIds } },
         orderBy: { effective_date: 'desc' },
       });
-      if (!latestPrice) continue;
+      // Group by ingredient_id, keeping only the latest (first) price per ingredient
+      const priceMap = new Map<string, (typeof allPrices)[0]>();
+      for (const p of allPrices) {
+        if (!priceMap.has(p.ingredient_id)) priceMap.set(p.ingredient_id, p);
+      }
 
-      const stocksForIng = stocks.filter((s) => s.ingredient_id === ingId);
-      const totalQty = stocksForIng.reduce(
-        (sum, s) => sum + Number(s.current_quantity),
-        0,
-      );
+      // Pre-load conversion cache once (avoids repeated DB hits in the loop)
+      const conversionCache = await loadConversions(this.prisma);
 
-      // current_quantity is in base_unit, price is per price.unit — need conversion
-      const baseUnit = stocksForIng[0].ingredient.base_unit;
-      const factor = await convertUnit(
-        1,
-        latestPrice.unit,
-        baseUnit,
-        this.prisma,
-      );
-      const pricePerBaseUnit = factor
-        ? Number(latestPrice.price) / factor
-        : Number(latestPrice.price);
+      // Build a Map of ingredient_id -> { totalQty, baseUnit } for O(1) lookups
+      const stockAggMap = new Map<string, { totalQty: number; baseUnit: string }>();
+      for (const s of allStocks) {
+        const existing = stockAggMap.get(s.ingredient_id);
+        if (existing) {
+          existing.totalQty += Number(s.current_quantity);
+        } else {
+          stockAggMap.set(s.ingredient_id, {
+            totalQty: Number(s.current_quantity),
+            baseUnit: s.ingredient.base_unit,
+          });
+        }
+      }
 
-      total_inventory_value += totalQty * pricePerBaseUnit;
+      for (const ingId of ingredientIds) {
+        const latestPrice = priceMap.get(ingId);
+        if (!latestPrice) continue;
+
+        const stockAgg = stockAggMap.get(ingId);
+        if (!stockAgg) continue;
+
+        // Synchronous unit conversion using pre-loaded cache
+        const fromUnit = latestPrice.unit;
+        const toUnit = stockAgg.baseUnit;
+        let factor: number | null = 1;
+        if (fromUnit !== toUnit) {
+          const direct = conversionCache.get(`${fromUnit}:${toUnit}`);
+          if (direct !== undefined) {
+            factor = direct;
+          } else {
+            const reverse = conversionCache.get(`${toUnit}:${fromUnit}`);
+            factor = reverse !== undefined && reverse !== 0 ? 1 / reverse : null;
+          }
+        }
+
+        const pricePerBaseUnit = factor
+          ? Number(latestPrice.price) / factor
+          : Number(latestPrice.price);
+
+        total_inventory_value += stockAgg.totalQty * pricePerBaseUnit;
+      }
     }
 
-    // 5. PO status breakdown
-    const [draft_count, ordered_count, received_count] = await Promise.all([
-      this.prisma.purchaseOrder.count({ where: { status: 'draft' } }),
-      this.prisma.purchaseOrder.count({ where: { status: 'ordered' } }),
-      this.prisma.purchaseOrder.count({ where: { status: 'received' } }),
-    ]);
+    // 5. PO status breakdown from groupBy
+    const statusMap = new Map(poStatusCounts.map((s) => [s.status, s._count.id]));
 
     return {
       pending_po_count,
@@ -119,9 +163,9 @@ export class ProcurementService {
       total_inventory_value,
       top_vendors,
       po_status_breakdown: {
-        draft: draft_count,
-        ordered: ordered_count,
-        received: received_count,
+        draft: statusMap.get('draft') ?? 0,
+        ordered: statusMap.get('ordered') ?? 0,
+        received: statusMap.get('received') ?? 0,
       },
     };
   }

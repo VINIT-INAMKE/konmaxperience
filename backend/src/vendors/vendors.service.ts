@@ -30,7 +30,9 @@ export class VendorsService {
     }
     return this.prisma.vendor.findMany({
       where,
-      include: VENDOR_INCLUDE,
+      include: {
+        _count: { select: { VendorPrices: true } },
+      },
       orderBy: { name: 'asc' },
     });
   }
@@ -75,10 +77,13 @@ export class VendorsService {
   }
 
   async remove(id: string) {
-    await this.findOne(id);
-    const priceCount = await this.prisma.vendorPrice.count({
-      where: { vendor_id: id },
-    });
+    const [vendor, priceCount] = await Promise.all([
+      this.prisma.vendor.findUnique({ where: { id }, select: { id: true } }),
+      this.prisma.vendorPrice.count({ where: { vendor_id: id } }),
+    ]);
+    if (!vendor) {
+      throw new NotFoundException(`Vendor with ID ${id} not found`);
+    }
     if (priceCount > 0) {
       throw new BadRequestException(
         `Cannot delete vendor — it has ${priceCount} price record(s). Remove the prices first.`,
@@ -113,17 +118,7 @@ export class VendorsService {
         ingredient: { select: { id: true, name: true, base_unit: true } },
       },
       orderBy: { effective_date: 'desc' },
-    });
-  }
-
-  async getLatestPrice(ingredientId: string) {
-    return this.prisma.vendorPrice.findFirst({
-      where: { ingredient_id: ingredientId },
-      include: {
-        vendor: { select: { id: true, name: true } },
-        ingredient: { select: { id: true, name: true, base_unit: true } },
-      },
-      orderBy: { effective_date: 'desc' },
+      take: 100,
     });
   }
 

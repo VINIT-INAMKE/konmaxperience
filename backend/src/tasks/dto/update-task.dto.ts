@@ -3,6 +3,7 @@ import {
   IsEnum,
   IsOptional,
   IsString,
+  IsUUID,
   MinLength,
 } from 'class-validator';
 
@@ -33,7 +34,7 @@ export class UpdateTaskDto {
   priority?: string;
 
   @IsOptional()
-  @IsString()
+  @IsUUID()
   depends_on_task_id?: string | null;
 
   @IsOptional()

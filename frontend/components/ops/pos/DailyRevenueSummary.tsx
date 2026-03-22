@@ -18,7 +18,7 @@ function formatINR(value: number): string {
 
 export function DailyRevenueSummary({ summary, isLoading }: DailyRevenueSummaryProps) {
   return (
-    <div className="grid grid-cols-3 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
       {/* Orders Today */}
       <div className="bg-card border border-border rounded-lg p-4">
         <p className="text-xs font-bold text-muted-foreground">Orders Today</p>

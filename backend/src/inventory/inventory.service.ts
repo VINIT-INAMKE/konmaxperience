@@ -11,7 +11,10 @@ export class InventoryService {
     private readonly eventEmitter: EventEmitter2,
   ) {}
 
-  async findAll() {
+  async findAll(page?: number, limit?: number) {
+    const take = Math.min(Number(limit) || 50, 100);
+    const skip = ((Number(page) || 1) - 1) * take;
+
     const stocks = await this.prisma.ingredientStock.findMany({
       include: {
         ingredient: {
@@ -26,6 +29,8 @@ export class InventoryService {
         zone: { select: { id: true, name: true } },
       },
       orderBy: { ingredient: { name: 'asc' } },
+      take,
+      skip,
     });
 
     return stocks.map((s) => ({
@@ -35,13 +40,18 @@ export class InventoryService {
     }));
   }
 
-  async getMovements(ingredientId: string) {
+  async getMovements(ingredientId: string, page?: number, limit?: number) {
+    const take = Math.min(Number(limit) || 50, 100);
+    const skip = ((Number(page) || 1) - 1) * take;
+
     return this.prisma.stockMovement.findMany({
       where: { ingredient_id: ingredientId },
       include: {
         creator: { select: { id: true, name: true } },
       },
       orderBy: { created_at: 'desc' },
+      take,
+      skip,
     });
   }
 
@@ -62,6 +72,24 @@ export class InventoryService {
         throw new BadRequestException(
           `No unit conversion from ${dto.unit} to ${ingredient.base_unit}`,
         );
+      }
+
+      // For negative adjustments, verify sufficient stock
+      if (convertedQty < 0) {
+        const existingStock = await tx.ingredientStock.findUnique({
+          where: {
+            ingredient_id_zone_id: {
+              ingredient_id: dto.ingredient_id,
+              zone_id: dto.zone_id,
+            },
+          },
+        });
+        const currentQty = existingStock ? Number(existingStock.current_quantity) : 0;
+        if (currentQty + convertedQty < 0) {
+          throw new BadRequestException(
+            `Insufficient stock: have ${currentQty} ${ingredient.base_unit}, adjustment would result in negative stock`,
+          );
+        }
       }
 
       // Upsert IngredientStock — increment by converted quantity
@@ -130,14 +158,38 @@ export class InventoryService {
           unit: stock.ingredient.base_unit,
           zoneId: stock.zone_id,
         });
-      } catch {}
+      } catch (e) { /* event emission failed - non-critical */ }
     }
 
     return stock;
   }
 
   async getLowStock() {
-    const stocks = await this.prisma.ingredientStock.findMany({
+    // Prisma doesn't support cross-field comparisons in WHERE clauses,
+    // so we use $queryRaw to filter at DB level for efficiency
+    const lowStockRows: Array<{ ingredient_id: string; zone_id: string }> =
+      await this.prisma.$queryRaw`
+        SELECT s.ingredient_id, s.zone_id
+        FROM "IngredientStock" s
+        JOIN "Ingredient" i ON i.id = s.ingredient_id
+        WHERE s.current_quantity < i.min_stock_level
+      `;
+
+    if (lowStockRows.length === 0) return [];
+
+    // Build composite key set for filtering
+    const compositeKeys = lowStockRows.map((r) => ({
+      ingredient_id: r.ingredient_id,
+      zone_id: r.zone_id,
+    }));
+
+    return this.prisma.ingredientStock.findMany({
+      where: {
+        OR: compositeKeys.map((k) => ({
+          ingredient_id: k.ingredient_id,
+          zone_id: k.zone_id,
+        })),
+      },
       include: {
         ingredient: {
           select: {
@@ -151,9 +203,5 @@ export class InventoryService {
         zone: { select: { id: true, name: true } },
       },
     });
-
-    return stocks.filter(
-      (s) => Number(s.current_quantity) < Number(s.ingredient.min_stock_level),
-    );
   }
 }

@@ -48,7 +48,7 @@ export function RejectionDialog({
         <DialogHeader>
           <DialogTitle>Reject evidence</DialogTitle>
           <DialogDescription>
-            Tell the task owner what needs to be corrected.
+            Share what needs to change so they can improve it.
           </DialogDescription>
         </DialogHeader>
 

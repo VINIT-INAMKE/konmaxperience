@@ -10,7 +10,9 @@ export class AnalyticsService {
    */
   private parseDateRange(from: string, to: string): { start: Date; end: Date } {
     const start = new Date(`${from}T00:00:00+05:30`);
-    const end = new Date(`${to}T23:59:59+05:30`);
+    // Use start of next day instead of 23:59:59 to avoid missing the last second's milliseconds
+    const endDate = new Date(`${to}T00:00:00+05:30`);
+    const end = new Date(endDate.getTime() + 24 * 60 * 60 * 1000);
     return { start, end };
   }
 
@@ -20,50 +22,51 @@ export class AnalyticsService {
   async getSummary(from: string, to: string) {
     const { start, end } = this.parseDateRange(from, to);
 
-    const orders = await this.prisma.order.findMany({
-      where: {
-        created_at: { gte: start, lte: end },
-        status: { not: 'cancelled' },
-      },
-      include: {
-        payment: true,
-        items: {
-          include: {
-            menu_item: {
-              select: {
-                base_price: true,
-                recipe: { select: { computed_cost: true } },
-              },
+    const dateFilter = {
+      created_at: { gte: start, lt: end },
+      status: { not: 'cancelled' as const },
+    };
+
+    // Run all independent queries in parallel instead of fetching full orders with includes
+    const [orderCount, revenueAgg, foodCostItems] = await Promise.all([
+      // 1. Total order count
+      this.prisma.order.count({ where: dateFilter }),
+      // 2. Revenue aggregates (only paid orders)
+      this.prisma.order.aggregate({
+        where: { ...dateFilter, payment: { status: 'paid' } },
+        _sum: { total: true },
+        _count: { id: true },
+      }),
+      // 3. Only fetch the fields needed for food cost % calculation
+      this.prisma.orderItem.findMany({
+        where: { order: dateFilter },
+        select: {
+          quantity: true,
+          menu_item: {
+            select: {
+              base_price: true,
+              recipe: { select: { computed_cost: true } },
             },
           },
         },
-      },
-    });
+      }),
+    ]);
 
-    const total_orders = orders.length;
-
-    // Revenue = sum of order.total where payment is paid
-    const total_revenue = orders.reduce((sum, order) => {
-      if (order.payment?.status === 'paid') {
-        return sum + Number(order.total);
-      }
-      return sum;
-    }, 0);
-
-    const avg_order_value = total_orders > 0 ? total_revenue / total_orders : 0;
+    const total_orders = orderCount;
+    const total_revenue = Number(revenueAgg._sum.total ?? 0);
+    const paidCount = revenueAgg._count.id;
+    const avg_order_value = paidCount > 0 ? total_revenue / paidCount : 0;
 
     // Weighted average food cost %: computed from recipe.computed_cost / base_price
     let weightedSum = 0;
     let totalQty = 0;
-    for (const order of orders) {
-      for (const item of order.items) {
-        const basePrice = Number(item.menu_item?.base_price ?? 0);
-        const computedCost = Number(item.menu_item?.recipe?.computed_cost ?? 0);
-        if (basePrice > 0) {
-          const fcp = (computedCost / basePrice) * 100;
-          weightedSum += fcp * item.quantity;
-          totalQty += item.quantity;
-        }
+    for (const item of foodCostItems) {
+      const basePrice = Number(item.menu_item?.base_price ?? 0);
+      const computedCost = Number(item.menu_item?.recipe?.computed_cost ?? 0);
+      if (basePrice > 0) {
+        const fcp = (computedCost / basePrice) * 100;
+        weightedSum += fcp * item.quantity;
+        totalQty += item.quantity;
       }
     }
     const avg_food_cost_pct = totalQty > 0 ? weightedSum / totalQty : 0;
@@ -79,15 +82,18 @@ export class AnalyticsService {
 
     const orders = await this.prisma.order.findMany({
       where: {
-        created_at: { gte: start, lte: end },
+        created_at: { gte: start, lt: end },
         status: { not: 'cancelled' },
+        payment: { status: 'paid' },
       },
-      include: { payment: true },
+      select: {
+        total: true,
+        created_at: true,
+      },
     });
 
     const dateMap = new Map<string, number>();
     for (const order of orders) {
-      if (order.payment?.status !== 'paid') continue;
       const dateKey = order.created_at.toLocaleDateString('en-CA', {
         timeZone: 'Asia/Kolkata',
       });
@@ -105,38 +111,49 @@ export class AnalyticsService {
   async getTopItems(from: string, to: string) {
     const { start, end } = this.parseDateRange(from, to);
 
-    const grouped = await this.prisma.orderItem.groupBy({
-      by: ['menu_item_id'],
+    // Fetch individual order items to use actual unit_price for revenue
+    const orderItems = await this.prisma.orderItem.findMany({
       where: {
         order: {
-          created_at: { gte: start, lte: end },
+          created_at: { gte: start, lt: end },
           status: { not: 'cancelled' },
         },
       },
-      _sum: { quantity: true },
-      orderBy: { _sum: { quantity: 'desc' } },
-      take: 10,
+      select: {
+        menu_item_id: true,
+        quantity: true,
+        unit_price: true,
+      },
     });
 
-    const menuItemIds = grouped.map((g) => g.menu_item_id);
+    // Aggregate by menu_item_id
+    const itemMap = new Map<string, { quantity_sold: number; revenue: number }>();
+    for (const item of orderItems) {
+      const existing = itemMap.get(item.menu_item_id) || { quantity_sold: 0, revenue: 0 };
+      existing.quantity_sold += item.quantity;
+      existing.revenue += item.quantity * Number(item.unit_price);
+      itemMap.set(item.menu_item_id, existing);
+    }
 
+    // Sort by quantity sold descending, take top 10
+    const sorted = Array.from(itemMap.entries())
+      .sort((a, b) => b[1].quantity_sold - a[1].quantity_sold)
+      .slice(0, 10);
+
+    const menuItemIds = sorted.map(([id]) => id);
     const menuItems = await this.prisma.menuItem.findMany({
       where: { id: { in: menuItemIds } },
-      select: { id: true, name: true, base_price: true },
+      select: { id: true, name: true },
     });
 
     const menuMap = new Map(menuItems.map((mi) => [mi.id, mi]));
 
-    return grouped.map((g) => {
-      const mi = menuMap.get(g.menu_item_id);
-      const quantity_sold = g._sum.quantity || 0;
-      return {
-        menu_item_id: g.menu_item_id,
-        name: mi?.name || 'Unknown',
-        quantity_sold,
-        revenue: quantity_sold * Number(mi?.base_price || 0),
-      };
-    });
+    return sorted.map(([menuItemId, data]) => ({
+      menu_item_id: menuItemId,
+      name: menuMap.get(menuItemId)?.name || 'Unknown',
+      quantity_sold: data.quantity_sold,
+      revenue: data.revenue,
+    }));
   }
 
   // ---------------------------------------------------------------
@@ -147,10 +164,14 @@ export class AnalyticsService {
 
     const orders = await this.prisma.order.findMany({
       where: {
-        created_at: { gte: start, lte: end },
+        created_at: { gte: start, lt: end },
         status: { not: 'cancelled' },
       },
-      include: { payment: true },
+      select: {
+        channel: true,
+        total: true,
+        payment: { select: { status: true } },
+      },
     });
 
     const channelMap = new Map<string, { revenue: number; order_count: number }>();
@@ -184,7 +205,7 @@ export class AnalyticsService {
       by: ['menu_item_id'],
       where: {
         order: {
-          created_at: { gte: start, lte: end },
+          created_at: { gte: start, lt: end },
           status: { not: 'cancelled' },
         },
       },
@@ -195,7 +216,9 @@ export class AnalyticsService {
 
     const menuItems = await this.prisma.menuItem.findMany({
       where: { id: { in: menuItemIds } },
-      include: {
+      select: {
+        id: true,
+        base_price: true,
         recipe: { select: { id: true, name: true, computed_cost: true } },
       },
     });
@@ -250,13 +273,21 @@ export class AnalyticsService {
     const [quests, tasks] = await Promise.all([
       this.prisma.quest.findMany({
         where: questWhere,
-        include: { owner: { select: { name: true, role: { select: { name: true } } } } },
+        select: {
+          id: true,
+          title: true,
+          updated_at: true,
+          owner: { select: { name: true, role: { select: { name: true } } } },
+        },
         orderBy: { updated_at: 'desc' },
         take: limit,
       }),
       this.prisma.task.findMany({
         where: taskWhere,
-        include: {
+        select: {
+          id: true,
+          title: true,
+          completed_at: true,
           owner: { select: { name: true, role: { select: { name: true } } } },
         },
         orderBy: { completed_at: 'desc' },

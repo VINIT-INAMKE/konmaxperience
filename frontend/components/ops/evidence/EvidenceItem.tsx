@@ -17,11 +17,11 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button';
-import { CoolMode } from '@/components/ui/cool-mode';
 import { ShineBorder } from '@/components/ui/shine-border';
 import { RejectionDialog } from './RejectionDialog';
 import { apiClient } from '@/lib/api-client';
 import type { Evidence, EvidenceType } from '@/lib/types/evidence';
+import { getEvidenceStatusBadge } from '@/lib/status-styles';
 
 const TYPE_ICONS: Record<EvidenceType, typeof Image> = {
   photo: Image,
@@ -31,18 +31,7 @@ const TYPE_ICONS: Record<EvidenceType, typeof Image> = {
   note: FileEdit,
 };
 
-function getStatusBadgeClass(status: string) {
-  switch (status) {
-    case 'pending':
-      return 'text-amber-400 bg-amber-950 border-amber-500/20';
-    case 'approved':
-      return 'text-green-400 bg-green-950 border-green-500/20';
-    case 'rejected':
-      return 'text-red-400 bg-red-950 border-red-500/20';
-    default:
-      return '';
-  }
-}
+const getStatusBadgeClass = getEvidenceStatusBadge;
 
 function getDisplayName(evidence: Evidence): string {
   if (evidence.type === 'note') return 'Note';
@@ -173,7 +162,7 @@ export function EvidenceItem({
                 style={{ width: `${uploadProgress}%` }}
               />
             </div>
-            <span className="text-[13px] text-blue-400">{uploadProgress}%</span>
+            <span className="text-xs text-blue-400">{uploadProgress}%</span>
           </div>
         ) : (
           <Badge
@@ -185,7 +174,7 @@ export function EvidenceItem({
         )}
 
         {evidence.reviewer && (
-          <span className="text-[13px] text-muted-foreground shrink-0">
+          <span className="text-xs text-muted-foreground shrink-0">
             {evidence.reviewer.name}
           </span>
         )}
@@ -193,8 +182,7 @@ export function EvidenceItem({
         {/* Approve / Reject actions */}
         {canApprove && evidence.approval_status === 'pending' && (
           <div className="flex items-center gap-2 shrink-0">
-            <CoolMode>
-              <InteractiveHoverButton
+            <InteractiveHoverButton
                 className="h-8 px-3 text-xs border-green-500/30 hover:bg-green-950"
                 onClick={() => void handleApprove()}
                 disabled={isApproving}
@@ -208,7 +196,6 @@ export function EvidenceItem({
                   'Approve'
                 )}
               </InteractiveHoverButton>
-            </CoolMode>
             <InteractiveHoverButton
               className="h-8 px-3 text-xs border-red-500/30 hover:bg-red-950"
               onClick={() => setRejectDialogOpen(true)}
@@ -222,7 +209,7 @@ export function EvidenceItem({
       {evidence.approval_status === 'rejected' && evidence.notes && (
         <div className="pl-9">
           <p className="text-sm italic text-muted-foreground">
-            <span className="text-[13px] text-red-400 not-italic">Rejected: </span>
+            <span className="text-xs text-red-400 not-italic">Rejected: </span>
             {evidence.notes}
           </p>
         </div>

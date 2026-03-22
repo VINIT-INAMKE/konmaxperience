@@ -1,6 +1,7 @@
 'use client';
 
 import { MagicCard } from '@/components/ui/magic-card';
+import { GRADIENT_OVERLAY } from '@/lib/brand-colors';
 import { Button } from '@/components/ui/button';
 import type { MenuItem } from '@/lib/types/menu';
 import type { MenuItemAvailability } from '@/lib/types/orders';
@@ -18,7 +19,7 @@ function getServingsBadge(availability: MenuItemAvailability | undefined) {
 
   if (!available || servings_remaining <= 0) {
     return (
-      <span className="text-[12px] font-bold text-muted-foreground">
+      <span className="text-xs font-bold text-muted-foreground">
         Sold Out
       </span>
     );
@@ -33,7 +34,7 @@ function getServingsBadge(availability: MenuItemAvailability | undefined) {
 
   return (
     <span
-      className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-[12px] font-bold ${colorClass}`}
+      className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-xs font-bold ${colorClass}`}
     >
       {servings_remaining} left
     </span>
@@ -55,18 +56,18 @@ export function PosMenuItemCard({
         isSoldOut ? 'opacity-60 pointer-events-none' : ''
       }`}
     >
-      <MagicCard gradientColor="#1a1a2e" className="h-full rounded-lg">
+      <MagicCard gradientColor={GRADIENT_OVERLAY} className="h-full rounded-lg">
         <div className="flex flex-col justify-between h-full p-3 gap-2">
           {/* Top: Name + badge */}
           <div className="flex items-start justify-between gap-1">
-            <span className="text-[14px] font-normal leading-snug line-clamp-2">
+            <span className="text-sm font-normal leading-snug line-clamp-2">
               {menuItem.name}
             </span>
             <div className="shrink-0">{getServingsBadge(availability)}</div>
           </div>
 
           {/* Price */}
-          <span className="font-mono text-[14px] font-bold">
+          <span className="font-mono text-sm font-bold">
             INR {menuItem.base_price}
           </span>
 
@@ -90,7 +91,7 @@ export function PosMenuItemCard({
 
           {isSoldOut && (
             <div className="flex items-center justify-center h-9">
-              <span className="text-[12px] font-bold text-muted-foreground">
+              <span className="text-xs font-bold text-muted-foreground">
                 Sold Out
               </span>
             </div>

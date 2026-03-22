@@ -29,6 +29,10 @@ import {
   TASK_PRIORITY_LABELS,
   TASK_TYPE_XP_WEIGHT,
 } from '@/lib/types/tasks';
+import {
+  getTaskStatusBadge,
+  getTaskTypeBadge,
+} from '@/lib/status-styles';
 
 interface TaskListViewProps {
   tasks: Task[];
@@ -47,29 +51,8 @@ const priorityOrder: Record<string, number> = {
   low: 1,
 };
 
-function getTypeBadgeClass(type: string) {
-  switch (type) {
-    case 'adhoc':
-      return 'text-amber-400 bg-amber-950 border-amber-500/20';
-    case 'improvement':
-      return 'text-blue-400 bg-blue-950 border-blue-500/20';
-    default:
-      return '';
-  }
-}
-
-function getStatusBadgeClass(status: string) {
-  switch (status) {
-    case 'doing':
-      return 'text-blue-400 bg-blue-950 border-blue-500/20';
-    case 'done':
-      return 'text-green-400 bg-green-950 border-green-500/20';
-    case 'blocked':
-      return 'text-red-400 bg-red-950 border-red-500/20';
-    default:
-      return '';
-  }
-}
+const getTypeBadgeClass = getTaskTypeBadge;
+const getStatusBadgeClass = getTaskStatusBadge;
 
 function getPriorityBadgeClass(priority: string) {
   switch (priority) {
@@ -260,17 +243,17 @@ export function TaskListView({
                           {TASK_PRIORITY_LABELS[task.priority]}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-[13px] text-muted-foreground">
+                      <TableCell className="text-xs text-muted-foreground">
                         {task.owner?.name || 'Unassigned'}
                       </TableCell>
                       <TableCell
-                        className={`text-[13px] ${isOverdue ? 'text-destructive' : 'text-muted-foreground'}`}
+                        className={`text-xs ${isOverdue ? 'text-destructive' : 'text-muted-foreground'}`}
                       >
                         {task.due_date
                           ? `${format(parseISO(task.due_date), 'MMM d')}${isOverdue ? ' \u00b7 Overdue' : ''}`
                           : '-'}
                       </TableCell>
-                      <TableCell className="text-[13px]">
+                      <TableCell className="text-xs">
                         {task.valid ? (
                           <span className="text-green-500 font-medium">
                             {task.valid_xp} XP

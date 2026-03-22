@@ -15,7 +15,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { BlurFade } from '@/components/ui/blur-fade';
 import { apiClient } from '@/lib/api-client';
 import { useAuthStore } from '@/lib/stores/auth-store';
 import { RoleCode } from '@/lib/types/roles';
@@ -82,11 +81,10 @@ export default function AdminBlockersPage() {
   }
 
   return (
-    <BlurFade>
       <div className="space-y-6">
         {/* Page header */}
         <div className="flex items-center gap-3">
-          <h1 className="text-xl font-semibold">Blocked tasks</h1>
+          <h1 className="text-2xl font-bold">Blocked tasks</h1>
           <Badge variant="secondary">{blockedTasks.length}</Badge>
         </div>
 
@@ -101,6 +99,7 @@ export default function AdminBlockersPage() {
             </div>
           </div>
         ) : (
+          <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -122,7 +121,7 @@ export default function AdminBlockersPage() {
                       {task.title}
                     </Link>
                   </TableCell>
-                  <TableCell className="text-[13px] text-muted-foreground">
+                  <TableCell className="text-xs text-muted-foreground">
                     {task.owner?.name || 'Unassigned'}
                   </TableCell>
                   <TableCell className="text-sm max-w-[300px]">
@@ -130,7 +129,7 @@ export default function AdminBlockersPage() {
                       {task.blocked_reason || 'No reason given'}
                     </span>
                   </TableCell>
-                  <TableCell className="text-[13px] text-muted-foreground">
+                  <TableCell className="text-xs text-muted-foreground">
                     {formatDistanceToNow(parseISO(task.updated_at), {
                       addSuffix: true,
                     })}
@@ -149,8 +148,8 @@ export default function AdminBlockersPage() {
               ))}
             </TableBody>
           </Table>
+          </div>
         )}
       </div>
-    </BlurFade>
   );
 }

@@ -78,7 +78,7 @@ export default function DashboardPage() {
   return (
     <BlurFade>
       <div className="space-y-8">
-        <h1 className="text-2xl font-semibold">My Dashboard</h1>
+        <h1 className="text-2xl font-bold">My Dashboard</h1>
         <RoleDashboardSections />
       </div>
     </BlurFade>
@@ -125,55 +125,63 @@ function AdminDashboard() {
 
   return (
     <BlurFade>
-      <div className="space-y-8">
+      <div className="space-y-10">
         {/* Page header */}
         <div className="flex items-center justify-between gap-4 flex-wrap">
-          <h1 className="text-2xl font-semibold">Mission Control</h1>
+          <h1 className="text-2xl font-bold">Mission Control</h1>
           <AdminUserFilter />
         </div>
 
-        {/* Row 1: Approvals, Blockers, Ad-hoc Injector (D-04 positions 1-3) */}
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-          <AdminPendingApprovalsWidget />
-          <AdminBlockersWidget />
-          <AdminAdHocInjectorWidget />
-        </div>
+        {/* === ACTION ZONE — what needs you NOW === */}
+        <section className="space-y-5">
+          <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Action Required</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            <AdminPendingApprovalsWidget />
+            <AdminBlockersWidget />
+            <AdminAdHocInjectorWidget />
+          </div>
 
-        {/* Row 2: Readiness Strip (D-04 position 4) */}
-        {(metersLoading || hasLowMeters) && (
-          <section className="space-y-3">
-            {metersLoading ? (
-              <>
-                <span className="text-sm font-semibold">Attention Needed</span>
-                <ReadinessStripSkeleton />
-              </>
-            ) : (
-              meters && <DashboardReadinessStrip meters={meters} />
-            )}
-          </section>
-        )}
+          {/* KPI Alerts */}
+          {(kpisLoading || hasAlertKpis) && (
+            <div>
+              {kpisLoading ? (
+                <div className="space-y-3">
+                  <span className="text-sm font-semibold">KPIs Requiring Attention</span>
+                  <KpiAlertSkeleton />
+                </div>
+              ) : (
+                kpis && <DashboardKpiAlert kpis={kpis} />
+              )}
+            </div>
+          )}
+        </section>
 
-        {/* Row 3: KPI Alerts (D-04 position 5) */}
-        {(kpisLoading || hasAlertKpis) && (
-          <section>
-            {kpisLoading ? (
-              <div className="space-y-3">
-                <span className="text-sm font-semibold">KPIs Requiring Attention</span>
-                <KpiAlertSkeleton />
-              </div>
-            ) : (
-              kpis && <DashboardKpiAlert kpis={kpis} />
-            )}
-          </section>
-        )}
+        {/* === STATUS ZONE — current state of things === */}
+        <section className="space-y-5 border-t border-border/40 pt-8">
+          <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Status</h2>
 
-        {/* Row 4: Recent Decisions (D-04 position 6 — AFTER KPI alerts) */}
-        <section>
+          {/* Readiness Strip */}
+          {(metersLoading || hasLowMeters) && (
+            <div className="space-y-3">
+              {metersLoading ? (
+                <>
+                  <span className="text-sm font-semibold">Readiness</span>
+                  <ReadinessStripSkeleton />
+                </>
+              ) : (
+                meters && <DashboardReadinessStrip meters={meters} />
+              )}
+            </div>
+          )}
+
+          {/* Recent Decisions */}
           <AdminRecentDecisionsWidget />
         </section>
 
-        {/* Row 5: Leaderboard + Low Stock (D-04 positions 7-8) */}
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+        {/* === INTELLIGENCE ZONE — context & insights === */}
+        <section className="space-y-5 border-t border-border/40 pt-8">
+          <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Intelligence</h2>
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
           <div className="lg:col-span-3">
             {(leaderboardLoading || (leaderboard && leaderboard.enabled)) ? (
               <section>
@@ -200,6 +208,7 @@ function AdminDashboard() {
             ) : null}
           </div>
         </div>
+        </section>
       </div>
     </BlurFade>
   );

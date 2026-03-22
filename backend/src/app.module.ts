@@ -48,15 +48,48 @@ import { PermissionsGuard } from './auth/permissions.guard';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
-    ThrottlerModule.forRoot([{ ttl: 60000, limit: 100 }]),
+    ThrottlerModule.forRoot([
+      { name: 'short', ttl: 1000, limit: 3 },
+      { name: 'medium', ttl: 10000, limit: 20 },
+      { name: 'long', ttl: 60000, limit: 100 },
+    ]),
     ScheduleModule.forRoot(),
     EventEmitterModule.forRoot(),
-    BullModule.forRoot({
-      connection: new (require('ioredis'))(process.env.UPSTASH_REDIS_URL, {
-        maxRetriesPerRequest: null,
-        enableReadyCheck: false,
-      }),
-    }),
+    ...((() => {
+      if (!process.env.UPSTASH_REDIS_URL) {
+        console.warn('[BullMQ] UPSTASH_REDIS_URL not set — notification queue disabled');
+        return [];
+      }
+      try {
+        const Redis = require('ioredis');
+        let errorLogged = false;
+        const conn = new Redis(process.env.UPSTASH_REDIS_URL, {
+          maxRetriesPerRequest: null,
+          enableReadyCheck: false,
+          connectTimeout: 5000,
+          lazyConnect: true,
+          retryStrategy: (times: number) => {
+            if (times > 2) {
+              if (!errorLogged) {
+                console.warn('[BullMQ] Redis unreachable after 3 attempts — queue disabled. App continues without notifications.');
+                errorLogged = true;
+              }
+              return null; // stop retrying
+            }
+            return Math.min(times * 1000, 3000);
+          },
+        });
+        conn.on('error', (err: Error) => {
+          if (!errorLogged) {
+            console.warn(`[BullMQ] Redis error: ${err.message}`);
+          }
+        });
+        return [BullModule.forRoot({ connection: conn })];
+      } catch (err) {
+        console.warn('[BullMQ] Failed to initialize Redis — notification queue disabled');
+        return [];
+      }
+    })()),
     PrismaModule,
     AuthModule,
     PermissionsModule,

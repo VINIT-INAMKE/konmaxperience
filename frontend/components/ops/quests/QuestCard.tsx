@@ -63,7 +63,7 @@ export function QuestCard({ quest }: QuestCardProps) {
             />
 
             {/* Meta row */}
-            <div className="flex items-center gap-3 text-[13px] text-muted-foreground">
+            <div className="flex items-center gap-3 text-xs text-muted-foreground">
               {totalTasks > 0 && (
                 <span>
                   {totalTasks} task{totalTasks !== 1 ? 's' : ''}

@@ -10,6 +10,7 @@ import {
   Body,
   ParseUUIDPipe,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { MenuService } from './menu.service';
 import { Public } from '../common/decorators/public.decorator';
 import { RequiresPermission } from '../common/decorators/permissions.decorator';
@@ -30,6 +31,7 @@ export class MenuController {
 
   @Get('categories')
   @Public()
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
   async findCategories(@Query('brand_id') brand_id?: string) {
     return this.menuService.findCategories(brand_id);
   }
@@ -61,6 +63,7 @@ export class MenuController {
 
   @Get('items')
   @Public()
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
   async findItems(
     @Query('category_id') category_id?: string,
     @Query('brand_id') brand_id?: string,
@@ -96,6 +99,7 @@ export class MenuController {
   // IMPORTANT: Batch route BEFORE parameterized route to prevent shadowing
   @Get('availability')
   @Public()
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
   async getAllServingsAvailable() {
     return this.menuService.getAllServingsAvailable();
   }

@@ -65,6 +65,7 @@ export class AuthService {
         email: user.email,
         roleCode: user.role.code,
         roleName: user.role.name,
+        permissions: user.role.permissions,
         xp_total: user.xp_total,
         level: user.level,
       },
@@ -83,20 +84,28 @@ export class AuthService {
         revoked_at: null,
         expires_at: { gt: new Date() },
       },
+      include: {
+        user: {
+          include: { role: true },
+        },
+      },
     });
 
     if (!storedToken) {
       throw new UnauthorizedException('Invalid or expired refresh token');
     }
 
-    const user = await this.prisma.user.findUnique({
-      where: { id: storedToken.user_id },
-      include: { role: true },
-    });
+    const user = storedToken.user;
 
     if (!user || user.status !== 'active') {
       throw new UnauthorizedException('User not found or inactive');
     }
+
+    // Revoke the old refresh token
+    await this.prisma.refreshToken.update({
+      where: { id: storedToken.id },
+      data: { revoked_at: new Date() },
+    });
 
     const payload: JwtPayload = {
       userId: user.id,
@@ -105,14 +114,31 @@ export class AuthService {
 
     const accessToken = this.jwtService.sign(payload, { expiresIn: '15m' });
 
+    // Issue a new refresh token (rotation)
+    const newRefreshToken = this.jwtService.sign(payload, { expiresIn: '7d' });
+    const newTokenHash = crypto
+      .createHash('sha256')
+      .update(newRefreshToken)
+      .digest('hex');
+
+    await this.prisma.refreshToken.create({
+      data: {
+        user_id: user.id,
+        token_hash: newTokenHash,
+        expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      },
+    });
+
     return {
       accessToken,
+      refreshToken: newRefreshToken,
       user: {
         id: user.id,
         name: user.name,
         email: user.email,
         roleCode: user.role.code,
         roleName: user.role.name,
+        permissions: user.role.permissions,
         xp_total: user.xp_total,
         level: user.level,
       },
@@ -151,6 +177,12 @@ export class AuthService {
       // Log but don't error -- prevent email enumeration
       return;
     }
+
+    // Invalidate all existing unused reset tokens for this user
+    await this.prisma.passwordResetToken.updateMany({
+      where: { user_id: user.id, used_at: null },
+      data: { used_at: new Date() },
+    });
 
     const token = crypto.randomBytes(32).toString('hex');
     const tokenHash = crypto
@@ -198,6 +230,12 @@ export class AuthService {
       where: { id: resetToken.id },
       data: { used_at: new Date() },
     });
+
+    // Revoke all active refresh tokens for this user (invalidate all sessions)
+    await this.prisma.refreshToken.updateMany({
+      where: { user_id: resetToken.user_id, revoked_at: null },
+      data: { revoked_at: new Date() },
+    });
   }
 
   async setPassword(token: string, newPassword: string) {
@@ -208,7 +246,16 @@ export class AuthService {
   async getProfile(userId: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      include: { role: true },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        status: true,
+        xp_total: true,
+        level: true,
+        created_at: true,
+        role: { select: { code: true, name: true, permissions: true } },
+      },
     });
 
     if (!user) {
@@ -221,6 +268,7 @@ export class AuthService {
       email: user.email,
       roleCode: user.role.code,
       roleName: user.role.name,
+      permissions: user.role.permissions,
       status: user.status,
       xpTotal: user.xp_total,
       level: user.level,

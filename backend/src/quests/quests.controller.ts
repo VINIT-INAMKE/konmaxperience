@@ -19,8 +19,12 @@ export class QuestsController {
   constructor(private readonly questsService: QuestsService) {}
 
   @Get()
-  async findAll(@Query('mission_id') missionId?: string) {
-    return this.questsService.findAll({ missionId });
+  async findAll(
+    @Query('mission_id') missionId?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.questsService.findAll({ missionId, page: Number(page), limit: Number(limit) });
   }
 
   @Get(':id')

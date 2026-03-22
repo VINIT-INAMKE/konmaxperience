@@ -43,7 +43,7 @@ export default function WinsBoardPage() {
     <BlurFade>
       <div className="space-y-6">
         {/* Header */}
-        <h1 className="text-[20px] font-bold">Wins & Milestones</h1>
+        <h1 className="text-2xl font-bold">Wins & Milestones</h1>
 
         {/* Loading state */}
         {isLoading && (
@@ -64,7 +64,7 @@ export default function WinsBoardPage() {
           <div className="flex flex-col items-center justify-center py-16 space-y-4 text-center">
             <Trophy className="size-12 text-muted-foreground" />
             <div className="space-y-1">
-              <h2 className="text-[20px] font-bold">No milestones yet</h2>
+              <h2 className="text-xl font-bold">No milestones yet</h2>
               <p className="text-sm text-muted-foreground">
                 Completed quests and validated tasks will appear here.
               </p>

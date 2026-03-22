@@ -7,12 +7,18 @@ import { ArrowLeft, Plus, Loader2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { BlurFade } from '@/components/ui/blur-fade';
+import dynamic from 'next/dynamic';
 import { Confetti, type ConfettiRef } from '@/components/ui/confetti';
+import { Skeleton } from '@/components/ui/skeleton';
 import { QuestProgress } from '@/components/ops/quests/QuestProgress';
 import { ConfirmActivateDialog } from '@/components/ops/quests/ConfirmActivateDialog';
-import { TaskKanban } from '@/components/ops/tasks/TaskKanban';
 import { TaskListView } from '@/components/ops/tasks/TaskListView';
 import { TaskViewToggle } from '@/components/ops/tasks/TaskViewToggle';
+
+const TaskKanban = dynamic(
+  () => import('@/components/ops/tasks/TaskKanban').then((m) => m.TaskKanban),
+  { loading: () => <Skeleton className="h-96 rounded-xl" /> },
+);
 import { apiClient } from '@/lib/api-client';
 import { useAuthStore } from '@/lib/stores/auth-store';
 import { RoleCode } from '@/lib/types/roles';
@@ -140,7 +146,7 @@ export default function QuestDetailPage(props: {
         <div className="space-y-2">
           <Link
             href={`/missions/${quest.mission_id}`}
-            className="inline-flex items-center gap-1 text-[13px] text-muted-foreground hover:text-foreground transition-colors"
+            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
           >
             <ArrowLeft className="size-3" />
             {quest.mission?.title || 'Mission'}
@@ -148,7 +154,7 @@ export default function QuestDetailPage(props: {
 
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <h1 className="text-xl font-semibold">{quest.title}</h1>
+              <h1 className="text-2xl font-bold">{quest.title}</h1>
               <Badge variant="secondary">Week {quest.week_number}</Badge>
               <Badge
                 variant="secondary"

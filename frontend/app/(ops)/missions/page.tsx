@@ -6,7 +6,6 @@ import { Rocket, AlertCircle, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { BlurFade } from '@/components/ui/blur-fade';
 import { apiClient } from '@/lib/api-client';
 import { useAuthStore } from '@/lib/stores/auth-store';
 import { RoleCode } from '@/lib/types/roles';
@@ -33,11 +32,10 @@ export default function MissionsPage() {
   const isEmpty = !isLoading && (!missions || missions.length === 0);
 
   return (
-    <BlurFade>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
-          <h1 className="text-xl font-semibold">Missions</h1>
+          <h1 className="text-2xl font-bold">Missions</h1>
           {isAdmin && (
             <Button nativeButton={false} render={<Link href="/missions/new" />}>
               <Plus className="size-4" />
@@ -112,6 +110,5 @@ export default function MissionsPage() {
           </div>
         )}
       </div>
-    </BlurFade>
   );
 }

@@ -1,6 +1,7 @@
 import React from "react"
 
 import { cn } from "@/lib/utils"
+import { PULSE_COLOR } from "@/lib/brand-colors"
 
 interface PulsatingButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   pulseColor?: string
@@ -15,7 +16,7 @@ export const PulsatingButton = React.forwardRef<
     {
       className,
       children,
-      pulseColor = "#808080",
+      pulseColor = PULSE_COLOR,
       duration = "1.5s",
       ...props
     },

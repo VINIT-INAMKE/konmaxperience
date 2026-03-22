@@ -73,7 +73,7 @@ export function ApprovalQueue() {
       <div className="flex flex-col items-center justify-center py-12 text-center space-y-2">
         <AlertCircle className="size-10 text-destructive" />
         <p className="text-sm text-muted-foreground">
-          Could not load approvals. Try refreshing.
+          Can't load approvals right now. Try refreshing.
         </p>
       </div>
     );

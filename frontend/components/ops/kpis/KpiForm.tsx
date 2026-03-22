@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { useQueryClient, useMutation } from '@tanstack/react-query';
+import { useQueryClient, useMutation, useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { Check, X, Search } from 'lucide-react';
 import {
   Sheet,
   SheetContent,
@@ -43,8 +44,15 @@ const kpiSchema = z.object({
   target_value: z.coerce.number().min(0, 'Must be a non-negative number'),
   current_value: z.coerce.number().min(0).optional(),
   status: z.enum(['on_track', 'at_risk', 'off_track']).optional(),
-  linked_task_ids_raw: z.string().optional(),
 });
+
+interface TaskOption {
+  id: string;
+  title: string;
+  status: string;
+  owner?: { name: string };
+  quest?: { title: string };
+}
 
 type KpiFormData = z.infer<typeof kpiSchema>;
 
@@ -57,6 +65,8 @@ interface KpiFormProps {
 export function KpiForm({ kpi, open, onOpenChange }: KpiFormProps) {
   const queryClient = useQueryClient();
   const isEdit = !!kpi;
+  const [selectedTaskIds, setSelectedTaskIds] = useState<string[]>([]);
+  const [taskSearch, setTaskSearch] = useState('');
 
   const {
     register,
@@ -74,9 +84,44 @@ export function KpiForm({ kpi, open, onOpenChange }: KpiFormProps) {
       target_value: 0,
       current_value: 0,
       status: 'on_track',
-      linked_task_ids_raw: '',
     },
   });
+
+  // Fetch tasks for the picker
+  const { data: allTasks } = useQuery({
+    queryKey: ['tasks-for-kpi'],
+    queryFn: () => apiClient.get<TaskOption[]>('/tasks?limit=100'),
+    enabled: open,
+  });
+
+  // Filter tasks by search
+  const filteredTasks = useMemo(() => {
+    if (!allTasks) return [];
+    if (!taskSearch.trim()) return allTasks;
+    const q = taskSearch.toLowerCase();
+    return allTasks.filter(
+      (t) =>
+        t.title.toLowerCase().includes(q) ||
+        t.owner?.name?.toLowerCase().includes(q) ||
+        t.quest?.title?.toLowerCase().includes(q),
+    );
+  }, [allTasks, taskSearch]);
+
+  // Get selected task objects for display
+  const selectedTasks = useMemo(() => {
+    if (!allTasks) return [];
+    return allTasks.filter((t) => selectedTaskIds.includes(t.id));
+  }, [allTasks, selectedTaskIds]);
+
+  function toggleTask(taskId: string) {
+    setSelectedTaskIds((prev) =>
+      prev.includes(taskId) ? prev.filter((id) => id !== taskId) : [...prev, taskId],
+    );
+  }
+
+  function removeTask(taskId: string) {
+    setSelectedTaskIds((prev) => prev.filter((id) => id !== taskId));
+  }
 
   // Populate form when editing
   useEffect(() => {
@@ -89,8 +134,8 @@ export function KpiForm({ kpi, open, onOpenChange }: KpiFormProps) {
         target_value: kpi.target_value,
         current_value: kpi.current_value,
         status: kpi.status,
-        linked_task_ids_raw: kpi.tasks.map((t) => t.id).join('\n'),
       });
+      setSelectedTaskIds(kpi.tasks.map((t) => t.id));
     } else {
       reset({
         name: '',
@@ -100,20 +145,14 @@ export function KpiForm({ kpi, open, onOpenChange }: KpiFormProps) {
         target_value: 0,
         current_value: 0,
         status: 'on_track',
-        linked_task_ids_raw: '',
       });
+      setSelectedTaskIds([]);
     }
+    setTaskSearch('');
   }, [kpi, reset, open]);
 
   const mutation = useMutation({
     mutationFn: async (data: KpiFormData) => {
-      const linked_task_ids = data.linked_task_ids_raw
-        ? data.linked_task_ids_raw
-            .split('\n')
-            .map((id) => id.trim())
-            .filter(Boolean)
-        : [];
-
       if (isEdit && kpi) {
         const body: UpdateKpiDto = {
           name: data.name,
@@ -122,7 +161,7 @@ export function KpiForm({ kpi, open, onOpenChange }: KpiFormProps) {
           target_value: data.target_value,
           current_value: data.current_value ?? 0,
           status: data.status as KpiStatus,
-          linked_task_ids,
+          linked_task_ids: selectedTaskIds,
         };
         return apiClient.patch(`/kpis/${kpi.id}`, body);
       } else {
@@ -134,7 +173,7 @@ export function KpiForm({ kpi, open, onOpenChange }: KpiFormProps) {
           current_value: data.current_value ?? 0,
           status: data.status as KpiStatus,
           domain: data.domain,
-          linked_task_ids,
+          linked_task_ids: selectedTaskIds,
         };
         return apiClient.post('/kpis', body);
       }
@@ -281,17 +320,86 @@ export function KpiForm({ kpi, open, onOpenChange }: KpiFormProps) {
             </Select>
           </div>
 
-          {/* Linked task IDs */}
+          {/* Linked Tasks */}
           <div className="space-y-1.5">
-            <Label htmlFor="kpi-tasks">Linked Task IDs</Label>
-            <Textarea
-              id="kpi-tasks"
-              placeholder="Paste task IDs, one per line"
-              className="font-mono text-xs"
-              {...register('linked_task_ids_raw')}
-            />
+            <Label>Linked Tasks</Label>
+
+            {/* Selected tasks chips */}
+            {selectedTasks.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {selectedTasks.map((t) => (
+                  <span
+                    key={t.id}
+                    className="inline-flex items-center gap-1 rounded-md bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary"
+                  >
+                    {t.title}
+                    <button
+                      type="button"
+                      onClick={() => removeTask(t.id)}
+                      className="ml-0.5 rounded-sm hover:bg-primary/20 p-0.5"
+                    >
+                      <X className="size-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {/* Search input */}
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
+              <Input
+                placeholder="Search tasks by title, owner, or quest..."
+                value={taskSearch}
+                onChange={(e) => setTaskSearch(e.target.value)}
+                className="pl-8 text-sm"
+              />
+            </div>
+
+            {/* Task list */}
+            <div className="max-h-40 overflow-y-auto rounded-md border">
+              {filteredTasks.length === 0 ? (
+                <p className="p-3 text-xs text-muted-foreground text-center">
+                  {allTasks ? 'No tasks match your search' : 'Loading tasks...'}
+                </p>
+              ) : (
+                filteredTasks.map((t) => {
+                  const isSelected = selectedTaskIds.includes(t.id);
+                  return (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => toggleTask(t.id)}
+                      className={`w-full flex items-center gap-2 px-3 py-2 text-left text-sm hover:bg-accent transition-colors border-b last:border-b-0 ${
+                        isSelected ? 'bg-primary/5' : ''
+                      }`}
+                    >
+                      <div
+                        className={`size-4 rounded border flex items-center justify-center shrink-0 ${
+                          isSelected
+                            ? 'bg-primary border-primary text-primary-foreground'
+                            : 'border-muted-foreground/30'
+                        }`}
+                      >
+                        {isSelected && <Check className="size-3" />}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-medium">{t.title}</p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {t.owner?.name ?? 'Unassigned'}
+                          {t.quest ? ` · ${t.quest.title}` : ''}
+                          {' · '}
+                          {t.status}
+                        </p>
+                      </div>
+                    </button>
+                  );
+                })
+              )}
+            </div>
+
             <p className="text-xs text-muted-foreground">
-              One task ID per line. Full combobox selection coming in v2.
+              {selectedTaskIds.length} task{selectedTaskIds.length !== 1 ? 's' : ''} linked
             </p>
           </div>
 

@@ -137,7 +137,7 @@ export function TaskForm({
       </div>
 
       {/* Task type + Domain */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-1.5">
           <Label>Task type</Label>
           <Select
@@ -207,7 +207,7 @@ export function TaskForm({
       </div>
 
       {/* Owner + Priority */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-1.5">
           <Label>Assigned to</Label>
           <Select
@@ -264,7 +264,7 @@ export function TaskForm({
       </div>
 
       {/* XP + Due date */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-1.5">
           <Label htmlFor="xp">XP</Label>
           <Input

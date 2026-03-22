@@ -4,11 +4,10 @@ import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { ChevronLeft, Loader2, CheckCircle } from 'lucide-react';
+import { ArrowLeft, Loader2, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { forgotPassword } from '@/lib/auth';
 import { ApiError } from '@/lib/api-client';
@@ -54,12 +53,12 @@ export default function ForgotPasswordPage() {
       } catch (err) {
         if (err instanceof ApiError) {
           if (err.status === 404) {
-            setError('No account found with that email address.');
+            setError('No account with that email — check the spelling and try again.');
           } else {
             setError(err.message);
           }
         } else {
-          setError('Something went wrong. Please try again.');
+          setError('Something went wrong — try again.');
         }
       } finally {
         setIsLoading(false);
@@ -81,103 +80,89 @@ export default function ForgotPasswordPage() {
 
   if (successEmail) {
     return (
-      <Card className="max-w-[400px] w-full rounded-xl border shadow-sm">
-        <CardContent className="px-6 py-6 text-center space-y-4">
-          <div className="flex justify-center">
-            <CheckCircle className="size-12 text-primary" />
-          </div>
-          <h1 className="text-xl font-semibold">Check your email</h1>
+      <div className="w-full max-w-sm space-y-6 text-center">
+        <CheckCircle className="size-10 text-success mx-auto" />
+        <div className="space-y-2">
+          <h1 className="text-2xl font-bold tracking-tight">Check your email</h1>
           <p className="text-sm text-muted-foreground">
-            We&apos;ve sent a reset link to {successEmail}. It expires in 15
-            minutes.
+            Reset link sent to <span className="font-medium text-foreground">{successEmail}</span>.
+            It expires in 15 minutes.
           </p>
-          <Button
-            variant="ghost"
-            onClick={handleResend}
-            disabled={resendCountdown > 0 || isLoading}
-            className="w-full"
-          >
-            {resendCountdown > 0
-              ? `Resend email (${resendCountdown}s)`
-              : 'Resend email'}
-          </Button>
-          <Link
-            href="/login"
-            className="text-sm text-muted-foreground hover:text-foreground hover:underline underline-offset-4 transition-colors inline-flex items-center gap-1"
-          >
-            <ChevronLeft className="size-4" />
-            Back to sign in
-          </Link>
-        </CardContent>
-      </Card>
+        </div>
+        <Button
+          variant="outline"
+          onClick={handleResend}
+          disabled={resendCountdown > 0 || isLoading}
+          className="w-full"
+        >
+          {resendCountdown > 0
+            ? `Resend email (${resendCountdown}s)`
+            : 'Resend email'}
+        </Button>
+        <Link
+          href="/login"
+          className="text-sm text-muted-foreground hover:text-foreground transition-colors inline-flex items-center gap-1"
+        >
+          <ArrowLeft className="size-3" />
+          Back to sign in
+        </Link>
+      </div>
     );
   }
 
   return (
-    <Card className="max-w-[400px] w-full rounded-xl border shadow-sm">
-      <CardHeader className="px-6 pt-6 pb-0 space-y-1">
+    <div className="w-full max-w-sm space-y-8">
+      <div className="space-y-2">
         <Link
           href="/login"
-          className="text-sm text-muted-foreground hover:text-foreground hover:underline underline-offset-4 transition-colors inline-flex items-center gap-1 mb-2"
+          className="text-sm text-muted-foreground hover:text-foreground transition-colors inline-flex items-center gap-1 mb-4"
         >
-          <ChevronLeft className="size-4" />
+          <ArrowLeft className="size-3" />
           Back to sign in
         </Link>
-        <p className="text-[28px] font-semibold leading-[1.1] text-center">
-          Konma Xperience
-        </p>
-        <h1 className="text-xl font-semibold text-center">
-          Reset your password
-        </h1>
-        <p className="text-sm text-muted-foreground text-center">
+        <h1 className="text-2xl font-bold tracking-tight">Reset your password</h1>
+        <p className="text-sm text-muted-foreground">
           Enter your email and we&apos;ll send a reset link.
         </p>
-      </CardHeader>
-      <CardContent className="px-6 pb-6 pt-4">
-        {error && (
-          <Alert variant="destructive" className="mb-4">
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="email">Email address</Label>
-            <Input
-              id="email"
-              type="email"
-              autoComplete="email"
-              placeholder="you@example.com"
-              disabled={isLoading}
-              aria-invalid={!!errors.email}
-              aria-describedby={errors.email ? 'email-error' : undefined}
-              {...register('email', {
-                required: 'Email is required',
-              })}
-            />
-            {errors.email && (
-              <p id="email-error" className="text-xs text-destructive">
-                {errors.email.message}
-              </p>
-            )}
-          </div>
+      </div>
 
-          <Button
-            type="submit"
-            className="w-full"
-            size="lg"
+      {error && (
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+        <div className="space-y-2">
+          <Label htmlFor="email">Email</Label>
+          <Input
+            id="email"
+            type="email"
+            autoComplete="email"
+            placeholder="you@example.com"
             disabled={isLoading}
-          >
-            {isLoading ? (
-              <>
-                <Loader2 className="size-4 animate-spin motion-reduce:animate-none" />
-                Sending...
-              </>
-            ) : (
-              'Send reset link'
-            )}
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
+            aria-invalid={!!errors.email}
+            aria-describedby={errors.email ? 'email-error' : undefined}
+            {...register('email', { required: 'Email is required' })}
+          />
+          {errors.email && (
+            <p id="email-error" className="text-xs text-destructive">
+              {errors.email.message}
+            </p>
+          )}
+        </div>
+
+        <Button type="submit" className="w-full h-11" disabled={isLoading}>
+          {isLoading ? (
+            <>
+              <Loader2 className="size-4 animate-spin motion-reduce:animate-none" />
+              Sending...
+            </>
+          ) : (
+            'Send reset link'
+          )}
+        </Button>
+      </form>
+    </div>
   );
 }

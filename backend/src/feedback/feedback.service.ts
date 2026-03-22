@@ -49,10 +49,15 @@ export class FeedbackService {
       where.created_at = createdAt;
     }
 
+    const take = Math.min(Number(filters.limit) || 50, 100);
+    const skip = ((Number(filters.page) || 1) - 1) * take;
+
     return this.prisma.feedback.findMany({
       where,
       include: { order: { select: { id: true } } },
       orderBy: { created_at: 'desc' },
+      take,
+      skip,
     });
   }
 

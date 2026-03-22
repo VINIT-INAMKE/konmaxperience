@@ -12,7 +12,7 @@ export function AvailabilityBadge({ available }: AvailabilityBadgeProps) {
   }
 
   return (
-    <Badge variant="secondary" className="text-gray-400">
+    <Badge variant="secondary" className="text-muted-foreground">
       Sold Out
     </Badge>
   );

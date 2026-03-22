@@ -72,7 +72,7 @@ export function DecisionForm({ open, onOpenChange, onCreated }: DecisionFormProp
       handleClose();
       onCreated(response.id);
     } catch {
-      toast.error('Failed to log decision. Check your inputs and try again.');
+      toast.error("Couldn't log that decision \u2014 check the fields and try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -80,12 +80,12 @@ export function DecisionForm({ open, onOpenChange, onCreated }: DecisionFormProp
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-[480px]">
+      <SheetContent side="right" className="w-full sm:max-w-[480px]">
         <SheetHeader>
           <SheetTitle>Log Decision</SheetTitle>
         </SheetHeader>
 
-        <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4 mt-4">
+        <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4 mt-4 px-4 pb-4 overflow-y-auto">
           {/* Title */}
           <div className="space-y-2">
             <Label htmlFor="decision-title">Title</Label>
@@ -176,7 +176,7 @@ export function DecisionForm({ open, onOpenChange, onCreated }: DecisionFormProp
               {isSubmitting ? (
                 <span className="flex items-center gap-2">
                   <Loader2 className="size-4 animate-spin" />
-                  Saving...
+                  Logging decision...
                 </span>
               ) : (
                 'Log Decision'

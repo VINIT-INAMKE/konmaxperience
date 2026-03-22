@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button';
+import { Button } from '@/components/ui/button';
 import type { PurchaseOrder, PurchaseOrderStatus } from '@/lib/types/purchase-order';
 import { PO_STATUS_BADGE_CLASSES, PO_STATUS_LABELS } from '@/lib/types/purchase-order';
 
@@ -48,9 +48,9 @@ export function PurchaseOrderRow({ po, onCancel }: PurchaseOrderRowProps) {
       <td className="px-4 py-2">
         <div className="flex items-center gap-2">
           <Link href={`/operations/purchase-orders/${po.id}`}>
-            <InteractiveHoverButton className="h-7 text-xs px-3">
+            <Button variant="outline" size="sm" className="h-7 text-xs px-3">
               View
-            </InteractiveHoverButton>
+            </Button>
           </Link>
           {canCancel && (
             <button

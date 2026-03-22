@@ -12,7 +12,7 @@ export function CapacityBadge({ spotsRemaining }: CapacityBadgeProps) {
   }
 
   return (
-    <Badge variant="outline" className="text-gray-400">
+    <Badge variant="outline" className="text-muted-foreground">
       Sold Out
     </Badge>
   );

@@ -3,14 +3,19 @@ import {
   NotFoundException,
   ForbiddenException,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { getPermissionsForRole } from '../permissions/permissions.cache';
 import { Permission } from '../types/permissions';
 import { CreateEvidenceDto } from './dto/create-evidence.dto';
+import { TasksService } from '../tasks/tasks.service';
 
 @Injectable()
 export class EvidenceService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly tasksService: TasksService,
+  ) {}
 
   async getFeed(status?: string, limit = 20, cursor?: string) {
     const where: Record<string, unknown> = {};
@@ -58,6 +63,7 @@ export class EvidenceService {
         },
       },
       orderBy: { created_at: 'asc' },
+      take: 200,
     });
   }
 
@@ -180,91 +186,17 @@ export class EvidenceService {
   }
 
   /**
-   * Recalculate quest progress using VALID tasks (not status='done').
-   * Core progress: valid core tasks / baseline_task_count
-   * Adhoc progress: valid adhoc tasks / total adhoc tasks
-   * Combined: weighted formula
-   */
-  async recalculateQuestProgress(
-    questId: string | null,
-    tx: any,
-  ): Promise<void> {
-    if (!questId) return;
-
-    const quest = await tx.quest.findUnique({ where: { id: questId } });
-    if (!quest) return;
-
-    // TIGHTENED: count tasks where valid=true (NOT status='done')
-    const coreValidCount = await tx.task.count({
-      where: { quest_id: questId, task_type: 'core', valid: true },
-    });
-    const coreProgress =
-      quest.baseline_task_count > 0
-        ? Math.round((coreValidCount / quest.baseline_task_count) * 100)
-        : 0;
-
-    const totalAdhoc = await tx.task.count({
-      where: { quest_id: questId, task_type: 'adhoc' },
-    });
-    const validAdhoc = await tx.task.count({
-      where: { quest_id: questId, task_type: 'adhoc', valid: true },
-    });
-    const adhocProgress =
-      totalAdhoc > 0 ? Math.round((validAdhoc / totalAdhoc) * 100) : 0;
-
-    // Combined progress (weighted: core carries more weight)
-    const combinedProgress =
-      quest.baseline_task_count > 0
-        ? Math.round(
-            ((coreValidCount + validAdhoc * 0.7) /
-              (quest.baseline_task_count + totalAdhoc * 0.7)) *
-              100,
-          )
-        : 0;
-
-    // IMPORTANT: Do NOT touch quest.status -- status is a separate concern
-    await tx.quest.update({
-      where: { id: questId },
-      data: {
-        core_progress_percent: coreProgress,
-        adhoc_progress_percent: adhocProgress,
-        progress_percent: combinedProgress,
-      },
-    });
-  }
-
-  /**
-   * Recalculate mission progress using VALID tasks (not status='done').
-   */
-  async recalculateMissionProgress(
-    missionId: string,
-    tx: any,
-  ): Promise<void> {
-    const total = await tx.task.count({
-      where: { mission_id: missionId },
-    });
-    const validCount = await tx.task.count({
-      where: { mission_id: missionId, valid: true },
-    });
-    const progress = total > 0 ? Math.round((validCount / total) * 100) : 0;
-
-    // IMPORTANT: Do NOT touch mission.status
-    await tx.mission.update({
-      where: { id: missionId },
-      data: { progress_percent: progress },
-    });
-  }
-
-  /**
    * Apply or revoke readiness events for a task.
    * Supports idempotent creation and revocation with recomputation.
+   * Accepts optional pre-fetched task data to avoid a redundant DB round-trip.
    */
   async applyReadinessFromTask(
     taskId: string,
     isValid: boolean,
     tx: any,
+    taskData?: { readiness_meter_id: string | null; readiness_value: number | null },
   ): Promise<void> {
-    const task = await tx.task.findUnique({
+    const task = taskData ?? await tx.task.findUnique({
       where: { id: taskId },
       select: {
         id: true,
@@ -338,9 +270,24 @@ export class EvidenceService {
   ): Promise<{ valid: boolean; valid_xp: number; user: { id: string; xp_total: number; level: number } }> {
     const task = await tx.task.findUnique({
       where: { id: taskId },
-      include: {
-        evidence: true,
-        approvals: true,
+      select: {
+        id: true,
+        status: true,
+        xp: true,
+        task_type: true,
+        requires_approval: true,
+        owner_user_id: true,
+        quest_id: true,
+        mission_id: true,
+        readiness_meter_id: true,
+        readiness_value: true,
+        // Use _count with filters instead of loading full relations
+        _count: {
+          select: {
+            evidence: { where: { approval_status: 'approved' } },
+            approvals: true,
+          },
+        },
       },
     });
 
@@ -348,13 +295,16 @@ export class EvidenceService {
       throw new NotFoundException(`Task with ID ${taskId} not found`);
     }
 
-    const hasApprovedEvidence = task.evidence.some(
-      (e: any) => e.approval_status === 'approved',
-    );
+    const hasApprovedEvidence = task._count.evidence > 0;
 
-    const approvalsSatisfied = task.requires_approval
-      ? task.approvals.every((a: any) => a.status === 'approved')
-      : true;
+    // For approvals, we need to check if ALL are approved (not just count)
+    let approvalsSatisfied = true;
+    if (task.requires_approval && task._count.approvals > 0) {
+      const nonApprovedCount = await tx.approval.count({
+        where: { entity_id: taskId, status: { not: 'approved' } },
+      });
+      approvalsSatisfied = nonApprovedCount === 0;
+    }
 
     const isValid =
       task.status === 'done' && hasApprovedEvidence && approvalsSatisfied;
@@ -373,9 +323,12 @@ export class EvidenceService {
 
     // Cascade: recalculate everything
     await this.recalculateUserXp(task.owner_user_id, tx);
-    await this.recalculateQuestProgress(task.quest_id, tx);
-    await this.recalculateMissionProgress(task.mission_id, tx);
-    await this.applyReadinessFromTask(taskId, isValid, tx);
+    await this.tasksService.recalculateQuestProgress(task.quest_id, tx);
+    await this.tasksService.recalculateMissionProgress(task.mission_id, tx);
+    await this.applyReadinessFromTask(taskId, isValid, tx, {
+      readiness_meter_id: task.readiness_meter_id,
+      readiness_value: task.readiness_value,
+    });
 
     const updatedUser = await tx.user.findUnique({
       where: { id: task.owner_user_id },
@@ -421,7 +374,7 @@ export class EvidenceService {
       });
 
       return this.validateTask(evidence.task_id, tx);
-    });
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
   }
 
   /**
@@ -462,6 +415,6 @@ export class EvidenceService {
 
       // Re-validate: task may become invalid if this was the only approved evidence
       await this.validateTask(evidence.task_id, tx);
-    });
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
   }
 }

@@ -83,7 +83,7 @@ export function DelegationForm({ open, onOpenChange, onCreated }: DelegationForm
       onCreated();
       handleClose();
     } catch {
-      toast.error('Failed to create delegation. Check the dates and try again.');
+      toast.error("Couldn't create that delegation \u2014 check for date conflicts and try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -91,12 +91,12 @@ export function DelegationForm({ open, onOpenChange, onCreated }: DelegationForm
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-[480px]">
+      <SheetContent side="right" className="w-full sm:max-w-[480px]">
         <SheetHeader>
           <SheetTitle>Create Delegation</SheetTitle>
         </SheetHeader>
 
-        <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4 mt-4 px-4">
+        <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4 mt-4 px-4 pb-4 overflow-y-auto">
           {/* From User */}
           <div className="space-y-2">
             <Label htmlFor="from-user">Delegating From (Absent User)</Label>
@@ -188,7 +188,7 @@ export function DelegationForm({ open, onOpenChange, onCreated }: DelegationForm
               {isSubmitting ? (
                 <span className="flex items-center gap-2">
                   <Loader2 className="size-4 animate-spin motion-reduce:animate-none" />
-                  Creating...
+                  Setting up delegation...
                 </span>
               ) : (
                 'Create Delegation'
@@ -200,7 +200,7 @@ export function DelegationForm({ open, onOpenChange, onCreated }: DelegationForm
               onClick={handleClose}
               disabled={isSubmitting}
             >
-              Discard Delegation
+              Cancel
             </Button>
           </div>
         </form>

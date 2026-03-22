@@ -22,11 +22,16 @@ export class DecisionsController {
   constructor(private readonly decisionsService: DecisionsService) {}
 
   @Get()
-  async findAll(@Query('status') status?: string) {
-    return this.decisionsService.findAll(status);
+  async findAll(
+    @Query('status') status?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.decisionsService.findAll(status, Number(page), Number(limit));
   }
 
   @Get(':id')
+  @RequiresPermission(Permission.VIEW_ROLE_SCOPED)
   async findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.decisionsService.findOne(id);
   }

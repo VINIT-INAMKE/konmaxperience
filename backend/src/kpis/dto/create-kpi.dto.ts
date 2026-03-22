@@ -4,6 +4,7 @@ import {
   IsOptional,
   IsArray,
   IsUUID,
+  IsIn,
 } from 'class-validator';
 
 export class CreateKpiDto {
@@ -24,7 +25,7 @@ export class CreateKpiDto {
   current_value?: number;
 
   @IsOptional()
-  @IsString()
+  @IsIn(['on_track', 'at_risk', 'off_track'])
   status?: string;
 
   @IsString()

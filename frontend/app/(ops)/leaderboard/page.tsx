@@ -2,7 +2,6 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { AlertCircle } from 'lucide-react';
-import { BlurFade } from '@/components/ui/blur-fade';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -28,9 +27,8 @@ export default function LeaderboardPage() {
     !isLoading && !isError && data?.enabled && (!data.users || data.users.length === 0);
 
   return (
-    <BlurFade>
       <div className="space-y-6">
-        <h1 className="text-xl font-semibold">Team Leaderboard</h1>
+        <h1 className="text-2xl font-bold">Team Leaderboard</h1>
 
         {/* Loading state */}
         {isLoading && (
@@ -91,6 +89,5 @@ export default function LeaderboardPage() {
           />
         )}
       </div>
-    </BlurFade>
   );
 }

@@ -20,6 +20,7 @@ export class DelegationsService {
     return this.prisma.approvalDelegation.findMany({
       include: DELEGATION_INCLUDE,
       orderBy: { created_at: 'desc' },
+      take: 100,
     });
   }
 
@@ -52,6 +53,10 @@ export class DelegationsService {
   }
 
   async create(dto: CreateDelegationDto, adminId: string) {
+    if (dto.from_user_id === dto.to_user_id) {
+      throw new BadRequestException('Cannot delegate to yourself');
+    }
+
     const startDate = new Date(dto.start_date);
     const endDate = new Date(dto.end_date);
 
@@ -75,6 +80,7 @@ export class DelegationsService {
   async deactivate(id: string) {
     const delegation = await this.prisma.approvalDelegation.findUnique({
       where: { id },
+      select: { id: true },
     });
     if (!delegation) {
       throw new NotFoundException(`Delegation with ID ${id} not found`);

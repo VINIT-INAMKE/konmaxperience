@@ -3,12 +3,18 @@
 import { useQuery } from '@tanstack/react-query';
 import { BlurFade } from '@/components/ui/blur-fade';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
 import { EventCard } from '@/components/public/EventCard';
 import { apiClient } from '@/lib/api-client';
 import type { Event } from '@/lib/types/events';
 
 export default function EventsPage() {
-  const { data: events, isLoading } = useQuery({
+  const {
+    data: events,
+    isLoading,
+    error,
+    refetch,
+  } = useQuery({
     queryKey: ['public-events'],
     queryFn: () => apiClient.get<Event[]>('/events'),
   });
@@ -26,18 +32,29 @@ export default function EventsPage() {
           </div>
         )}
 
-        {!isLoading && (!events || events.length === 0) && (
+        {!isLoading && error && (
+          <div className="py-16 text-center space-y-4">
+            <p className="text-base text-muted-foreground">
+              Can&apos;t load events right now.
+            </p>
+            <Button variant="outline" onClick={() => void refetch()}>
+              Try again
+            </Button>
+          </div>
+        )}
+
+        {!isLoading && !error && (!events || events.length === 0) && (
           <div className="py-16 text-center space-y-2">
-            <h2 className="text-xl font-semibold text-gray-900">
+            <h2 className="text-xl font-semibold">
               No upcoming events
             </h2>
-            <p className="text-base text-gray-500">
+            <p className="text-base text-muted-foreground">
               Check back soon &mdash; we&apos;re always planning something new.
             </p>
           </div>
         )}
 
-        {!isLoading && events && events.length > 0 && (
+        {!isLoading && !error && events && events.length > 0 && (
           <div className="grid gap-6 md:grid-cols-2">
             {events.map((event, index) => (
               <BlurFade key={event.id} delay={index * 0.05} direction="up">

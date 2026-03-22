@@ -59,14 +59,37 @@ export class IngredientsService {
 
   async remove(id: string) {
     await this.findOne(id);
-    const usage = await this.prisma.recipeLine.count({
-      where: { ingredient_id: id },
-    });
-    if (usage > 0) {
+
+    const [recipeCount, vendorPriceCount, stockCount, movementCount, poLineCount, wasteCount] = await Promise.all([
+      this.prisma.recipeLine.count({ where: { ingredient_id: id } }),
+      this.prisma.vendorPrice.count({ where: { ingredient_id: id } }),
+      this.prisma.ingredientStock.count({ where: { ingredient_id: id } }),
+      this.prisma.stockMovement.count({ where: { ingredient_id: id } }),
+      this.prisma.purchaseOrderLine.count({ where: { ingredient_id: id } }),
+      this.prisma.wasteLog.count({ where: { ingredient_id: id } }),
+    ]);
+
+    if (recipeCount > 0) {
       throw new BadRequestException(
-        `Cannot delete ingredient — it is used in ${usage} recipe(s). Remove it from those recipes first.`,
+        `Cannot delete ingredient — it is used in ${recipeCount} recipe(s). Remove it from those recipes first.`,
       );
     }
+    if (vendorPriceCount > 0) {
+      throw new BadRequestException('Cannot delete ingredient — it has vendor prices associated.');
+    }
+    if (stockCount > 0) {
+      throw new BadRequestException('Cannot delete ingredient — it has stock records.');
+    }
+    if (movementCount > 0) {
+      throw new BadRequestException('Cannot delete ingredient — it has stock movement records.');
+    }
+    if (poLineCount > 0) {
+      throw new BadRequestException('Cannot delete ingredient — it is referenced in purchase orders.');
+    }
+    if (wasteCount > 0) {
+      throw new BadRequestException('Cannot delete ingredient — it has waste log records.');
+    }
+
     return this.prisma.ingredient.delete({ where: { id } });
   }
 

@@ -9,7 +9,6 @@ import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { login } from '@/lib/auth';
 import { ApiError } from '@/lib/api-client';
@@ -49,14 +48,12 @@ function LoginContent() {
         if (err.status === 429) {
           setError('Too many attempts. Try again in 5 minutes.');
         } else if (err.status === 401) {
-          setError(
-            'Incorrect email or password. Check your details and try again.',
-          );
+          setError('Wrong email or password — try again.');
         } else {
           setError(err.message);
         }
       } else {
-        setError('Something went wrong. Please try again.');
+        setError('Something went wrong — try again.');
       }
     } finally {
       setIsLoading(false);
@@ -64,115 +61,97 @@ function LoginContent() {
   }
 
   return (
-    <Card className="max-w-[400px] w-full rounded-xl border shadow-sm">
-      <CardHeader className="space-y-1 text-center px-6 pt-6 pb-0">
-        <p className="text-[28px] font-semibold leading-[1.1]">
-          Konma Xperience
-        </p>
-        <h1 className="text-xl font-semibold">
-          Welcome back
-        </h1>
+    <div className="w-full max-w-sm space-y-8">
+      {/* Heading */}
+      <div className="space-y-2">
+        <h1 className="text-2xl font-bold tracking-tight">Welcome back</h1>
         <p className="text-sm text-muted-foreground">
-          Sign in to Konma Xperience
+          Sign in to your account to continue.
         </p>
-      </CardHeader>
-      <CardContent className="px-6 pb-6 pt-4">
-        {message && (
-          <Alert className="mb-4">
-            <AlertDescription>{message}</AlertDescription>
-          </Alert>
-        )}
-        {error && (
-          <Alert variant="destructive" className="mb-4">
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="email">Email address</Label>
-            <Input
-              id="email"
-              type="email"
-              autoComplete="email"
-              placeholder="you@example.com"
-              disabled={isLoading}
-              aria-invalid={!!errors.email}
-              aria-describedby={errors.email ? 'email-error' : undefined}
-              {...register('email', {
-                required: 'Email is required',
-              })}
-            />
-            {errors.email && (
-              <p id="email-error" className="text-xs text-destructive">
-                {errors.email.message}
-              </p>
-            )}
-          </div>
+      </div>
 
-          <div className="space-y-2">
+      {/* Alerts */}
+      {message && (
+        <Alert>
+          <AlertDescription>{message}</AlertDescription>
+        </Alert>
+      )}
+      {error && (
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
+      {/* Form */}
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+        <div className="space-y-2">
+          <Label htmlFor="email">Email</Label>
+          <Input
+            id="email"
+            type="email"
+            autoComplete="email"
+            placeholder="you@example.com"
+            disabled={isLoading}
+            aria-invalid={!!errors.email}
+            aria-describedby={errors.email ? 'email-error' : undefined}
+            {...register('email', { required: 'Email is required' })}
+          />
+          {errors.email && (
+            <p id="email-error" className="text-xs text-destructive">
+              {errors.email.message}
+            </p>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
             <Label htmlFor="password">Password</Label>
-            <div className="relative">
-              <Input
-                id="password"
-                type={showPassword ? 'text' : 'password'}
-                autoComplete="current-password"
-                disabled={isLoading}
-                className="pr-10"
-                aria-invalid={!!errors.password}
-                aria-describedby={
-                  errors.password ? 'password-error' : undefined
-                }
-                {...register('password', {
-                  required: 'Password is required',
-                })}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-2 top-1/2 -translate-y-1/2 h-[44px] w-[44px] flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
-              >
-                {showPassword ? (
-                  <EyeOff className="size-4" />
-                ) : (
-                  <Eye className="size-4" />
-                )}
-              </button>
-            </div>
-            {errors.password && (
-              <p id="password-error" className="text-xs text-destructive">
-                {errors.password.message}
-              </p>
-            )}
-          </div>
-
-          <div className="flex justify-end">
             <Link
               href="/forgot-password"
-              className="text-sm text-muted-foreground hover:text-foreground hover:underline underline-offset-4 transition-colors"
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
             >
               Forgot password?
             </Link>
           </div>
+          <div className="relative">
+            <Input
+              id="password"
+              type={showPassword ? 'text' : 'password'}
+              autoComplete="current-password"
+              disabled={isLoading}
+              className="pr-10"
+              aria-invalid={!!errors.password}
+              aria-describedby={errors.password ? 'password-error' : undefined}
+              {...register('password', { required: 'Password is required' })}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-2 top-1/2 -translate-y-1/2 size-8 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors rounded-md"
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
+            >
+              {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+            </button>
+          </div>
+          {errors.password && (
+            <p id="password-error" className="text-xs text-destructive">
+              {errors.password.message}
+            </p>
+          )}
+        </div>
 
-          <Button
-            type="submit"
-            className="w-full"
-            size="lg"
-            disabled={isLoading}
-          >
-            {isLoading ? (
-              <>
-                <Loader2 className="size-4 animate-spin motion-reduce:animate-none" />
-                Signing in...
-              </>
-            ) : (
-              'Sign in'
-            )}
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
+        <Button type="submit" className="w-full h-11" disabled={isLoading}>
+          {isLoading ? (
+            <>
+              <Loader2 className="size-4 animate-spin motion-reduce:animate-none" />
+              Signing you in...
+            </>
+          ) : (
+            'Sign in'
+          )}
+        </Button>
+      </form>
+    </div>
   );
 }
 

@@ -4,7 +4,6 @@ import { useState, useMemo } from 'react';
 import { Search } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { BlurFade } from '@/components/ui/blur-fade';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -112,11 +111,10 @@ export default function IngredientsPage() {
   };
 
   return (
-    <BlurFade>
       <div className="space-y-6">
         {/* Page header */}
         <div className="flex items-center justify-between gap-4 flex-wrap">
-          <h1 className="text-[28px] font-semibold leading-tight">Ingredients</h1>
+          <h1 className="text-2xl font-bold">Ingredients</h1>
           <Button onClick={handleAddClick}>Add Ingredient</Button>
         </div>
 
@@ -126,7 +124,7 @@ export default function IngredientsPage() {
             value={categoryFilter}
             onValueChange={(v) => setCategoryFilter(v as CategoryFilter)}
           >
-            <TabsList>
+            <TabsList className="overflow-x-auto">
               <TabsTrigger value="all">All</TabsTrigger>
               {INGREDIENT_CATEGORIES.map((cat) => (
                 <TabsTrigger key={cat} value={cat}>
@@ -136,7 +134,7 @@ export default function IngredientsPage() {
             </TabsList>
           </Tabs>
 
-          <div className="relative w-64">
+          <div className="relative w-full sm:w-64">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
             <Input
               placeholder="Search ingredients..."
@@ -247,6 +245,5 @@ export default function IngredientsPage() {
           </DialogContent>
         </Dialog>
       </div>
-    </BlurFade>
   );
 }

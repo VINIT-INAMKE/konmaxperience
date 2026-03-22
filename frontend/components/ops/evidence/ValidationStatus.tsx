@@ -5,6 +5,7 @@ import { AnimatedCircularProgressBar } from '@/components/ui/animated-circular-p
 import { Badge } from '@/components/ui/badge';
 import type { Task } from '@/lib/types/tasks';
 import type { Evidence } from '@/lib/types/evidence';
+import { STATUS_BADGE } from '@/lib/status-styles';
 
 interface ValidationStatusProps {
   task: Task;
@@ -34,11 +35,11 @@ export function ValidationStatus({ task, evidence }: ValidationStatusProps) {
         <div className="flex items-center gap-3">
           <Badge
             variant="secondary"
-            className="text-green-400 bg-green-950 border-green-500/20"
+            className={STATUS_BADGE.green}
           >
             Valid
           </Badge>
-          <span className="text-[13px] text-green-400">Task validated</span>
+          <span className="text-xs text-green-400">Task validated</span>
         </div>
         <div className="flex justify-center">
           <AnimatedCircularProgressBar
@@ -84,7 +85,7 @@ export function ValidationStatus({ task, evidence }: ValidationStatusProps) {
               />
             )}
             <span
-              className={`text-[13px] ${
+              className={`text-xs ${
                 condition.met ? 'text-green-400' : 'text-muted-foreground'
               }`}
             >

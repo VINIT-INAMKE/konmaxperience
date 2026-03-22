@@ -16,7 +16,7 @@ const ASSET_INCLUDE = {
 export class AssetsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll(status?: string, assetType?: string) {
+  async findAll(status?: string, assetType?: string, page?: number, limit?: number) {
     const where: Record<string, unknown> = {};
     if (status) {
       where.status = status;
@@ -24,10 +24,16 @@ export class AssetsService {
     if (assetType) {
       where.asset_type = assetType;
     }
+
+    const take = Math.min(Number(limit) || 50, 100);
+    const skip = ((Number(page) || 1) - 1) * take;
+
     return this.prisma.asset.findMany({
       where,
       include: ASSET_INCLUDE,
       orderBy: { created_at: 'desc' },
+      take,
+      skip,
     });
   }
 

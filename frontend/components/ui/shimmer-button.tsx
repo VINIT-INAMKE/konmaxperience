@@ -1,6 +1,7 @@
 import React, { type ComponentPropsWithoutRef, type CSSProperties } from "react"
 
 import { cn } from "@/lib/utils"
+import { SHIMMER_COLOR, SHIMMER_BG } from "@/lib/brand-colors"
 
 export interface ShimmerButtonProps extends ComponentPropsWithoutRef<"button"> {
   shimmerColor?: string
@@ -18,11 +19,11 @@ export const ShimmerButton = React.forwardRef<
 >(
   (
     {
-      shimmerColor = "#ffffff",
+      shimmerColor = SHIMMER_COLOR,
       shimmerSize = "0.05em",
       shimmerDuration = "3s",
       borderRadius = "100px",
-      background = "rgba(0, 0, 0, 1)",
+      background = SHIMMER_BG,
       className,
       children,
       ...props

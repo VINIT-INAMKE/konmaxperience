@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsIn } from 'class-validator';
+import { IsString, IsOptional, IsIn, IsUUID } from 'class-validator';
 
 export class UpdateBrandDto {
   @IsOptional()
@@ -14,7 +14,7 @@ export class UpdateBrandDto {
   status?: string;
 
   @IsOptional()
-  @IsString()
+  @IsUUID()
   owner_user_id?: string;
 
   @IsOptional()

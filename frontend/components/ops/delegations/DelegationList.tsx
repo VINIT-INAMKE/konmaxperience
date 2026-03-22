@@ -37,7 +37,7 @@ export function DelegationList({ delegations, isLoading, isError, onRefresh }: D
       <div className="flex flex-col items-center justify-center py-12 text-center space-y-2">
         <AlertCircle className="size-8 text-destructive" />
         <p className="text-sm text-muted-foreground">
-          Couldn&apos;t load delegations. Refresh the page or try again.
+          Can&apos;t load delegations right now. Try refreshing.
         </p>
       </div>
     );
@@ -47,16 +47,16 @@ export function DelegationList({ delegations, isLoading, isError, onRefresh }: D
     <div className="space-y-6">
       {/* Active section */}
       <div className="space-y-3">
-        <p className="text-[14px] font-semibold uppercase tracking-wider text-muted-foreground">
+        <p className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
           Active
         </p>
         {active.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center space-y-3">
             <UserCheck className="size-12 text-muted-foreground" />
             <div className="space-y-1">
-              <p className="text-[20px] font-semibold">No active delegations</p>
-              <p className="text-[14px] text-muted-foreground">
-                Delegations let an admin temporarily grant approval authority to another user.
+              <p className="text-xl font-semibold">No active delegations</p>
+              <p className="text-sm text-muted-foreground">
+                Set up a delegation so someone can approve things while another person is away.
               </p>
             </div>
           </div>
@@ -85,11 +85,11 @@ export function DelegationList({ delegations, isLoading, isError, onRefresh }: D
 
         {showExpired && (
           <div className="space-y-3">
-            <p className="text-[14px] font-semibold uppercase tracking-wider text-muted-foreground">
+            <p className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
               Expired
             </p>
             {expired.length === 0 ? (
-              <p className="text-[14px] text-muted-foreground">No expired delegations.</p>
+              <p className="text-sm text-muted-foreground">No expired delegations.</p>
             ) : (
               expired.map((delegation) => (
                 <DelegationCard

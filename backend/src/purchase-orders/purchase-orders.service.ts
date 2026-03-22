@@ -3,7 +3,6 @@ import {
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
-import { Decimal } from '@prisma/client/runtime/library';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreatePurchaseOrderDto } from './dto/create-purchase-order.dto';
 import { ReceivePurchaseOrderDto } from './dto/receive-purchase-order.dto';
@@ -119,13 +118,19 @@ export class PurchaseOrdersService {
     return this.prisma.$transaction(async (tx) => {
       const po = await tx.purchaseOrder.findUniqueOrThrow({
         where: { id: poId },
-        include: { lines: true },
+        include: {
+          lines: {
+            include: {
+              ingredient: { select: { id: true, base_unit: true } },
+            },
+          },
+        },
       });
-      if (po.status !== 'ordered') {
-        throw new BadRequestException('PO must be in ordered status');
+      if (po.status !== 'ordered' && po.status !== 'partially_received') {
+        throw new BadRequestException(
+          'PO must be in ordered or partially_received status to receive',
+        );
       }
-
-      let totalReceived = new Decimal(0);
 
       for (const lineReceived of dto.lines) {
         if (!lineReceived.received_quantity || lineReceived.received_quantity <= 0) {
@@ -135,9 +140,15 @@ export class PurchaseOrdersService {
         const poLine = po.lines.find((l) => l.id === lineReceived.id);
         if (!poLine) continue;
 
-        const ingredient = await tx.ingredient.findUniqueOrThrow({
-          where: { id: poLine.ingredient_id },
-        });
+        // Validate cumulative received does not exceed ordered quantity
+        const currentReceived = Number(poLine.received_quantity ?? 0);
+        if (currentReceived + lineReceived.received_quantity > Number(poLine.quantity)) {
+          throw new BadRequestException(
+            `Receiving ${lineReceived.received_quantity} for line ${poLine.id} would exceed ordered quantity of ${poLine.quantity} (already received ${currentReceived})`,
+          );
+        }
+
+        const ingredient = poLine.ingredient;
 
         // Convert procurement unit to base_unit — pass tx, not this.prisma (Pitfall 2)
         const qtyBase = await convertUnit(
@@ -183,31 +194,34 @@ export class PurchaseOrdersService {
           },
         });
 
-        // Update line received_quantity
+        // Increment line received_quantity (not overwrite)
         await tx.purchaseOrderLine.update({
           where: { id: poLine.id },
-          data: { received_quantity: lineReceived.received_quantity },
+          data: {
+            received_quantity: { increment: lineReceived.received_quantity },
+          },
         });
-
-        totalReceived = totalReceived.add(
-          new Decimal(lineReceived.received_quantity).mul(
-            new Decimal(Number(poLine.unit_cost)),
-          ),
-        );
       }
+
+      // Re-fetch lines to determine correct status after increments
+      const updatedLines = await tx.purchaseOrderLine.findMany({
+        where: { po_id: poId },
+      });
+
+      const allFullyReceived = updatedLines.every(
+        (line) => Number(line.received_quantity ?? 0) >= Number(line.quantity),
+      );
+
+      const newStatus = allFullyReceived ? 'received' : 'ordered';
 
       return tx.purchaseOrder.update({
         where: { id: poId },
         data: {
-          status: 'received',
-          received_at: new Date(),
-          total_amount: totalReceived,
+          status: newStatus,
+          ...(allFullyReceived && { received_at: new Date() }),
+          // Do NOT overwrite total_amount — it should remain as the ordered total
         },
-        include: {
-          lines: { include: { ingredient: true } },
-          vendor: true,
-          zone: true,
-        },
+        include: PO_INCLUDE,
       });
     });
   }

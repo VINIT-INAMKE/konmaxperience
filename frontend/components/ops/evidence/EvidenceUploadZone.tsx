@@ -41,12 +41,12 @@ export function EvidenceUploadZone({
   const validateFile = useCallback((file: File): boolean => {
     if (!ALLOWED_MIME_TYPES.has(file.type)) {
       toast.error(
-        'File type not allowed. Upload photos, documents, or videos.',
+        "That file type isn't supported \u2014 try a photo, document, or video.",
       );
       return false;
     }
     if (file.size > MAX_FILE_SIZE) {
-      toast.error('File too large. Maximum size is 10 MB.');
+      toast.error("That file is too large \u2014 keep it under 10 MB.");
       return false;
     }
     return true;
@@ -106,7 +106,7 @@ export function EvidenceUploadZone({
 
         onUploadComplete();
       } catch {
-        toast.error('Upload failed.');
+        toast.error('Upload failed — check your connection and try again.');
       } finally {
         setIsUploading(false);
         setUploadProgress(null);
@@ -213,12 +213,12 @@ export function EvidenceUploadZone({
                 aria-label="Upload progress"
               />
             </div>
-            <span className="text-[13px] text-blue-400">{uploadProgress}%</span>
+            <span className="text-xs text-blue-400">{uploadProgress}%</span>
           </div>
         ) : (
           <>
             <p className="text-sm text-center">Drop files here, or click to browse</p>
-            <p className="text-[13px] text-muted-foreground text-center">
+            <p className="text-xs text-muted-foreground text-center">
               Photos, documents, video up to 10 MB
             </p>
           </>
@@ -245,7 +245,7 @@ export function EvidenceUploadZone({
         <Button
           variant="ghost"
           size="sm"
-          className="text-[13px] text-muted-foreground"
+          className="text-xs text-muted-foreground"
           onClick={onShowLinkForm}
         >
           Add a link
@@ -253,7 +253,7 @@ export function EvidenceUploadZone({
         <Button
           variant="ghost"
           size="sm"
-          className="text-[13px] text-muted-foreground"
+          className="text-xs text-muted-foreground"
           onClick={onShowNoteForm}
         >
           Add a note

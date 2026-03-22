@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { BlurFade } from '@/components/ui/blur-fade';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
 import { MenuBrandTabs } from '@/components/public/MenuBrandTabs';
 import { MenuItemPublicCard } from '@/components/public/MenuItemPublicCard';
 import { apiClient } from '@/lib/api-client';
@@ -16,18 +17,33 @@ interface AvailabilityMap {
 export default function MenuPage() {
   const [activeBrandId, setActiveBrandId] = useState<string>('');
 
-  const { data: brands = [], isLoading: brandsLoading } = useQuery({
+  const {
+    data: brands = [],
+    isLoading: brandsLoading,
+    error: brandsError,
+    refetch: refetchBrands,
+  } = useQuery({
     queryKey: ['public-brands'],
     queryFn: () =>
       apiClient.get<{ id: string; name: string }[]>('/brands'),
   });
 
-  const { data: categories = [], isLoading: categoriesLoading } = useQuery({
+  const {
+    data: categories = [],
+    isLoading: categoriesLoading,
+    error: categoriesError,
+    refetch: refetchCategories,
+  } = useQuery({
     queryKey: ['public-menu-categories'],
     queryFn: () => apiClient.get<MenuCategory[]>('/menu/categories'),
   });
 
-  const { data: items = [], isLoading: itemsLoading } = useQuery({
+  const {
+    data: items = [],
+    isLoading: itemsLoading,
+    error: itemsError,
+    refetch: refetchItems,
+  } = useQuery({
     queryKey: ['public-menu-items'],
     queryFn: () => apiClient.get<MenuItem[]>('/menu/items'),
   });
@@ -67,6 +83,13 @@ export default function MenuPage() {
   }, [items, effectiveBrandId, filteredCategories]);
 
   const isLoading = brandsLoading || categoriesLoading || itemsLoading;
+  const hasError = brandsError || categoriesError || itemsError;
+
+  const handleRetry = () => {
+    if (brandsError) void refetchBrands();
+    if (categoriesError) void refetchCategories();
+    if (itemsError) void refetchItems();
+  };
 
   return (
     <BlurFade direction="up">
@@ -85,17 +108,29 @@ export default function MenuPage() {
           </div>
         )}
 
+        {/* Error state */}
+        {!isLoading && hasError && (
+          <div className="py-16 text-center space-y-4">
+            <p className="text-base text-muted-foreground">
+              Can&apos;t load the menu right now.
+            </p>
+            <Button variant="outline" onClick={handleRetry}>
+              Try again
+            </Button>
+          </div>
+        )}
+
         {/* No brands / empty state */}
-        {!isLoading && brands.length === 0 && (
+        {!isLoading && !hasError && brands.length === 0 && (
           <div className="py-16 text-center space-y-2">
-            <p className="text-base text-gray-500">
+            <p className="text-base text-muted-foreground">
               Menu is being updated. Check back shortly.
             </p>
           </div>
         )}
 
         {/* Menu content */}
-        {!isLoading && brands.length > 0 && (
+        {!isLoading && !hasError && brands.length > 0 && (
           <div className="space-y-8">
             <MenuBrandTabs
               brands={brands}
@@ -105,7 +140,7 @@ export default function MenuPage() {
 
             {filteredCategories.length === 0 && (
               <div className="py-16 text-center space-y-2">
-                <p className="text-base text-gray-500">
+                <p className="text-base text-muted-foreground">
                   Menu is being updated. Check back shortly.
                 </p>
               </div>
@@ -116,7 +151,7 @@ export default function MenuPage() {
               if (categoryItems.length === 0) return null;
               return (
                 <div key={category.id} className="space-y-4">
-                  <h2 className="text-xl font-semibold text-gray-900">
+                  <h2 className="text-xl font-semibold">
                     {category.name}
                   </h2>
                   <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

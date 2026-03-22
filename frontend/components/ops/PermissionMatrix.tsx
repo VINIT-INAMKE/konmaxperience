@@ -159,7 +159,7 @@ export function PermissionMatrix({ roles }: PermissionMatrixProps) {
                   key={role.id}
                   className="text-center min-w-[100px] max-w-[120px]"
                 >
-                  <span className="text-[13px] font-normal line-clamp-2">
+                  <span className="text-xs font-normal line-clamp-2">
                     {role.name}
                     {role.code === RoleCode.FOUNDER_ADMIN && (
                       <Lock className="size-3 inline ml-1 text-muted-foreground" />

@@ -14,7 +14,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { CoolMode } from '@/components/ui/cool-mode';
 import { BorderBeam } from '@/components/ui/border-beam';
 import { ShimmerButton } from '@/components/ui/shimmer-button';
 import { apiClient } from '@/lib/api-client';
@@ -119,8 +118,7 @@ export function OverrideDialog({
           >
             Keep Waiting
           </Button>
-          <CoolMode aria-hidden="true">
-            <ShimmerButton
+          <ShimmerButton
               shimmerColor="#4ade80"
               className="h-9 px-4 text-sm"
               onClick={() => void handleSubmit()}
@@ -135,7 +133,6 @@ export function OverrideDialog({
                 'Override and Approve'
               )}
             </ShimmerButton>
-          </CoolMode>
         </DialogFooter>
       </DialogContent>
     </Dialog>

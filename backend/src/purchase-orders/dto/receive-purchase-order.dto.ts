@@ -1,14 +1,14 @@
 import {
   IsArray,
   ValidateNested,
-  IsString,
+  IsUUID,
   IsNumber,
   Min,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class ReceiveLineDto {
-  @IsString()
+  @IsUUID()
   id: string; // PurchaseOrderLine id
 
   @IsNumber()

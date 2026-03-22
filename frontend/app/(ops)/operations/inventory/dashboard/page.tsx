@@ -1,7 +1,6 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { BlurFade } from '@/components/ui/blur-fade';
 import { Card, CardContent } from '@/components/ui/card';
 import { NumberTicker } from '@/components/ui/number-ticker';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -62,9 +61,8 @@ export default function InventoryDashboardPage() {
     : [];
 
   return (
-    <BlurFade>
       <div className="space-y-8">
-        <h1 className="text-2xl font-semibold">Inventory Overview</h1>
+        <h1 className="text-2xl font-bold">Inventory Overview</h1>
 
         {/* Stat cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -120,6 +118,5 @@ export default function InventoryDashboardPage() {
           )
         )}
       </div>
-    </BlurFade>
   );
 }

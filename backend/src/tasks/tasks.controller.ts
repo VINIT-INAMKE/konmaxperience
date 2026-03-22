@@ -13,6 +13,7 @@ import {
 import express from 'express';
 import { TasksService } from './tasks.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { RequiresPermission } from '../common/decorators/permissions.decorator';
 import { getPermissionsForRole } from '../permissions/permissions.cache';
 import { Permission } from '../types/permissions';
 import { CreateTaskDto } from './dto/create-task.dto';
@@ -52,6 +53,7 @@ export class TasksController {
   }
 
   @Get(':id')
+  @RequiresPermission(Permission.VIEW_ROLE_SCOPED)
   async findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.tasksService.findOne(id);
   }

@@ -29,7 +29,7 @@ export default function EventDetailPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-16">
-        <Loader2 className="size-6 animate-spin text-gray-400" />
+        <Loader2 className="size-6 animate-spin text-muted-foreground" />
       </div>
     );
   }
@@ -37,10 +37,10 @@ export default function EventDetailPage() {
   if (error || !event) {
     return (
       <div className="max-w-2xl mx-auto px-4 py-16 text-center space-y-2">
-        <h2 className="text-xl font-semibold text-gray-900">
+        <h2 className="text-xl font-semibold">
           Event not found
         </h2>
-        <p className="text-base text-gray-500">
+        <p className="text-base text-muted-foreground">
           This event may have been removed or the link may be incorrect.
         </p>
       </div>
@@ -64,7 +64,7 @@ export default function EventDetailPage() {
       <div className="max-w-4xl mx-auto px-4 py-8">
         <div className="grid gap-8 md:grid-cols-2">
           {/* Image or placeholder */}
-          <div className="relative aspect-square rounded-xl overflow-hidden bg-gray-100">
+          <div className="relative aspect-square rounded-xl overflow-hidden bg-muted">
             {event.image_url ? (
               <Image
                 src={event.image_url}
@@ -75,7 +75,7 @@ export default function EventDetailPage() {
               />
             ) : (
               <div className="flex items-center justify-center h-full">
-                <span className="text-lg font-semibold text-gray-400">
+                <span className="text-lg font-semibold text-muted-foreground">
                   {EVENT_TYPE_LABELS[event.event_type]}
                 </span>
               </div>
@@ -86,7 +86,7 @@ export default function EventDetailPage() {
           <div className="space-y-6">
             <div className="space-y-3">
               <h1 className="text-3xl font-semibold">{event.title}</h1>
-              <p className="text-sm text-gray-500">{formattedDate}</p>
+              <p className="text-sm text-muted-foreground">{formattedDate}</p>
               <div className="flex items-center gap-2 flex-wrap">
                 <Badge variant="secondary">
                   {EVENT_TYPE_LABELS[event.event_type]}
@@ -99,10 +99,10 @@ export default function EventDetailPage() {
                 />
               </div>
               {event.description && (
-                <p className="text-base text-gray-700">{event.description}</p>
+                <p className="text-base text-muted-foreground">{event.description}</p>
               )}
               {(event.zone || event.brand) && (
-                <div className="flex items-center gap-2 text-sm text-gray-500">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   {event.zone && <span>{event.zone.name}</span>}
                   {event.zone && event.brand && <span>&middot;</span>}
                   {event.brand && <span>{event.brand.name}</span>}

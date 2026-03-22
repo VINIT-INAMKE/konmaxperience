@@ -3,7 +3,6 @@
 import Link from 'next/link';
 import { ShoppingCart, AlertTriangle, TrendingUp, PackageSearch } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
-import { BlurFade } from '@/components/ui/blur-fade';
 import { MagicCard } from '@/components/ui/magic-card';
 import { NumberTicker } from '@/components/ui/number-ticker';
 import { apiClient } from '@/lib/api-client';
@@ -70,10 +69,9 @@ export default function ProcurementPage() {
   });
 
   return (
-    <BlurFade>
       <div className="space-y-8">
         {/* Page header */}
-        <h1 className="text-xl font-semibold">Procurement</h1>
+        <h1 className="text-2xl font-bold">Procurement</h1>
 
         {/* Summary cards */}
         {isLoading && (
@@ -93,8 +91,7 @@ export default function ProcurementPage() {
               const value = Number(summary[card.key]) || 0;
               const showAmber = card.amberWhen && value > 0;
               return (
-                <BlurFade key={card.key} delay={index * 0.1}>
-                  <MagicCard gradientColor="#1a1a2e" className="rounded-xl">
+                <MagicCard key={card.key} gradientColor="#1a1a2e" className="rounded-xl">
                     <div className="p-4 space-y-2">
                       <div className="flex items-center gap-2 text-muted-foreground">
                         <card.icon className="size-4" />
@@ -109,7 +106,6 @@ export default function ProcurementPage() {
                       </div>
                     </div>
                   </MagicCard>
-                </BlurFade>
               );
             })}
           </div>
@@ -187,6 +183,5 @@ export default function ProcurementPage() {
           </div>
         )}
       </div>
-    </BlurFade>
   );
 }

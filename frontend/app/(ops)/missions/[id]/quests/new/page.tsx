@@ -6,7 +6,6 @@ import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { BlurFade } from '@/components/ui/blur-fade';
 import { apiClient } from '@/lib/api-client';
 import { QuestForm } from '@/components/ops/quests/QuestForm';
 import type { CreateQuestDto, Quest } from '@/lib/types/quests';
@@ -43,7 +42,6 @@ export default function NewQuestPage({
   }
 
   return (
-    <BlurFade>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center gap-3">
@@ -55,7 +53,7 @@ export default function NewQuestPage({
             Back to mission
           </Link>
         </div>
-        <h1 className="text-xl font-semibold">New quest</h1>
+        <h1 className="text-2xl font-bold">New quest</h1>
 
         {/* Form */}
         <div className="max-w-2xl mx-auto">
@@ -71,6 +69,5 @@ export default function NewQuestPage({
           />
         </div>
       </div>
-    </BlurFade>
   );
 }

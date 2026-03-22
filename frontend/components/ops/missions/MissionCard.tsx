@@ -15,6 +15,7 @@ import type {
   MISSION_PHASE_LABELS,
   MISSION_SCOPE_LABELS,
 } from '@/lib/types/missions';
+import { GRADIENT_OVERLAY } from '@/lib/brand-colors';
 
 const PHASE_COLORS: Record<MissionPhase, string> = {
   setup: 'text-muted-foreground bg-muted',
@@ -58,7 +59,7 @@ export function MissionCard({
 
   return (
     <Link href={`/missions/${mission.id}`} className="block rounded-xl">
-      <MagicCard className="rounded-xl cursor-pointer" gradientColor="#1a1a2e">
+      <MagicCard className="rounded-xl cursor-pointer" gradientColor={GRADIENT_OVERLAY}>
         <div className="p-6 space-y-4">
           {/* Header: badges */}
           <div className="flex items-center gap-2 flex-wrap">
@@ -106,7 +107,7 @@ export function MissionCard({
                 <span className="text-sm text-muted-foreground">% complete</span>
               </div>
               {mission.quests && mission.quests.length > 0 && (
-                <span className="text-[13px] text-muted-foreground">
+                <span className="text-xs text-muted-foreground">
                   {mission.quests.length} quest{mission.quests.length !== 1 ? 's' : ''}
                 </span>
               )}
@@ -116,7 +117,7 @@ export function MissionCard({
           {/* Footer: dates and avatars */}
           <div className="flex items-center justify-between">
             {mission.start_date && (
-              <div className="flex items-center gap-1.5 text-[13px] text-muted-foreground">
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <Calendar className="size-3.5" />
                 <span>
                   {format(new Date(mission.start_date), 'MMM d, yyyy')}

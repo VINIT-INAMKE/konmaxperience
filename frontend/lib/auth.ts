@@ -1,6 +1,6 @@
 import { apiClient } from '@/lib/api-client';
 import { useAuthStore } from '@/lib/stores/auth-store';
-import type { LoginResponse } from '@/lib/types/auth';
+import type { LoginResponse, RefreshResponse } from '@/lib/types/auth';
 
 export async function login(
   email: string,
@@ -11,6 +11,7 @@ export async function login(
     password,
   });
   useAuthStore.getState().setUser(data.user);
+  useAuthStore.getState().setPermissions(data.user.permissions ?? []);
   return '/dashboard';
 }
 
@@ -36,7 +37,11 @@ export async function logoutAll(): Promise<void> {
 
 export async function refreshSession(): Promise<boolean> {
   try {
-    await apiClient.post('/auth/refresh');
+    const data = await apiClient.post<RefreshResponse>('/auth/refresh');
+    if (data.user) {
+      useAuthStore.getState().setUser(data.user);
+      useAuthStore.getState().setPermissions(data.user.permissions ?? []);
+    }
     return true;
   } catch {
     return false;

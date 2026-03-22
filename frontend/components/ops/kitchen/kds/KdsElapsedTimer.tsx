@@ -1,23 +1,37 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useReducer } from 'react';
 
 interface KdsElapsedTimerProps {
   createdAt: string;
 }
 
-export function KdsElapsedTimer({ createdAt }: KdsElapsedTimerProps) {
-  const [elapsed, setElapsed] = useState(() =>
-    Math.max(0, Math.floor((Date.now() - new Date(createdAt).getTime()) / 1000)),
-  );
+// Shared tick: all timer instances subscribe to a single interval
+let tickListeners = new Set<() => void>();
+let tickInterval: ReturnType<typeof setInterval> | null = null;
 
-  useEffect(() => {
-    const id = setInterval(() => {
-      setElapsed(Math.max(0, Math.floor((Date.now() - new Date(createdAt).getTime()) / 1000)));
+function subscribeTick(listener: () => void) {
+  tickListeners.add(listener);
+  if (!tickInterval) {
+    tickInterval = setInterval(() => {
+      tickListeners.forEach((fn) => fn());
     }, 1000);
-    return () => clearInterval(id);
-  }, [createdAt]);
+  }
+  return () => {
+    tickListeners.delete(listener);
+    if (tickListeners.size === 0 && tickInterval) {
+      clearInterval(tickInterval);
+      tickInterval = null;
+    }
+  };
+}
 
+export function KdsElapsedTimer({ createdAt }: KdsElapsedTimerProps) {
+  const [, forceUpdate] = useReducer((x: number) => x + 1, 0);
+
+  useEffect(() => subscribeTick(forceUpdate), []);
+
+  const elapsed = Math.max(0, Math.floor((Date.now() - new Date(createdAt).getTime()) / 1000));
   const minutes = Math.floor(elapsed / 60);
   const seconds = elapsed % 60;
 

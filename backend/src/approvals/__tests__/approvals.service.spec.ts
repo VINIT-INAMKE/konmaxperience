@@ -95,7 +95,7 @@ describe('ApprovalsService', () => {
       txMock.evidence.update.mockResolvedValue(mockEvidence);
       txMock.evidence.findUnique.mockResolvedValue(mockEvidence);
 
-      await service.overrideApproval('evidence-1', 'evidence', 'admin-1', 'Urgent override reason');
+      await service.overrideApproval('evidence-1', 'admin-1', 'Urgent override reason');
 
       expect(txMock.approval.update).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -125,7 +125,7 @@ describe('ApprovalsService', () => {
       txMock.approval.findFirst.mockResolvedValue(taskApproval);
       txMock.approval.update.mockResolvedValue({ ...taskApproval, status: 'approved' });
 
-      const result = await service.overrideApproval('task-1', 'task', 'admin-1', 'Override reason text');
+      const result = await service.overrideApproval('task-1', 'admin-1', 'Override reason text');
 
       expect(evidenceService.validateTask).not.toHaveBeenCalled();
       expect(result).toEqual({ overridden: true });
@@ -135,7 +135,7 @@ describe('ApprovalsService', () => {
       txMock.approval.findFirst.mockResolvedValue(null);
 
       await expect(
-        service.overrideApproval('missing-1', 'evidence', 'admin-1', 'Override reason here'),
+        service.overrideApproval('missing-1', 'admin-1', 'Override reason here'),
       ).rejects.toThrow(NotFoundException);
     });
   });

@@ -25,8 +25,8 @@ const ROLE_SEEDS: RoleSeed[] = [
     description: 'Strategy, mission control, escalations, overrides. Full system access.',
     permissions: Object.values(Permission),
     functionDomain: 'operations',
-    userName: 'Aditee',
-    userEmail: 'aditee@konmaxperience.com',
+    userName: 'Admin',
+    userEmail: 'admin@konma.store',
   },
   {
     code: RoleCode.FRONTEND_LEAD,
@@ -42,8 +42,8 @@ const ROLE_SEEDS: RoleSeed[] = [
       Permission.CREATE_DECISION,
     ],
     functionDomain: 'food',
-    userName: 'Frontend Lead User',
-    userEmail: 'frontend@konmaxperience.com',
+    userName: 'Anchitha',
+    userEmail: 'anchitha@konma.store',
   },
   {
     code: RoleCode.BACKEND_LEAD,
@@ -59,8 +59,8 @@ const ROLE_SEEDS: RoleSeed[] = [
       Permission.CREATE_DECISION,
     ],
     functionDomain: 'food',
-    userName: 'Backend Lead User',
-    userEmail: 'backend@konmaxperience.com',
+    userName: 'Sadhana',
+    userEmail: 'sadhana@konma.store',
   },
   {
     code: RoleCode.BI_LEAD,
@@ -75,8 +75,8 @@ const ROLE_SEEDS: RoleSeed[] = [
       Permission.MANAGE_KPIS,
     ],
     functionDomain: 'bi',
-    userName: 'BI Lead User',
-    userEmail: 'bi@konmaxperience.com',
+    userName: 'Hasmitha',
+    userEmail: 'hasmitha@konma.store',
   },
   {
     code: RoleCode.PROCUREMENT_LEAD,
@@ -94,8 +94,8 @@ const ROLE_SEEDS: RoleSeed[] = [
       Permission.MANAGE_KITCHEN,
     ],
     functionDomain: 'procurement',
-    userName: 'Procurement Lead User',
-    userEmail: 'procurement@konmaxperience.com',
+    userName: 'Surya',
+    userEmail: 'surya@konma.store',
   },
   {
     code: RoleCode.TALENT_LEAD,
@@ -108,8 +108,8 @@ const ROLE_SEEDS: RoleSeed[] = [
       Permission.UPLOAD_EVIDENCE,
     ],
     functionDomain: 'talent',
-    userName: 'Talent Lead User',
-    userEmail: 'talent@konmaxperience.com',
+    userName: 'Sathya',
+    userEmail: 'sathya@konma.store',
   },
   {
     code: RoleCode.TECH_LEAD,
@@ -117,8 +117,8 @@ const ROLE_SEEDS: RoleSeed[] = [
     description: 'Dashboard, automations, integrations, system infrastructure.',
     permissions: Object.values(Permission),
     functionDomain: 'tech',
-    userName: 'Tech Lead User',
-    userEmail: 'tech@konmaxperience.com',
+    userName: 'Vinit',
+    userEmail: 'vinit@konma.store',
   },
   {
     code: RoleCode.DESIGN_OUTREACH_LEAD,
@@ -132,8 +132,8 @@ const ROLE_SEEDS: RoleSeed[] = [
       Permission.CREATE_DECISION,
     ],
     functionDomain: 'design',
-    userName: 'Design/Outreach Lead User',
-    userEmail: 'design@konmaxperience.com',
+    userName: 'Advitha',
+    userEmail: 'advitha@konma.store',
   },
 ];
 

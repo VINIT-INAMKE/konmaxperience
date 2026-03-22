@@ -89,12 +89,12 @@ export function StockAdjustmentSheet({ open, onOpenChange }: StockAdjustmentShee
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-[480px]">
+      <SheetContent side="right" className="w-full sm:max-w-[480px]">
         <SheetHeader>
           <SheetTitle>Adjust Stock</SheetTitle>
         </SheetHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4 mt-4 px-4">
+        <form onSubmit={handleSubmit} className="space-y-4 mt-4 px-4 pb-4 overflow-y-auto">
           {/* Ingredient */}
           <div className="space-y-2">
             <Label>Ingredient</Label>

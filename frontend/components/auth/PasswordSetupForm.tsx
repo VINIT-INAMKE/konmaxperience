@@ -126,7 +126,7 @@ export function PasswordSetupForm({
           setError(err.message);
         }
       } else {
-        setError('Something went wrong. Please try again.');
+        setError('Something went wrong — try again.');
       }
     } finally {
       setIsLoading(false);

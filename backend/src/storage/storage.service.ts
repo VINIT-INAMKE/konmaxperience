@@ -1,5 +1,6 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
-import { PutObjectCommand } from '@aws-sdk/client-s3';
+import { ConfigService } from '@nestjs/config';
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { createR2Client } from './r2.config';
 
@@ -17,8 +18,26 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 
 @Injectable()
 export class StorageService {
-  private readonly s3 = createR2Client();
-  private readonly bucketName = process.env.R2_BUCKET_NAME || 'konma-evidence';
+  private readonly s3: S3Client;
+  private readonly bucketName: string;
+  private readonly publicUrl: string;
+
+  constructor(private readonly config: ConfigService) {
+    const required = ['R2_ENDPOINT', 'R2_ACCESS_KEY_ID', 'R2_SECRET_ACCESS_KEY', 'R2_BUCKET_NAME'] as const;
+    for (const key of required) {
+      if (!this.config.get<string>(key)) {
+        throw new Error(`Missing required env var: ${key}`);
+      }
+    }
+
+    this.s3 = createR2Client({
+      endpoint: this.config.get<string>('R2_ENDPOINT')!,
+      accessKeyId: this.config.get<string>('R2_ACCESS_KEY_ID')!,
+      secretAccessKey: this.config.get<string>('R2_SECRET_ACCESS_KEY')!,
+    });
+    this.bucketName = this.config.get<string>('R2_BUCKET_NAME')!;
+    this.publicUrl = this.config.get<string>('R2_PUBLIC_URL') || '';
+  }
 
   validatePresignRequest(contentType: string, fileSize: number): void {
     if (!ALLOWED_MIME_TYPES.has(contentType)) {
@@ -54,6 +73,6 @@ export class StorageService {
   }
 
   getPublicUrl(key: string): string {
-    return `${process.env.R2_PUBLIC_URL}/${key}`;
+    return `${this.publicUrl}/${key}`;
   }
 }

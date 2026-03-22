@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { KpiStatusBadge } from '@/components/ops/kpis/KpiStatusBadge';
 import { KPI_DOMAIN_LABELS } from '@/lib/types/kpi';
 import type { Kpi } from '@/lib/types/kpi';
+import { GRADIENT_OVERLAY } from '@/lib/brand-colors';
 
 interface KpiCardProps {
   kpi: Kpi;
@@ -19,7 +20,7 @@ export function KpiCard({ kpi, canEdit, onEdit }: KpiCardProps) {
   const linkedCount = kpi.tasks.length;
 
   return (
-    <MagicCard gradientColor="#1a1a2e" className="rounded-xl">
+    <MagicCard gradientColor={GRADIENT_OVERLAY} className="rounded-xl">
       <div className="p-5 space-y-4">
         {/* Header */}
         <div className="space-y-1">

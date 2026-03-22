@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { MagicCard } from '@/components/ui/magic-card';
 import { Badge } from '@/components/ui/badge';
 import type { IngredientStock } from '@/lib/types/inventory';
+import { GRADIENT_OVERLAY } from '@/lib/brand-colors';
 
 interface DashboardLowStockAlertProps {
   lowStockItems: IngredientStock[];
@@ -22,7 +23,7 @@ export function DashboardLowStockAlert({ lowStockItems }: DashboardLowStockAlert
       <span className="text-sm font-semibold">Low Stock Alerts</span>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {displayItems.map((item) => (
-          <MagicCard key={item.id} gradientColor="#1a1a2e" className="rounded-xl">
+          <MagicCard key={item.id} gradientColor={GRADIENT_OVERLAY} className="rounded-xl">
             <div className="p-4 space-y-2">
               <div className="flex items-start justify-between gap-2">
                 <div>

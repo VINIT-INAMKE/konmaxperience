@@ -2,16 +2,32 @@ import { jwtVerify } from 'jose';
 import { NextRequest, NextResponse } from 'next/server';
 
 const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET!);
-const PUBLIC_PATHS = ['/login', '/forgot-password', '/set-password', '/reset-password'];
+const PUBLIC_PATHS = ['/login', '/forgot-password', '/set-password', '/reset-password', '/menu', '/events', '/feedback'];
+const AUTH_PAGES = ['/login', '/forgot-password', '/set-password', '/reset-password'];
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const token = request.cookies.get('access_token')?.value;
 
-  if (PUBLIC_PATHS.some((p) => pathname.startsWith(p))) {
+  // Landing page is always public
+  if (pathname === '/') {
     return NextResponse.next();
   }
 
-  const token = request.cookies.get('access_token')?.value;
+  // Public pages (menu, events, feedback) — always accessible
+  if (PUBLIC_PATHS.some((p) => pathname.startsWith(p))) {
+    // If logged-in user visits an auth page (login, etc.), redirect to dashboard
+    if (AUTH_PAGES.some((p) => pathname.startsWith(p)) && token) {
+      try {
+        await jwtVerify(token, JWT_SECRET);
+        return NextResponse.redirect(new URL('/dashboard', request.url));
+      } catch {
+        // Token invalid — let them through to login
+      }
+    }
+    return NextResponse.next();
+  }
+
   if (!token) {
     const loginUrl = new URL('/login', request.url);
     loginUrl.searchParams.set('redirect', pathname);

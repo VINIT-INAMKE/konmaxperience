@@ -1,20 +1,26 @@
 'use client';
 
+import Image from 'next/image';
+import Link from 'next/link';
+
 export default function PublicLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
-    <div className="light min-h-screen bg-white text-foreground flex flex-col">
-      <header className="h-14 border-b bg-white/95 backdrop-blur sticky top-0 z-10 flex items-center px-4">
-        <span className="text-sm font-semibold tracking-tight text-gray-900">
-          Konma Xperience
-        </span>
+    <div className="light min-h-screen bg-background text-foreground flex flex-col">
+      <header className="h-14 border-b border-border/50 bg-background/95 backdrop-blur sticky top-0 z-10 flex items-center justify-between px-4">
+        <Link href="/" className="flex items-center gap-2">
+          <Image src="/logo.png" alt="Konma Xperience" width={36} height={36} style={{ height: '2.25rem', width: 'auto' }} />
+          <span className="text-sm font-bold tracking-tight">
+            Konma Xperience
+          </span>
+        </Link>
       </header>
       <main className="flex-1">{children}</main>
-      <footer className="h-10 flex items-center justify-center">
-        <span className="text-xs text-gray-500">
+      <footer className="h-10 flex items-center justify-center border-t border-border/30">
+        <span className="text-xs text-muted-foreground">
           Powered by Konma Xperience
         </span>
       </footer>

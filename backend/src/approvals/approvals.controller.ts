@@ -24,7 +24,18 @@ export class ApprovalsController {
     return this.approvalsService.findPending();
   }
 
+  @Post(':id/approve')
+  @RequiresPermission(Permission.APPROVE_EVIDENCE)
+  async approve(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Req() req: express.Request,
+  ) {
+    const user = (req as any).user;
+    return this.approvalsService.approveWithDelegation(id, user.id, user.roleCode);
+  }
+
   @Post(':id/override')
+  @RequiresPermission(Permission.MANAGE_SYSTEM)
   async override(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: OverrideApprovalDto,
@@ -34,6 +45,6 @@ export class ApprovalsController {
     if (user.roleCode !== 'FOUNDER_ADMIN') {
       throw new ForbiddenException('Only admin can override approvals');
     }
-    return this.approvalsService.overrideApproval(id, 'evidence', user.id, dto.reason);
+    return this.approvalsService.overrideApproval(id, user.id, dto.reason);
   }
 }

@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import type { Notification } from '@/lib/types/notifications';
-import { BlurFade } from '@/components/ui/blur-fade';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -105,11 +104,10 @@ export default function NotificationsPage() {
   };
 
   return (
-    <BlurFade>
       <div className="max-w-2xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-[20px] font-bold">Notifications</h1>
+          <h1 className="text-2xl font-bold">Notifications</h1>
           <Button
             variant="outline"
             size="sm"
@@ -122,7 +120,7 @@ export default function NotificationsPage() {
 
         {/* Tab filters */}
         <Tabs value={activeTab} onValueChange={handleTabChange}>
-          <TabsList>
+          <TabsList className="overflow-x-auto">
             <TabsTrigger value="all">All</TabsTrigger>
             <TabsTrigger value="unread">Unread</TabsTrigger>
             <TabsTrigger value="tasks">Tasks</TabsTrigger>
@@ -161,6 +159,5 @@ export default function NotificationsPage() {
           </TabsContent>
         </Tabs>
       </div>
-    </BlurFade>
   );
 }

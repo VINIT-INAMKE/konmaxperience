@@ -39,6 +39,7 @@ export class AnalyticsController {
   }
 
   @Get('wins')
+  @RequiresPermission(Permission.MANAGE_KPIS)
   async getWins(@Query() dto: WinsQueryDto) {
     const limit = parseInt(dto.limit || '20', 10);
     return this.analyticsService.getWins(limit, dto.cursor);

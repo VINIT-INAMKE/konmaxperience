@@ -3,8 +3,7 @@
 import { useState } from 'react';
 import { redirect } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { BlurFade } from '@/components/ui/blur-fade';
-import { ShimmerButton } from '@/components/ui/shimmer-button';
+import { Button } from '@/components/ui/button';
 import { DelegationList } from '@/components/ops/delegations/DelegationList';
 import { DelegationForm } from '@/components/ops/delegations/DelegationForm';
 import { apiClient } from '@/lib/api-client';
@@ -31,17 +30,11 @@ export default function AdminDelegationsPage() {
   };
 
   return (
-    <BlurFade>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
-          <h1 className="text-[28px] font-semibold">Approval Delegations</h1>
-          <ShimmerButton
-            className="h-9 text-sm px-4"
-            onClick={() => setFormOpen(true)}
-          >
-            Create Delegation
-          </ShimmerButton>
+          <h1 className="text-2xl font-bold">Approval Delegations</h1>
+          <Button onClick={() => setFormOpen(true)}>Create Delegation</Button>
         </div>
 
         {/* Delegation List */}
@@ -59,6 +52,5 @@ export default function AdminDelegationsPage() {
           onCreated={handleRefresh}
         />
       </div>
-    </BlurFade>
   );
 }

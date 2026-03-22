@@ -14,7 +14,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { BlurFade } from '@/components/ui/blur-fade';
 import { AnimatedCircularProgressBar } from '@/components/ui/animated-circular-progress-bar';
 import { NumberTicker } from '@/components/ui/number-ticker';
 import { apiClient } from '@/lib/api-client';
@@ -112,7 +111,6 @@ export default function MissionDetailPage({
   }
 
   return (
-    <BlurFade>
       <div className="space-y-8">
         {/* Back link */}
         <Link
@@ -127,7 +125,7 @@ export default function MissionDetailPage({
         <div className="space-y-4">
           <div className="flex items-start justify-between gap-4">
             <div className="space-y-2">
-              <h1 className="text-xl font-semibold">{mission.title}</h1>
+              <h1 className="text-2xl font-bold">{mission.title}</h1>
               <div className="flex items-center gap-2 flex-wrap">
                 <Badge
                   variant="secondary"
@@ -190,7 +188,7 @@ export default function MissionDetailPage({
 
           {/* Dates */}
           {(mission.start_date || mission.end_date) && (
-            <div className="flex items-center gap-1.5 text-[13px] text-muted-foreground">
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <Calendar className="size-3.5" />
               <span>
                 {mission.start_date &&
@@ -245,6 +243,5 @@ export default function MissionDetailPage({
           )}
         </div>
       </div>
-    </BlurFade>
   );
 }

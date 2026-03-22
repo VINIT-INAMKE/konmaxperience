@@ -5,6 +5,7 @@ import {
   Param,
   Body,
   Req,
+  Query,
   ParseUUIDPipe,
 } from '@nestjs/common';
 import * as express from 'express';
@@ -18,20 +19,28 @@ export class InventoryController {
   constructor(private readonly inventoryService: InventoryService) {}
 
   @Get()
-  async findAll() {
-    return this.inventoryService.findAll();
+  @RequiresPermission(Permission.MANAGE_INVENTORY)
+  async findAll(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.inventoryService.findAll(Number(page), Number(limit));
   }
 
   @Get('low-stock')
+  @RequiresPermission(Permission.MANAGE_INVENTORY)
   async getLowStock() {
     return this.inventoryService.getLowStock();
   }
 
   @Get(':ingredientId/movements')
+  @RequiresPermission(Permission.MANAGE_INVENTORY)
   async getMovements(
     @Param('ingredientId', ParseUUIDPipe) ingredientId: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
   ) {
-    return this.inventoryService.getMovements(ingredientId);
+    return this.inventoryService.getMovements(ingredientId, Number(page), Number(limit));
   }
 
   @Post('adjust')

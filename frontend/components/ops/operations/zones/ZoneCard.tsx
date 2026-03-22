@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { MagicCard } from '@/components/ui/magic-card';
 import { ShineBorder } from '@/components/ui/shine-border';
-import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button';
+import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
   Tooltip,
@@ -22,6 +22,7 @@ import {
 import { ZoneStatusBadge } from './ZoneStatusBadge';
 import type { Zone, ZoneType } from '@/lib/types/zone';
 import { ZONE_TYPE_LABELS } from '@/lib/types/zone';
+import { GRADIENT_OVERLAY } from '@/lib/brand-colors';
 
 const ZONE_TYPE_ICONS: Record<ZoneType, React.ReactNode> = {
   kitchen: <ChefHat className="size-4 text-muted-foreground" />,
@@ -81,7 +82,7 @@ export function ZoneCard({
         />
       )}
       <MagicCard
-        gradientColor="#1a1a2e"
+        gradientColor={GRADIENT_OVERLAY}
         className="p-4 space-y-2 cursor-pointer hover:bg-muted/20 transition-colors"
       >
         {/* Row 1: type icon + name + status badge */}
@@ -120,7 +121,9 @@ export function ZoneCard({
         {/* Row 3: edit/delete + notes */}
         <div className="flex items-center gap-2 flex-wrap">
           {canEdit && (
-            <InteractiveHoverButton
+            <Button
+              variant="outline"
+              size="sm"
               className="h-7 text-xs px-3"
               onClick={(e) => {
                 e.stopPropagation();
@@ -128,7 +131,7 @@ export function ZoneCard({
               }}
             >
               Edit
-            </InteractiveHoverButton>
+            </Button>
           )}
           {zone.notes && (
             <p className="text-xs text-muted-foreground line-clamp-1 flex-1">

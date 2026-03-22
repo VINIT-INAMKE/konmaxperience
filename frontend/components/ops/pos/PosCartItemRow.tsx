@@ -22,7 +22,7 @@ export function PosCartItemRow({ item, onUpdateQuantity }: PosCartItemRowProps) 
   return (
     <AnimatedListItem>
       <div className="flex flex-col gap-1 py-2">
-        <span className="text-[14px] font-normal leading-snug line-clamp-1">
+        <span className="text-sm font-normal leading-snug line-clamp-1">
           {item.name}
         </span>
         <div className="flex items-center justify-between gap-2">
@@ -47,7 +47,7 @@ export function PosCartItemRow({ item, onUpdateQuantity }: PosCartItemRowProps) 
               <Plus className="size-3" />
             </Button>
           </div>
-          <span className="font-mono text-[14px] font-bold tabular-nums">
+          <span className="font-mono text-sm font-bold tabular-nums">
             INR {lineTotal}
           </span>
         </div>

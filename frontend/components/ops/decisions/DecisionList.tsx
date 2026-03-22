@@ -44,7 +44,7 @@ export function DecisionList({
       <div className="flex flex-col items-center justify-center py-12 text-center space-y-2">
         <AlertCircle className="size-10 text-destructive" />
         <p className="text-sm text-muted-foreground">
-          Couldn't load decisions. Refresh the page or try again.
+          Can't load decisions right now. Try refreshing.
         </p>
       </div>
     );
@@ -56,7 +56,7 @@ export function DecisionList({
         <ClipboardList className="size-12 text-muted-foreground" />
         <h2 className="text-xl font-semibold">No decisions yet</h2>
         <p className="text-sm text-muted-foreground max-w-sm">
-          Log the first decision to start building your governance trail.
+          Log your first decision to start building a clear record of the calls you've made.
         </p>
         {onLogDecision && (
           <ShimmerButton

@@ -1,32 +1,29 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { Job } from 'bullmq';
-import { MailerSend, EmailParams, Sender, Recipient } from 'mailersend';
 import { NotificationsService } from './notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { EmailService } from '../email/email.service';
+
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
 
 @Processor('notifications')
 export class NotificationsWorker extends WorkerHost {
   private readonly logger = new Logger(NotificationsWorker.name);
-  private mailerSend: MailerSend;
-  private fromEmail: string;
-  private frontendUrl: string;
 
   constructor(
     private readonly notifications: NotificationsService,
     private readonly prisma: PrismaService,
-    private readonly configService: ConfigService,
+    private readonly emailService: EmailService,
   ) {
     super();
-    const apiKey = this.configService.get<string>('MAILERSEND_API_KEY') || '';
-    this.mailerSend = new MailerSend({ apiKey });
-    this.fromEmail =
-      this.configService.get<string>('MAILERSEND_FROM_EMAIL') ||
-      'noreply@konmaxperience.com';
-    this.frontendUrl =
-      this.configService.get<string>('FRONTEND_URL') ||
-      'http://localhost:3000';
   }
 
   async process(job: Job): Promise<void> {
@@ -114,32 +111,57 @@ export class NotificationsWorker extends WorkerHost {
     try {
       const { approvalId, taskName, hours } = job.data;
 
-      // Get all FOUNDER_ADMIN users
+      // Get all FOUNDER_ADMIN users with email + name in a single query (avoids per-admin fetch in sendCriticalEmail)
       const admins = await this.prisma.user.findMany({
         where: { status: 'active', role: { code: 'FOUNDER_ADMIN' } },
+        select: { id: true, email: true, name: true },
       });
 
-      for (const admin of admins) {
-        const shouldSend = await this.notifications.shouldNotify(
-          admin.id,
-          'approval_pending',
-          approvalId,
-          24,
-        );
-        if (!shouldSend) continue;
-
-        const notification = await this.notifications.create({
-          user_id: admin.id,
+      // Batch check cooldowns: fetch last notification per admin for this approval in one query
+      const recentNotifications = await this.prisma.notification.findMany({
+        where: {
+          user_id: { in: admins.map((a) => a.id) },
           type: 'approval_pending',
-          title: `Approval waiting ${hours}h`,
-          body: `${taskName} evidence has been pending approval for over 24 hours.`,
-          link_url: '/approvals',
           reference_id: approvalId,
-          reference_type: 'approval',
-        });
+        },
+        orderBy: { created_at: 'desc' },
+        select: { user_id: true, created_at: true },
+      });
 
-        await this.sendCriticalEmail(notification.id, admin.id, notification.title, notification.body);
+      // Build a map of userId -> last notification time
+      const lastNotifMap = new Map<string, Date>();
+      for (const n of recentNotifications) {
+        if (!lastNotifMap.has(n.user_id)) {
+          lastNotifMap.set(n.user_id, n.created_at);
+        }
       }
+
+      const title = `Approval waiting ${hours}h`;
+      const body = `${taskName} evidence has been pending approval for over 24 hours.`;
+
+      // Process eligible admins in parallel
+      const eligibleAdmins = admins.filter((admin) => {
+        const lastSent = lastNotifMap.get(admin.id);
+        if (!lastSent) return true;
+        const hoursSince = (Date.now() - lastSent.getTime()) / (1000 * 60 * 60);
+        return hoursSince >= 24;
+      });
+
+      await Promise.all(
+        eligibleAdmins.map(async (admin) => {
+          const notification = await this.notifications.create({
+            user_id: admin.id,
+            type: 'approval_pending',
+            title,
+            body,
+            link_url: '/approvals',
+            reference_id: approvalId,
+            reference_type: 'approval',
+          });
+
+          await this.sendCriticalEmail(notification.id, admin, title, body);
+        }),
+      );
     } catch (error) {
       this.logger.error(
         `Failed to process notify-approval-pending job ${job.id}`,
@@ -153,31 +175,58 @@ export class NotificationsWorker extends WorkerHost {
       const { ingredientId, ingredientName, currentQty, minQty, unit } =
         job.data;
 
-      const users = await this.notifications.getUsersByPermission(
-        'MANAGE_PROCUREMENT',
-      );
+      // Fetch users with email + name to avoid per-user lookup in sendCriticalEmail
+      const users = await this.prisma.user.findMany({
+        where: {
+          status: 'active',
+          role: { permissions: { has: 'MANAGE_PROCUREMENT' } },
+        },
+        select: { id: true, email: true, name: true },
+      });
 
-      for (const user of users) {
-        const shouldSend = await this.notifications.shouldNotify(
-          user.id,
-          'low_stock',
-          ingredientId,
-          4,
-        );
-        if (!shouldSend) continue;
-
-        const notification = await this.notifications.create({
-          user_id: user.id,
+      // Batch check cooldowns in one query
+      const recentNotifications = await this.prisma.notification.findMany({
+        where: {
+          user_id: { in: users.map((u) => u.id) },
           type: 'low_stock',
-          title: `Low stock: ${ingredientName}`,
-          body: `${ingredientName} is at ${currentQty} ${unit}, below minimum level of ${minQty} ${unit}.`,
-          link_url: '/operations/inventory',
           reference_id: ingredientId,
-          reference_type: 'ingredient',
-        });
+        },
+        orderBy: { created_at: 'desc' },
+        select: { user_id: true, created_at: true },
+      });
 
-        await this.sendCriticalEmail(notification.id, user.id, notification.title, notification.body);
+      const lastNotifMap = new Map<string, Date>();
+      for (const n of recentNotifications) {
+        if (!lastNotifMap.has(n.user_id)) {
+          lastNotifMap.set(n.user_id, n.created_at);
+        }
       }
+
+      const title = `Low stock: ${ingredientName}`;
+      const body = `${ingredientName} is at ${currentQty} ${unit}, below minimum level of ${minQty} ${unit}.`;
+
+      const eligibleUsers = users.filter((user) => {
+        const lastSent = lastNotifMap.get(user.id);
+        if (!lastSent) return true;
+        const hoursSince = (Date.now() - lastSent.getTime()) / (1000 * 60 * 60);
+        return hoursSince >= 4;
+      });
+
+      await Promise.all(
+        eligibleUsers.map(async (user) => {
+          const notification = await this.notifications.create({
+            user_id: user.id,
+            type: 'low_stock',
+            title,
+            body,
+            link_url: '/operations/inventory',
+            reference_id: ingredientId,
+            reference_type: 'ingredient',
+          });
+
+          await this.sendCriticalEmail(notification.id, user, title, body);
+        }),
+      );
     } catch (error) {
       this.logger.error(
         `Failed to process notify-low-stock job ${job.id}`,
@@ -194,17 +243,23 @@ export class NotificationsWorker extends WorkerHost {
         'MANAGE_KITCHEN',
       );
 
-      for (const user of users) {
-        await this.notifications.create({
-          user_id: user.id,
-          type: 'new_order',
-          title: `New order #${orderId.slice(-6).toUpperCase()}`,
-          body: `${channel} order placed. ${itemCount} item(s).`,
-          link_url: '/operations/kitchen/kds',
-          reference_id: orderId,
-          reference_type: 'order',
-        });
-      }
+      const title = `New order #${orderId.slice(-6).toUpperCase()}`;
+      const body = `${channel} order placed. ${itemCount} item(s).`;
+
+      // Create all notifications in parallel
+      await Promise.all(
+        users.map((user) =>
+          this.notifications.create({
+            user_id: user.id,
+            type: 'new_order',
+            title,
+            body,
+            link_url: '/operations/kitchen/kds',
+            reference_id: orderId,
+            reference_type: 'order',
+          }),
+        ),
+      );
       // No email for new orders
     } catch (error) {
       this.logger.error(
@@ -229,17 +284,23 @@ export class NotificationsWorker extends WorkerHost {
         'MANAGE_POS',
       );
 
-      for (const user of users) {
-        await this.notifications.create({
-          user_id: user.id,
-          type: 'order_ready',
-          title: `Order #${orderId.slice(-6).toUpperCase()} ready`,
-          body: `${channel} order is ready for ${action}.`,
-          link_url: '/pos/orders',
-          reference_id: orderId,
-          reference_type: 'order',
-        });
-      }
+      const title = `Order #${orderId.slice(-6).toUpperCase()} ready`;
+      const body = `${channel} order is ready for ${action}.`;
+
+      // Create all notifications in parallel
+      await Promise.all(
+        users.map((user) =>
+          this.notifications.create({
+            user_id: user.id,
+            type: 'order_ready',
+            title,
+            body,
+            link_url: '/pos/orders',
+            reference_id: orderId,
+            reference_type: 'order',
+          }),
+        ),
+      );
       // No email for order ready
     } catch (error) {
       this.logger.error(
@@ -271,39 +332,43 @@ export class NotificationsWorker extends WorkerHost {
     }
   }
 
+  /**
+   * Send a critical email. Accepts either a userId (string) to look up,
+   * or a pre-fetched user object { email, name } to avoid an extra DB query.
+   */
   private async sendCriticalEmail(
     notificationId: string,
-    userId: string,
+    userOrId: string | { email: string; name: string },
     subject: string,
     body: string,
   ): Promise<void> {
     try {
-      const user = await this.prisma.user.findUnique({
-        where: { id: userId },
-        select: { email: true, name: true },
-      });
+      let user: { email: string; name: string } | null;
+      if (typeof userOrId === 'string') {
+        user = await this.prisma.user.findUnique({
+          where: { id: userOrId },
+          select: { email: true, name: true },
+        });
+      } else {
+        user = userOrId;
+      }
       if (!user) return;
 
-      const sentFrom = new Sender(this.fromEmail, 'Konma Xperience');
-      const recipients = [new Recipient(user.email, user.name)];
+      const safeName = escapeHtml(user.name);
+      const safeBody = escapeHtml(body);
+      const frontendUrl = this.emailService.publicFrontendUrl;
 
-      const emailParams = new EmailParams()
-        .setFrom(sentFrom)
-        .setTo(recipients)
-        .setSubject(`[Konma] ${subject}`)
-        .setHtml(
-          `<p>Hi ${user.name},</p>` +
-            `<p>${body}</p>` +
-            `<p><a href="${this.frontendUrl}">Open Konma Xperience</a></p>` +
-            `<p>-- Konma Xperience Team</p>`,
-        )
-        .setText(
-          `Hi ${user.name},\n\n${body}\n\n` +
-            `Open Konma Xperience: ${this.frontendUrl}\n\n` +
-            `-- Konma Xperience Team`,
-        );
-
-      await this.mailerSend.email.send(emailParams);
+      await this.emailService.sendHtml(
+        { email: user.email, name: user.name },
+        `[Konma] ${subject}`,
+        `<p>Hi ${safeName},</p>` +
+          `<p>${safeBody}</p>` +
+          `<p><a href="${frontendUrl}">Open Konma Xperience</a></p>` +
+          `<p>-- Konma Xperience Team</p>`,
+        `Hi ${user.name},\n\n${body}\n\n` +
+          `Open Konma Xperience: ${frontendUrl}\n\n` +
+          `-- Konma Xperience Team`,
+      );
 
       // Mark email as sent on the notification record
       await this.prisma.notification.update({

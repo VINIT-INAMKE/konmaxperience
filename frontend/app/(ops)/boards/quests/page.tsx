@@ -73,7 +73,7 @@ export default function QuestBoardPage() {
       <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <h1 className="text-[20px] font-bold">Quest Board</h1>
+          <h1 className="text-2xl font-bold">Quest Board</h1>
           <div className="flex gap-4">
             <Select
               value={missionFilter}
@@ -129,7 +129,7 @@ export default function QuestBoardPage() {
           <div className="flex flex-col items-center justify-center py-16 space-y-4 text-center">
             <KanbanSquare className="size-12 text-muted-foreground" />
             <div className="space-y-1">
-              <h2 className="text-[20px] font-bold">No quests found</h2>
+              <h2 className="text-xl font-bold">No quests found</h2>
               <p className="text-sm text-muted-foreground">
                 Try adjusting your filters.
               </p>

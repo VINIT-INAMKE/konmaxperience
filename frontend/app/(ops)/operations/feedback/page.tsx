@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { BlurFade } from '@/components/ui/blur-fade';
 import {
   Select,
   SelectContent,
@@ -60,10 +59,9 @@ export default function FeedbackPage() {
   });
 
   return (
-    <BlurFade>
       <div className="space-y-6">
         {/* Header */}
-        <h1 className="text-xl font-semibold">Customer Feedback</h1>
+        <h1 className="text-2xl font-bold">Customer Feedback</h1>
 
         {/* Stats card */}
         <FeedbackStatsCard stats={stats} isLoading={statsLoading} />
@@ -155,6 +153,5 @@ export default function FeedbackPage() {
           </div>
         )}
       </div>
-    </BlurFade>
   );
 }

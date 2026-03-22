@@ -192,12 +192,12 @@ export function AssetUploadZone({ onFileReady, disabled }: AssetUploadZoneProps)
                 aria-label="Upload progress"
               />
             </div>
-            <span className="text-[13px] text-blue-400">{uploadProgress}%</span>
+            <span className="text-xs text-blue-400">{uploadProgress}%</span>
           </div>
         ) : (
           <>
             <p className="text-sm text-center">Drop files here, or click to browse</p>
-            <p className="text-[13px] text-muted-foreground text-center">
+            <p className="text-xs text-muted-foreground text-center">
               Photos, documents, video up to 10 MB
             </p>
           </>

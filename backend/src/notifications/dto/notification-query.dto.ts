@@ -1,4 +1,4 @@
-import { IsOptional, IsString, IsBoolean } from 'class-validator';
+import { IsOptional, IsString, IsBoolean, Max } from 'class-validator';
 import { Transform } from 'class-transformer';
 
 export class NotificationQueryDto {
@@ -13,6 +13,7 @@ export class NotificationQueryDto {
 
   @IsOptional()
   @Transform(({ value }) => Number(value))
+  @Max(100)
   limit?: number;
 
   @IsOptional()

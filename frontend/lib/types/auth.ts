@@ -18,6 +18,7 @@ export interface LoginResponse {
     email: string;
     roleCode: string;
     roleName: string;
+    permissions: string[];
     xp_total: number;
     level: number;
   };
@@ -31,6 +32,7 @@ export interface RefreshResponse {
     email: string;
     roleCode: string;
     roleName: string;
+    permissions: string[];
     xp_total: number;
     level: number;
   };

@@ -156,12 +156,12 @@ export function EventForm({ event, open, onOpenChange, onSaved }: EventFormProps
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-[480px] overflow-y-auto">
+      <SheetContent side="right" className="w-full sm:max-w-[480px] overflow-y-auto">
         <SheetHeader>
           <SheetTitle>{isEditing ? 'Edit Event' : 'Create Event'}</SheetTitle>
         </SheetHeader>
 
-        <form onSubmit={(e) => void handleSubmit(onSubmit)(e)} className="space-y-4 mt-4 px-4">
+        <form onSubmit={(e) => void handleSubmit(onSubmit)(e)} className="space-y-4 mt-4 px-4 pb-4">
           {/* Title */}
           <div className="space-y-2">
             <Label htmlFor="event-title">Title</Label>

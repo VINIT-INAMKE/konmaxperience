@@ -65,6 +65,8 @@ export class RecipesService {
     brand_id?: string;
     status?: string;
     search?: string;
+    page?: number;
+    limit?: number;
   }) {
     const where: Record<string, unknown> = {};
     if (filters.brand_id) {
@@ -77,6 +79,9 @@ export class RecipesService {
       where.name = { contains: filters.search, mode: 'insensitive' };
     }
 
+    const take = Math.min(Number(filters.limit) || 50, 100);
+    const skip = ((Number(filters.page) || 1) - 1) * take;
+
     return this.prisma.recipe.findMany({
       where,
       include: {
@@ -85,6 +90,8 @@ export class RecipesService {
         creator: { select: { id: true, name: true } },
       },
       orderBy: { name: 'asc' },
+      take,
+      skip,
     });
   }
 

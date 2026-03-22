@@ -15,15 +15,30 @@ export class CostCalculatorService {
 
     const recipe = await this.prisma.recipe.findUnique({
       where: { id: recipeId },
-      include: {
+      select: {
+        id: true,
+        yield_qty: true,
+        yield_unit: true,
         RecipeLines: {
-          include: {
+          select: {
+            input_type: true,
+            quantity: true,
+            unit: true,
+            ingredient_id: true,
+            source_recipe_id: true,
             ingredient: {
-              include: {
-                VendorPrices: { orderBy: { effective_date: 'desc' }, take: 1 },
+              select: {
+                VendorPrices: {
+                  where: { effective_date: { lte: new Date() } },
+                  orderBy: { effective_date: 'desc' },
+                  take: 1,
+                  select: { price: true, unit: true },
+                },
               },
             },
-            source_recipe: true,
+            source_recipe: {
+              select: { yield_qty: true, yield_unit: true },
+            },
           },
         },
       },
@@ -78,31 +93,56 @@ export class CostCalculatorService {
   // Called by VendorsService when a VendorPrice is saved
   async recalculateForIngredient(ingredientId: string): Promise<void> {
     // Find all recipes that directly use this ingredient
-    const directLines = await this.prisma.recipeLine.findMany({
-      where: { ingredient_id: ingredientId },
-      select: { recipe_id: true },
+    const directRecipes = await this.prisma.recipe.findMany({
+      where: { RecipeLines: { some: { ingredient_id: ingredientId } } },
+      select: { id: true },
     });
-    const directRecipeIds = [
-      ...new Set(directLines.map((l) => l.recipe_id)),
-    ];
 
-    // Recalculate each direct recipe
-    for (const recipeId of directRecipeIds) {
-      await this.recalculateAndSave(recipeId);
+    // Pre-fetch ALL sub-recipe relationships in one query to avoid N+1 parent lookups
+    const allSubRecipeLines = await this.prisma.recipeLine.findMany({
+      where: { input_type: 'recipe', source_recipe_id: { not: null } },
+      select: { recipe_id: true, source_recipe_id: true },
+    });
+
+    // Build a reverse index: child recipe ID -> parent recipe IDs
+    const parentMap = new Map<string, Set<string>>();
+    for (const line of allSubRecipeLines) {
+      if (!line.source_recipe_id) continue;
+      const parents = parentMap.get(line.source_recipe_id) ?? new Set();
+      parents.add(line.recipe_id);
+      parentMap.set(line.source_recipe_id, parents);
     }
 
-    // One level of propagation: find recipes that use any of the recalculated recipes as BOM input
-    if (directRecipeIds.length > 0) {
-      const parentLines = await this.prisma.recipeLine.findMany({
-        where: { source_recipe_id: { in: directRecipeIds } },
-        select: { recipe_id: true },
-      });
-      const parentRecipeIds = [
-        ...new Set(parentLines.map((l) => l.recipe_id)),
-      ];
-      for (const recipeId of parentRecipeIds) {
-        await this.recalculateAndSave(recipeId);
+    // BFS propagation: process level by level, parallelizing within each level
+    const recalculated = new Set<string>();
+    let currentLevel = directRecipes.map((r) => r.id);
+
+    while (currentLevel.length > 0) {
+      // Filter out already-recalculated recipes
+      const toProcess = currentLevel.filter((id) => !recalculated.has(id));
+      if (toProcess.length === 0) break;
+
+      // Recalculate all recipes at this level in parallel
+      await Promise.all(
+        toProcess.map(async (id) => {
+          await this.recalculateAndSave(id);
+          recalculated.add(id);
+        }),
+      );
+
+      // Collect next level: all parent recipes of the ones we just recalculated
+      const nextLevel: string[] = [];
+      for (const id of toProcess) {
+        const parents = parentMap.get(id);
+        if (parents) {
+          for (const parentId of parents) {
+            if (!recalculated.has(parentId)) {
+              nextLevel.push(parentId);
+            }
+          }
+        }
       }
+      currentLevel = [...new Set(nextLevel)];
     }
   }
 }

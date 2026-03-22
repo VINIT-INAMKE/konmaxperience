@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsOptional, IsIn } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, IsIn, IsUUID } from 'class-validator';
 
 export class CreateAssetDto {
   @IsString()
@@ -13,10 +13,10 @@ export class CreateAssetDto {
   url: string;
 
   @IsOptional()
-  @IsString()
+  @IsUUID()
   linked_brand_id?: string;
 
   @IsOptional()
-  @IsString()
+  @IsUUID()
   linked_task_id?: string;
 }

@@ -38,7 +38,7 @@ export function EvidenceList({
       <div className="flex flex-col items-center justify-center py-8 text-center">
         <FileQuestion className="size-10 text-muted-foreground mb-2 opacity-50" />
         <p className="text-sm text-muted-foreground">
-          No evidence submitted yet.
+          No evidence yet — upload a photo, document, or note to support this task.
         </p>
       </div>
     );

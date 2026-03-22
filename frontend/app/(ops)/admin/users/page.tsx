@@ -112,7 +112,7 @@ export default function AdminUsersPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Team</h1>
+        <h1 className="text-2xl font-bold">Team</h1>
         <Button onClick={() => setCreateDialogOpen(true)}>
           <Plus className="size-4" />
           Add team member
@@ -151,6 +151,7 @@ export default function AdminUsersPage() {
       )}
 
       {users && users.length > 0 && (
+        <div className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -228,6 +229,7 @@ export default function AdminUsersPage() {
             ))}
           </TableBody>
         </Table>
+        </div>
       )}
 
       <CreateUserDialog

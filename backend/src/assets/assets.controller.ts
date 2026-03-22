@@ -12,6 +12,8 @@ import {
 } from '@nestjs/common';
 import express from 'express';
 import { AssetsService } from './assets.service';
+import { RequiresPermission } from '../common/decorators/permissions.decorator';
+import { Permission } from '../types/permissions';
 import { CreateAssetDto } from './dto/create-asset.dto';
 import { UpdateAssetDto } from './dto/update-asset.dto';
 
@@ -33,12 +35,14 @@ export class AssetsController {
   }
 
   @Post()
+  @RequiresPermission(Permission.MANAGE_OPS)
   async create(@Body() dto: CreateAssetDto, @Req() req: express.Request) {
     const user = (req as any).user;
     return this.assetsService.create(dto, user.id);
   }
 
   @Patch(':id')
+  @RequiresPermission(Permission.MANAGE_OPS)
   async update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateAssetDto,
@@ -50,6 +54,7 @@ export class AssetsController {
   }
 
   @Delete(':id')
+  @RequiresPermission(Permission.MANAGE_OPS)
   async remove(
     @Param('id', ParseUUIDPipe) id: string,
     @Req() req: express.Request,

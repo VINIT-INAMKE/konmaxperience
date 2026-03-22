@@ -72,7 +72,7 @@ export function PosCartSidebar({
 
       {/* Header */}
       <div className="px-4 pt-4 pb-2">
-        <h2 className="text-[20px] font-bold leading-tight">Order Summary</h2>
+        <h2 className="text-xl font-bold leading-tight">Order Summary</h2>
       </div>
 
       {/* Cart items list */}
@@ -113,21 +113,21 @@ export function PosCartSidebar({
 
         {/* Subtotal */}
         <div className="flex items-center justify-between">
-          <span className="text-[14px] font-normal">Subtotal</span>
-          <span className="font-mono text-[14px] font-bold tabular-nums">
+          <span className="text-sm font-normal">Subtotal</span>
+          <span className="font-mono text-sm font-bold tabular-nums">
             INR {subtotal}
           </span>
         </div>
 
         {/* Channel modifier note */}
-        <p className="text-[12px] text-muted-foreground">
+        <p className="text-xs text-muted-foreground">
           Channel pricing applied at checkout
         </p>
 
         {/* Total estimate */}
         <div className="flex items-center justify-between">
-          <span className="text-[14px] font-bold">Total</span>
-          <span className="font-mono text-[14px] font-bold tabular-nums">
+          <span className="text-sm font-bold">Total</span>
+          <span className="font-mono text-sm font-bold tabular-nums">
             INR {subtotal}
           </span>
         </div>

@@ -2,7 +2,6 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { format, formatDistanceToNow } from 'date-fns';
-import { BlurFade } from '@/components/ui/blur-fade';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -38,7 +37,6 @@ export default function KitchenDashboardPage() {
   });
 
   return (
-    <BlurFade>
       <div className="space-y-8">
         <h1 className="text-2xl font-semibold">Kitchen Dashboard</h1>
 
@@ -147,6 +145,5 @@ export default function KitchenDashboardPage() {
           </Card>
         </section>
       </div>
-    </BlurFade>
   );
 }

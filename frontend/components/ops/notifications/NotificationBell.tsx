@@ -7,7 +7,6 @@ import { toast } from 'sonner';
 import { apiClient } from '@/lib/api-client';
 import type { Notification, NotificationUnreadCount } from '@/lib/types/notifications';
 import { Bell, BellOff } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import {
   Popover,
   PopoverContent,
@@ -90,25 +89,21 @@ export function NotificationBell() {
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="relative size-8"
-          aria-label="Notifications"
-          aria-haspopup="true"
-          aria-expanded={open}
-        >
-          <Bell className="size-4" />
-          {unreadCount > 0 && (
-            <span
-              className="absolute -top-0.5 -right-0.5 h-4 min-w-4 rounded-full bg-destructive text-destructive-foreground text-xs font-bold flex items-center justify-center px-1"
-              aria-label={`${unreadCount} unread notifications`}
-            >
-              {displayCount}
-            </span>
-          )}
-        </Button>
+      <PopoverTrigger
+        className="relative inline-flex size-8 items-center justify-center rounded-md text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-colors focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-3"
+        aria-label="Notifications"
+        aria-haspopup="true"
+        aria-expanded={open}
+      >
+        <Bell className="size-4" />
+        {unreadCount > 0 && (
+          <span
+            className="absolute -top-0.5 -right-0.5 h-4 min-w-4 rounded-full bg-destructive text-destructive-foreground text-xs font-bold flex items-center justify-center px-1"
+            aria-label={`${unreadCount} unread notifications`}
+          >
+            {displayCount}
+          </span>
+        )}
       </PopoverTrigger>
       <PopoverContent
         side="bottom"

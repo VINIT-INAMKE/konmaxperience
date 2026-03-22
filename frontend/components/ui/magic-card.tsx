@@ -10,6 +10,7 @@ import {
 import { useTheme } from "next-themes"
 
 import { cn } from "@/lib/utils"
+import { GRADIENT_FROM, GRADIENT_TO, GRADIENT_OVERLAY, ORB_GLOW_FROM, ORB_GLOW_TO } from "@/lib/brand-colors"
 
 interface MagicCardBaseProps {
   children?: React.ReactNode
@@ -59,15 +60,15 @@ export function MagicCard(props: MagicCardProps) {
     children,
     className,
     gradientSize = 200,
-    gradientColor = "#262626",
-    gradientOpacity = 0.8,
-    gradientFrom = "#9E7AFF",
-    gradientTo = "#FE8BBB",
+    gradientColor,
+    gradientOpacity,
+    gradientFrom = GRADIENT_FROM,
+    gradientTo = GRADIENT_TO,
     mode = "gradient",
   } = props
 
-  const glowFrom = isOrbMode(props) ? (props.glowFrom ?? "#ee4f27") : "#ee4f27"
-  const glowTo = isOrbMode(props) ? (props.glowTo ?? "#6b21ef") : "#6b21ef"
+  const glowFrom = isOrbMode(props) ? (props.glowFrom ?? ORB_GLOW_FROM) : ORB_GLOW_FROM
+  const glowTo = isOrbMode(props) ? (props.glowTo ?? ORB_GLOW_TO) : ORB_GLOW_TO
   const glowAngle = isOrbMode(props) ? (props.glowAngle ?? 90) : 90
   const glowSize = isOrbMode(props) ? (props.glowSize ?? 420) : 420
   const glowBlur = isOrbMode(props) ? (props.glowBlur ?? 60) : 60
@@ -82,6 +83,9 @@ export function MagicCard(props: MagicCardProps) {
     const currentTheme = theme === "system" ? systemTheme : theme
     return currentTheme === "dark"
   }, [theme, systemTheme, mounted])
+
+  const resolvedGradientColor = gradientColor ?? (isDarkTheme ? GRADIENT_OVERLAY : "#e0e0e0")
+  const resolvedGradientOpacity = gradientOpacity ?? (isDarkTheme ? 0.15 : 0.1)
 
   const mouseX = useMotionValue(-gradientSize)
   const mouseY = useMotionValue(-gradientSize)
@@ -185,11 +189,11 @@ export function MagicCard(props: MagicCardProps) {
           style={{
             background: useMotionTemplate`
               radial-gradient(${gradientSize}px circle at ${mouseX}px ${mouseY}px,
-                ${gradientColor},
+                ${resolvedGradientColor},
                 transparent 100%
               )
             `,
-            opacity: gradientOpacity,
+            opacity: resolvedGradientOpacity,
           }}
         />
       )}

@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsIn } from 'class-validator';
+import { IsString, IsOptional, IsIn, IsUUID } from 'class-validator';
 
 export class UpdateAssetDto {
   @IsOptional()
@@ -10,10 +10,10 @@ export class UpdateAssetDto {
   status?: string;
 
   @IsOptional()
-  @IsString()
+  @IsUUID()
   linked_brand_id?: string;
 
   @IsOptional()
-  @IsString()
+  @IsUUID()
   linked_task_id?: string;
 }

@@ -17,37 +17,43 @@ export class KitchenExpiryCron {
         status: 'active',
         expires_at: { not: null, lt: new Date() },
       },
-      include: { recipe: true },
+      include: { recipe: { select: { computed_cost: true } } },
     });
 
     this.logger.log(`Found ${expired.length} expired prep batches`);
 
-    for (const batch of expired) {
-      await this.prisma.$transaction(async (tx) => {
-        await tx.prepBatch.update({
-          where: { id: batch.id },
-          data: { status: 'expired' },
-        });
+    if (expired.length === 0) return;
 
-        if (Number(batch.quantity_remaining) > 0) {
+    await this.prisma.$transaction(async (tx) => {
+      // Batch update all expired batches in one query
+      const expiredIds = expired.map((b) => b.id);
+      await tx.prepBatch.updateMany({
+        where: { id: { in: expiredIds } },
+        data: { status: 'expired' },
+      });
+
+      // Batch create waste logs for batches with remaining quantity
+      const wasteLogs = expired
+        .filter((batch) => Number(batch.quantity_remaining) > 0)
+        .map((batch) => {
           const costImpact =
             Number(batch.recipe.computed_cost ?? 0) *
             (Number(batch.quantity_remaining) / Number(batch.quantity_produced));
+          return {
+            waste_type: 'prep_batch' as const,
+            prep_batch_id: batch.id,
+            quantity: batch.quantity_remaining,
+            unit: batch.unit,
+            reason: 'expired' as const,
+            cost_impact: costImpact,
+            logged_by: null as string | null, // System-generated -- logged_by is nullable per schema
+            zone_id: batch.zone_id,
+          };
+        });
 
-          await tx.wasteLog.create({
-            data: {
-              waste_type: 'prep_batch',
-              prep_batch_id: batch.id,
-              quantity: batch.quantity_remaining,
-              unit: batch.unit,
-              reason: 'expired',
-              cost_impact: costImpact,
-              logged_by: null, // System-generated -- logged_by is nullable per schema
-              zone_id: batch.zone_id,
-            },
-          });
-        }
-      });
-    }
+      if (wasteLogs.length > 0) {
+        await tx.wasteLog.createMany({ data: wasteLogs });
+      }
+    });
   }
 }

@@ -24,8 +24,8 @@ export function EventCard({ event }: EventCardProps) {
     <Link href={`/events/${event.id}`}>
       <MagicCard className="rounded-xl cursor-pointer">
         <div className="p-4 space-y-3">
-          <h3 className="text-xl font-semibold">{event.title}</h3>
-          <p className="text-sm text-gray-500">{formattedDate}</p>
+          <h3 className="text-xl font-semibold line-clamp-2">{event.title}</h3>
+          <p className="text-sm text-muted-foreground">{formattedDate}</p>
           <div className="flex items-center gap-2 flex-wrap">
             <Badge variant="secondary">
               {EVENT_TYPE_LABELS[event.event_type]}
@@ -34,7 +34,7 @@ export function EventCard({ event }: EventCardProps) {
             <CapacityBadge spotsRemaining={event.spots_remaining ?? 0} />
           </div>
           {(event.zone || event.brand) && (
-            <div className="flex items-center gap-2 text-xs text-gray-500">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
               {event.zone && <span>{event.zone.name}</span>}
               {event.zone && event.brand && <span>&middot;</span>}
               {event.brand && <span>{event.brand.name}</span>}

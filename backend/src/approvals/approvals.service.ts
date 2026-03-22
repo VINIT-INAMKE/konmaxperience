@@ -23,35 +23,38 @@ export class ApprovalsService {
       include: {
         approver: { select: { id: true, name: true } },
         task: {
-          include: {
-            evidence: true,
+          select: {
+            id: true,
+            title: true,
+            status: true,
             owner: { select: { id: true, name: true } },
+            _count: { select: { evidence: true } },
           },
         },
       },
       orderBy: { created_at: 'asc' },
+      take: 100,
     });
   }
 
   /**
    * Override any pending approval (admin only).
-   * Finds approval by entity_id + entity_type (not by Approval primary key).
+   * Accepts the Approval primary key (id).
    * If entity_type is 'evidence', also updates Evidence approval_status and fires validateTask cascade.
    */
   async overrideApproval(
-    entityId: string,
-    entityType: string,
+    approvalId: string,
     adminId: string,
     reason: string,
   ) {
     return this.prisma.$transaction(async (tx: any) => {
       const approval = await tx.approval.findFirst({
-        where: { entity_id: entityId, entity_type: entityType, status: 'pending' },
+        where: { id: approvalId, status: 'pending' },
       });
 
       if (!approval) {
         throw new NotFoundException(
-          `No pending approval found for ${entityType} ${entityId}`,
+          `No pending approval found with ID ${approvalId}`,
         );
       }
 
@@ -67,16 +70,16 @@ export class ApprovalsService {
       });
 
       // Per D-10: if evidence approval, update Evidence record AND fire validation cascade
-      if (entityType === 'evidence') {
-        await tx.evidence.update({
-          where: { id: entityId },
+      if (approval.entity_type === 'evidence') {
+        const evidence = await tx.evidence.update({
+          where: { id: approval.entity_id },
           data: {
             approval_status: 'approved',
             reviewed_by: adminId,
             reviewed_at: new Date(),
           },
+          select: { task_id: true },
         });
-        const evidence = await tx.evidence.findUnique({ where: { id: entityId } });
         if (evidence) {
           return this.evidenceService.validateTask(evidence.task_id, tx);
         }
@@ -128,16 +131,14 @@ export class ApprovalsService {
       });
 
       if (approval.entity_type === 'evidence') {
-        await tx.evidence.update({
+        const evidence = await tx.evidence.update({
           where: { id: approval.entity_id },
           data: {
             approval_status: 'approved',
             reviewed_by: actingUserId,
             reviewed_at: new Date(),
           },
-        });
-        const evidence = await tx.evidence.findUnique({
-          where: { id: approval.entity_id },
+          select: { task_id: true },
         });
         if (evidence) {
           return this.evidenceService.validateTask(evidence.task_id, tx);

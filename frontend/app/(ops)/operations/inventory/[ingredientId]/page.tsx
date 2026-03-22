@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { ArrowLeft, Clock } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
-import { BlurFade } from '@/components/ui/blur-fade';
 import { Button } from '@/components/ui/button';
 import { MagicCard } from '@/components/ui/magic-card';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -44,7 +43,6 @@ export default function IngredientMovementsPage() {
     : '\u2014';
 
   return (
-    <BlurFade>
       <div className="space-y-6">
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-sm">
@@ -62,7 +60,7 @@ export default function IngredientMovementsPage() {
         {/* Summary card */}
         <MagicCard gradientColor="#1a1a2e" className="p-6">
           <div className="space-y-3">
-            <h1 className="text-xl font-semibold">{ingredientName}</h1>
+            <h1 className="text-2xl font-bold">{ingredientName}</h1>
             <div className="flex items-center gap-6 text-sm">
               <div>
                 <span className="text-muted-foreground">Current Stock: </span>
@@ -120,6 +118,5 @@ export default function IngredientMovementsPage() {
         {/* Stock adjustment Sheet */}
         <StockAdjustmentSheet open={adjustOpen} onOpenChange={setAdjustOpen} />
       </div>
-    </BlurFade>
   );
 }

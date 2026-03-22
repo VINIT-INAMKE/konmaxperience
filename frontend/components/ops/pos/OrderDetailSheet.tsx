@@ -167,7 +167,7 @@ export function OrderDetailSheet({
   return (
     <>
       <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent side="right" className="sm:max-w-[520px] overflow-y-auto">
+        <SheetContent side="right" className="w-full sm:max-w-[520px] overflow-y-auto">
           <SheetHeader>
             <SheetTitle className="text-[28px] font-bold font-mono leading-[1.1]">
               #{orderShortId}

@@ -61,6 +61,38 @@ export class EmailService {
     }
   }
 
+  async sendHtml(
+    to: { email: string; name: string },
+    subject: string,
+    html: string,
+    text: string,
+  ): Promise<void> {
+    try {
+      const sentFrom = new Sender(this.fromEmail, 'Konma Xperience');
+      const recipients = [new Recipient(to.email, to.name)];
+
+      const emailParams = new EmailParams()
+        .setFrom(sentFrom)
+        .setTo(recipients)
+        .setSubject(subject)
+        .setHtml(html)
+        .setText(text);
+
+      await this.mailerSend.email.send(emailParams);
+      this.logger.log(`Email sent to ${to.email}: ${subject}`);
+    } catch (error) {
+      this.logger.error(
+        `Failed to send email to ${to.email}`,
+        error instanceof Error ? error.stack : String(error),
+      );
+      throw error;
+    }
+  }
+
+  get publicFrontendUrl(): string {
+    return this.frontendUrl;
+  }
+
   async sendPasswordReset(
     email: string,
     token: string,

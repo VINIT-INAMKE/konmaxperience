@@ -24,7 +24,7 @@ export function QuestProgress({
     return (
       <div className="flex items-center gap-2">
         <CheckCircle className="size-4 text-green-400" />
-        <span className="text-[13px] text-green-400">Quest complete</span>
+        <span className="text-xs text-green-400">Quest complete</span>
       </div>
     );
   }
@@ -34,9 +34,9 @@ export function QuestProgress({
       {/* Core progress track */}
       <div className="space-y-1">
         <div className="flex items-center justify-between">
-          <span className="text-[13px] text-muted-foreground">Core tasks</span>
-          <span className="text-[13px] font-semibold">
-            <NumberTicker value={coreProgress} className="text-[13px] font-semibold" />
+          <span className="text-xs text-muted-foreground">Core tasks</span>
+          <span className="text-xs font-semibold">
+            <NumberTicker value={coreProgress} className="text-xs font-semibold" />
             <span>%</span>
           </span>
         </div>
@@ -54,11 +54,11 @@ export function QuestProgress({
       {totalAdhocTasks > 0 && (
         <div className="space-y-1">
           <div className="flex items-center justify-between">
-            <span className="text-[13px] text-muted-foreground">
+            <span className="text-xs text-muted-foreground">
               Ad-hoc tasks
             </span>
-            <span className="text-[13px] font-semibold">
-              <NumberTicker value={adhocProgress} className="text-[13px] font-semibold" />
+            <span className="text-xs font-semibold">
+              <NumberTicker value={adhocProgress} className="text-xs font-semibold" />
               <span>%</span>
             </span>
           </div>

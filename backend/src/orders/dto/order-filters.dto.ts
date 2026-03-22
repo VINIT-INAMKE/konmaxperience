@@ -1,12 +1,12 @@
-import { IsOptional, IsString } from 'class-validator';
+import { IsOptional, IsString, IsIn } from 'class-validator';
 
 export class OrderFiltersDto {
   @IsOptional()
-  @IsString()
+  @IsIn(['dine_in', 'takeaway', 'delivery'])
   channel?: string;
 
   @IsOptional()
-  @IsString()
+  @IsIn(['placed', 'preparing', 'ready', 'served', 'dispatched', 'cancelled'])
   status?: string;
 
   @IsOptional()
@@ -24,4 +24,12 @@ export class OrderFiltersDto {
   @IsOptional()
   @IsString()
   search?: string;
+
+  @IsOptional()
+  @IsString()
+  page?: string;
+
+  @IsOptional()
+  @IsString()
+  limit?: string;
 }

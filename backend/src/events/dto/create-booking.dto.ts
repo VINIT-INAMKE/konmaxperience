@@ -1,4 +1,4 @@
-import { IsString, IsInt, Min, MinLength, MaxLength } from 'class-validator';
+import { IsString, IsInt, Min, Max, MinLength, MaxLength } from 'class-validator';
 
 export class CreateBookingDto {
   @IsString()
@@ -13,5 +13,6 @@ export class CreateBookingDto {
 
   @IsInt()
   @Min(1)
+  @Max(50)
   guests: number;
 }

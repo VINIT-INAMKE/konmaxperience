@@ -6,7 +6,6 @@ import Link from 'next/link';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { ArrowLeft, Plus } from 'lucide-react';
-import { BlurFade } from '@/components/ui/blur-fade';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { NumberTicker } from '@/components/ui/number-ticker';
@@ -149,7 +148,6 @@ export default function NewPurchaseOrderPage() {
   };
 
   return (
-    <BlurFade>
       <div className="space-y-8 max-w-4xl">
         {/* Back link */}
         <button
@@ -161,7 +159,7 @@ export default function NewPurchaseOrderPage() {
           Back to Purchase Orders
         </button>
 
-        <h1 className="text-xl font-semibold">New Purchase Order</h1>
+        <h1 className="text-2xl font-bold">New Purchase Order</h1>
 
         {/* Section 1: Vendor + Zone Selection */}
         <div className="space-y-4">
@@ -314,6 +312,5 @@ export default function NewPurchaseOrderPage() {
           </div>
         </div>
       </div>
-    </BlurFade>
   );
 }

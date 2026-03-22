@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { BlurFade } from '@/components/ui/blur-fade';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -77,11 +76,10 @@ export default function EventsPage() {
   };
 
   return (
-    <BlurFade>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between gap-4 flex-wrap">
-          <h1 className="text-xl font-semibold">Experience Events</h1>
+          <h1 className="text-2xl font-bold">Experience Events</h1>
           <Button onClick={handleCreate}>Create Event</Button>
         </div>
 
@@ -203,6 +201,5 @@ export default function EventsPage() {
           </DialogContent>
         </Dialog>
       </div>
-    </BlurFade>
   );
 }

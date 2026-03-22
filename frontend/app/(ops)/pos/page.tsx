@@ -3,9 +3,10 @@
 import { useState, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { X, Loader2 } from 'lucide-react';
+import { X, Loader2, ShoppingCart } from 'lucide-react';
 import { ShimmerButton } from '@/components/ui/shimmer-button';
 import { Button } from '@/components/ui/button';
+import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { PosMenuGrid } from '@/components/ops/pos/PosMenuGrid';
 import { PosCartSidebar } from '@/components/ops/pos/PosCartSidebar';
 import { apiClient } from '@/lib/api-client';
@@ -35,6 +36,7 @@ export default function PosPage() {
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [selectedBrandId, setSelectedBrandId] = useState<string>('');
   const [showBorderBeam, setShowBorderBeam] = useState(false);
+  const [cartOpen, setCartOpen] = useState(false);
 
   // Channel-specific fields
   const [tableNumber, setTableNumber] = useState('');
@@ -45,7 +47,7 @@ export default function PosPage() {
   const [notes, setNotes] = useState('');
 
   // Queries
-  const { data: brands = [] } = useQuery({
+  const { data: brands = [], isLoading: brandsLoading } = useQuery({
     queryKey: ['brands'],
     queryFn: () => apiClient.get<Brand[]>('/brands'),
     select: (data) =>
@@ -101,6 +103,7 @@ export default function PosPage() {
       setDeliveryAssignedTo('');
       setNotes('');
       setShowBorderBeam(true);
+      setCartOpen(false);
       setTimeout(() => setShowBorderBeam(false), 3000);
       void queryClient.invalidateQueries({
         queryKey: ['menu', 'availability-batch'],
@@ -157,6 +160,7 @@ export default function PosPage() {
     (sum, i) => sum + i.unit_price * i.quantity,
     0,
   );
+  const totalItems = cartItems.reduce((sum, i) => sum + i.quantity, 0);
 
   const handlePlaceOrder = useCallback(() => {
     if (cartItems.length === 0) return;
@@ -222,6 +226,21 @@ export default function PosPage() {
     [],
   );
 
+  const cartSidebarProps = {
+    cartItems,
+    channel,
+    onChannelChange: setChannel,
+    channelFields,
+    onChannelFieldChange: handleChannelFieldChange,
+    notes,
+    onNotesChange: setNotes,
+    subtotal,
+    onUpdateQuantity: updateQuantity,
+    onPlaceOrder: handlePlaceOrder,
+    isPlacing: placeOrder.isPending,
+    showBorderBeam,
+  };
+
   const fullScreenClass = isFullScreen
     ? 'fixed inset-0 z-50 bg-background overflow-hidden'
     : '';
@@ -230,7 +249,7 @@ export default function PosPage() {
     <div className={fullScreenClass}>
       {/* Page header */}
       <div className="flex items-center justify-between px-4 py-3 border-b">
-        <h1 className="text-[20px] font-bold leading-tight">
+        <h1 className="text-2xl font-bold leading-tight">
           {isFullScreen ? 'Terminal Mode' : 'Take Order'}
         </h1>
         <div className="flex items-center gap-2">
@@ -261,10 +280,17 @@ export default function PosPage() {
       >
         {/* Left panel: Menu Grid */}
         <div className="flex-1 overflow-y-auto p-4">
-          {!effectiveBrandId ? (
+          {brandsLoading ? (
             <div className="flex items-center gap-2 text-sm text-muted-foreground py-8">
               <Loader2 className="size-4 animate-spin motion-reduce:animate-none" />
               Loading menu...
+            </div>
+          ) : !effectiveBrandId ? (
+            <div className="py-16 text-center space-y-2">
+              <h2 className="text-base font-semibold">No menu available</h2>
+              <p className="text-sm text-muted-foreground">
+                Add food brands and menu items in Operations to start taking orders.
+              </p>
             </div>
           ) : (
             <PosMenuGrid
@@ -279,24 +305,30 @@ export default function PosPage() {
           )}
         </div>
 
-        {/* Right panel: Cart Sidebar */}
-        <div className="w-80 min-w-[320px] border-l border-border flex flex-col">
-          <PosCartSidebar
-            cartItems={cartItems}
-            channel={channel}
-            onChannelChange={setChannel}
-            channelFields={channelFields}
-            onChannelFieldChange={handleChannelFieldChange}
-            notes={notes}
-            onNotesChange={setNotes}
-            subtotal={subtotal}
-            onUpdateQuantity={updateQuantity}
-            onPlaceOrder={handlePlaceOrder}
-            isPlacing={placeOrder.isPending}
-            showBorderBeam={showBorderBeam}
-          />
+        {/* Desktop: Cart Sidebar */}
+        <div className="hidden lg:flex w-80 min-w-[320px] border-l border-border flex-col">
+          <PosCartSidebar {...cartSidebarProps} />
         </div>
       </div>
+
+      {/* Mobile: Floating cart button */}
+      {totalItems > 0 && (
+        <button
+          className="fixed bottom-6 right-6 lg:hidden z-40 flex items-center gap-2 rounded-full bg-primary text-primary-foreground px-5 py-3 text-sm font-semibold shadow-lg active:scale-95 transition-transform"
+          onClick={() => setCartOpen(true)}
+        >
+          <ShoppingCart className="size-4" />
+          View Cart ({totalItems})
+          <span className="font-mono tabular-nums">INR {subtotal}</span>
+        </button>
+      )}
+
+      {/* Mobile: Cart Sheet */}
+      <Sheet open={cartOpen} onOpenChange={setCartOpen}>
+        <SheetContent side="right" className="w-full sm:max-w-[400px] p-0">
+          <PosCartSidebar {...cartSidebarProps} />
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

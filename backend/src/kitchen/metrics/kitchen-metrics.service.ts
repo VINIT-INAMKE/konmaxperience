@@ -24,39 +24,62 @@ export class KitchenMetricsService {
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
 
-    // 1. Orders in queue: status IN ('placed', 'preparing')
-    const orders_in_queue = await this.prisma.order.count({
-      where: { status: { in: ['placed', 'preparing'] } },
-    });
-
-    // 2. Items completed today: OrderItems with status='ready' AND ready_at >= today
-    const items_completed_today = await this.prisma.orderItem.count({
-      where: {
-        status: 'ready',
-        ready_at: { gte: todayStart },
-      },
-    });
-
-    // 3. Active prep batches
-    const active_prep_batches = await this.prisma.prepBatch.count({
-      where: { status: 'active' },
-    });
-
-    // 4. Waste today cost: sum of WasteLog.cost_impact where created_at >= today
-    const wasteAggregate = await this.prisma.wasteLog.aggregate({
-      _sum: { cost_impact: true },
-      where: { created_at: { gte: todayStart } },
-    });
+    // Run ALL independent DB queries in a single parallel batch
+    const [
+      orders_in_queue,
+      items_completed_today,
+      active_prep_batches,
+      wasteAggregate,
+      todayBatches,
+      completedItems,
+      zoneOrders,
+    ] = await Promise.all([
+      // 1. Orders in queue: status IN ('placed', 'preparing')
+      this.prisma.order.count({
+        where: { status: { in: ['placed', 'preparing'] } },
+      }),
+      // 2. Items completed today: OrderItems with status='ready' AND ready_at >= today
+      this.prisma.orderItem.count({
+        where: {
+          status: 'ready',
+          ready_at: { gte: todayStart },
+        },
+      }),
+      // 3. Active prep batches
+      this.prisma.prepBatch.count({
+        where: { status: 'active' },
+      }),
+      // 4. Waste today cost: sum of WasteLog.cost_impact where created_at >= today
+      this.prisma.wasteLog.aggregate({
+        _sum: { cost_impact: true },
+        where: { created_at: { gte: todayStart } },
+      }),
+      // 5. Today's prep batches for waste percentage
+      this.prisma.prepBatch.findMany({
+        where: { created_at: { gte: todayStart } },
+        select: {
+          quantity_produced: true,
+          recipe: { select: { computed_cost: true, yield_qty: true } },
+        },
+      }),
+      // 6. Completed items for average prep time
+      this.prisma.orderItem.findMany({
+        where: {
+          ready_at: { not: null, gte: todayStart },
+        },
+        select: {
+          ready_at: true,
+          order: { select: { created_at: true } },
+        },
+      }),
+      // 7. Zone utilization: active orders grouped by zone
+      this.prisma.order.groupBy({
+        by: ['zone_id'],
+        where: { status: { in: ['placed', 'preparing'] } },
+        _count: { id: true },
+      }),
+    ]);
     const waste_today_cost = Number(wasteAggregate._sum.cost_impact ?? 0);
-
-    // 5. Waste percentage: (waste_today_cost / totalCostProduced) * 100
-    // totalCostProduced: sum of (quantity_produced / yield_qty) * computed_cost for today's PrepBatches
-    const todayBatches = await this.prisma.prepBatch.findMany({
-      where: { created_at: { gte: todayStart } },
-      include: {
-        recipe: { select: { computed_cost: true, yield_qty: true } },
-      },
-    });
 
     let totalCostProduced = 0;
     for (const batch of todayBatches) {
@@ -73,17 +96,6 @@ export class KitchenMetricsService {
         ? (waste_today_cost / totalCostProduced) * 100
         : 0;
 
-    // 6. Average prep time: average of (ready_at - order.created_at) in minutes
-    //    for OrderItems with ready_at IS NOT NULL and created today
-    const completedItems = await this.prisma.orderItem.findMany({
-      where: {
-        ready_at: { not: null, gte: todayStart },
-      },
-      include: {
-        order: { select: { created_at: true } },
-      },
-    });
-
     let average_prep_time_minutes: number | null = null;
     if (completedItems.length > 0) {
       let totalMinutes = 0;
@@ -96,13 +108,6 @@ export class KitchenMetricsService {
         (totalMinutes / completedItems.length) * 10,
       ) / 10;
     }
-
-    // 7. Zone utilization: active orders grouped by zone
-    const zoneOrders = await this.prisma.order.groupBy({
-      by: ['zone_id'],
-      where: { status: { in: ['placed', 'preparing'] } },
-      _count: { id: true },
-    });
 
     const zones = zoneOrders.length > 0
       ? await this.prisma.zone.findMany({

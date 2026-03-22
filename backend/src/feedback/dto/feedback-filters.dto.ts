@@ -16,4 +16,12 @@ export class FeedbackFiltersDto {
   @IsOptional()
   @IsString()
   date_to?: string;
+
+  @IsOptional()
+  @IsString()
+  page?: string;
+
+  @IsOptional()
+  @IsString()
+  limit?: string;
 }

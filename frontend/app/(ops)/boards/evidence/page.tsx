@@ -64,7 +64,7 @@ export default function EvidenceFeedPage() {
       <div className="space-y-6">
         {/* Header + filter bar */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <h1 className="text-[20px] font-bold">Evidence Feed</h1>
+          <h1 className="text-2xl font-bold">Evidence Feed</h1>
           <div className="flex gap-2">
             {STATUS_FILTERS.map((f) => (
               <Button
@@ -100,7 +100,7 @@ export default function EvidenceFeedPage() {
           <div className="flex flex-col items-center justify-center py-16 space-y-4 text-center">
             <FileSearch className="size-12 text-muted-foreground" />
             <div className="space-y-1">
-              <h2 className="text-[20px] font-bold">No evidence submitted</h2>
+              <h2 className="text-xl font-bold">No evidence submitted</h2>
               <p className="text-sm text-muted-foreground">
                 Evidence submitted to tasks will appear here.
               </p>

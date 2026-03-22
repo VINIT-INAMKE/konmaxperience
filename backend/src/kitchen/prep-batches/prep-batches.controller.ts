@@ -21,8 +21,10 @@ export class PrepBatchesController {
   async findAll(
     @Query('zone_id') zoneId?: string,
     @Query('status') status?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
   ) {
-    return this.prepBatchesService.findAll(zoneId, status);
+    return this.prepBatchesService.findAll(zoneId, status, Number(page), Number(limit));
   }
 
   @Post()

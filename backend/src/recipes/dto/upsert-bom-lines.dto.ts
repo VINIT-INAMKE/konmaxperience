@@ -5,10 +5,7 @@ import {
   IsNumber,
   Min,
   IsOptional,
-  ValidateNested,
-  IsArray,
 } from 'class-validator';
-import { Type } from 'class-transformer';
 
 export class BomLineDto {
   @IsIn(['ingredient', 'recipe'])
@@ -27,11 +24,4 @@ export class BomLineDto {
   @IsOptional()
   @IsString()
   prep_notes?: string;
-}
-
-export class UpsertBomLinesDto {
-  @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => BomLineDto)
-  bom_lines!: BomLineDto[];
 }

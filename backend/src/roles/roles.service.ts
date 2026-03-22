@@ -26,9 +26,10 @@ export class RolesService {
   }
 
   async updatePermissions(roleId: string, permissions: string[]) {
-    // Validate role exists
+    // Validate role exists — only need code for guard check + cache invalidation
     const role = await this.prisma.role.findUnique({
       where: { id: roleId },
+      select: { id: true, code: true },
     });
     if (!role) {
       throw new NotFoundException(`Role with ID ${roleId} not found`);

@@ -3,6 +3,7 @@ import {
   BadRequestException,
   NotFoundException,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
@@ -12,25 +13,21 @@ import { CreateBookingDto } from './dto/create-booking.dto';
 export class EventsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findUpcoming() {
-    const events = await this.prisma.event.findMany({
-      where: {
-        date: { gte: new Date() },
-        status: { not: 'cancelled' },
-      },
-      include: {
-        bookings: { select: { guests: true } },
-        zone: { select: { id: true, name: true } },
-        brand: { select: { id: true, name: true } },
-      },
-      orderBy: { date: 'asc' },
+  private async enrichWithGuestCounts<T extends { id: string; capacity: number }>(
+    events: T[],
+  ): Promise<Array<T & { booked_guests: number; spots_remaining: number }>> {
+    if (events.length === 0) return [];
+    const eventIds = events.map((e) => e.id);
+    const guestSums = await this.prisma.eventBooking.groupBy({
+      by: ['event_id'],
+      where: { event_id: { in: eventIds } },
+      _sum: { guests: true },
     });
-
+    const guestMap = new Map(
+      guestSums.map((g) => [g.event_id, g._sum.guests ?? 0]),
+    );
     return events.map((event) => {
-      const booked_guests = event.bookings.reduce(
-        (sum, b) => sum + b.guests,
-        0,
-      );
+      const booked_guests = guestMap.get(event.id) ?? 0;
       return {
         ...event,
         booked_guests,
@@ -39,27 +36,33 @@ export class EventsService {
     });
   }
 
+  async findUpcoming() {
+    const events = await this.prisma.event.findMany({
+      where: {
+        date: { gte: new Date() },
+        status: { not: 'cancelled' },
+      },
+      include: {
+        zone: { select: { id: true, name: true } },
+        brand: { select: { id: true, name: true } },
+      },
+      orderBy: { date: 'asc' },
+    });
+
+    return this.enrichWithGuestCounts(events);
+  }
+
   async findAll() {
     const events = await this.prisma.event.findMany({
       include: {
-        bookings: { select: { guests: true } },
         zone: { select: { id: true, name: true } },
         brand: { select: { id: true, name: true } },
       },
       orderBy: { date: 'desc' },
+      take: 100,
     });
 
-    return events.map((event) => {
-      const booked_guests = event.bookings.reduce(
-        (sum, b) => sum + b.guests,
-        0,
-      );
-      return {
-        ...event,
-        booked_guests,
-        spots_remaining: event.capacity - booked_guests,
-      };
-    });
+    return this.enrichWithGuestCounts(events);
   }
 
   async findOne(id: string) {
@@ -68,7 +71,6 @@ export class EventsService {
       include: {
         zone: { select: { id: true, name: true } },
         brand: { select: { id: true, name: true } },
-        bookings: true,
       },
     });
 
@@ -76,7 +78,17 @@ export class EventsService {
       throw new NotFoundException(`Event with ID ${id} not found`);
     }
 
-    return event;
+    const guestAgg = await this.prisma.eventBooking.aggregate({
+      where: { event_id: id },
+      _sum: { guests: true },
+    });
+    const booked_guests = guestAgg._sum.guests ?? 0;
+
+    return {
+      ...event,
+      booked_guests,
+      spots_remaining: event.capacity - booked_guests,
+    };
   }
 
   async create(dto: CreateEventDto) {
@@ -100,8 +112,14 @@ export class EventsService {
   }
 
   async update(id: string, dto: UpdateEventDto) {
-    // Verify event exists
-    await this.findOne(id);
+    // Verify event exists (lightweight check — no aggregation)
+    const exists = await this.prisma.event.findUnique({
+      where: { id },
+      select: { id: true },
+    });
+    if (!exists) {
+      throw new NotFoundException(`Event with ID ${id} not found`);
+    }
 
     return this.prisma.event.update({
       where: { id },
@@ -125,8 +143,14 @@ export class EventsService {
   }
 
   async remove(id: string) {
-    // Verify event exists
-    await this.findOne(id);
+    // Verify event exists (lightweight check — no aggregation)
+    const exists = await this.prisma.event.findUnique({
+      where: { id },
+      select: { id: true },
+    });
+    if (!exists) {
+      throw new NotFoundException(`Event with ID ${id} not found`);
+    }
 
     return this.prisma.event.delete({ where: { id } });
   }
@@ -175,12 +199,18 @@ export class EventsService {
           guests: dto.guests,
         },
       });
-    });
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
   }
 
   async getBookings(eventId: string) {
-    // Verify event exists
-    await this.findOne(eventId);
+    // Verify event exists (lightweight check)
+    const event = await this.prisma.event.findUnique({
+      where: { id: eventId },
+      select: { id: true },
+    });
+    if (!event) {
+      throw new NotFoundException(`Event with ID ${eventId} not found`);
+    }
 
     return this.prisma.eventBooking.findMany({
       where: { event_id: eventId },

@@ -1,8 +1,10 @@
 import {
   Injectable,
+  BadRequestException,
   ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma/prisma.service';
 import { buildScopeFilter } from '../permissions/scope.filter';
@@ -71,6 +73,7 @@ export class TasksService {
         depends_on: { select: { id: true, title: true, status: true } },
       },
       orderBy: [{ priority: 'desc' }, { created_at: 'desc' }],
+      take: 200,
     });
 
     // Add is_own boolean: admin sees all as is_own=true (can edit anything)
@@ -128,16 +131,16 @@ export class TasksService {
     dto: UpdateTaskDto,
     requestingUser: { id: string; roleCode: string },
   ) {
-    const existing = await this.prisma.task.findUnique({ where: { id } });
+    // Parallelize independent lookups
+    const [existing, perms] = await Promise.all([
+      this.prisma.task.findUnique({ where: { id } }),
+      getPermissionsForRole(requestingUser.roleCode, this.prisma),
+    ]);
     if (!existing) {
       throw new NotFoundException(`Task with ID ${id} not found`);
     }
 
     // Permission check
-    const perms = await getPermissionsForRole(
-      requestingUser.roleCode,
-      this.prisma,
-    );
     const canUpdateAny = perms.includes(Permission.UPDATE_ANY_TASK);
     const canUpdateOwn =
       perms.includes(Permission.UPDATE_OWN_TASK) &&
@@ -147,6 +150,19 @@ export class TasksService {
       throw new ForbiddenException(
         'You do not have permission to update this task',
       );
+    }
+
+    // B1: Enforce dependency check on task completion
+    if (dto.status === 'done' && existing.depends_on_task_id) {
+      const depTask = await this.prisma.task.findUnique({
+        where: { id: existing.depends_on_task_id },
+        select: { id: true, title: true, status: true },
+      });
+      if (depTask && depTask.status !== 'done') {
+        throw new BadRequestException(
+          `Cannot complete task: dependency "${depTask.title}" is not yet done`,
+        );
+      }
     }
 
     const statusChanged =
@@ -181,14 +197,16 @@ export class TasksService {
         },
       });
 
-      // Recalculate progress if status changed
+      // Recalculate progress if status changed — parallelized (independent aggregations)
       if (statusChanged) {
-        await this.recalculateQuestProgress(existing.quest_id, tx);
-        await this.recalculateMissionProgress(existing.mission_id, tx);
+        await Promise.all([
+          this.recalculateQuestProgress(existing.quest_id, tx),
+          this.recalculateMissionProgress(existing.mission_id, tx),
+        ]);
       }
 
       return updated;
-    });
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 
     return result;
   }
@@ -198,16 +216,16 @@ export class TasksService {
     reason: string,
     requestingUser: { id: string; roleCode: string },
   ) {
-    const existing = await this.prisma.task.findUnique({ where: { id } });
+    // Parallelize independent lookups
+    const [existing, perms] = await Promise.all([
+      this.prisma.task.findUnique({ where: { id } }),
+      getPermissionsForRole(requestingUser.roleCode, this.prisma),
+    ]);
     if (!existing) {
       throw new NotFoundException(`Task with ID ${id} not found`);
     }
 
     // Permission check: owner or UPDATE_ANY_TASK
-    const perms = await getPermissionsForRole(
-      requestingUser.roleCode,
-      this.prisma,
-    );
     const canUpdateAny = perms.includes(Permission.UPDATE_ANY_TASK);
     const isOwner = existing.owner_user_id === requestingUser.id;
 
@@ -231,12 +249,14 @@ export class TasksService {
         },
       });
 
-      // Status changed, recalculate progress
-      await this.recalculateQuestProgress(existing.quest_id, tx);
-      await this.recalculateMissionProgress(existing.mission_id, tx);
+      // Status changed, recalculate progress — parallelized (independent aggregations)
+      await Promise.all([
+        this.recalculateQuestProgress(existing.quest_id, tx),
+        this.recalculateMissionProgress(existing.mission_id, tx),
+      ]);
 
       return updated;
-    });
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 
     // Emit AFTER transaction commits (Pitfall 1 compliance)
     try {
@@ -246,7 +266,7 @@ export class TasksService {
         ownerUserId: result.owner_user_id,
         blockedReason: reason,
       });
-    } catch {}
+    } catch (e) { /* event emission failed - non-critical */ }
 
     return result;
   }
@@ -255,16 +275,16 @@ export class TasksService {
     id: string,
     requestingUser: { id: string; roleCode: string },
   ) {
-    const existing = await this.prisma.task.findUnique({ where: { id } });
+    // Parallelize independent lookups
+    const [existing, perms] = await Promise.all([
+      this.prisma.task.findUnique({ where: { id } }),
+      getPermissionsForRole(requestingUser.roleCode, this.prisma),
+    ]);
     if (!existing) {
       throw new NotFoundException(`Task with ID ${id} not found`);
     }
 
     // Permission check: owner or UPDATE_ANY_TASK
-    const perms = await getPermissionsForRole(
-      requestingUser.roleCode,
-      this.prisma,
-    );
     const canUpdateAny = perms.includes(Permission.UPDATE_ANY_TASK);
     const isOwner = existing.owner_user_id === requestingUser.id;
 
@@ -275,6 +295,8 @@ export class TasksService {
     }
 
     const result = await this.prisma.$transaction(async (tx) => {
+      // Note: We default to 'todo' because the schema does not store a previous_status.
+      // A proper fix would require adding a previous_status column to the Task model.
       const updated = await tx.task.update({
         where: { id },
         data: {
@@ -288,12 +310,14 @@ export class TasksService {
         },
       });
 
-      // Status changed, recalculate progress
-      await this.recalculateQuestProgress(existing.quest_id, tx);
-      await this.recalculateMissionProgress(existing.mission_id, tx);
+      // Status changed, recalculate progress — parallelized (independent aggregations)
+      await Promise.all([
+        this.recalculateQuestProgress(existing.quest_id, tx),
+        this.recalculateMissionProgress(existing.mission_id, tx),
+      ]);
 
       return updated;
-    });
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 
     return result;
   }
@@ -312,7 +336,14 @@ export class TasksService {
 
     return this.prisma.task.findMany({
       where: { blocked: true, status: 'blocked' },
-      include: {
+      select: {
+        id: true,
+        title: true,
+        blocked_reason: true,
+        owner_user_id: true,
+        quest_id: true,
+        mission_id: true,
+        updated_at: true,
         owner: { select: { id: true, name: true } },
         quest: { select: { id: true, title: true } },
         mission: { select: { id: true, title: true } },
@@ -321,31 +352,48 @@ export class TasksService {
     });
   }
 
-  private async recalculateQuestProgress(
+  async recalculateQuestProgress(
     questId: string | null,
     tx: any,
   ): Promise<void> {
     if (!questId) return;
 
-    const quest = await tx.quest.findUnique({ where: { id: questId } });
+    const quest = await tx.quest.findUnique({
+      where: { id: questId },
+      select: { id: true, baseline_task_count: true },
+    });
     if (!quest) return;
 
-    // Core progress: valid core tasks / baseline_task_count
-    const coreValidCount = await tx.task.count({
-      where: { quest_id: questId, task_type: 'core', valid: true },
+    // Use groupBy to get all task type/valid counts in a single query
+    const taskCounts = await tx.task.groupBy({
+      by: ['task_type', 'valid'],
+      where: { quest_id: questId, task_type: { in: ['core', 'adhoc'] } },
+      _count: { id: true },
     });
+
+    let coreValidCount = 0;
+    let totalAdhoc = 0;
+    let validAdhoc = 0;
+
+    for (const group of taskCounts) {
+      if (group.task_type === 'core' && group.valid) {
+        coreValidCount = group._count.id;
+      }
+      if (group.task_type === 'adhoc') {
+        totalAdhoc += group._count.id;
+        if (group.valid) {
+          validAdhoc = group._count.id;
+        }
+      }
+    }
+
+    // Core progress: valid core tasks / baseline_task_count
     const coreProgress =
       quest.baseline_task_count > 0
         ? Math.round((coreValidCount / quest.baseline_task_count) * 100)
         : 0;
 
     // Adhoc progress: valid adhoc tasks / total adhoc tasks
-    const totalAdhoc = await tx.task.count({
-      where: { quest_id: questId, task_type: 'adhoc' },
-    });
-    const validAdhoc = await tx.task.count({
-      where: { quest_id: questId, task_type: 'adhoc', valid: true },
-    });
     const adhocProgress =
       totalAdhoc > 0 ? Math.round((validAdhoc / totalAdhoc) * 100) : 0;
 
@@ -370,16 +418,22 @@ export class TasksService {
     });
   }
 
-  private async recalculateMissionProgress(
+  async recalculateMissionProgress(
     missionId: string,
     tx: any,
   ): Promise<void> {
-    const total = await tx.task.count({
+    const counts = await tx.task.groupBy({
+      by: ['valid'],
       where: { mission_id: missionId },
+      _count: { id: true },
     });
-    const validCount = await tx.task.count({
-      where: { mission_id: missionId, valid: true },
-    });
+
+    let total = 0;
+    let validCount = 0;
+    for (const group of counts) {
+      total += group._count.id;
+      if (group.valid) validCount = group._count.id;
+    }
     const progress = total > 0 ? Math.round((validCount / total) * 100) : 0;
 
     // IMPORTANT: Do NOT touch mission.status

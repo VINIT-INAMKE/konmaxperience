@@ -106,7 +106,7 @@ export function EvidenceSection({ task, isOwn, isAdmin }: EvidenceSectionProps) 
         <div className="flex items-center justify-between">
           <h3 className="text-xl font-semibold">Evidence</h3>
           {evidence && evidence.length > 0 && (
-            <span className="text-[13px] text-muted-foreground">
+            <span className="text-xs text-muted-foreground">
               {evidence.length} {evidence.length === 1 ? 'item' : 'items'}
             </span>
           )}

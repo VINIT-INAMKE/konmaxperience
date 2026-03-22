@@ -38,16 +38,36 @@ export class OrdersService {
   // ---------------------------------------------------------------
   async createOrder(dto: CreateOrderDto, userId: string) {
     const order = await this.prisma.$transaction(async (tx) => {
-      // Compute subtotal from items
-      const subtotal = dto.items.reduce(
-        (sum, item) => sum + item.unit_price * item.quantity,
-        0,
+      // Look up authoritative prices for each menu item from the database
+      const menuItemIds = dto.items.map((i) => i.menu_item_id);
+      const menuItems = await tx.menuItem.findMany({
+        where: { id: { in: menuItemIds } },
+        select: { id: true, base_price: true },
+      });
+
+      const priceMap = new Map(
+        menuItems.map((mi) => [mi.id, Number(mi.base_price)]),
       );
+
+      // Validate all menu items exist
+      for (const item of dto.items) {
+        if (!priceMap.has(item.menu_item_id)) {
+          throw new BadRequestException(
+            `Menu item with ID ${item.menu_item_id} not found`,
+          );
+        }
+      }
 
       // Look up channel modifier (null-check gracefully per Pitfall 5)
       const modifier = await tx.channelModifier.findFirst({
         where: { channel_type: dto.channel, status: 'active' },
       });
+
+      // Compute subtotal using server-side prices
+      const subtotal = dto.items.reduce((sum, item) => {
+        const basePrice = priceMap.get(item.menu_item_id)!;
+        return sum + basePrice * item.quantity;
+      }, 0);
 
       // Compute modifier amount
       let modifierAmount = 0;
@@ -59,7 +79,7 @@ export class OrdersService {
         }
       }
 
-      // Create order with items
+      // Create order with items using server-side prices
       const created = await tx.order.create({
         data: {
           channel: dto.channel,
@@ -79,7 +99,7 @@ export class OrdersService {
             create: dto.items.map((i) => ({
               menu_item_id: i.menu_item_id,
               quantity: i.quantity,
-              unit_price: i.unit_price,
+              unit_price: priceMap.get(i.menu_item_id)!,
               item_notes: i.item_notes,
               status: 'pending',
             })),
@@ -100,7 +120,7 @@ export class OrdersService {
         total: String(order.total),
         createdBy: userId,
       });
-    } catch {}
+    } catch (e) { /* event emission failed - non-critical */ }
 
     return order;
   }
@@ -125,7 +145,9 @@ export class OrdersService {
         createdAt.gte = new Date(filters.date_from);
       }
       if (filters.date_to) {
-        createdAt.lte = new Date(filters.date_to);
+        const endDate = new Date(filters.date_to);
+        endDate.setHours(23, 59, 59, 999);
+        createdAt.lte = endDate;
       }
       where.created_at = createdAt;
     }
@@ -138,13 +160,18 @@ export class OrdersService {
       where.id = { contains: filters.search };
     }
 
+    const take = Math.min(Number(filters.limit) || 50, 100);
+    const skip = ((Number(filters.page) || 1) - 1) * take;
+
     return this.prisma.order.findMany({
       where,
       include: {
-        items: { select: { id: true } },
-        payment: true,
+        _count: { select: { items: true } },
+        payment: { select: { id: true, method: true, amount: true, status: true } },
       },
       orderBy: { created_at: 'desc' },
+      take,
+      skip,
     });
   }
 
@@ -177,6 +204,7 @@ export class OrdersService {
   async updateOrderStatus(orderId: string, newStatus: string) {
     const order = await this.prisma.order.findUnique({
       where: { id: orderId },
+      select: { id: true, status: true },
     });
 
     if (!order) {
@@ -190,10 +218,14 @@ export class OrdersService {
           `Cannot cancel order in "${order.status}" status`,
         );
       }
-      return this.prisma.order.update({
-        where: { id: orderId },
+      const cancelResult = await this.prisma.order.updateMany({
+        where: { id: orderId, status: order.status },
         data: { status: 'cancelled' },
       });
+      if (cancelResult.count === 0) {
+        throw new ConflictException('Order status was changed by another request. Please retry.');
+      }
+      return this.prisma.order.findUnique({ where: { id: orderId } });
     }
 
     // Validate non-cancellation transition
@@ -205,36 +237,88 @@ export class OrdersService {
       );
     }
 
-    return this.prisma.order.update({
-      where: { id: orderId },
+    const updateResult = await this.prisma.order.updateMany({
+      where: { id: orderId, status: order.status },
       data: { status: newStatus },
     });
+    if (updateResult.count === 0) {
+      throw new ConflictException('Order status was changed by another request. Please retry.');
+    }
+    return this.prisma.order.findUnique({ where: { id: orderId } });
   }
 
   // ---------------------------------------------------------------
   // Record Payment
   // ---------------------------------------------------------------
   async recordPayment(orderId: string, dto: RecordPaymentDto) {
-    // Check for existing payment (per Pitfall 7)
-    const existing = await this.prisma.payment.findFirst({
-      where: { order_id: orderId },
+    // Verify order exists — only fetch fields needed for validation
+    const order = await this.prisma.order.findUnique({
+      where: { id: orderId },
+      select: { id: true, status: true, total: true },
     });
+    if (!order) {
+      throw new NotFoundException(`Order with ID ${orderId} not found`);
+    }
 
-    if (existing) {
-      throw new ConflictException(
-        'Payment already recorded for this order',
+    // Reject payment for cancelled orders
+    if (order.status === 'cancelled') {
+      throw new BadRequestException(
+        'Cannot record payment for a cancelled order',
       );
     }
 
-    return this.prisma.payment.create({
-      data: {
-        order_id: orderId,
-        method: dto.method,
-        amount: dto.amount,
-        status: 'paid',
-        notes: dto.notes,
-      },
-    });
+    // Validate payment amount matches order total (allow small rounding tolerance)
+    const orderTotal = Number(order.total);
+    if (Math.abs(dto.amount - orderTotal) > 0.01) {
+      throw new BadRequestException(
+        `Payment amount (${dto.amount}) does not match order total (${orderTotal})`,
+      );
+    }
+
+    // Check for existing payment and create atomically
+    try {
+      // Check for existing payment (per Pitfall 7)
+      const existing = await this.prisma.payment.findFirst({
+        where: { order_id: orderId },
+      });
+
+      if (existing) {
+        throw new ConflictException(
+          'Payment already recorded for this order',
+        );
+      }
+
+      return await this.prisma.payment.create({
+        data: {
+          order_id: orderId,
+          method: dto.method,
+          amount: dto.amount,
+          status: 'paid',
+          notes: dto.notes,
+        },
+      });
+    } catch (error) {
+      // Re-throw known exceptions
+      if (
+        error instanceof ConflictException ||
+        error instanceof BadRequestException ||
+        error instanceof NotFoundException
+      ) {
+        throw error;
+      }
+      // Handle unique constraint violation (P2002)
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        'code' in error &&
+        (error as any).code === 'P2002'
+      ) {
+        throw new ConflictException(
+          'Payment already recorded for this order',
+        );
+      }
+      throw error;
+    }
   }
 
   // ---------------------------------------------------------------
@@ -243,10 +327,15 @@ export class OrdersService {
   async updateDelivery(orderId: string, dto: UpdateDeliveryDto) {
     const order = await this.prisma.order.findUnique({
       where: { id: orderId },
+      select: { id: true, channel: true, status: true, delivery_status: true, delivery_address: true, created_by: true },
     });
 
     if (!order) {
       throw new NotFoundException(`Order with ID ${orderId} not found`);
+    }
+
+    if (order.channel !== 'delivery') {
+      throw new BadRequestException('Delivery updates only apply to delivery orders');
     }
 
     // Validate delivery_status progression if provided
@@ -285,7 +374,7 @@ export class OrdersService {
         deliveryAddress: order.delivery_address,
         createdBy: order.created_by,
       });
-    } catch {}
+    } catch (e) { /* event emission failed - non-critical */ }
 
     return updated;
   }
@@ -298,23 +387,26 @@ export class OrdersService {
     const start = new Date(`${date}T00:00:00+05:30`);
     const end = new Date(start.getTime() + 24 * 60 * 60 * 1000);
 
-    const orders = await this.prisma.order.findMany({
-      where: {
-        created_at: { gte: start, lt: end },
-        status: { not: 'cancelled' },
-      },
-      include: { payment: true },
-    });
+    const dateFilter = {
+      created_at: { gte: start, lt: end },
+      status: { not: 'cancelled' as const },
+    };
 
-    const totalOrders = orders.length;
-    const totalRevenue = orders.reduce((sum, order) => {
-      if (order.payment && order.payment.status === 'paid') {
-        return sum + Number(order.total);
-      }
-      return sum;
-    }, 0);
-    const averageOrderValue =
-      totalOrders > 0 ? totalRevenue / totalOrders : 0;
+    const [totalOrders, paidAgg] = await Promise.all([
+      this.prisma.order.count({ where: dateFilter }),
+      this.prisma.order.aggregate({
+        where: {
+          ...dateFilter,
+          payment: { status: 'paid' },
+        },
+        _sum: { total: true },
+        _count: { id: true },
+      }),
+    ]);
+
+    const totalRevenue = Number(paidAgg._sum.total ?? 0);
+    const paidCount = paidAgg._count.id;
+    const averageOrderValue = paidCount > 0 ? totalRevenue / paidCount : 0;
 
     return {
       total_orders: totalOrders,
@@ -357,14 +449,26 @@ export class OrdersService {
       quantity: number;
     },
     userId: string,
+    /** Pass zone_id from the order to avoid an extra DB round-trip */
+    zoneId?: string,
   ): Promise<void> {
-    // 1. Load MenuItem with Recipe and RecipeLines
+    // 1. Load MenuItem with Recipe and RecipeLines (only fields needed for deduction)
     const menuItem = await tx.menuItem.findUniqueOrThrow({
       where: { id: orderItem.menu_item_id },
-      include: {
+      select: {
         recipe: {
-          include: {
-            RecipeLines: { include: { ingredient: true, source_recipe: true } },
+          select: {
+            RecipeLines: {
+              select: {
+                input_type: true,
+                quantity: true,
+                unit: true,
+                ingredient_id: true,
+                ingredient: { select: { name: true, base_unit: true } },
+                source_recipe_id: true,
+                source_recipe: { select: { name: true, yield_unit: true } },
+              },
+            },
           },
         },
       },
@@ -372,111 +476,116 @@ export class OrdersService {
 
     const recipe = menuItem.recipe;
 
-    // Get zone_id from the order itself
-    const order = await tx.order.findUniqueOrThrow({
-      where: { id: orderItem.order_id },
-    });
-    const zoneId = order.zone_id;
+    // Only fetch order for zone_id if not passed by caller
+    if (!zoneId) {
+      const order = await tx.order.findUniqueOrThrow({
+        where: { id: orderItem.order_id },
+        select: { zone_id: true },
+      });
+      zoneId = order.zone_id;
+    }
 
-    // 2. For each serving (orderItem.quantity), deduct each RecipeLine
-    for (let serving = 0; serving < orderItem.quantity; serving++) {
-      for (const line of recipe.RecipeLines) {
-        const needed = Number(line.quantity);
+    // 2. Multiply per-serving needs by quantity to avoid looping per serving.
+    //    This eliminates N redundant stock lookups for N servings.
+    const servings = orderItem.quantity;
 
-        if (line.input_type === 'ingredient' && line.ingredient) {
-          // Deduct raw ingredient from IngredientStock
-          // CRITICAL: pass tx (not this.prisma) per Research Pitfall 2
-          const neededBase = await convertUnit(
-            needed,
-            line.unit,
-            line.ingredient.base_unit,
-            tx,
+    for (const line of recipe.RecipeLines) {
+      const neededPerServing = Number(line.quantity);
+      const totalNeeded = neededPerServing * servings;
+
+      if (line.input_type === 'ingredient' && line.ingredient) {
+        // Deduct raw ingredient from IngredientStock
+        // CRITICAL: pass tx (not this.prisma) per Research Pitfall 2
+        const neededBase = await convertUnit(
+          totalNeeded,
+          line.unit,
+          line.ingredient.base_unit,
+          tx,
+        );
+        if (neededBase === null) {
+          throw new BadRequestException(
+            `No unit conversion from ${line.unit} to ${line.ingredient.base_unit}`,
           );
-          if (neededBase === null) {
-            throw new BadRequestException(
-              `No unit conversion from ${line.unit} to ${line.ingredient.base_unit}`,
-            );
-          }
-
-          const stock = await tx.ingredientStock.findFirst({
-            where: { ingredient_id: line.ingredient_id, zone_id: zoneId },
-          });
-          if (!stock || Number(stock.current_quantity) < neededBase) {
-            throw new BadRequestException(
-              `Insufficient stock for ${line.ingredient.name}`,
-            );
-          }
-
-          await tx.ingredientStock.update({
-            where: { id: stock.id },
-            data: { current_quantity: { decrement: neededBase } },
-          });
-
-          await tx.stockMovement.create({
-            data: {
-              ingredient_id: line.ingredient_id,
-              zone_id: zoneId,
-              movement_type: 'order_deducted',
-              quantity: -neededBase,
-              original_quantity: needed,
-              unit: line.unit,
-              reason: 'Order item deduction',
-              reference_type: 'order',
-              reference_id: orderItem.order_id,
-              created_by: userId,
-            },
-          });
         }
 
-        if (line.input_type === 'recipe' && line.source_recipe) {
-          // FIFO deduct from PrepBatches — same pattern as PrepBatchesService
-          const batches = await tx.prepBatch.findMany({
-            where: {
-              recipe_id: line.source_recipe_id,
-              status: 'active',
-              OR: [
-                { expires_at: null },
-                { expires_at: { gt: new Date() } },
-              ],
+        const stock = await tx.ingredientStock.findFirst({
+          where: { ingredient_id: line.ingredient_id, zone_id: zoneId },
+        });
+        if (!stock || Number(stock.current_quantity) < neededBase) {
+          throw new BadRequestException(
+            `Insufficient stock for ${line.ingredient.name}`,
+          );
+        }
+
+        await tx.ingredientStock.update({
+          where: { id: stock.id },
+          data: { current_quantity: { decrement: neededBase } },
+        });
+
+        await tx.stockMovement.create({
+          data: {
+            ingredient_id: line.ingredient_id,
+            zone_id: zoneId,
+            movement_type: 'order_deducted',
+            quantity: -neededBase,
+            original_quantity: totalNeeded,
+            unit: line.unit,
+            reason: 'Order item deduction',
+            reference_type: 'order',
+            reference_id: orderItem.order_id,
+            created_by: userId,
+          },
+        });
+      }
+
+      if (line.input_type === 'recipe' && line.source_recipe) {
+        // FIFO deduct from PrepBatches — same pattern as PrepBatchesService
+        const batches = await tx.prepBatch.findMany({
+          where: {
+            recipe_id: line.source_recipe_id,
+            status: 'active',
+            OR: [
+              { expires_at: null },
+              { expires_at: { gt: new Date() } },
+            ],
+          },
+          orderBy: { created_at: 'asc' }, // FIFO — oldest first
+        });
+
+        // Convert total needed to batch yield unit — pass tx (Pitfall 2)
+        let remainingNeed = await convertUnit(
+          totalNeeded,
+          line.unit,
+          line.source_recipe.yield_unit,
+          tx,
+        );
+        if (remainingNeed === null) {
+          throw new BadRequestException(
+            `No unit conversion from ${line.unit} to ${line.source_recipe.yield_unit}`,
+          );
+        }
+
+        for (const batch of batches) {
+          if (remainingNeed <= 0) break;
+          const batchRemaining = Number(batch.quantity_remaining);
+          const deduct = Math.min(batchRemaining, remainingNeed);
+          const newRemaining = batchRemaining - deduct;
+
+          await tx.prepBatch.update({
+            where: { id: batch.id },
+            data: {
+              quantity_remaining: { decrement: deduct },
+              ...(newRemaining <= 0 ? { status: 'depleted' } : {}),
             },
-            orderBy: { created_at: 'asc' }, // FIFO — oldest first
           });
 
-          // Convert needed to batch yield unit — pass tx (Pitfall 2)
-          let remainingNeed = await convertUnit(
-            needed,
-            line.unit,
-            line.source_recipe.yield_unit,
-            tx,
+          remainingNeed -= deduct;
+        }
+
+        if (remainingNeed > 0) {
+          throw new BadRequestException(
+            `Insufficient prep batch stock for ${line.source_recipe.name}`,
           );
-          if (remainingNeed === null) {
-            throw new BadRequestException(
-              `No unit conversion from ${line.unit} to ${line.source_recipe.yield_unit}`,
-            );
-          }
-
-          for (const batch of batches) {
-            if (remainingNeed <= 0) break;
-            const batchRemaining = Number(batch.quantity_remaining);
-            const deduct = Math.min(batchRemaining, remainingNeed);
-            const newRemaining = batchRemaining - deduct;
-
-            await tx.prepBatch.update({
-              where: { id: batch.id },
-              data: {
-                quantity_remaining: { decrement: deduct },
-                ...(newRemaining <= 0 ? { status: 'depleted' } : {}),
-              },
-            });
-
-            remainingNeed -= deduct;
-          }
-
-          if (remainingNeed > 0) {
-            throw new BadRequestException(
-              `Insufficient prep batch stock for ${line.source_recipe.name}`,
-            );
-          }
         }
       }
     }

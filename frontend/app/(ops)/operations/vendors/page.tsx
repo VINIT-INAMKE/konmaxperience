@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { BlurFade } from '@/components/ui/blur-fade';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -88,11 +87,10 @@ export default function VendorsPage() {
   };
 
   return (
-    <BlurFade>
       <div className="space-y-6">
         {/* Page header */}
         <div className="flex items-center justify-between gap-4 flex-wrap">
-          <h1 className="text-[28px] font-semibold leading-tight">Vendors</h1>
+          <h1 className="text-2xl font-bold">Vendors</h1>
           <Button onClick={handleAddClick}>Add Vendor</Button>
         </div>
 
@@ -203,6 +201,5 @@ export default function VendorsPage() {
           </DialogContent>
         </Dialog>
       </div>
-    </BlurFade>
   );
 }

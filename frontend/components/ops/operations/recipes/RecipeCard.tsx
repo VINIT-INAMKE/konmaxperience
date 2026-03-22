@@ -5,11 +5,12 @@ import { Archive } from 'lucide-react';
 import Link from 'next/link';
 import { MagicCard } from '@/components/ui/magic-card';
 import { ShineBorder } from '@/components/ui/shine-border';
-import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button';
+import { Button } from '@/components/ui/button';
 import { NumberTicker } from '@/components/ui/number-ticker';
 import { Badge } from '@/components/ui/badge';
 import { RecipeStatusBadge } from './RecipeStatusBadge';
 import type { Recipe } from '@/lib/types/recipe';
+import { GRADIENT_OVERLAY } from '@/lib/brand-colors';
 
 interface RecipeCardProps {
   recipe: Recipe;
@@ -47,7 +48,7 @@ export function RecipeCard({
       )}
       <Link href={`/operations/recipes/${recipe.id}`} className="block">
         <MagicCard
-          gradientColor="#1a1a2e"
+          gradientColor={GRADIENT_OVERLAY}
           className="p-4 space-y-2 cursor-pointer hover:bg-muted/20 transition-colors"
         >
           {/* Row 1: name + status badge */}
@@ -87,7 +88,9 @@ export function RecipeCard({
 
           {/* Row 4: edit + archive */}
           <div className="flex items-center gap-2 flex-wrap pt-1">
-            <InteractiveHoverButton
+            <Button
+              variant="outline"
+              size="sm"
               className="h-7 text-xs px-3"
               onClick={(e) => {
                 e.preventDefault();
@@ -96,7 +99,7 @@ export function RecipeCard({
               }}
             >
               Edit
-            </InteractiveHoverButton>
+            </Button>
             {isAdmin && (
               <button
                 className="ml-auto p-1 rounded text-muted-foreground hover:text-destructive transition-colors"

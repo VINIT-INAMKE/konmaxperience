@@ -46,6 +46,7 @@ export class RecipesController {
   }
 
   @Patch(':id')
+  @RequiresPermission(Permission.MANAGE_OPS)
   async update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateRecipeDto,

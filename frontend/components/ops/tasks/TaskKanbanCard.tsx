@@ -8,22 +8,14 @@ import { Badge } from '@/components/ui/badge';
 import { CoolMode } from '@/components/ui/cool-mode';
 import type { Task } from '@/lib/types/tasks';
 import { TASK_TYPE_LABELS, TASK_PRIORITY_LABELS, TASK_TYPE_XP_WEIGHT } from '@/lib/types/tasks';
+import { getTaskTypeBadge, STATUS_BADGE } from '@/lib/status-styles';
 
 interface TaskKanbanCardProps {
   task: Task;
   isDraggable: boolean;
 }
 
-function getTypeBadgeClass(type: string) {
-  switch (type) {
-    case 'adhoc':
-      return 'text-amber-400 bg-amber-950 border-amber-500/20';
-    case 'improvement':
-      return 'text-blue-400 bg-blue-950 border-blue-500/20';
-    default:
-      return '';
-  }
-}
+const getTypeBadgeClass = getTaskTypeBadge;
 
 function getPriorityBadgeClass(priority: string) {
   switch (priority) {
@@ -83,14 +75,14 @@ export function TaskKanbanCard({ task, isDraggable }: TaskKanbanCardProps) {
             </Badge>
           )}
           {task.task_type === 'adhoc' && (
-            <Badge className="text-amber-400 bg-amber-950 border-amber-500/20">
+            <Badge className={STATUS_BADGE.amber}>
               Ad-hoc
             </Badge>
           )}
         </div>
 
         {/* Owner + due date */}
-        <div className="flex items-center justify-between text-[13px] text-muted-foreground">
+        <div className="flex items-center justify-between text-xs text-muted-foreground">
           <span className="truncate">{task.owner?.name || 'Unassigned'}</span>
           {task.due_date && (
             <span className={isOverdue ? 'text-destructive' : ''}>

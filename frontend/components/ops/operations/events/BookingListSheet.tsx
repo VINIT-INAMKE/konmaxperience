@@ -33,7 +33,7 @@ export function BookingListSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-[480px] overflow-y-auto">
+      <SheetContent side="right" className="w-full sm:max-w-[480px] overflow-y-auto">
         <SheetHeader>
           <SheetTitle>Bookings for {eventName}</SheetTitle>
         </SheetHeader>

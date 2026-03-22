@@ -9,10 +9,6 @@ export enum QuestStatus {
 
 export class UpdateQuestDto {
   @IsOptional()
-  @IsUUID()
-  mission_id?: string;
-
-  @IsOptional()
   @IsString()
   @MinLength(3)
   title?: string;

@@ -1,10 +1,12 @@
 import {
   IsString,
   IsDateString,
+  IsIn,
   IsInt,
   IsNumber,
   IsOptional,
   IsUUID,
+  IsUrl,
   MaxLength,
   Min,
   MinLength,
@@ -18,7 +20,7 @@ export class UpdateEventDto {
   title?: string;
 
   @IsOptional()
-  @IsString()
+  @IsIn(['dining', 'workshop', 'pop_up', 'tasting', 'other'])
   event_type?: string;
 
   @IsOptional()
@@ -48,10 +50,10 @@ export class UpdateEventDto {
   description?: string;
 
   @IsOptional()
-  @IsString()
+  @IsUrl()
   image_url?: string;
 
   @IsOptional()
-  @IsString()
-  status?: string; // upcoming | past | cancelled
+  @IsIn(['upcoming', 'past', 'cancelled'])
+  status?: string;
 }

@@ -9,6 +9,7 @@ import {
   ParseUUIDPipe,
   Req,
 } from '@nestjs/common';
+import { IsIn } from 'class-validator';
 import { OrdersService } from './orders.service';
 import { RequiresPermission } from '../common/decorators/permissions.decorator';
 import { Permission } from '../types/permissions';
@@ -16,6 +17,11 @@ import { CreateOrderDto } from './dto/create-order.dto';
 import { RecordPaymentDto } from './dto/record-payment.dto';
 import { UpdateDeliveryDto } from './dto/update-delivery.dto';
 import { OrderFiltersDto } from './dto/order-filters.dto';
+
+export class UpdateOrderStatusDto {
+  @IsIn(['placed', 'preparing', 'ready', 'served', 'dispatched', 'cancelled'])
+  status: string;
+}
 
 @Controller('orders')
 export class OrdersController {
@@ -58,9 +64,9 @@ export class OrdersController {
   @RequiresPermission(Permission.MANAGE_POS)
   async updateOrderStatus(
     @Param('id', ParseUUIDPipe) id: string,
-    @Body('status') status: string,
+    @Body() dto: UpdateOrderStatusDto,
   ) {
-    return this.ordersService.updateOrderStatus(id, status);
+    return this.ordersService.updateOrderStatus(id, dto.status);
   }
 
   @Post(':id/payment')

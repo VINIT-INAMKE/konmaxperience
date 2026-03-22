@@ -6,9 +6,15 @@ import {
   Body,
   ParseUUIDPipe,
 } from '@nestjs/common';
+import { IsIn } from 'class-validator';
 import { KdsService } from './kds.service';
 import { RequiresPermission } from '../../common/decorators/permissions.decorator';
 import { Permission } from '../../types/permissions';
+
+export class UpdateKdsItemStatusDto {
+  @IsIn(['pending', 'preparing', 'ready'])
+  status: string;
+}
 
 @Controller('kitchen/kds')
 export class KdsController {
@@ -24,8 +30,8 @@ export class KdsController {
   @RequiresPermission(Permission.MANAGE_KITCHEN)
   async updateItemStatus(
     @Param('id', ParseUUIDPipe) id: string,
-    @Body() body: { status: string },
+    @Body() dto: UpdateKdsItemStatusDto,
   ) {
-    return this.kdsService.updateItemStatus(id, body.status);
+    return this.kdsService.updateItemStatus(id, dto.status);
   }
 }

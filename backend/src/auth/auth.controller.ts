@@ -62,6 +62,7 @@ export class AuthController {
 
   @Public()
   @Post('refresh')
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   async refresh(
     @Req() request: express.Request,
     @Res({ passthrough: true }) response: express.Response,
@@ -73,6 +74,15 @@ export class AuthController {
 
     const result = await this.authService.refreshToken(refreshToken);
 
+    // Set new refresh_token cookie (rotation)
+    response.cookie('refresh_token', result.refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/auth',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
+
     // Set new access_token cookie
     response.cookie('access_token', result.accessToken, {
       httpOnly: true,
@@ -81,7 +91,10 @@ export class AuthController {
       maxAge: 15 * 60 * 1000,
     });
 
-    return result;
+    return {
+      accessToken: result.accessToken,
+      user: result.user,
+    };
   }
 
   @Post('logout')
@@ -127,6 +140,7 @@ export class AuthController {
   }
 
   @Public()
+  @Throttle({ default: { limit: 5, ttl: 300000 } })
   @Post('reset-password')
   async resetPassword(@Body() dto: ResetPasswordDto) {
     await this.authService.resetPassword(dto.token, dto.password);
@@ -134,6 +148,7 @@ export class AuthController {
   }
 
   @Public()
+  @Throttle({ default: { limit: 5, ttl: 300000 } })
   @Post('set-password')
   async setPassword(@Body() dto: ResetPasswordDto) {
     await this.authService.setPassword(dto.token, dto.password);

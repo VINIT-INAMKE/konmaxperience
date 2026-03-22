@@ -6,6 +6,7 @@ import { NumberTicker } from '@/components/ui/number-ticker';
 import { LevelBadge } from '@/components/ops/gamification/LevelBadge';
 import { cn } from '@/lib/utils';
 import type { LeaderboardUser } from '@/lib/types/leaderboard';
+import { GRADIENT_OVERLAY } from '@/lib/brand-colors';
 
 interface LeaderboardTableProps {
   users: LeaderboardUser[];
@@ -86,7 +87,7 @@ export function LeaderboardTable({
   );
 
   return (
-    <MagicCard gradientColor="#1a1a2e" className="overflow-hidden rounded-xl">
+    <MagicCard gradientColor={GRADIENT_OVERLAY} className="overflow-hidden rounded-xl">
       {users.length > 10 ? (
         <ScrollArea className="max-h-96">{tableContent}</ScrollArea>
       ) : (

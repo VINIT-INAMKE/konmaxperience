@@ -4,9 +4,7 @@ import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { BlurFade } from '@/components/ui/blur-fade';
 import { Button } from '@/components/ui/button';
-import { ShimmerButton } from '@/components/ui/shimmer-button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Dialog,
@@ -59,18 +57,12 @@ export default function PurchaseOrdersPage() {
       : `No ${statusFilter} purchase orders.`;
 
   return (
-    <BlurFade>
       <div className="space-y-6">
         {/* Page header */}
         <div className="flex items-center justify-between gap-4 flex-wrap">
-          <h1 className="text-xl font-semibold">Purchase Orders</h1>
+          <h1 className="text-2xl font-bold">Purchase Orders</h1>
           <Link href="/operations/purchase-orders/new">
-            <ShimmerButton
-              shimmerColor="#4ade80"
-              className="h-9 text-sm px-4"
-            >
-              New Purchase Order
-            </ShimmerButton>
+            <Button>New Purchase Order</Button>
           </Link>
         </div>
 
@@ -79,7 +71,7 @@ export default function PurchaseOrdersPage() {
           value={statusFilter}
           onValueChange={(v) => setStatusFilter(v as StatusFilter)}
         >
-          <TabsList>
+          <TabsList className="overflow-x-auto">
             <TabsTrigger value="all">All</TabsTrigger>
             <TabsTrigger value="draft">Draft</TabsTrigger>
             <TabsTrigger value="ordered">Ordered</TabsTrigger>
@@ -184,6 +176,5 @@ export default function PurchaseOrdersPage() {
           </DialogContent>
         </Dialog>
       </div>
-    </BlurFade>
   );
 }

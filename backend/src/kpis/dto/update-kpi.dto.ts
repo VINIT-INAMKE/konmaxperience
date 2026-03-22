@@ -4,6 +4,7 @@ import {
   IsOptional,
   IsArray,
   IsUUID,
+  IsIn,
 } from 'class-validator';
 
 export class UpdateKpiDto {
@@ -28,7 +29,7 @@ export class UpdateKpiDto {
   current_value?: number;
 
   @IsOptional()
-  @IsString()
+  @IsIn(['on_track', 'at_risk', 'off_track'])
   status?: string;
 
   @IsOptional()

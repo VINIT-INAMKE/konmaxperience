@@ -89,12 +89,21 @@ export class NotificationsListener {
   @OnEvent('task.blocked')
   async handleTaskBlocked(payload: TaskBlockedEvent) {
     try {
-      await this.queue.add('notify-task-blocked', payload, {
-        attempts: 3,
-        backoff: { type: 'exponential', delay: 5000 },
-        removeOnComplete: 100,
-        removeOnFail: 50,
-      });
+      await this.queue.add(
+        'notify-task-blocked',
+        {
+          userId: payload.ownerUserId,
+          taskId: payload.taskId,
+          taskName: payload.taskTitle,
+          reason: payload.blockedReason,
+        },
+        {
+          attempts: 3,
+          backoff: { type: 'exponential', delay: 5000 },
+          removeOnComplete: 100,
+          removeOnFail: 50,
+        },
+      );
     } catch (error) {
       this.logger.warn(
         'Failed to enqueue task.blocked notification',

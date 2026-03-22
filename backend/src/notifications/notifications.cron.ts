@@ -33,23 +33,25 @@ export class NotificationsCron {
 
       this.logger.log(`Scan: found ${tasks.length} tasks due within 48h`);
 
-      for (const task of tasks) {
-        if (!task.owner_user_id) continue;
-        const hoursUntilDue = Math.round(
-          (task.due_date!.getTime() - Date.now()) / (1000 * 60 * 60),
-        );
-        await this.queue.add(
-          'notify-task-due',
-          {
-            taskId: task.id,
-            taskTitle: task.title,
-            questTitle: task.quest?.title ?? 'Unknown Quest',
-            ownerUserId: task.owner_user_id,
-            hoursUntilDue,
-          },
-          { attempts: 2, removeOnComplete: 100, removeOnFail: 50 },
-        );
-      }
+      const taskJobs = tasks
+        .filter((task) => task.owner_user_id)
+        .map((task) => {
+          const hoursUntilDue = Math.round(
+            (task.due_date!.getTime() - Date.now()) / (1000 * 60 * 60),
+          );
+          return this.queue.add(
+            'notify-task-due',
+            {
+              taskId: task.id,
+              taskName: task.title,
+              questName: task.quest?.title ?? 'Unknown Quest',
+              userId: task.owner_user_id,
+              hours: hoursUntilDue,
+            },
+            { attempts: 2, removeOnComplete: 100, removeOnFail: 50, jobId: `task-due-${task.id}-${hoursUntilDue}` },
+          );
+        });
+      await Promise.all(taskJobs);
     } catch (error) {
       this.logger.error(
         'scanTasksDue failed',
@@ -70,6 +72,7 @@ export class NotificationsCron {
         select: {
           id: true,
           entity_id: true,
+          created_at: true,
           task: { select: { id: true, title: true } },
         },
       });
@@ -78,17 +81,22 @@ export class NotificationsCron {
         `Scan: found ${pendingApprovals.length} approvals pending >24h`,
       );
 
-      for (const approval of pendingApprovals) {
-        await this.queue.add(
+      const approvalJobs = pendingApprovals.map((approval) => {
+        const hoursPending = Math.round(
+          (Date.now() - new Date(approval.created_at).getTime()) /
+            (1000 * 60 * 60),
+        );
+        return this.queue.add(
           'notify-approval-pending',
           {
             approvalId: approval.id,
-            taskId: approval.task?.id ?? approval.entity_id,
-            taskTitle: approval.task?.title ?? 'Unknown Task',
+            taskName: approval.task?.title ?? 'Unknown Task',
+            hours: hoursPending,
           },
-          { attempts: 2, removeOnComplete: 100, removeOnFail: 50 },
+          { attempts: 2, removeOnComplete: 100, removeOnFail: 50, jobId: `approval-pending-${approval.id}` },
         );
-      }
+      });
+      await Promise.all(approvalJobs);
     } catch (error) {
       this.logger.error(
         'scanApprovalsPending failed',

@@ -3,7 +3,6 @@
 import { useState, useMemo } from 'react';
 import { Search, AlertTriangle } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
-import { BlurFade } from '@/components/ui/blur-fade';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -69,11 +68,10 @@ export default function InventoryPage() {
   }, [stocks]);
 
   return (
-    <BlurFade>
       <div className="space-y-6">
         {/* Page header */}
         <div className="flex items-center justify-between gap-4 flex-wrap">
-          <h1 className="text-xl font-semibold">Inventory</h1>
+          <h1 className="text-2xl font-bold">Inventory</h1>
           <Button variant="secondary" onClick={() => setAdjustOpen(true)}>
             Adjust Stock
           </Button>
@@ -125,7 +123,7 @@ export default function InventoryPage() {
             </SelectContent>
           </Select>
 
-          <div className="relative w-64">
+          <div className="relative w-full sm:w-64">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
             <Input
               placeholder="Search ingredients..."
@@ -194,6 +192,5 @@ export default function InventoryPage() {
         {/* Stock adjustment Sheet */}
         <StockAdjustmentSheet open={adjustOpen} onOpenChange={setAdjustOpen} />
       </div>
-    </BlurFade>
   );
 }

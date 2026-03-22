@@ -22,7 +22,7 @@ export default function AdminPermissionsPage() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-xl font-semibold">Permissions</h1>
+        <h1 className="text-2xl font-bold">Permissions</h1>
         <p className="text-sm text-muted-foreground mt-1">
           Control what each role can view and do. Changes take effect within 60
           seconds.

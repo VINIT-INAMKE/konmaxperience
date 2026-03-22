@@ -9,12 +9,23 @@ import {
   Req,
   ParseUUIDPipe,
 } from '@nestjs/common';
+import { IsOptional, IsString, IsIn } from 'class-validator';
 import * as express from 'express';
 import { PurchaseOrdersService } from './purchase-orders.service';
 import { RequiresPermission } from '../common/decorators/permissions.decorator';
 import { Permission } from '../types/permissions';
 import { CreatePurchaseOrderDto } from './dto/create-purchase-order.dto';
 import { ReceivePurchaseOrderDto } from './dto/receive-purchase-order.dto';
+
+export class UpdatePurchaseOrderDto {
+  @IsOptional()
+  @IsString()
+  notes?: string;
+
+  @IsOptional()
+  @IsIn(['ordered'])
+  status?: string;
+}
 
 @Controller('purchase-orders')
 export class PurchaseOrdersController {
@@ -23,11 +34,13 @@ export class PurchaseOrdersController {
   ) {}
 
   @Get()
+  @RequiresPermission(Permission.MANAGE_PROCUREMENT)
   async findAll(@Query('status') status?: string) {
     return this.purchaseOrdersService.findAll(status);
   }
 
   @Get(':id')
+  @RequiresPermission(Permission.MANAGE_PROCUREMENT)
   async findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.purchaseOrdersService.findOne(id);
   }
@@ -46,9 +59,9 @@ export class PurchaseOrdersController {
   @RequiresPermission(Permission.MANAGE_PROCUREMENT)
   async update(
     @Param('id', ParseUUIDPipe) id: string,
-    @Body() body: { notes?: string; status?: string },
+    @Body() dto: UpdatePurchaseOrderDto,
   ) {
-    return this.purchaseOrdersService.update(id, body);
+    return this.purchaseOrdersService.update(id, dto);
   }
 
   @Post(':id/receive')

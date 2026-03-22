@@ -3,8 +3,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { AlertCircle, BarChart3, RefreshCw } from 'lucide-react';
-import { BlurFade } from '@/components/ui/blur-fade';
-import { ShimmerButton } from '@/components/ui/shimmer-button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -71,18 +69,12 @@ export default function KpisPage() {
   const isEmpty = !isLoading && !isError && (!kpis || kpis.length === 0);
 
   return (
-    <BlurFade>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between gap-4 flex-wrap">
-          <h1 className="text-2xl font-semibold">KPI Tracker</h1>
+          <h1 className="text-2xl font-bold">KPI Tracker</h1>
           {hasManageKpis && (
-            <ShimmerButton
-              onClick={handleCreate}
-              className="text-sm px-5 py-2"
-            >
-              Create KPI
-            </ShimmerButton>
+            <Button onClick={handleCreate}>Create KPI</Button>
           )}
         </div>
 
@@ -125,9 +117,7 @@ export default function KpisPage() {
               </p>
             </div>
             {hasManageKpis && (
-              <ShimmerButton onClick={handleCreate} className="text-sm px-5 py-2">
-                Create KPI
-              </ShimmerButton>
+              <Button onClick={handleCreate}>Create KPI</Button>
             )}
           </div>
         )}
@@ -175,6 +165,5 @@ export default function KpisPage() {
           }}
         />
       </div>
-    </BlurFade>
   );
 }

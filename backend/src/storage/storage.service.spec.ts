@@ -21,9 +21,19 @@ describe('StorageService', () => {
   let service: StorageService;
 
   beforeEach(() => {
-    process.env.R2_PUBLIC_URL = 'https://cdn.example.com';
-    process.env.R2_BUCKET_NAME = 'test-bucket';
-    service = new StorageService();
+    const mockConfigService = {
+      get: jest.fn((key: string) => {
+        const env: Record<string, string> = {
+          R2_ENDPOINT: 'https://r2.example.com',
+          R2_ACCESS_KEY_ID: 'test-key',
+          R2_SECRET_ACCESS_KEY: 'test-secret',
+          R2_BUCKET_NAME: 'test-bucket',
+          R2_PUBLIC_URL: 'https://cdn.example.com',
+        };
+        return env[key];
+      }),
+    };
+    service = new StorageService(mockConfigService as any);
   });
 
   describe('validatePresignRequest', () => {

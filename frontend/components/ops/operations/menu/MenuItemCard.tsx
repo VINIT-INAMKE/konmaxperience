@@ -3,11 +3,12 @@
 import { useState } from 'react';
 import { Loader2, Pencil, Trash2 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
-import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button';
+import { Button } from '@/components/ui/button';
 import { MagicCard } from '@/components/ui/magic-card';
 import { FoodCostBadge } from './FoodCostBadge';
 import { calcFoodCostPercent } from '@/lib/types/menu';
 import type { MenuItem } from '@/lib/types/menu';
+import { GRADIENT_OVERLAY } from '@/lib/brand-colors';
 
 interface MenuItemCardProps {
   item: MenuItem;
@@ -43,7 +44,7 @@ export function MenuItemCard({
 
   return (
     <MagicCard
-      gradientColor="#1a1a2e"
+      gradientColor={GRADIENT_OVERLAY}
       className="p-4 space-y-2 cursor-default"
     >
       {/* Row 1: item name */}
@@ -81,13 +82,15 @@ export function MenuItemCard({
 
       {/* Row 4: edit + remove (admin or any authenticated for edit) */}
       <div className="flex items-center gap-2 flex-wrap">
-        <InteractiveHoverButton
+        <Button
+          variant="outline"
+          size="sm"
           className="h-7 text-xs px-3"
           onClick={() => onEdit(item)}
         >
           <Pencil className="size-3 mr-1" />
           Edit
-        </InteractiveHoverButton>
+        </Button>
         {isAdmin && (
           <button
             className="ml-auto p-1 rounded text-muted-foreground hover:text-destructive transition-colors"

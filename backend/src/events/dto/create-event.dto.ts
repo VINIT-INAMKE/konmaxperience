@@ -1,10 +1,12 @@
 import {
   IsString,
   IsDateString,
+  IsIn,
   IsInt,
   IsNumber,
   IsOptional,
   IsUUID,
+  IsUrl,
   MaxLength,
   Min,
   MinLength,
@@ -16,8 +18,8 @@ export class CreateEventDto {
   @MaxLength(200)
   title: string;
 
-  @IsString()
-  event_type: string; // dining | workshop | pop_up | tasting | other
+  @IsIn(['dining', 'workshop', 'pop_up', 'tasting', 'other'])
+  event_type: string;
 
   @IsDateString()
   date: string;
@@ -43,6 +45,6 @@ export class CreateEventDto {
   description?: string;
 
   @IsOptional()
-  @IsString()
+  @IsUrl()
   image_url?: string;
 }

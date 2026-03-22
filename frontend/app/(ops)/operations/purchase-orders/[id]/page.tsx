@@ -6,7 +6,6 @@ import Link from 'next/link';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { ArrowLeft } from 'lucide-react';
-import { BlurFade } from '@/components/ui/blur-fade';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { MagicCard } from '@/components/ui/magic-card';
@@ -201,7 +200,6 @@ export default function PurchaseOrderDetailPage() {
   );
 
   return (
-    <BlurFade>
       <div className="space-y-6 max-w-4xl">
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -426,6 +424,5 @@ export default function PurchaseOrderDetailPage() {
           </DialogContent>
         </Dialog>
       </div>
-    </BlurFade>
   );
 }

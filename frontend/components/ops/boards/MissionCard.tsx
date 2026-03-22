@@ -5,6 +5,7 @@ import { format } from 'date-fns';
 import { MagicCard } from '@/components/ui/magic-card';
 import { Progress } from '@/components/ui/progress';
 import type { Mission, MissionPhase } from '@/lib/types/missions';
+import { GRADIENT_OVERLAY } from '@/lib/brand-colors';
 
 const PHASE_LABELS: Record<MissionPhase, string> = {
   setup: 'Setup Phase',
@@ -20,9 +21,9 @@ interface BoardMissionCardProps {
 export function BoardMissionCard({ mission }: BoardMissionCardProps) {
   return (
     <Link href={`/missions/${mission.id}`} className="block rounded-xl">
-      <MagicCard className="rounded-xl cursor-pointer" gradientColor="#1a1a2e">
+      <MagicCard className="rounded-xl cursor-pointer" gradientColor={GRADIENT_OVERLAY}>
         <div className="p-4 space-y-3">
-          <h3 className="text-[20px] font-bold leading-tight line-clamp-2">
+          <h3 className="text-xl font-bold leading-tight line-clamp-2">
             {mission.title}
           </h3>
           <p className="text-xs font-bold text-muted-foreground">

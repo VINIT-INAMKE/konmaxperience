@@ -84,7 +84,7 @@ export function DecisionDetail({ decision, onStatusChange }: DecisionDetailProps
       <Card className="p-6 space-y-4">
         {/* Context section */}
         <div className="space-y-2">
-          <p className="text-[14px] font-semibold uppercase tracking-wider text-muted-foreground">
+          <p className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
             Context
           </p>
           <p className="text-base leading-relaxed">{decision.context}</p>
@@ -93,7 +93,7 @@ export function DecisionDetail({ decision, onStatusChange }: DecisionDetailProps
         {/* Links section */}
         {(decision.linked_mission_id || decision.linked_task_id) && (
           <div className="space-y-2">
-            <p className="text-[14px] font-semibold uppercase tracking-wider text-muted-foreground">
+            <p className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
               Links
             </p>
             <div className="flex flex-wrap gap-2">
@@ -115,7 +115,7 @@ export function DecisionDetail({ decision, onStatusChange }: DecisionDetailProps
 
         {/* History section */}
         <div className="space-y-2">
-          <p className="text-[14px] font-semibold uppercase tracking-wider text-muted-foreground">
+          <p className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
             History
           </p>
           <div className="flex items-center gap-2 text-sm">

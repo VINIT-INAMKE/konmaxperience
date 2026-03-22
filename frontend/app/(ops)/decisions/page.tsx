@@ -3,8 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Search } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { BlurFade } from '@/components/ui/blur-fade';
-import { ShimmerButton } from '@/components/ui/shimmer-button';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DecisionList } from '@/components/ops/decisions/DecisionList';
@@ -54,18 +53,11 @@ export default function DecisionsPage() {
   };
 
   return (
-    <BlurFade>
       <div className="space-y-6">
         {/* Page header */}
         <div className="flex items-center justify-between gap-4 flex-wrap">
-          <h1 className="text-[28px] font-semibold leading-tight">Decisions</h1>
-          <ShimmerButton
-            shimmerColor="#4ade80"
-            className="h-9 text-sm px-4"
-            onClick={() => setFormOpen(true)}
-          >
-            Log Decision
-          </ShimmerButton>
+          <h1 className="text-2xl font-bold">Decisions</h1>
+          <Button onClick={() => setFormOpen(true)}>Log Decision</Button>
         </div>
 
         {/* Filter bar: tabs + search */}
@@ -74,7 +66,7 @@ export default function DecisionsPage() {
             value={statusFilter}
             onValueChange={(v) => setStatusFilter(v as StatusFilter)}
           >
-            <TabsList>
+            <TabsList className="overflow-x-auto">
               <TabsTrigger value="all">All</TabsTrigger>
               <TabsTrigger value="proposed">Proposed</TabsTrigger>
               <TabsTrigger value="approved">Approved</TabsTrigger>
@@ -82,7 +74,7 @@ export default function DecisionsPage() {
             </TabsList>
           </Tabs>
 
-          <div className="relative w-64">
+          <div className="relative w-full sm:w-64">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
             <Input
               placeholder="Search decisions..."
@@ -109,6 +101,5 @@ export default function DecisionsPage() {
           onCreated={handleDecisionCreated}
         />
       </div>
-    </BlurFade>
   );
 }

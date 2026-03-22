@@ -1,19 +1,26 @@
-// Cache conversions in memory after first load
-let conversionCache: Map<string, number> | null = null;
+// Cache conversions in memory with TTL
+const conversionCache = new Map<string, number>();
+let cacheLoadedAt = 0;
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+async function ensureCache(prisma: any): Promise<void> {
+  if (conversionCache.size > 0 && Date.now() - cacheLoadedAt < CACHE_TTL) return;
+  conversionCache.clear();
+  const conversions = await prisma.unitConversion.findMany();
+  for (const c of conversions) {
+    conversionCache.set(`${c.from_unit}:${c.to_unit}`, Number(c.factor));
+  }
+  cacheLoadedAt = Date.now();
+}
 
 export async function loadConversions(prisma: any): Promise<Map<string, number>> {
-  if (conversionCache) return conversionCache;
-  const rows = await prisma.unitConversion.findMany();
-  const map = new Map<string, number>();
-  for (const row of rows) {
-    map.set(`${row.from_unit}:${row.to_unit}`, Number(row.factor));
-  }
-  conversionCache = map;
-  return map;
+  await ensureCache(prisma);
+  return conversionCache;
 }
 
 export function clearConversionCache() {
-  conversionCache = null;
+  conversionCache.clear();
+  cacheLoadedAt = 0;
 }
 
 export async function convertUnit(
@@ -24,9 +31,11 @@ export async function convertUnit(
 ): Promise<number | null> {
   if (fromUnit === toUnit) return qty;
   const cache = await loadConversions(prisma);
-  const factor = cache.get(`${fromUnit}:${toUnit}`);
-  if (factor === undefined) return null;
-  return qty * factor;
+  const direct = cache.get(`${fromUnit}:${toUnit}`);
+  if (direct !== undefined) return qty * direct;
+  const reverse = cache.get(`${toUnit}:${fromUnit}`);
+  if (reverse !== undefined && reverse !== 0) return qty / reverse;
+  return null;
 }
 
 // Get all units compatible with a base_unit (reachable via conversion table)

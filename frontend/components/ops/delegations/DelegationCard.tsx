@@ -48,7 +48,7 @@ export function DelegationCard({ delegation, onDeactivated }: DelegationCardProp
             avatarUrls={avatarUrls}
             className="[&_img]:size-7 [&_img]:h-7 [&_img]:w-7"
           />
-          <span className="text-[16px] font-semibold flex-1">
+          <span className="text-base font-semibold flex-1">
             {delegation.from_user?.name ?? 'Unknown'} &rarr; {delegation.to_user?.name ?? 'Unknown'}
           </span>
           {isExpired ? (
@@ -89,7 +89,7 @@ export function DelegationCard({ delegation, onDeactivated }: DelegationCardProp
             {format(parseISO(delegation.end_date), 'MMM d, yyyy')}
           </span>
           {delegation.creator && (
-            <span className="ml-auto text-[14px] text-muted-foreground">
+            <span className="ml-auto text-sm text-muted-foreground">
               Created by {delegation.creator.name}
             </span>
           )}

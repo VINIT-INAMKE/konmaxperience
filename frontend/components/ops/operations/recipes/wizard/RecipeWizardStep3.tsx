@@ -29,7 +29,7 @@ export function RecipeWizardStep3({
       {/* Details summary */}
       <div className="space-y-3">
         <h3 className="text-sm font-semibold">Recipe Details</h3>
-        <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-sm">
           <div>
             <span className="text-muted-foreground">Name</span>
             <p className="font-medium">{details.name}</p>

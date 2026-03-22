@@ -51,7 +51,7 @@ export function PosMenuGrid({
             <TabsList className="flex-wrap h-auto gap-1">
               {brands.map((brand) => (
                 <TabsTrigger key={brand.id} value={brand.id}>
-                  <span className="text-[20px] font-bold leading-tight">
+                  <span className="text-xl font-bold leading-tight">
                     {brand.name}
                   </span>
                 </TabsTrigger>
@@ -69,10 +69,10 @@ export function PosMenuGrid({
 
           return (
             <div key={category.id} className="space-y-3">
-              <h2 className="text-[20px] font-bold leading-tight">
+              <h2 className="text-xl font-bold leading-tight">
                 {category.name}
               </h2>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                 {categoryItems.map((item) => (
                   <PosMenuItemCard
                     key={item.id}
@@ -87,8 +87,8 @@ export function PosMenuGrid({
         })
       ) : items.length > 0 ? (
         <div className="space-y-3">
-          <h2 className="text-[20px] font-bold leading-tight">All Items</h2>
-          <div className="grid grid-cols-3 gap-3">
+          <h2 className="text-xl font-bold leading-tight">All Items</h2>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
             {items.map((item) => (
               <PosMenuItemCard
                 key={item.id}
@@ -104,8 +104,8 @@ export function PosMenuGrid({
       {/* Uncategorized items */}
       {uncategorizedItems.length > 0 && categories.length > 0 && (
         <div className="space-y-3">
-          <h2 className="text-[20px] font-bold leading-tight">Other</h2>
-          <div className="grid grid-cols-3 gap-3">
+          <h2 className="text-xl font-bold leading-tight">Other</h2>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
             {uncategorizedItems.map((item) => (
               <PosMenuItemCard
                 key={item.id}

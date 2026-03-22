@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsOptional, IsIn } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, IsIn, IsUUID } from 'class-validator';
 
 export class CreateDecisionDto {
   @IsString()
@@ -13,10 +13,10 @@ export class CreateDecisionDto {
   context: string;
 
   @IsOptional()
-  @IsString()
+  @IsUUID()
   linked_mission_id?: string;
 
   @IsOptional()
-  @IsString()
+  @IsUUID()
   linked_task_id?: string;
 }

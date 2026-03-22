@@ -3,6 +3,7 @@ import {
   BadRequestException,
   NotFoundException,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../../prisma/prisma.service';
 import { OrdersService } from '../../orders/orders.service';
@@ -102,42 +103,43 @@ export class KdsService {
       );
     }
 
-    // Find the current item
-    const item = await this.prisma.orderItem.findUnique({
-      where: { id: itemId },
-    });
-    if (!item) {
-      throw new NotFoundException(`Order item with ID ${itemId} not found`);
-    }
-
-    // Validate status progression: pending -> preparing -> ready only
-    const progressionMap: Record<string, string> = {
-      pending: 'preparing',
-      preparing: 'ready',
-    };
-
-    if (progressionMap[item.status] !== newStatus) {
-      throw new BadRequestException(
-        `Cannot transition from "${item.status}" to "${newStatus}". ` +
-          `Valid next status: ${progressionMap[item.status] ?? 'none (already at final status)'}`,
-      );
-    }
-
     const updateData: Record<string, unknown> = { status: newStatus };
     if (newStatus === 'ready') {
       updateData.ready_at = new Date();
     }
 
-    // When status is 'ready' — wrap in $transaction with deduction
+    // When status is 'ready' — wrap in $transaction with deduction and Serializable isolation
     if (newStatus === 'ready') {
       let wasAllReady = false;
       let orderData: { id: string; channel: string; created_by: string } | null =
         null;
 
       const result = await this.prisma.$transaction(async (tx) => {
+        // Fetch item INSIDE transaction to prevent concurrent status race
+        const item = await tx.orderItem.findUnique({
+          where: { id: itemId },
+        });
+        if (!item) {
+          throw new NotFoundException(`Order item with ID ${itemId} not found`);
+        }
+
+        // Validate status progression inside transaction
+        const progressionMap: Record<string, string> = {
+          pending: 'preparing',
+          preparing: 'ready',
+        };
+
+        if (progressionMap[item.status] !== newStatus) {
+          throw new BadRequestException(
+            `Cannot transition from "${item.status}" to "${newStatus}". ` +
+              `Valid next status: ${progressionMap[item.status] ?? 'none (already at final status)'}`,
+          );
+        }
+
         // Deduct ingredients/prep batches for this item (atomic)
         const order = await tx.order.findUniqueOrThrow({
           where: { id: item.order_id },
+          select: { id: true, channel: true, created_by: true, zone_id: true },
         });
         await this.ordersService.deductItemIngredients(
           tx,
@@ -148,6 +150,7 @@ export class KdsService {
             quantity: item.quantity,
           },
           order.created_by,
+          order.zone_id,
         );
 
         // Update item status
@@ -157,12 +160,15 @@ export class KdsService {
         });
 
         // Check if ALL items in order are ready -> auto-transition order
-        const allItems = await tx.orderItem.findMany({
-          where: { order_id: item.order_id },
+        // Only count non-ready siblings (excluding the current item we just marked ready)
+        const notReadyCount = await tx.orderItem.count({
+          where: {
+            order_id: item.order_id,
+            id: { not: itemId },
+            status: { not: 'ready' },
+          },
         });
-        const allReady = allItems.every(
-          (i) => (i.id === itemId ? true : i.status === 'ready'),
-        );
+        const allReady = notReadyCount === 0;
         if (allReady) {
           await tx.order.update({
             where: { id: item.order_id },
@@ -181,7 +187,7 @@ export class KdsService {
           status: updated.status,
           ready_at: updated.ready_at,
         };
-      });
+      }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 
       // Emit AFTER transaction commits (Pitfall 1 compliance)
       if (wasAllReady && orderData) {
@@ -191,22 +197,47 @@ export class KdsService {
             channel: (orderData as { id: string; channel: string; created_by: string }).channel,
             createdBy: (orderData as { id: string; channel: string; created_by: string }).created_by,
           });
-        } catch {}
+        } catch (e) { /* event emission failed - non-critical */ }
       }
 
       return result;
     }
 
-    // Non-ready transitions — simple update (no transaction needed)
-    const updatedItem = await this.prisma.orderItem.update({
-      where: { id: itemId },
-      data: updateData,
-    });
+    // Non-ready transitions (e.g., pending -> preparing) — wrap in transaction for concurrency safety
+    const result = await this.prisma.$transaction(async (tx) => {
+      // Fetch item INSIDE transaction to prevent concurrent status race
+      const item = await tx.orderItem.findUnique({
+        where: { id: itemId },
+      });
+      if (!item) {
+        throw new NotFoundException(`Order item with ID ${itemId} not found`);
+      }
 
-    return {
-      id: updatedItem.id,
-      status: updatedItem.status,
-      ready_at: updatedItem.ready_at,
-    };
+      // Validate status progression inside transaction
+      const progressionMap: Record<string, string> = {
+        pending: 'preparing',
+        preparing: 'ready',
+      };
+
+      if (progressionMap[item.status] !== newStatus) {
+        throw new BadRequestException(
+          `Cannot transition from "${item.status}" to "${newStatus}". ` +
+            `Valid next status: ${progressionMap[item.status] ?? 'none (already at final status)'}`,
+        );
+      }
+
+      const updatedItem = await tx.orderItem.update({
+        where: { id: itemId },
+        data: updateData,
+      });
+
+      return {
+        id: updatedItem.id,
+        status: updatedItem.status,
+        ready_at: updatedItem.ready_at,
+      };
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+
+    return result;
   }
 }

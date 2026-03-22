@@ -46,6 +46,7 @@ export const useAuthStore = create<AuthState>()(
             xp_total: user.xp_total ?? 0,
             level: user.level ?? 1,
           },
+          permissions: 'permissions' in user ? (user.permissions as string[]) : [],
           isAuthenticated: true,
         }),
       setPermissions: (permissions) => set({ permissions }),

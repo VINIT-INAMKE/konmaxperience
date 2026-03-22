@@ -1,4 +1,5 @@
 import { Controller, Get, Post, Query, Body } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { FeedbackService } from './feedback.service';
 import { CreateFeedbackDto } from './dto/create-feedback.dto';
 import { FeedbackFiltersDto } from './dto/feedback-filters.dto';
@@ -12,6 +13,7 @@ export class FeedbackController {
 
   @Post()
   @Public()
+  @Throttle({ default: { limit: 5, ttl: 300000 } })
   async submit(@Body() dto: CreateFeedbackDto) {
     return this.feedbackService.submit(dto);
   }

@@ -34,16 +34,16 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
           <div className="flex flex-col items-center gap-4 text-center">
             <AlertCircle className="size-10 text-destructive" />
             <div className="space-y-1">
-              <h2 className="text-xl font-semibold">Something went wrong</h2>
+              <h2 className="text-xl font-semibold">Something broke</h2>
               <p className="text-sm text-muted-foreground">
-                An unexpected error occurred. Please try refreshing the page.
+                An unexpected error occurred. Refresh the page to continue.
               </p>
             </div>
             <Button
               variant="outline"
               onClick={() => this.setState({ hasError: false })}
             >
-              Try again
+              Refresh page
             </Button>
           </div>
         </div>

@@ -27,15 +27,16 @@ export class NotificationsService {
     if (query.is_read !== undefined) {
       where.is_read = query.is_read;
     }
+    const limit = Math.min(query.limit ?? 20, 100);
     if (query.cursor) {
-      const cursorNotification = await this.prisma.notification.findUnique({
-        where: { id: query.cursor },
+      return this.prisma.notification.findMany({
+        where,
+        orderBy: { created_at: 'desc' },
+        take: limit,
+        skip: 1,
+        cursor: { id: query.cursor },
       });
-      if (cursorNotification) {
-        where.created_at = { lt: cursorNotification.created_at };
-      }
     }
-    const limit = query.limit ?? 20;
     return this.prisma.notification.findMany({
       where,
       orderBy: { created_at: 'desc' },
@@ -80,11 +81,13 @@ export class NotificationsService {
     return hoursSinceLast >= cooldownHours;
   }
 
-  async getUsersByPermission(permission: string) {
-    const users = await this.prisma.user.findMany({
-      where: { status: 'active' },
-      include: { role: { select: { permissions: true, code: true } } },
+  async getUsersByPermission(permission: string): Promise<{ id: string }[]> {
+    return this.prisma.user.findMany({
+      where: {
+        status: 'active',
+        role: { permissions: { has: permission } },
+      },
+      select: { id: true },
     });
-    return users.filter((u) => u.role.permissions.includes(permission));
   }
 }

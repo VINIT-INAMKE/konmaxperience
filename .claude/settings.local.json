@@ -6,7 +6,9 @@
       "Bash(node:*)",
       "mcp__magicuidesign",
       "mcp__magicuidesign-mcp__searchRegistryItems",
-      "mcp__magicuidesign-mcp__listRegistryItems"
+      "mcp__magicuidesign-mcp__listRegistryItems",
+      "Bash(npx tsc:*)",
+      "mcp__context7__resolve-library-id"
     ]
   },
   "enableAllProjectMcpServers": true,

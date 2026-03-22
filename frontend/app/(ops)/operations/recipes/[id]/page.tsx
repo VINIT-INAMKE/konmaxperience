@@ -73,7 +73,7 @@ export default function RecipeDetailPage() {
           <div className="flex items-start justify-between gap-4 flex-wrap">
             <div className="space-y-1">
               <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="text-[28px] font-semibold leading-tight">{recipe.name}</h1>
+                <h1 className="text-2xl font-bold">{recipe.name}</h1>
                 <RecipeStatusBadge status={recipe.status} />
               </div>
               {/* Brand + Zone */}
@@ -126,7 +126,7 @@ export default function RecipeDetailPage() {
           )}
 
           {/* Yield + Portion + Shelf life */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-0.5">
               <p className="text-xs text-muted-foreground uppercase tracking-wide">Yield</p>
               <p className="text-sm font-medium">

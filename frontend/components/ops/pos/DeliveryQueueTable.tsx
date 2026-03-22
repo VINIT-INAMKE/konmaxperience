@@ -183,6 +183,7 @@ export function DeliveryQueueTable({
   }
 
   return (
+    <div className="overflow-x-auto">
     <Table>
       <TableHeader>
         <TableRow>
@@ -208,7 +209,7 @@ export function DeliveryQueueTable({
           return (
             <TableRow key={order.id}>
               <TableCell>
-                <span className="font-mono text-[14px] font-bold">
+                <span className="font-mono text-sm font-bold">
                   {shortId}
                 </span>
               </TableCell>
@@ -259,5 +260,6 @@ export function DeliveryQueueTable({
         })}
       </TableBody>
     </Table>
+    </div>
   );
 }

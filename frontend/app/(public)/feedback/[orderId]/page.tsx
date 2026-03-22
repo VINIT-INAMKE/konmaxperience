@@ -52,7 +52,7 @@ export default function FeedbackPage() {
       setSubmitted(true);
     } catch {
       setError(
-        "Couldn't submit your feedback \u2014 please check your connection and try again."
+        "Feedback didn't go through — check your connection and try again."
       );
     } finally {
       setSubmitting(false);
@@ -67,52 +67,65 @@ export default function FeedbackPage() {
     <BlurFade direction="up">
       <div className="max-w-md mx-auto px-4 py-8">
         <div className="space-y-2 mb-8">
-          <h1 className="text-3xl font-semibold">How was your experience?</h1>
-          <p className="text-sm text-gray-500">
-            Takes 30 seconds. Helps us improve.
+          <h1 className="text-3xl font-semibold">Tell us about your meal</h1>
+          <p className="text-sm text-muted-foreground">
+            Quick feedback, big impact.
           </p>
         </div>
 
         {orderNotFound && (
-          <div className="mb-6 rounded-lg bg-blue-50 border border-blue-200 px-4 py-3 text-sm text-blue-700">
-            We couldn&apos;t find your order, but you can still leave feedback.
+          <div className="mb-6 rounded-lg bg-info/10 border border-info/20 px-4 py-3 text-sm text-info" role="status">
+            We couldn&apos;t match this link to an order, but you can still share feedback.
           </div>
         )}
 
         <form onSubmit={(e) => void handleSubmit(e)} className="space-y-6">
           <div className="space-y-2">
-            <label className="text-base font-normal text-gray-900">
+            <label className="text-base font-normal">
               Rate your meal
             </label>
             <StarRatingInput value={rating} onChange={setRating} />
           </div>
 
           <div className="space-y-2">
+            <label htmlFor="feedback-comment" className="text-sm text-foreground">
+              Comments
+            </label>
             <Textarea
+              id="feedback-comment"
               placeholder="Tell us what you loved or what we can do better..."
               value={comment}
               onChange={(e) => setComment(e.target.value)}
-              className="bg-white border-gray-300 text-gray-900 placeholder:text-gray-400"
+              className="bg-background border-input text-foreground placeholder:text-muted-foreground"
             />
           </div>
 
           <div className="space-y-2">
+            <label htmlFor="feedback-name" className="text-sm text-foreground">
+              Name <span className="text-muted-foreground">(optional)</span>
+            </label>
             <Input
-              placeholder="Your name (optional)"
+              id="feedback-name"
+              placeholder="Your name"
               maxLength={100}
               value={customerName}
               onChange={(e) => setCustomerName(e.target.value)}
-              className="bg-white border-gray-300 text-gray-900 placeholder:text-gray-400"
+              className="bg-background border-input text-foreground placeholder:text-muted-foreground"
             />
           </div>
 
           <div className="space-y-2">
+            <label htmlFor="feedback-phone" className="text-sm text-foreground">
+              Phone <span className="text-muted-foreground">(optional)</span>
+            </label>
             <Input
-              placeholder="Your number (optional)"
+              id="feedback-phone"
+              type="tel"
+              placeholder="Your number"
               maxLength={20}
               value={customerPhone}
               onChange={(e) => setCustomerPhone(e.target.value)}
-              className="bg-white border-gray-300 text-gray-900 placeholder:text-gray-400"
+              className="bg-background border-input text-foreground placeholder:text-muted-foreground"
             />
           </div>
 
@@ -124,7 +137,7 @@ export default function FeedbackPage() {
             {submitting ? (
               <span className="flex items-center gap-2">
                 <Loader2 className="size-4 animate-spin" />
-                Submitting...
+                Sending feedback...
               </span>
             ) : (
               'Submit Feedback'
@@ -132,7 +145,9 @@ export default function FeedbackPage() {
           </Button>
 
           {error && (
-            <p className="text-sm text-red-600 text-center">{error}</p>
+            <p role="alert" className="text-sm text-destructive text-center">
+              {error}
+            </p>
           )}
         </form>
       </div>

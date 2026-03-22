@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { MagicCard } from '@/components/ui/magic-card';
 import { KpiStatusBadge } from '@/components/ops/kpis/KpiStatusBadge';
 import { KPI_DOMAIN_LABELS, type Kpi } from '@/lib/types/kpi';
+import { GRADIENT_OVERLAY } from '@/lib/brand-colors';
 
 interface DashboardKpiAlertProps {
   kpis: Kpi[];
@@ -25,7 +26,7 @@ export function DashboardKpiAlert({ kpis }: DashboardKpiAlertProps) {
       <span className="text-sm font-semibold">KPIs Requiring Attention</span>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {displayKpis.map((kpi) => (
-          <MagicCard key={kpi.id} gradientColor="#1a1a2e" className="rounded-xl">
+          <MagicCard key={kpi.id} gradientColor={GRADIENT_OVERLAY} className="rounded-xl">
             <div className="p-4 space-y-2">
               <div className="flex items-start justify-between gap-2">
                 <div>

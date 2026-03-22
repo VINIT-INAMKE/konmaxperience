@@ -262,7 +262,7 @@ describe('OrdersService', () => {
       });
 
       const result = await service.updateOrderStatus('o-1', 'preparing');
-      expect(result.status).toBe('preparing');
+      expect(result!.status).toBe('preparing');
     });
 
     it('throws on invalid transition placed -> ready', async () => {
@@ -287,7 +287,7 @@ describe('OrdersService', () => {
       });
 
       const result = await service.updateOrderStatus('o-1', 'cancelled');
-      expect(result.status).toBe('cancelled');
+      expect(result!.status).toBe('cancelled');
     });
 
     it('does not allow cancellation from terminal status', async () => {

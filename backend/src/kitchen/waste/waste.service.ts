@@ -7,25 +7,34 @@ import { convertUnit } from '../../common/utils/unit-conversion';
 export class WasteService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll(zoneId?: string) {
+  async findAll(zoneId?: string, page?: number, limit?: number) {
     const where: Record<string, unknown> = {};
     if (zoneId) {
       where.zone_id = zoneId;
     }
+
+    const take = Math.min(Number(limit) || 50, 100);
+    const skip = ((Number(page) || 1) - 1) * take;
 
     return this.prisma.wasteLog.findMany({
       where,
       include: {
         ingredient: { select: { id: true, name: true, base_unit: true } },
         prep_batch: {
-          include: {
-            recipe: { select: { id: true, name: true, yield_unit: true, yield_qty: true } },
+          select: {
+            id: true,
+            quantity_produced: true,
+            quantity_remaining: true,
+            unit: true,
+            recipe: { select: { id: true, name: true, yield_unit: true } },
           },
         },
         zone: { select: { id: true, name: true } },
         creator: { select: { id: true, name: true } },
       },
       orderBy: { created_at: 'desc' },
+      take,
+      skip,
     });
   }
 
@@ -39,16 +48,18 @@ export class WasteService {
         );
       }
 
-      // Fetch ingredient for base_unit
-      const ingredient = await this.prisma.ingredient.findUniqueOrThrow({
-        where: { id: dto.ingredient_id },
-      });
-
-      // Fetch latest VendorPrice for ingredient
-      const latestPrice = await this.prisma.vendorPrice.findFirst({
-        where: { ingredient_id: dto.ingredient_id },
-        orderBy: { effective_date: 'desc' },
-      });
+      // Fetch ingredient + latest vendor price in parallel
+      const [ingredient, latestPrice] = await Promise.all([
+        this.prisma.ingredient.findUniqueOrThrow({
+          where: { id: dto.ingredient_id },
+          select: { id: true, base_unit: true },
+        }),
+        this.prisma.vendorPrice.findFirst({
+          where: { ingredient_id: dto.ingredient_id },
+          orderBy: { effective_date: 'desc' },
+          select: { price: true, unit: true },
+        }),
+      ]);
 
       let convertedQtyForCost = 0;
       let convertedQtyInBaseUnit = 0;
@@ -72,10 +83,29 @@ export class WasteService {
         ingredient.base_unit,
         this.prisma,
       );
-      convertedQtyInBaseUnit = toBase ?? dto.quantity;
+      if (toBase === null) {
+        throw new BadRequestException(
+          `No unit conversion found from ${dto.unit} to ${ingredient.base_unit}`,
+        );
+      }
+      convertedQtyInBaseUnit = toBase;
 
       // Transaction: create WasteLog + StockMovement + decrement IngredientStock
       return this.prisma.$transaction(async (tx) => {
+        // Check stock sufficiency before decrementing
+        const existingStock = await tx.ingredientStock.findFirst({
+          where: {
+            ingredient_id: dto.ingredient_id!,
+            zone_id: dto.zone_id,
+          },
+        });
+        const currentQty = existingStock ? Number(existingStock.current_quantity) : 0;
+        if (currentQty < convertedQtyInBaseUnit) {
+          throw new BadRequestException(
+            `Insufficient stock: have ${currentQty} ${ingredient.base_unit}, need ${convertedQtyInBaseUnit} for waste deduction`,
+          );
+        }
+
         const wasteLog = await tx.wasteLog.create({
           data: {
             waste_type: dto.waste_type,
@@ -144,6 +174,13 @@ export class WasteService {
           Number(prepBatch.recipe.computed_cost ?? 0);
       }
 
+      // Check sufficiency before decrementing
+      if (Number(prepBatch.quantity_remaining) < dto.quantity) {
+        throw new BadRequestException(
+          'Waste quantity exceeds remaining prep batch quantity',
+        );
+      }
+
       // Transaction: create WasteLog + decrement PrepBatch quantity_remaining
       return this.prisma.$transaction(async (tx) => {
         const wasteLog = await tx.wasteLog.create({
@@ -160,21 +197,15 @@ export class WasteService {
           },
         });
 
-        // Decrement PrepBatch quantity_remaining
-        const updatedBatch = await tx.prepBatch.update({
+        // Decrement PrepBatch quantity_remaining and mark depleted if needed
+        const newRemaining = Number(prepBatch.quantity_remaining) - dto.quantity;
+        await tx.prepBatch.update({
           where: { id: dto.prep_batch_id },
           data: {
             quantity_remaining: { decrement: dto.quantity },
+            ...(newRemaining <= 0 ? { status: 'depleted' } : {}),
           },
         });
-
-        // Mark as depleted if quantity_remaining <= 0
-        if (Number(updatedBatch.quantity_remaining) <= 0) {
-          await tx.prepBatch.update({
-            where: { id: dto.prep_batch_id },
-            data: { status: 'depleted' },
-          });
-        }
 
         return wasteLog;
       });

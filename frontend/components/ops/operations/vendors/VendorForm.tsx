@@ -109,12 +109,12 @@ export function VendorForm({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-[480px]">
+      <SheetContent side="right" className="w-full sm:max-w-[480px]">
         <SheetHeader>
           <SheetTitle>{isEditing ? 'Edit Vendor' : 'Add Vendor'}</SheetTitle>
         </SheetHeader>
 
-        <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4 mt-4 px-4">
+        <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4 mt-4 px-4 pb-4 overflow-y-auto">
           {/* Name */}
           <div className="space-y-2">
             <Label htmlFor="vendor-name">Name</Label>

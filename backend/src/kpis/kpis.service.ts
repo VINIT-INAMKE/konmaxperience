@@ -17,7 +17,7 @@ const ROLE_DOMAIN_MAP: Record<string, string> = {
 export class KpisService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll(roleCode: string) {
+  async findAll(roleCode: string, page?: number, limit?: number) {
     const where: Record<string, unknown> = {};
 
     if (roleCode !== 'FOUNDER_ADMIN' && roleCode !== 'BI_LEAD') {
@@ -27,18 +27,17 @@ export class KpisService {
       }
     }
 
+    const take = Math.min(Number(limit) || 50, 100);
+    const skip = ((Number(page) || 1) - 1) * take;
+
     return this.prisma.kpi.findMany({
       where,
       include: {
-        tasks: {
-          select: {
-            id: true,
-            title: true,
-            valid: true,
-          },
-        },
+        _count: { select: { tasks: true } },
       },
       orderBy: { domain: 'asc' },
+      take,
+      skip,
     });
   }
 
@@ -74,15 +73,6 @@ export class KpisService {
         status: dto.status || 'on_track',
         domain: dto.domain,
       },
-      include: {
-        tasks: {
-          select: {
-            id: true,
-            title: true,
-            valid: true,
-          },
-        },
-      },
     });
 
     if (dto.linked_task_ids && dto.linked_task_ids.length > 0) {
@@ -92,11 +82,22 @@ export class KpisService {
       });
     }
 
-    return kpi;
+    // Re-fetch with linked tasks after linking is complete (avoids stale empty tasks array)
+    return this.prisma.kpi.findUnique({
+      where: { id: kpi.id },
+      include: {
+        tasks: {
+          select: { id: true, title: true, valid: true },
+        },
+      },
+    });
   }
 
   async update(id: string, dto: UpdateKpiDto) {
-    const existing = await this.prisma.kpi.findUnique({ where: { id } });
+    const existing = await this.prisma.kpi.findUnique({
+      where: { id },
+      select: { id: true },
+    });
     if (!existing) {
       throw new NotFoundException(`KPI with ID ${id} not found`);
     }
@@ -109,19 +110,10 @@ export class KpisService {
     if (dto.current_value !== undefined) data.current_value = dto.current_value;
     if (dto.status !== undefined) data.status = dto.status;
 
-    const kpi = await this.prisma.$transaction(async (tx: any) => {
-      const updated = await tx.kpi.update({
+    await this.prisma.$transaction(async (tx: any) => {
+      await tx.kpi.update({
         where: { id },
         data,
-        include: {
-          tasks: {
-            select: {
-              id: true,
-              title: true,
-              valid: true,
-            },
-          },
-        },
       });
 
       if (dto.linked_task_ids !== undefined) {
@@ -139,10 +131,16 @@ export class KpisService {
           });
         }
       }
-
-      return updated;
     });
 
-    return kpi;
+    // Re-fetch after transaction so linked tasks reflect the current state
+    return this.prisma.kpi.findUnique({
+      where: { id },
+      include: {
+        tasks: {
+          select: { id: true, title: true, valid: true },
+        },
+      },
+    });
   }
 }

@@ -9,11 +9,14 @@ export class QuestsService {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll(filters: { missionId?: string }) {
+  async findAll(filters: { missionId?: string; page?: number; limit?: number }) {
     const where: Record<string, unknown> = {};
     if (filters.missionId) {
       where.mission_id = filters.missionId;
     }
+
+    const take = Math.min(Number(filters.limit) || 50, 100);
+    const skip = ((Number(filters.page) || 1) - 1) * take;
 
     return this.prisma.quest.findMany({
       where,
@@ -22,6 +25,8 @@ export class QuestsService {
         _count: { select: { tasks: true } },
       },
       orderBy: [{ week_number: 'asc' }, { created_at: 'desc' }],
+      take,
+      skip,
     });
   }
 
@@ -69,7 +74,10 @@ export class QuestsService {
   }
 
   async update(id: string, dto: UpdateQuestDto) {
-    const existing = await this.prisma.quest.findUnique({ where: { id } });
+    const existing = await this.prisma.quest.findUnique({
+      where: { id },
+      select: { id: true },
+    });
     if (!existing) {
       throw new NotFoundException(`Quest with ID ${id} not found`);
     }
@@ -78,8 +86,8 @@ export class QuestsService {
       where: { id },
       data: {
         ...dto,
-        start_date: dto.start_date ? new Date(dto.start_date) : undefined,
-        end_date: dto.end_date ? new Date(dto.end_date) : undefined,
+        start_date: dto.start_date === undefined ? undefined : (dto.start_date ? new Date(dto.start_date) : null),
+        end_date: dto.end_date === undefined ? undefined : (dto.end_date ? new Date(dto.end_date) : null),
       },
     });
 
@@ -98,7 +106,10 @@ export class QuestsService {
 
   private async activate(questId: string) {
     await this.prisma.$transaction(async (tx) => {
-      const quest = await tx.quest.findUnique({ where: { id: questId } });
+      const quest = await tx.quest.findUnique({
+        where: { id: questId },
+        select: { id: true, baseline_task_count: true },
+      });
       if (!quest) return;
 
       // Only set baseline if not already set (immutable after first activation)

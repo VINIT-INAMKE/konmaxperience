@@ -87,12 +87,12 @@ export default function NewTaskPage(props: {
         <div className="space-y-2">
           <Link
             href={`/quests/${id}`}
-            className="inline-flex items-center gap-1 text-[13px] text-muted-foreground hover:text-foreground transition-colors"
+            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
           >
             <ArrowLeft className="size-3" />
             {quest.title}
           </Link>
-          <h1 className="text-xl font-semibold">
+          <h1 className="text-2xl font-bold">
             {defaultTaskType === 'adhoc' ? 'New ad-hoc task' : 'New task'}
           </h1>
         </div>

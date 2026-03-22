@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsOptional, IsIn } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, IsIn, IsUUID } from 'class-validator';
 
 export class CreateZoneDto {
   @IsString()
@@ -9,7 +9,7 @@ export class CreateZoneDto {
   zone_type: string;
 
   @IsOptional()
-  @IsString()
+  @IsUUID()
   owner_user_id?: string;
 
   @IsOptional()

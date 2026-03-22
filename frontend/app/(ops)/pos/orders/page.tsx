@@ -79,7 +79,7 @@ export default function OrderHistoryPage() {
     <BlurFade>
       <div className="space-y-6">
         {/* Page header */}
-        <h1 className="text-xl font-semibold">Order History</h1>
+        <h1 className="text-2xl font-bold">Order History</h1>
 
         {/* Daily revenue summary */}
         <DailyRevenueSummary summary={summary} isLoading={summaryLoading} />

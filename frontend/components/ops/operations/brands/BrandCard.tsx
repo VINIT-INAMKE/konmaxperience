@@ -4,12 +4,13 @@ import { useState, useEffect } from 'react';
 import { Trash2 } from 'lucide-react';
 import { MagicCard } from '@/components/ui/magic-card';
 import { ShineBorder } from '@/components/ui/shine-border';
-import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button';
+import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { BrandStatusBadge } from './BrandStatusBadge';
 import type { Brand } from '@/lib/types/brand';
 import { BRAND_TYPE_LABELS } from '@/lib/types/brand';
+import { GRADIENT_OVERLAY } from '@/lib/brand-colors';
 
 function getInitials(name: string): string {
   return name
@@ -60,7 +61,7 @@ export function BrandCard({
         />
       )}
       <MagicCard
-        gradientColor="#1a1a2e"
+        gradientColor={GRADIENT_OVERLAY}
         className="p-4 space-y-2 cursor-pointer hover:bg-muted/20 transition-colors"
       >
         {/* Row 1: brand name + type badge + status badge */}
@@ -91,7 +92,9 @@ export function BrandCard({
         {/* Row 3: edit/delete */}
         <div className="flex items-center gap-2 flex-wrap">
           {canEdit && (
-            <InteractiveHoverButton
+            <Button
+              variant="outline"
+              size="sm"
               className="h-7 text-xs px-3"
               onClick={(e) => {
                 e.stopPropagation();
@@ -99,7 +102,7 @@ export function BrandCard({
               }}
             >
               Edit
-            </InteractiveHoverButton>
+            </Button>
           )}
           {isAdmin && (
             <button

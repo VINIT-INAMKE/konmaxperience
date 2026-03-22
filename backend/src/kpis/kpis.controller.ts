@@ -6,6 +6,7 @@ import {
   Param,
   Body,
   Req,
+  Query,
   ParseUUIDPipe,
 } from '@nestjs/common';
 import express from 'express';
@@ -20,9 +21,13 @@ export class KpisController {
   constructor(private readonly kpisService: KpisService) {}
 
   @Get()
-  async findAll(@Req() req: express.Request) {
+  async findAll(
+    @Req() req: express.Request,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
     const user = (req as any).user;
-    return this.kpisService.findAll(user.roleCode);
+    return this.kpisService.findAll(user.roleCode, Number(page), Number(limit));
   }
 
   @Get(':id')

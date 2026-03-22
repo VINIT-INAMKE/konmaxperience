@@ -34,17 +34,17 @@ export function EventBookingForm({
 
   if (spotsRemaining <= 0 && !booked) {
     return (
-      <div className="rounded-lg border border-gray-200 bg-gray-50 p-6 text-center">
-        <p className="text-base text-gray-500">This event is full</p>
+      <div className="rounded-lg border bg-muted p-6 text-center">
+        <p className="text-base text-muted-foreground">This event is sold out</p>
       </div>
     );
   }
 
   if (booked) {
     return (
-      <div className="rounded-lg border border-green-200 bg-green-50 p-6 text-center">
-        <p className="text-base text-green-700">
-          You&apos;re booked! We&apos;ll see you on {formattedDate}.
+      <div className="rounded-lg border border-success/20 bg-success/10 p-6 text-center" role="status">
+        <p className="text-base text-success">
+          You&apos;re in! See you on {formattedDate}.
         </p>
       </div>
     );
@@ -72,11 +72,11 @@ export function EventBookingForm({
     } catch (err) {
       if (err instanceof ApiError && err.status === 400) {
         setError(
-          `Sorry, this event just filled up. No spots remain for ${guests} guests.`
+          `This event just sold out — no spots left for ${guests} guests.`
         );
       } else {
         setError(
-          "Couldn't complete your booking \u2014 please check your connection and try again."
+          "Booking didn't go through — check your connection and try again."
         );
       }
     } finally {
@@ -95,39 +95,52 @@ export function EventBookingForm({
   return (
     <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4">
       <div className="space-y-2">
+        <label htmlFor="booking-name" className="text-sm text-foreground">
+          Your name
+        </label>
         <Input
+          id="booking-name"
           placeholder="Your name"
           required
           value={customerName}
           onChange={(e) => setCustomerName(e.target.value)}
-          className="bg-white border-gray-300 text-gray-900 placeholder:text-gray-400"
+          className="bg-background border-input text-foreground placeholder:text-muted-foreground"
         />
       </div>
 
       <div className="space-y-2">
+        <label htmlFor="booking-phone" className="text-sm text-foreground">
+          Phone number
+        </label>
         <Input
+          id="booking-phone"
+          type="tel"
           placeholder="Your phone number"
           required
           value={customerPhone}
           onChange={(e) => setCustomerPhone(e.target.value)}
-          className="bg-white border-gray-300 text-gray-900 placeholder:text-gray-400"
+          className="bg-background border-input text-foreground placeholder:text-muted-foreground"
         />
       </div>
 
       <div className="space-y-2">
-        <label className="text-sm text-gray-700">Number of guests</label>
+        <label htmlFor="booking-guests" className="text-sm text-foreground">
+          Number of guests
+        </label>
         <div className="flex items-center gap-3">
           <Button
             type="button"
             variant="outline"
             size="icon"
-            className="min-h-[44px] min-w-[44px] border-gray-300"
+            aria-label="Remove guest"
+            className="min-h-[44px] min-w-[44px]"
             onClick={handleDecrement}
             disabled={guests <= 1}
           >
             <Minus className="size-4" />
           </Button>
           <Input
+            id="booking-guests"
             type="number"
             min={1}
             max={spotsRemaining}
@@ -138,13 +151,14 @@ export function EventBookingForm({
                 setGuests(val);
               }
             }}
-            className="w-20 text-center bg-white border-gray-300 text-gray-900"
+            className="w-20 text-center bg-background border-input text-foreground"
           />
           <Button
             type="button"
             variant="outline"
             size="icon"
-            className="min-h-[44px] min-w-[44px] border-gray-300"
+            aria-label="Add guest"
+            className="min-h-[44px] min-w-[44px]"
             onClick={handleIncrement}
             disabled={guests >= spotsRemaining}
           >
@@ -161,7 +175,7 @@ export function EventBookingForm({
         {submitting ? (
           <span className="flex items-center gap-2">
             <Loader2 className="size-4 animate-spin" />
-            Booking...
+            Placing booking...
           </span>
         ) : (
           'Confirm Booking'
@@ -169,7 +183,9 @@ export function EventBookingForm({
       </Button>
 
       {error && (
-        <p className="text-sm text-red-600 text-center">{error}</p>
+        <p role="alert" className="text-sm text-destructive text-center">
+          {error}
+        </p>
       )}
     </form>
   );

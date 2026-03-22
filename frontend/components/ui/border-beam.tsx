@@ -3,6 +3,7 @@
 import { motion, MotionStyle, Transition } from "motion/react"
 
 import { cn } from "@/lib/utils"
+import { BEAM_FROM, BEAM_TO } from "@/lib/brand-colors"
 
 interface BorderBeamProps {
   /**
@@ -56,8 +57,8 @@ export const BorderBeam = ({
   size = 50,
   delay = 0,
   duration = 6,
-  colorFrom = "#ffaa40",
-  colorTo = "#9c40ff",
+  colorFrom = BEAM_FROM,
+  colorTo = BEAM_TO,
   transition,
   style,
   reverse = false,

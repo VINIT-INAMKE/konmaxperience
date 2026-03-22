@@ -18,8 +18,12 @@ export class WasteController {
 
   @Get()
   @RequiresPermission(Permission.MANAGE_KITCHEN)
-  async findAll(@Query('zone_id') zoneId?: string) {
-    return this.wasteService.findAll(zoneId);
+  async findAll(
+    @Query('zone_id') zoneId?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.wasteService.findAll(zoneId, Number(page), Number(limit));
   }
 
   @Post()

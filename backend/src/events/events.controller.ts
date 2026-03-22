@@ -8,6 +8,7 @@ import {
   Body,
   ParseUUIDPipe,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { EventsService } from './events.service';
 import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
@@ -23,6 +24,7 @@ export class EventsController {
   // Public endpoints first
   @Get()
   @Public()
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
   async findUpcoming() {
     return this.eventsService.findUpcoming();
   }
@@ -36,6 +38,7 @@ export class EventsController {
 
   @Get(':id')
   @Public()
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
   async findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.eventsService.findOne(id);
   }
@@ -63,6 +66,7 @@ export class EventsController {
 
   @Post(':id/bookings')
   @Public()
+  @Throttle({ default: { limit: 5, ttl: 300000 } })
   async createBooking(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: CreateBookingDto,

@@ -3,8 +3,7 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { BlurFade } from '@/components/ui/blur-fade';
-import { ShimmerButton } from '@/components/ui/shimmer-button';
+import { Button } from '@/components/ui/button';
 import {
   Table,
   TableBody,
@@ -59,22 +58,19 @@ export default function ChannelsPage() {
   };
 
   return (
-    <BlurFade>
       <div className="space-y-6">
         {/* Page header */}
         <div className="flex items-center justify-between gap-4 flex-wrap">
-          <h1 className="text-[28px] font-semibold leading-tight">Channels</h1>
+          <h1 className="text-2xl font-bold">Channels</h1>
           {isAdmin && (
-            <ShimmerButton
-              shimmerColor="#4ade80"
-              className="h-9 text-sm px-4"
+            <Button
               onClick={() => {
                 setEditingChannel(null);
                 setFormOpen(true);
               }}
             >
               Add Channel
-            </ShimmerButton>
+            </Button>
           )}
         </div>
 
@@ -146,6 +142,5 @@ export default function ChannelsPage() {
           }}
         />
       </div>
-    </BlurFade>
   );
 }

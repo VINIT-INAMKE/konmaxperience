@@ -4,7 +4,6 @@ import { useState, useMemo } from 'react';
 import { Plus, Loader2 } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { BlurFade } from '@/components/ui/blur-fade';
 import { ShimmerButton } from '@/components/ui/shimmer-button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
@@ -211,20 +210,15 @@ export default function MenuPage() {
   const isLoading = brandsLoading || (!!effectiveBrandId && (categoriesLoading || itemsLoading));
 
   return (
-    <BlurFade>
       <div className="space-y-6">
         {/* Page header */}
         <div className="flex items-center justify-between gap-4 flex-wrap">
-          <h1 className="text-[28px] font-semibold leading-tight">Menu</h1>
+          <h1 className="text-2xl font-bold">Menu</h1>
           {effectiveBrandId && (
-            <ShimmerButton
-              shimmerColor="#4ade80"
-              className="h-9 text-sm px-4"
-              onClick={() => handleOpenCategoryForm()}
-            >
+            <Button onClick={() => handleOpenCategoryForm()}>
               <Plus className="size-4 mr-1" />
               Add Category
-            </ShimmerButton>
+            </Button>
           )}
         </div>
 
@@ -234,7 +228,7 @@ export default function MenuPage() {
             value={effectiveBrandId}
             onValueChange={(v) => setSelectedBrandId(v)}
           >
-            <TabsList>
+            <TabsList className="overflow-x-auto">
               {brands.map((brand) => (
                 <TabsTrigger key={brand.id} value={brand.id}>
                   {brand.name}
@@ -448,6 +442,5 @@ export default function MenuPage() {
           </DialogContent>
         </Dialog>
       </div>
-    </BlurFade>
   );
 }

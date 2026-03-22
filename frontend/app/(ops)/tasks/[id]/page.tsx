@@ -170,7 +170,7 @@ export default function TaskDetailPage(props: {
         {/* Back link */}
         <Link
           href={task.quest_id ? `/quests/${task.quest_id}` : `/missions/${task.mission_id}`}
-          className="inline-flex items-center gap-1 text-[13px] text-muted-foreground hover:text-foreground transition-colors"
+          className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
         >
           <ArrowLeft className="size-3" />
           Back to {task.quest_id ? 'quest' : 'mission'}
@@ -179,7 +179,7 @@ export default function TaskDetailPage(props: {
         {/* Header */}
         <div className="space-y-2">
           <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="text-xl font-semibold">{task.title}</h1>
+            <h1 className="text-2xl font-bold">{task.title}</h1>
             <Badge
               variant="secondary"
               className={getStatusBadgeClass(task.status)}
@@ -230,7 +230,7 @@ export default function TaskDetailPage(props: {
                     </span>
                   )}
                 </p>
-                <div className="flex flex-wrap gap-4 text-[13px] text-muted-foreground">
+                <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
                   <span>
                     Domain:{' '}
                     <Badge variant="secondary">
@@ -268,11 +268,11 @@ export default function TaskDetailPage(props: {
                     <p className="text-sm font-medium">
                       {task.owner?.name || 'Unassigned'}
                     </p>
-                    <p className="text-[13px] text-muted-foreground">Owner</p>
+                    <p className="text-xs text-muted-foreground">Owner</p>
                   </div>
                 </div>
                 {task.creator && isAdmin && (
-                  <div className="text-[13px] text-muted-foreground">
+                  <div className="text-xs text-muted-foreground">
                     Created by: {task.creator.name}
                   </div>
                 )}
@@ -392,7 +392,7 @@ export default function TaskDetailPage(props: {
               <CardContent className="p-4 space-y-4">
                 {task.quest_id && (
                   <div>
-                    <p className="text-[13px] text-muted-foreground">Quest</p>
+                    <p className="text-xs text-muted-foreground">Quest</p>
                     <Link
                       href={`/quests/${task.quest_id}`}
                       className="text-sm text-primary hover:underline"
@@ -402,7 +402,7 @@ export default function TaskDetailPage(props: {
                   </div>
                 )}
                 <div>
-                  <p className="text-[13px] text-muted-foreground">Mission</p>
+                  <p className="text-xs text-muted-foreground">Mission</p>
                   <Link
                     href={`/missions/${task.mission_id}`}
                     className="text-sm text-primary hover:underline"
@@ -411,7 +411,7 @@ export default function TaskDetailPage(props: {
                   </Link>
                 </div>
                 <div>
-                  <p className="text-[13px] text-muted-foreground">
+                  <p className="text-xs text-muted-foreground">
                     Assigned to
                   </p>
                   <p className="text-sm">
@@ -420,14 +420,14 @@ export default function TaskDetailPage(props: {
                 </div>
                 {isAdmin && task.creator && (
                   <div>
-                    <p className="text-[13px] text-muted-foreground">
+                    <p className="text-xs text-muted-foreground">
                       Created by
                     </p>
                     <p className="text-sm">{task.creator.name}</p>
                   </div>
                 )}
                 <div>
-                  <p className="text-[13px] text-muted-foreground">
+                  <p className="text-xs text-muted-foreground">
                     Due date
                   </p>
                   <p
@@ -439,11 +439,11 @@ export default function TaskDetailPage(props: {
                   </p>
                 </div>
                 <div>
-                  <p className="text-[13px] text-muted-foreground">XP value</p>
+                  <p className="text-xs text-muted-foreground">XP value</p>
                   <p className="text-sm">{task.xp} XP</p>
                 </div>
                 <div>
-                  <p className="text-[13px] text-muted-foreground">Status</p>
+                  <p className="text-xs text-muted-foreground">Status</p>
                   <Badge
                     variant="secondary"
                     className={getStatusBadgeClass(task.status)}
@@ -452,7 +452,7 @@ export default function TaskDetailPage(props: {
                   </Badge>
                 </div>
                 <div>
-                  <p className="text-[13px] text-muted-foreground">Created</p>
+                  <p className="text-xs text-muted-foreground">Created</p>
                   <p className="text-sm text-muted-foreground">
                     {formatDistanceToNow(parseISO(task.created_at), {
                       addSuffix: true,

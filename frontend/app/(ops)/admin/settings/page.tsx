@@ -66,7 +66,7 @@ export default function AdminSettingsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold">System Settings</h1>
+      <h1 className="text-2xl font-bold">System Settings</h1>
 
       <Card>
         <CardContent className="p-6">

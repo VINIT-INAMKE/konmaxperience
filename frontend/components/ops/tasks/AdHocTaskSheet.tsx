@@ -88,7 +88,7 @@ export function AdHocTaskSheet({ open, onOpenChange }: AdHocTaskSheetProps) {
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-[480px] sm:max-w-[480px] overflow-y-auto">
+      <SheetContent side="right" className="w-full sm:max-w-[480px] overflow-y-auto">
         <SheetHeader>
           <SheetTitle>Inject ad-hoc task</SheetTitle>
           <SheetDescription>

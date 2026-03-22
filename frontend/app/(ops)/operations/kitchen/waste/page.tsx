@@ -2,7 +2,6 @@
 
 import { Trash2 } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { BlurFade } from '@/components/ui/blur-fade';
 import { AnimatedList } from '@/components/ui/animated-list';
 import { apiClient } from '@/lib/api-client';
 import type { WasteLog } from '@/lib/types/kitchen';
@@ -22,9 +21,8 @@ export default function WasteLogPage() {
   };
 
   return (
-    <BlurFade>
       <div className="space-y-8">
-        <h1 className="text-xl font-semibold">Waste Log</h1>
+        <h1 className="text-2xl font-bold">Waste Log</h1>
 
         <div className="grid lg:grid-cols-3 gap-6">
           {/* Left: waste history table */}
@@ -95,6 +93,5 @@ export default function WasteLogPage() {
           </div>
         </div>
       </div>
-    </BlurFade>
   );
 }

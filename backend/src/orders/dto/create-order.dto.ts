@@ -3,7 +3,6 @@ import {
   IsArray,
   IsIn,
   IsInt,
-  IsNumber,
   IsOptional,
   IsString,
   IsUUID,
@@ -19,9 +18,6 @@ export class CreateOrderItemDto {
   @IsInt()
   @Min(1)
   quantity: number;
-
-  @IsNumber()
-  unit_price: number;
 
   @IsOptional()
   @IsString()

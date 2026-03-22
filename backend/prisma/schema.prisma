@@ -1,6 +1,6 @@
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
 }
 
 generator client {
@@ -55,6 +55,11 @@ model User {
   wasteLogs               WasteLog[]           @relation("WasteLogCreator")
   orders                  Order[]              @relation("OrderCreator")
   notifications           Notification[]
+
+  // Optimizes: leaderboard query (active users sorted by xp_total desc)
+  @@index([status, xp_total(sort: Desc)])
+  // Optimizes: role-based user lookups, auth queries
+  @@index([role_id])
 }
 
 model RefreshToken {
@@ -67,6 +72,7 @@ model RefreshToken {
   created_at DateTime  @default(now())
 
   @@index([user_id])
+  @@index([token_hash])
 }
 
 model PasswordResetToken {
@@ -77,6 +83,8 @@ model PasswordResetToken {
   expires_at DateTime
   used_at    DateTime?
   created_at DateTime  @default(now())
+
+  @@index([token_hash])
 }
 
 model Mission {
@@ -162,6 +170,10 @@ model Task {
   @@index([owner_user_id, status])
   @@index([quest_id, valid])
   @@index([mission_id])
+  // Optimizes: notifications.cron scanTasksDue (due_date range + status filter)
+  @@index([due_date, status])
+  // Optimizes: analytics getWins (valid + completed_at cursor pagination)
+  @@index([valid, completed_at(sort: Desc)])
 }
 
 model Evidence {
@@ -178,6 +190,11 @@ model Evidence {
   reviewer        User?     @relation("EvidenceReviewer", fields: [reviewed_by], references: [id])
   reviewed_at     DateTime?
   created_at      DateTime  @default(now())
+
+  // Optimizes: findByTask (evidence by task_id)
+  @@index([task_id])
+  // Optimizes: getFeed filtered by approval_status, ordered by created_at
+  @@index([approval_status, created_at(sort: Desc)])
 }
 
 model Approval {
@@ -199,6 +216,11 @@ model Approval {
   delegated_from_user    User?     @relation("ApprovalDelegate", fields: [delegated_from_user_id], references: [id])
   created_at             DateTime  @default(now())
   updated_at             DateTime  @updatedAt
+
+  // Optimizes: findPending, notifications.cron scanApprovalsPending (status + created_at)
+  @@index([status, created_at])
+  // Optimizes: entity lookups (approval by entity_type + entity_id)
+  @@index([entity_type, entity_id])
 }
 
 model Decision {
@@ -232,6 +254,11 @@ model ApprovalDelegation {
   active       Boolean  @default(true)
   created_at   DateTime @default(now())
   updated_at   DateTime @updatedAt
+
+  // Optimizes: getActiveDelegationForUser (to_user_id + active + date range)
+  @@index([to_user_id, active, start_date, end_date])
+  // Optimizes: findActive (from_user_id + active + date range)
+  @@index([from_user_id, active])
 }
 
 model ReadinessMeter {
@@ -375,6 +402,9 @@ model RecipeLine {
   recipe           Recipe      @relation("RecipeLines", fields: [recipe_id], references: [id])
   ingredient       Ingredient? @relation(fields: [ingredient_id], references: [id])
   source_recipe    Recipe?     @relation("SourceRecipeLines", fields: [source_recipe_id], references: [id])
+
+  // Optimizes: recipe BOM loading (all lines for a recipe)
+  @@index([recipe_id])
 }
 
 model Ingredient {
@@ -425,6 +455,11 @@ model VendorPrice {
   created_at     DateTime   @default(now())
   vendor         Vendor     @relation(fields: [vendor_id], references: [id])
   ingredient     Ingredient @relation(fields: [ingredient_id], references: [id])
+
+  // Optimizes: getPricesForIngredient, procurement inventory valuation (latest price per ingredient)
+  @@index([ingredient_id, effective_date(sort: Desc)])
+  // Optimizes: vendor price lookups by vendor
+  @@index([vendor_id])
 }
 
 model MenuCategory {
@@ -435,6 +470,9 @@ model MenuCategory {
   status     String     @default("active")
   brand      Brand      @relation(fields: [brand_id], references: [id])
   MenuItems  MenuItem[]
+
+  // Optimizes: findCategories by brand_id
+  @@index([brand_id])
 }
 
 model MenuItem {
@@ -451,6 +489,11 @@ model MenuItem {
   recipe      Recipe       @relation(fields: [recipe_id], references: [id])
   category    MenuCategory @relation(fields: [category_id], references: [id])
   orderItems  OrderItem[]
+
+  // Optimizes: findItems by category_id
+  @@index([category_id])
+  // Optimizes: getAllServingsAvailable (active items), findItems filtered by status
+  @@index([status])
 }
 
 model ChannelModifier {
@@ -491,6 +534,11 @@ model StockMovement {
   ingredient        Ingredient @relation(fields: [ingredient_id], references: [id])
   zone              Zone       @relation(fields: [zone_id], references: [id])
   creator           User       @relation("StockMovementCreator", fields: [created_by], references: [id])
+
+  // Optimizes: inventory getMovements by ingredient (paginated, ordered by created_at)
+  @@index([ingredient_id, created_at(sort: Desc)])
+  // Optimizes: zone+date movement queries
+  @@index([zone_id, created_at])
 }
 
 model PurchaseOrder {
@@ -509,6 +557,13 @@ model PurchaseOrder {
   zone            Zone                @relation(fields: [zone_id], references: [id])
   ordered_by_user User                @relation("PurchaseOrderer", fields: [ordered_by], references: [id])
   lines           PurchaseOrderLine[]
+
+  // Optimizes: procurement pending PO count, PO status breakdown
+  @@index([status])
+  // Optimizes: procurement vendor spend this month (status + ordered_at range)
+  @@index([status, ordered_at])
+  // Optimizes: vendor-scoped PO lookups
+  @@index([vendor_id])
 }
 
 model PurchaseOrderLine {
@@ -521,6 +576,9 @@ model PurchaseOrderLine {
   received_quantity Decimal?
   purchase_order    PurchaseOrder @relation(fields: [po_id], references: [id], onDelete: Cascade)
   ingredient        Ingredient    @relation(fields: [ingredient_id], references: [id])
+
+  // Optimizes: PO lines loading by po_id
+  @@index([po_id])
 }
 
 model PrepBatch {
@@ -538,6 +596,13 @@ model PrepBatch {
   zone               Zone      @relation(fields: [zone_id], references: [id])
   creator            User      @relation("PrepBatchCreator", fields: [prepared_by], references: [id])
   wasteLogs          WasteLog[]
+
+  // Optimizes: FIFO batch lookup by recipe+zone+status (prep-batches, KDS deductions, menu availability)
+  @@index([recipe_id, status, zone_id])
+  // Optimizes: kitchen-metrics active batch count, prep-batches findAll by zone+status
+  @@index([zone_id, status])
+  // Optimizes: kitchen-metrics today's batches for waste percentage
+  @@index([created_at])
 }
 
 model WasteLog {
@@ -557,6 +622,11 @@ model WasteLog {
   prep_batch     PrepBatch?  @relation(fields: [prep_batch_id], references: [id])
   zone           Zone        @relation(fields: [zone_id], references: [id])
   creator        User?       @relation("WasteLogCreator", fields: [logged_by], references: [id])
+
+  // Optimizes: kitchen-metrics waste today aggregate (created_at filter)
+  @@index([created_at])
+  // Optimizes: waste by zone queries
+  @@index([zone_id, created_at])
 }
 
 model Order {
@@ -582,6 +652,13 @@ model Order {
   items                   OrderItem[]
   payment                 Payment?
   feedbacks               Feedback[]
+
+  // Optimizes: analytics date-range + status filters, orders list by status+date, daily summary
+  @@index([status, created_at])
+  // Optimizes: orders filtered by channel (getOrders channel filter)
+  @@index([channel])
+  // Optimizes: KDS getActiveOrders grouped by zone, kitchen-metrics zone utilization
+  @@index([zone_id, status])
 }
 
 model OrderItem {
@@ -596,6 +673,13 @@ model OrderItem {
   created_at   DateTime  @default(now())
   order        Order     @relation(fields: [order_id], references: [id], onDelete: Cascade)
   menu_item    MenuItem  @relation(fields: [menu_item_id], references: [id])
+
+  // Optimizes: KDS findMany by order_id, all-items-ready check
+  @@index([order_id])
+  // Optimizes: kitchen-metrics items_completed_today (status + ready_at filter)
+  @@index([status, ready_at])
+  // Optimizes: analytics getTopItems groupBy menu_item_id
+  @@index([menu_item_id])
 }
 
 model Payment {
@@ -636,6 +720,13 @@ model Feedback {
   customer_name  String?
   customer_phone String?
   created_at     DateTime @default(now())
+
+  // Optimizes: findAll by order_id
+  @@index([order_id])
+  // Optimizes: findAll date range filter + pagination ordered by created_at
+  @@index([created_at(sort: Desc)])
+  // Optimizes: findAll rating filter
+  @@index([rating])
 }
 
 model Event {

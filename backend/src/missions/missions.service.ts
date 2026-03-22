@@ -7,19 +7,17 @@ import { UpdateMissionDto } from './dto/update-mission.dto';
 export class MissionsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll() {
+  async findAll(page?: number, limit?: number) {
+    const take = Math.min(Number(limit) || 50, 100);
+    const skip = ((Number(page) || 1) - 1) * take;
+
     return this.prisma.mission.findMany({
       include: {
-        quests: {
-          select: {
-            id: true,
-            title: true,
-            status: true,
-            progress_percent: true,
-          },
-        },
+        _count: { select: { quests: true } },
       },
       orderBy: { created_at: 'desc' },
+      take,
+      skip,
     });
   }
 
@@ -64,7 +62,10 @@ export class MissionsService {
   }
 
   async update(id: string, dto: UpdateMissionDto) {
-    const existing = await this.prisma.mission.findUnique({ where: { id } });
+    const existing = await this.prisma.mission.findUnique({
+      where: { id },
+      select: { id: true },
+    });
     if (!existing) {
       throw new NotFoundException(`Mission with ID ${id} not found`);
     }
@@ -73,8 +74,8 @@ export class MissionsService {
       where: { id },
       data: {
         ...dto,
-        start_date: dto.start_date ? new Date(dto.start_date) : undefined,
-        end_date: dto.end_date ? new Date(dto.end_date) : undefined,
+        start_date: dto.start_date === undefined ? undefined : (dto.start_date ? new Date(dto.start_date) : null),
+        end_date: dto.end_date === undefined ? undefined : (dto.end_date ? new Date(dto.end_date) : null),
       },
     });
   }

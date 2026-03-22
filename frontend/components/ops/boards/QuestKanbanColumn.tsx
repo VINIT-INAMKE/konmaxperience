@@ -17,7 +17,7 @@ export function QuestKanbanColumn({
   accentClass,
 }: QuestKanbanColumnProps) {
   return (
-    <div className={`min-w-[240px] border-l-4 ${accentClass} rounded-lg bg-muted/30 p-4`}>
+    <div className={`w-full sm:min-w-[240px] border-l-4 ${accentClass} rounded-lg bg-muted/30 p-4`}>
       {/* Column header */}
       <div className="flex items-center gap-2 mb-3">
         <span className="text-xs font-bold uppercase">{title}</span>

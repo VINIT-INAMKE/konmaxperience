@@ -1,5 +1,6 @@
 import {
   Injectable,
+  Logger,
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
@@ -13,6 +14,8 @@ import { convertUnit } from '../common/utils/unit-conversion';
 
 @Injectable()
 export class MenuService {
+  private readonly logger = new Logger(MenuService.name);
+
   constructor(private readonly prisma: PrismaService) {}
 
   // ----------------------------------------------------------------
@@ -77,7 +80,7 @@ export class MenuService {
   // Menu Items
   // ----------------------------------------------------------------
 
-  async findItems(categoryId?: string, brandId?: string) {
+  async findItems(categoryId?: string, brandId?: string, page?: number, limit?: number) {
     const where: Record<string, unknown> = {};
     if (categoryId) {
       where.category_id = categoryId;
@@ -85,6 +88,10 @@ export class MenuService {
     if (brandId) {
       where.category = { brand_id: brandId };
     }
+
+    const take = Math.min(Number(limit) || 50, 100);
+    const skip = ((Number(page) || 1) - 1) * take;
+
     return this.prisma.menuItem.findMany({
       where,
       include: {
@@ -96,6 +103,8 @@ export class MenuService {
         },
       },
       orderBy: { name: 'asc' },
+      take,
+      skip,
     });
   }
 
@@ -141,6 +150,25 @@ export class MenuService {
     if (!existing) {
       throw new NotFoundException(`Menu item with ID ${id} not found`);
     }
+
+    // Validate: if changing recipe, new recipe must be approved
+    if (dto.recipe_id !== undefined) {
+      const recipe = await this.prisma.recipe.findUnique({
+        where: { id: dto.recipe_id },
+        select: { id: true, status: true },
+      });
+
+      if (!recipe) {
+        throw new NotFoundException(`Recipe with ID ${dto.recipe_id} not found`);
+      }
+
+      if (recipe.status !== 'approved') {
+        throw new BadRequestException(
+          'Only approved recipes can be added to the menu. Change the recipe status to Approved first.',
+        );
+      }
+    }
+
     return this.prisma.menuItem.update({
       where: { id },
       data: {
@@ -201,7 +229,7 @@ export class MenuService {
 
   /**
    * Compute servings available for a single menu item given its loaded recipe lines.
-   * Shared helper used by both single-item and batch endpoints.
+   * Uses pre-fetched stock and batch data when provided (batch mode) or queries individually.
    */
   private async computeServings(
     menuItem: {
@@ -213,12 +241,14 @@ export class MenuService {
           quantity: any;
           unit: string;
           ingredient_id: string | null;
-          ingredient: { base_unit: string } | null;
+          ingredient: { id: string; base_unit: string } | null;
           source_recipe_id: string | null;
-          source_recipe: { yield_unit: string } | null;
+          source_recipe: { id: string; yield_unit: string } | null;
         }>;
       };
     },
+    prefetchedStocks?: Map<string, number>,
+    prefetchedBatches?: Map<string, number>,
   ): Promise<{ available: boolean; servings_remaining: number }> {
     if (!menuItem.available || menuItem.status !== 'active') {
       return { available: false, servings_remaining: 0 };
@@ -228,43 +258,71 @@ export class MenuService {
 
     for (const line of menuItem.recipe.RecipeLines) {
       if (line.input_type === 'ingredient') {
-        const stocks = await this.prisma.ingredientStock.findMany({
-          where: { ingredient_id: line.ingredient_id! },
-        });
-        const totalStock = stocks.reduce(
-          (s, st) => s + Number(st.current_quantity),
-          0,
-        );
+        let totalStock: number;
+        if (prefetchedStocks && line.ingredient_id) {
+          totalStock = prefetchedStocks.get(line.ingredient_id) ?? 0;
+        } else {
+          const stocks = await this.prisma.ingredientStock.findMany({
+            where: { ingredient_id: line.ingredient_id! },
+          });
+          totalStock = stocks.reduce(
+            (s, st) => s + Number(st.current_quantity),
+            0,
+          );
+        }
         const neededPerServing = await convertUnit(
           Number(line.quantity),
           line.unit,
-          line.ingredient!.base_unit,
+          line.ingredient?.base_unit ?? line.unit,
           this.prisma,
         );
-        if (neededPerServing === null || neededPerServing === 0) continue;
+        if (neededPerServing === null) {
+          // Conversion failure means we cannot determine availability — treat as unavailable
+          return { available: false, servings_remaining: 0 };
+        }
+        if (neededPerServing === 0) {
+          this.logger.warn(
+            `Skipping recipe line with zero neededPerServing for ingredient ${line.ingredient_id}`,
+          );
+          continue;
+        }
         const servings = Math.floor(totalStock / neededPerServing);
         minServings = Math.min(minServings, servings);
       }
 
       if (line.input_type === 'recipe') {
-        const batches = await this.prisma.prepBatch.findMany({
-          where: {
-            recipe_id: line.source_recipe_id!,
-            status: 'active',
-            OR: [{ expires_at: null }, { expires_at: { gt: new Date() } }],
-          },
-        });
-        const totalRemaining = batches.reduce(
-          (s, b) => s + Number(b.quantity_remaining),
-          0,
-        );
+        let totalRemaining: number;
+        if (prefetchedBatches && line.source_recipe_id) {
+          totalRemaining = prefetchedBatches.get(line.source_recipe_id) ?? 0;
+        } else {
+          const batches = await this.prisma.prepBatch.findMany({
+            where: {
+              recipe_id: line.source_recipe_id!,
+              status: 'active',
+              OR: [{ expires_at: null }, { expires_at: { gt: new Date() } }],
+            },
+          });
+          totalRemaining = batches.reduce(
+            (s, b) => s + Number(b.quantity_remaining),
+            0,
+          );
+        }
         const neededPerServing = await convertUnit(
           Number(line.quantity),
           line.unit,
-          line.source_recipe!.yield_unit,
+          line.source_recipe?.yield_unit ?? line.unit,
           this.prisma,
         );
-        if (neededPerServing === null || neededPerServing === 0) continue;
+        if (neededPerServing === null) {
+          // Conversion failure means we cannot determine availability — treat as unavailable
+          return { available: false, servings_remaining: 0 };
+        }
+        if (neededPerServing === 0) {
+          this.logger.warn(
+            `Skipping recipe line with zero neededPerServing for sub-recipe ${line.source_recipe_id}`,
+          );
+          continue;
+        }
         const servings = Math.floor(totalRemaining / neededPerServing);
         minServings = Math.min(minServings, servings);
       }
@@ -283,7 +341,10 @@ export class MenuService {
         recipe: {
           include: {
             RecipeLines: {
-              include: { ingredient: true, source_recipe: true },
+              include: {
+                ingredient: { select: { id: true, base_unit: true } },
+                source_recipe: { select: { id: true, yield_unit: true } },
+              },
             },
           },
         },
@@ -302,12 +363,62 @@ export class MenuService {
         recipe: {
           include: {
             RecipeLines: {
-              include: { ingredient: true, source_recipe: true },
+              include: {
+                ingredient: { select: { id: true, base_unit: true } },
+                source_recipe: { select: { id: true, yield_unit: true } },
+              },
             },
           },
         },
       },
     });
+
+    // Collect all ingredient_ids and recipe_ids needed across all items
+    const ingredientIds = new Set<string>();
+    const recipeIds = new Set<string>();
+
+    for (const item of menuItems) {
+      for (const line of item.recipe.RecipeLines) {
+        if (line.input_type === 'ingredient' && line.ingredient_id) {
+          ingredientIds.add(line.ingredient_id);
+        }
+        if (line.input_type === 'recipe' && line.source_recipe_id) {
+          recipeIds.add(line.source_recipe_id);
+        }
+      }
+    }
+
+    // Batch-fetch all IngredientStock records for needed ingredients
+    const [allStocks, allBatches] = await Promise.all([
+      ingredientIds.size > 0
+        ? this.prisma.ingredientStock.findMany({
+            where: { ingredient_id: { in: [...ingredientIds] } },
+          })
+        : [],
+      recipeIds.size > 0
+        ? this.prisma.prepBatch.findMany({
+            where: {
+              recipe_id: { in: [...recipeIds] },
+              status: 'active',
+              OR: [{ expires_at: null }, { expires_at: { gt: new Date() } }],
+            },
+          })
+        : [],
+    ]);
+
+    // Aggregate stocks by ingredient_id
+    const stockMap = new Map<string, number>();
+    for (const stock of allStocks) {
+      const current = stockMap.get(stock.ingredient_id) ?? 0;
+      stockMap.set(stock.ingredient_id, current + Number(stock.current_quantity));
+    }
+
+    // Aggregate batches by recipe_id
+    const batchMap = new Map<string, number>();
+    for (const batch of allBatches) {
+      const current = batchMap.get(batch.recipe_id) ?? 0;
+      batchMap.set(batch.recipe_id, current + Number(batch.quantity_remaining));
+    }
 
     const result: Record<
       string,
@@ -315,7 +426,7 @@ export class MenuService {
     > = {};
 
     for (const item of menuItems) {
-      result[item.id] = await this.computeServings(item);
+      result[item.id] = await this.computeServings(item, stockMap, batchMap);
     }
 
     return result;

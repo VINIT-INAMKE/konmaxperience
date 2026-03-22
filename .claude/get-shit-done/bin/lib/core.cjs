@@ -843,8 +843,9 @@ const MODEL_ALIAS_MAP = {
 function resolveModelInternal(cwd, agentType) {
   const config = loadConfig(cwd);
 
-  // Check per-agent override first
-  const override = config.model_overrides?.[agentType];
+  // Check per-agent override first (try full name, then short name without gsd- prefix)
+  const override = config.model_overrides?.[agentType]
+    || config.model_overrides?.[agentType.replace(/^gsd-/, '')];
   if (override) {
     return override;
   }

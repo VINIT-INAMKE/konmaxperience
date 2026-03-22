@@ -48,6 +48,7 @@ export class EvidenceReviewController {
   constructor(private readonly evidenceService: EvidenceService) {}
 
   @Get('feed')
+  @RequiresPermission(Permission.UPLOAD_EVIDENCE)
   async getFeed(
     @Query('status') status?: string,
     @Query('limit') limit?: string,
@@ -55,7 +56,7 @@ export class EvidenceReviewController {
   ) {
     return this.evidenceService.getFeed(
       status || undefined,
-      parseInt(limit || '20', 10),
+      Math.min(parseInt(limit || '20', 10), 100),
       cursor || undefined,
     );
   }

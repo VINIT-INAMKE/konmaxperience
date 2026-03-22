@@ -159,7 +159,8 @@ export function TaskKanban({
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <div className="grid grid-cols-4 gap-4 h-[calc(100vh-280px)]">
+      <div className="overflow-x-auto -mx-6 px-6">
+      <div className="grid grid-cols-4 gap-4 h-[calc(100vh-280px)] min-w-[900px]">
         {KANBAN_COLUMNS.map((status) => {
           const columnTasks = tasksByColumn[status] || [];
           return (
@@ -177,6 +178,7 @@ export function TaskKanban({
             </SortableContext>
           );
         })}
+      </div>
       </div>
 
       <DragOverlay adjustScale={false} dropAnimation={null}>
@@ -228,7 +230,7 @@ function KanbanColumn({
       <div className="flex-1 min-h-0 overflow-y-auto">
         <div className="space-y-2 p-1">
           {tasks.length === 0 ? (
-            <p className="text-center text-[13px] text-muted-foreground py-8">
+            <p className="text-center text-xs text-muted-foreground py-8">
               No tasks
             </p>
           ) : (

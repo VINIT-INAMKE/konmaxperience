@@ -1,12 +1,18 @@
 import { S3Client } from '@aws-sdk/client-s3';
 
-export function createR2Client(): S3Client {
+export interface R2Config {
+  endpoint: string;
+  accessKeyId: string;
+  secretAccessKey: string;
+}
+
+export function createR2Client(config: R2Config): S3Client {
   return new S3Client({
     region: 'auto',
-    endpoint: process.env.R2_ENDPOINT,
+    endpoint: config.endpoint,
     credentials: {
-      accessKeyId: process.env.R2_ACCESS_KEY_ID || '',
-      secretAccessKey: process.env.R2_SECRET_ACCESS_KEY || '',
+      accessKeyId: config.accessKeyId,
+      secretAccessKey: config.secretAccessKey,
     },
   });
 }

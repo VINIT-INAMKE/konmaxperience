@@ -10,6 +10,7 @@ import {
   Req,
   ParseUUIDPipe,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import express from 'express';
 import { BrandsService } from './brands.service';
 import { Public } from '../common/decorators/public.decorator';
@@ -24,6 +25,7 @@ export class BrandsController {
 
   @Get()
   @Public()
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
   async findAll(@Query('status') status?: string) {
     return this.brandsService.findAll(status);
   }
@@ -40,6 +42,7 @@ export class BrandsController {
   }
 
   @Patch(':id')
+  @RequiresPermission(Permission.MANAGE_OPS)
   async update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateBrandDto,

@@ -4,8 +4,6 @@ import { useState, useEffect, useMemo } from 'react';
 import { Search } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { BlurFade } from '@/components/ui/blur-fade';
-import { ShimmerButton } from '@/components/ui/shimmer-button';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -124,18 +122,11 @@ export default function RecipesPage() {
   const hasFilters = brandFilter !== 'all' || statusFilter !== 'all' || searchQuery.trim() !== '';
 
   return (
-    <BlurFade>
       <div className="space-y-6">
         {/* Page header */}
         <div className="flex items-center justify-between gap-4 flex-wrap">
-          <h1 className="text-[28px] font-semibold leading-tight">Recipes</h1>
-          <ShimmerButton
-            shimmerColor="#4ade80"
-            className="h-9 text-sm px-4"
-            onClick={handleCreateClick}
-          >
-            Create Recipe
-          </ShimmerButton>
+          <h1 className="text-2xl font-bold">Recipes</h1>
+          <Button onClick={handleCreateClick}>Create Recipe</Button>
         </div>
 
         {/* Filter bar */}
@@ -166,7 +157,7 @@ export default function RecipesPage() {
             </SelectContent>
           </Select>
 
-          <div className="relative w-64 ml-auto">
+          <div className="relative w-full sm:w-64 ml-auto">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
             <Input
               placeholder="Search recipes..."
@@ -260,6 +251,5 @@ export default function RecipesPage() {
           </DialogContent>
         </Dialog>
       </div>
-    </BlurFade>
   );
 }

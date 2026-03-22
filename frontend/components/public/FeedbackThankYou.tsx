@@ -15,8 +15,8 @@ export function FeedbackThankYou() {
     <BlurFade direction="up">
       <div className="flex flex-col items-center justify-center py-16 space-y-4">
         <h2 className="text-3xl font-semibold">Thank you!</h2>
-        <p className="text-base text-gray-500">
-          Your feedback helps us improve every meal.
+        <p className="text-base text-muted-foreground">
+          Your feedback makes every meal better.
         </p>
         <Confetti
           ref={confettiRef}

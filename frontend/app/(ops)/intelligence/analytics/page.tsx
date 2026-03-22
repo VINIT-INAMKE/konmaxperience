@@ -6,11 +6,26 @@ import { BlurFade } from '@/components/ui/blur-fade';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import dynamic from 'next/dynamic';
+import { Skeleton } from '@/components/ui/skeleton';
 import { AnalyticsSummaryCards } from '@/components/ops/analytics/AnalyticsSummaryCards';
-import { RevenueTrendChart } from '@/components/ops/analytics/RevenueTrendChart';
-import { TopItemsList } from '@/components/ops/analytics/TopItemsList';
-import { ChannelBreakdownChart } from '@/components/ops/analytics/ChannelBreakdownChart';
-import { RecipeCostTable } from '@/components/ops/analytics/RecipeCostTable';
+
+const RevenueTrendChart = dynamic(
+  () => import('@/components/ops/analytics/RevenueTrendChart').then((m) => m.RevenueTrendChart),
+  { loading: () => <Skeleton className="h-72 rounded-xl" /> },
+);
+const TopItemsList = dynamic(
+  () => import('@/components/ops/analytics/TopItemsList').then((m) => m.TopItemsList),
+  { loading: () => <Skeleton className="h-72 rounded-xl" /> },
+);
+const ChannelBreakdownChart = dynamic(
+  () => import('@/components/ops/analytics/ChannelBreakdownChart').then((m) => m.ChannelBreakdownChart),
+  { loading: () => <Skeleton className="h-72 rounded-xl" /> },
+);
+const RecipeCostTable = dynamic(
+  () => import('@/components/ops/analytics/RecipeCostTable').then((m) => m.RecipeCostTable),
+  { loading: () => <Skeleton className="h-72 rounded-xl" /> },
+);
 import { apiClient } from '@/lib/api-client';
 import { useAuthStore } from '@/lib/stores/auth-store';
 import { RoleCode } from '@/lib/types/roles';
@@ -126,7 +141,7 @@ export default function AnalyticsPage() {
       <div className="space-y-8">
         {/* Header: title + time range toggle */}
         <div className="flex items-center justify-between gap-4 flex-wrap">
-          <h1 className="text-2xl font-semibold">Analytics</h1>
+          <h1 className="text-2xl font-bold">Analytics</h1>
           <div className="flex items-center gap-2">
             {(['today', '7d', '30d'] as const).map((range) => (
               <Button
@@ -149,7 +164,7 @@ export default function AnalyticsPage() {
                 Custom
               </PopoverTrigger>
               <PopoverContent className="w-auto p-4 space-y-3">
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="text-xs font-bold">From</label>
                     <input

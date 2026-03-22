@@ -8,6 +8,7 @@ import {
   Query,
   Req,
   ParseUUIDPipe,
+  BadRequestException,
 } from '@nestjs/common';
 import express from 'express';
 import { UsersService } from './users.service';
@@ -24,6 +25,9 @@ export class UsersController {
   @RequiresPermission(Permission.VIEW_ALL)
   async findAll(@Query('viewAs') viewAs?: string) {
     if (viewAs) {
+      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(viewAs)) {
+        throw new BadRequestException('Invalid viewAs UUID');
+      }
       // Admin user-level filtering (AUTH-06)
       const user = await this.usersService.findOne(viewAs);
       return [user];

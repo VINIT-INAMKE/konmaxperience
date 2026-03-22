@@ -6,6 +6,7 @@ import {
   Param,
   Body,
   Req,
+  Query,
   ParseUUIDPipe,
 } from '@nestjs/common';
 import express from 'express';
@@ -20,8 +21,11 @@ export class MissionsController {
   constructor(private readonly missionsService: MissionsService) {}
 
   @Get()
-  async findAll() {
-    return this.missionsService.findAll();
+  async findAll(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.missionsService.findAll(Number(page), Number(limit));
   }
 
   @Get(':id')

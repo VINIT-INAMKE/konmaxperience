@@ -1,4 +1,5 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreatePrepBatchDto } from './dto/create-prep-batch.dto';
 import { PreviewDeductionsDto } from './dto/preview-deductions.dto';
@@ -14,22 +15,29 @@ const RECIPE_INCLUDE = {
 } as const;
 
 /** WHERE clause to find active, non-expired prep batches */
-function activeBatchWhere(recipeId: string) {
-  return {
+function activeBatchWhere(recipeId: string, zoneId?: string) {
+  const where: Record<string, unknown> = {
     recipe_id: recipeId,
     status: 'active',
     OR: [{ expires_at: null }, { expires_at: { gt: new Date() } }],
   };
+  if (zoneId) {
+    where.zone_id = zoneId;
+  }
+  return where;
 }
 
 @Injectable()
 export class PrepBatchesService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll(zoneId?: string, status?: string) {
+  async findAll(zoneId?: string, status?: string, page?: number, limit?: number) {
     const where: Record<string, unknown> = {};
     if (zoneId) where.zone_id = zoneId;
     if (status) where.status = status;
+
+    const take = Math.min(Number(limit) || 50, 100);
+    const skip = ((Number(page) || 1) - 1) * take;
 
     return this.prisma.prepBatch.findMany({
       where,
@@ -46,6 +54,8 @@ export class PrepBatchesService {
         creator: { select: { name: true } },
       },
       orderBy: { created_at: 'asc' },
+      take,
+      skip,
     });
   }
 
@@ -64,6 +74,53 @@ export class PrepBatchesService {
     }
 
     const multiplier = dto.quantity_to_prep / Number(recipe.yield_qty);
+
+    // Collect all ingredient IDs and source recipe IDs from BOM lines
+    const ingredientIds: string[] = [];
+    const sourceRecipeIds: string[] = [];
+    for (const line of recipe.RecipeLines) {
+      if (line.input_type === 'ingredient' && line.ingredient) {
+        ingredientIds.push(line.ingredient.id);
+      } else if (line.input_type === 'recipe' && line.source_recipe) {
+        sourceRecipeIds.push(line.source_recipe.id);
+      }
+    }
+
+    // Batch-fetch all ingredient stocks and prep batches in parallel
+    const [ingredientStocks, prepBatches] = await Promise.all([
+      ingredientIds.length > 0
+        ? this.prisma.ingredientStock.findMany({
+            where: {
+              ingredient_id: { in: ingredientIds },
+              zone_id: dto.zone_id,
+            },
+          })
+        : [],
+      sourceRecipeIds.length > 0
+        ? this.prisma.prepBatch.findMany({
+            where: {
+              recipe_id: { in: sourceRecipeIds },
+              zone_id: dto.zone_id,
+              status: 'active',
+              OR: [{ expires_at: null }, { expires_at: { gt: new Date() } }],
+            },
+          })
+        : [],
+    ]);
+
+    // Build lookup maps
+    const stockMap = new Map<string, number>();
+    for (const stock of ingredientStocks) {
+      stockMap.set(stock.ingredient_id, Number(stock.current_quantity));
+    }
+    const batchMap = new Map<string, number>();
+    for (const batch of prepBatches) {
+      batchMap.set(
+        batch.recipe_id,
+        (batchMap.get(batch.recipe_id) ?? 0) + Number(batch.quantity_remaining),
+      );
+    }
+
     const lines: Array<{
       input_name: string;
       input_type: string;
@@ -90,15 +147,7 @@ export class PrepBatchesService {
           );
         }
 
-        const stock = await (this.prisma as any).ingredientStock.findUnique({
-          where: {
-            ingredient_id_zone_id: {
-              ingredient_id: line.ingredient.id,
-              zone_id: dto.zone_id,
-            },
-          },
-        });
-        const available = stock ? Number(stock.current_quantity) : 0;
+        const available = stockMap.get(line.ingredient.id) ?? 0;
 
         lines.push({
           input_name: line.ingredient.name,
@@ -109,15 +158,7 @@ export class PrepBatchesService {
           sufficient: available >= neededBase,
         });
       } else if (line.input_type === 'recipe' && line.source_recipe) {
-        // Fetch active non-expired prep batches for source recipe
-        const batches = await this.prisma.prepBatch.findMany({
-          where: activeBatchWhere(line.source_recipe.id),
-          orderBy: { created_at: 'asc' },
-        });
-        const totalRemaining = batches.reduce(
-          (sum, b) => sum + Number(b.quantity_remaining),
-          0,
-        );
+        const totalRemaining = batchMap.get(line.source_recipe.id) ?? 0;
 
         // Convert needed to source recipe's yield unit if different
         const convertedNeeded = await convertUnit(
@@ -204,12 +245,13 @@ export class PrepBatchesService {
             sourceYieldUnit: line.source_recipe.yield_unit,
             lineUnit: line.unit,
             needed,
+            zoneId: dto.zone_id,
           });
         }
       }
 
       return prepBatch;
-    });
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
   }
 
   /**
@@ -293,11 +335,12 @@ export class PrepBatchesService {
       sourceYieldUnit: string;
       lineUnit: string;
       needed: number;
+      zoneId: string;
     },
   ) {
-    // Fetch active, non-expired batches in FIFO order (oldest first)
+    // Fetch active, non-expired batches in FIFO order (oldest first), filtered by zone
     const batches = await tx.prepBatch.findMany({
-      where: activeBatchWhere(params.sourceRecipeId),
+      where: activeBatchWhere(params.sourceRecipeId, params.zoneId),
       orderBy: { created_at: 'asc' },
     });
 

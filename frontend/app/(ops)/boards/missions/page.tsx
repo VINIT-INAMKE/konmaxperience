@@ -49,7 +49,7 @@ export default function MissionBoardPage() {
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
-          <h1 className="text-[20px] font-bold">Mission Board</h1>
+          <h1 className="text-2xl font-bold">Mission Board</h1>
           <Select
             value={statusFilter}
             onValueChange={(v) => setStatusFilter(v ?? 'all')}
@@ -96,7 +96,7 @@ export default function MissionBoardPage() {
           <div className="flex flex-col items-center justify-center py-16 space-y-4 text-center">
             <Rocket className="size-12 text-muted-foreground" />
             <div className="space-y-1">
-              <h2 className="text-[20px] font-bold">No missions yet</h2>
+              <h2 className="text-xl font-bold">No missions yet</h2>
               <p className="text-sm text-muted-foreground">
                 Create a mission to get started.
               </p>

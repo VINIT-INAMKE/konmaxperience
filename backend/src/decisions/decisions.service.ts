@@ -17,15 +17,21 @@ const DECISION_INCLUDE = {
 export class DecisionsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll(status?: string) {
+  async findAll(status?: string, page?: number, limit?: number) {
     const where: Record<string, unknown> = {};
     if (status) {
       where.status = status;
     }
+
+    const take = Math.min(Number(limit) || 50, 100);
+    const skip = ((Number(page) || 1) - 1) * take;
+
     return this.prisma.decision.findMany({
       where,
       include: DECISION_INCLUDE,
       orderBy: { created_at: 'desc' },
+      take,
+      skip,
     });
   }
 

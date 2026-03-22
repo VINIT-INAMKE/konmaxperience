@@ -11,7 +11,7 @@ interface KdsZoneColumnProps {
 
 export function KdsZoneColumn({ zone, newOrderIds, onStatusAdvance }: KdsZoneColumnProps) {
   return (
-    <div className="min-w-[280px] flex flex-col">
+    <div className="w-full sm:min-w-[280px] flex flex-col">
       {/* Zone header */}
       <div className="sticky top-0 z-10 bg-[oklch(0.145_0_0)] px-3 py-2 rounded-t-lg border-b border-white/10">
         <h2 className="text-[18px] font-bold leading-[1.2] text-white">

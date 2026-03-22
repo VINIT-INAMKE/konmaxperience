@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard,
@@ -56,11 +57,13 @@ import { useAuthStore } from '@/lib/stores/auth-store';
 import { logout, logoutAll } from '@/lib/auth';
 import { RoleCode, ROLE_DISPLAY_NAMES } from '@/lib/types/roles';
 import { AdHocTaskSheet } from '@/components/ops/tasks/AdHocTaskSheet';
+import { STATUS_BADGE } from '@/lib/status-styles';
 import { NumberTicker } from '@/components/ui/number-ticker';
 import { LevelBadge } from '@/components/ops/gamification/LevelBadge';
 import { XpProgressBar } from '@/components/ops/gamification/XpProgressBar';
 import { LevelUpCelebration } from '@/components/ops/gamification/LevelUpCelebration';
 import { NotificationBell } from '@/components/ops/notifications/NotificationBell';
+import { AnimatedThemeToggler } from '@/components/ui/animated-theme-toggler';
 
 interface NavItem {
   label: string;
@@ -71,7 +74,11 @@ interface NavItem {
   badgeClassName?: string;
 }
 
-export function Sidebar() {
+interface SidebarProps {
+  onNavigate?: () => void;
+}
+
+export function Sidebar({ onNavigate }: SidebarProps = {}) {
   const pathname = usePathname();
   const user = useAuthStore((s) => s.user);
   const levelUpEvent = useAuthStore((s) => s.levelUpEvent);
@@ -134,6 +141,11 @@ export function Sidebar() {
   // Default to true — leaderboard shows unless explicitly disabled
   const leaderboardEnabled = leaderboardSetting?.value !== 'false';
 
+  // Helper: check if user has a permission
+  const can = (perm: string) => permissions.includes(perm);
+  const canAny = (...perms: string[]) => perms.some((p) => permissions.includes(p));
+
+  // ── Overview (everyone) ──
   const overviewNav: NavItem[] = [
     {
       label: 'Dashboard',
@@ -142,28 +154,37 @@ export function Sidebar() {
     },
   ];
 
+  // ── Work (permission-filtered) ──
   const workNav: NavItem[] = [
+    // Missions: everyone can view, but link is always visible
     {
       label: 'Missions',
       href: '/missions',
       icon: <Rocket className="size-4" />,
     },
-    {
-      label: 'Approvals',
-      href: '/approvals',
-      icon: <CheckCircle className="size-4" />,
-      badge: pendingCount > 0 ? String(pendingCount) : undefined,
-      badgeClassName: 'text-amber-400 bg-amber-950 border-amber-500/20',
-    },
-    {
-      label: 'Decisions',
-      href: '/decisions',
-      icon: <ClipboardCheck className="size-4" />,
-      badge: proposedCount > 0 ? String(proposedCount) : undefined,
-      badgeClassName: 'text-blue-400 bg-blue-950 border-blue-500/20',
-    },
+    // Approvals: only if user can approve evidence
+    ...(can('APPROVE_EVIDENCE')
+      ? [{
+          label: 'Approvals',
+          href: '/approvals',
+          icon: <CheckCircle className="size-4" />,
+          badge: pendingCount > 0 ? String(pendingCount) : undefined,
+          badgeClassName: STATUS_BADGE.amber,
+        }]
+      : []),
+    // Decisions: only if user can create or approve decisions
+    ...(canAny('CREATE_DECISION', 'APPROVE_DECISION')
+      ? [{
+          label: 'Decisions',
+          href: '/decisions',
+          icon: <ClipboardCheck className="size-4" />,
+          badge: proposedCount > 0 ? String(proposedCount) : undefined,
+          badgeClassName: STATUS_BADGE.blue,
+        }]
+      : []),
   ];
 
+  // ── Boards (everyone — shared visibility) ──
   const boardsNav: NavItem[] = [
     { label: 'Missions', href: '/boards/missions', icon: <Rocket className="size-4" /> },
     { label: 'Quests', href: '/boards/quests', icon: <CheckCircle className="size-4" /> },
@@ -171,93 +192,120 @@ export function Sidebar() {
     { label: 'Evidence Feed', href: '/boards/evidence', icon: <Eye className="size-4" /> },
   ];
 
+  // ── Intelligence (permission-filtered) ──
   const intelligenceNav: NavItem[] = [
+    // Readiness: everyone can view
     {
       label: 'Readiness',
       href: '/readiness',
       icon: <Gauge className="size-4" />,
     },
+    // Leaderboard: everyone (if enabled)
     ...(leaderboardEnabled
-      ? [
-          {
-            label: 'Leaderboard',
-            href: '/leaderboard',
-            icon: <Trophy className="size-4" />,
-          },
-        ]
+      ? [{
+          label: 'Leaderboard',
+          href: '/leaderboard',
+          icon: <Trophy className="size-4" />,
+        }]
       : []),
-    {
-      label: 'KPIs',
-      href: '/kpis',
-      icon: <BarChart3 className="size-4" />,
-    },
-    ...(permissions.includes('MANAGE_KPIS')
-      ? [
-          {
-            label: 'Analytics',
-            href: '/intelligence/analytics',
-            icon: <TrendingUp className="size-4" />,
-          },
-        ]
+    // KPIs: only if MANAGE_KPIS
+    ...(can('MANAGE_KPIS')
+      ? [{
+          label: 'KPIs',
+          href: '/kpis',
+          icon: <BarChart3 className="size-4" />,
+        }]
+      : []),
+    // Analytics: only if MANAGE_KPIS
+    ...(can('MANAGE_KPIS')
+      ? [{
+          label: 'Analytics',
+          href: '/intelligence/analytics',
+          icon: <TrendingUp className="size-4" />,
+        }]
       : []),
   ];
 
+  // ── Operations (requires MANAGE_OPS) ──
   const operationsNav: NavItem[] = [
-    { label: 'Zones', href: '/operations/zones', icon: <MapPin className="size-4" /> },
-    { label: 'Brands', href: '/operations/brands', icon: <Tag className="size-4" /> },
-    { label: 'Channels', href: '/operations/channels', icon: <Radio className="size-4" /> },
-    { label: 'Assets', href: '/operations/assets', icon: <FolderOpen className="size-4" /> },
-    { label: 'Recipes', href: '/operations/recipes', icon: <ChefHat className="size-4" /> },
-    { label: 'Ingredients', href: '/operations/ingredients', icon: <Salad className="size-4" /> },
-    { label: 'Vendors', href: '/operations/vendors', icon: <Truck className="size-4" /> },
-    { label: 'Menu', href: '/operations/menu', icon: <UtensilsCrossed className="size-4" /> },
-    { label: 'Inventory', href: '/operations/inventory', icon: <PackageSearch className="size-4" /> },
-    { label: 'Inventory Overview', href: '/operations/inventory/dashboard', icon: <BarChart3 className="size-4" /> },
-    { label: 'Purchase Orders', href: '/operations/purchase-orders', icon: <ShoppingCart className="size-4" /> },
-    { label: 'Procurement', href: '/operations/procurement', icon: <TrendingUp className="size-4" /> },
-    { label: 'Feedback', href: '/operations/feedback', icon: <MessageSquare className="size-4" /> },
-    { label: 'Events', href: '/operations/events', icon: <CalendarDays className="size-4" /> },
+    ...(can('MANAGE_OPS')
+      ? [
+          { label: 'Zones', href: '/operations/zones', icon: <MapPin className="size-4" /> },
+          { label: 'Brands', href: '/operations/brands', icon: <Tag className="size-4" /> },
+          { label: 'Channels', href: '/operations/channels', icon: <Radio className="size-4" /> },
+          { label: 'Assets', href: '/operations/assets', icon: <FolderOpen className="size-4" /> },
+          { label: 'Recipes', href: '/operations/recipes', icon: <ChefHat className="size-4" /> },
+          { label: 'Ingredients', href: '/operations/ingredients', icon: <Salad className="size-4" /> },
+          { label: 'Vendors', href: '/operations/vendors', icon: <Truck className="size-4" /> },
+          { label: 'Menu', href: '/operations/menu', icon: <UtensilsCrossed className="size-4" /> },
+        ]
+      : []),
+    ...(can('MANAGE_INVENTORY')
+      ? [
+          { label: 'Inventory', href: '/operations/inventory', icon: <PackageSearch className="size-4" /> },
+          { label: 'Inventory Overview', href: '/operations/inventory/dashboard', icon: <BarChart3 className="size-4" /> },
+        ]
+      : []),
+    ...(can('MANAGE_PROCUREMENT')
+      ? [
+          { label: 'Purchase Orders', href: '/operations/purchase-orders', icon: <ShoppingCart className="size-4" /> },
+          { label: 'Procurement', href: '/operations/procurement', icon: <TrendingUp className="size-4" /> },
+        ]
+      : []),
+    ...(can('MANAGE_POS')
+      ? [
+          { label: 'Feedback', href: '/operations/feedback', icon: <MessageSquare className="size-4" /> },
+        ]
+      : []),
+    ...(can('MANAGE_OPS')
+      ? [
+          { label: 'Events', href: '/operations/events', icon: <CalendarDays className="size-4" /> },
+        ]
+      : []),
   ];
 
-  const kitchenNav: NavItem[] = [
-    { label: 'Dashboard', href: '/operations/kitchen/dashboard', icon: <LayoutDashboard className="size-4" /> },
-    { label: 'Prep Batches', href: '/operations/kitchen/prep-batches', icon: <ChefHat className="size-4" /> },
-    { label: 'KDS', href: '/operations/kitchen/kds', icon: <Monitor className="size-4" /> },
-    { label: 'Waste Log', href: '/operations/kitchen/waste', icon: <Trash2 className="size-4" /> },
-  ];
+  // ── Kitchen (requires MANAGE_KITCHEN) ──
+  const kitchenNav: NavItem[] = can('MANAGE_KITCHEN')
+    ? [
+        { label: 'Dashboard', href: '/operations/kitchen/dashboard', icon: <LayoutDashboard className="size-4" /> },
+        { label: 'Prep Batches', href: '/operations/kitchen/prep-batches', icon: <ChefHat className="size-4" /> },
+        { label: 'KDS', href: '/operations/kitchen/kds', icon: <Monitor className="size-4" /> },
+        { label: 'Waste Log', href: '/operations/kitchen/waste', icon: <Trash2 className="size-4" /> },
+      ]
+    : [];
 
-  const posNav: NavItem[] = [
-    { label: 'Take Order', href: '/pos', icon: <ShoppingCart className="size-4" /> },
-    { label: 'Order History', href: '/pos/orders', icon: <ClipboardList className="size-4" /> },
-    { label: 'Delivery Queue', href: '/pos/delivery', icon: <Truck className="size-4" /> },
-  ];
+  // ── POS (requires MANAGE_POS) ──
+  const posNav: NavItem[] = can('MANAGE_POS')
+    ? [
+        { label: 'Take Order', href: '/pos', icon: <ShoppingCart className="size-4" /> },
+        { label: 'Order History', href: '/pos/orders', icon: <ClipboardList className="size-4" /> },
+        { label: 'Delivery Queue', href: '/pos/delivery', icon: <Truck className="size-4" /> },
+      ]
+    : [];
 
+  // ── Admin (requires MANAGE_RBAC or MANAGE_SYSTEM or MANAGE_DELEGATIONS) ──
   const adminNav: NavItem[] = [
-    {
-      label: 'Team',
-      href: '/admin/users',
-      icon: <Users className="size-4" />,
-    },
-    {
-      label: 'Permissions',
-      href: '/admin/permissions',
-      icon: <Shield className="size-4" />,
-    },
-    {
-      label: 'Blockers',
-      href: '/admin/blockers',
-      icon: <AlertTriangle className="size-4" />,
-    },
-    {
-      label: 'Delegations',
-      href: '/admin/delegations',
-      icon: <UserCheck className="size-4" />,
-    },
-    {
-      label: 'Settings',
-      href: '/admin/settings',
-      icon: <Settings className="size-4" />,
-    },
+    ...(can('MANAGE_RBAC')
+      ? [
+          { label: 'Team', href: '/admin/users', icon: <Users className="size-4" /> },
+          { label: 'Permissions', href: '/admin/permissions', icon: <Shield className="size-4" /> },
+        ]
+      : []),
+    ...(can('VIEW_ALL')
+      ? [
+          { label: 'Blockers', href: '/admin/blockers', icon: <AlertTriangle className="size-4" /> },
+        ]
+      : []),
+    ...(can('MANAGE_DELEGATIONS')
+      ? [
+          { label: 'Delegations', href: '/admin/delegations', icon: <UserCheck className="size-4" /> },
+        ]
+      : []),
+    ...(can('MANAGE_SYSTEM')
+      ? [
+          { label: 'Settings', href: '/admin/settings', icon: <Settings className="size-4" /> },
+        ]
+      : []),
   ];
 
   function getInitials(name: string): string {
@@ -279,19 +327,23 @@ export function Sidebar() {
     : '';
 
   return (
-    <aside className="w-[240px] shrink-0 border-r bg-card flex flex-col h-full">
+    <aside className="shrink-0 border-r bg-card flex flex-col h-full w-full">
       {/* Top: Logo area */}
       <div className="px-4 py-3 border-b flex items-center justify-between">
-        <span className="text-sm font-semibold tracking-tight">
-          Konma Xperience
-        </span>
-        <NotificationBell />
+        <div className="flex items-center gap-2">
+          <Image src="/logo.png" alt="Konma Xperience" width={28} height={28} style={{ height: '1.75rem', width: 'auto' }} />
+          <span className="text-sm font-semibold tracking-tight">Konma Xperience</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <AnimatedThemeToggler />
+          <NotificationBell />
+        </div>
       </div>
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto px-2 py-2 space-y-1">
         {overviewNav.map((item) => (
-          <NavLink key={item.label} item={item} active={isActive(item.href)} />
+          <NavLink key={item.label} item={item} active={isActive(item.href)} onNavigate={onNavigate} />
         ))}
 
         <div className="pt-3 pb-1 px-2">
@@ -300,7 +352,7 @@ export function Sidebar() {
           </span>
         </div>
         {workNav.map((item) => (
-          <NavLink key={item.label} item={item} active={isActive(item.href)} />
+          <NavLink key={item.label} item={item} active={isActive(item.href)} onNavigate={onNavigate} />
         ))}
 
         <div className="pt-3 pb-1 px-2">
@@ -309,7 +361,7 @@ export function Sidebar() {
           </span>
         </div>
         {boardsNav.map((item) => (
-          <NavLink key={item.label} item={item} active={isActive(item.href)} />
+          <NavLink key={item.label} item={item} active={isActive(item.href)} onNavigate={onNavigate} />
         ))}
 
         <div className="pt-3 pb-1 px-2">
@@ -318,37 +370,49 @@ export function Sidebar() {
           </span>
         </div>
         {intelligenceNav.map((item) => (
-          <NavLink key={item.label} item={item} active={isActive(item.href)} />
+          <NavLink key={item.label} item={item} active={isActive(item.href)} onNavigate={onNavigate} />
         ))}
 
-        <div className="pt-3 pb-1 px-2">
-          <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/60">
-            Operations
-          </span>
-        </div>
-        {operationsNav.map((item) => (
-          <NavLink key={item.label} item={item} active={isActive(item.href)} />
-        ))}
+        {operationsNav.length > 0 && (
+          <>
+            <div className="pt-3 pb-1 px-2">
+              <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/60">
+                Operations
+              </span>
+            </div>
+            {operationsNav.map((item) => (
+              <NavLink key={item.label} item={item} active={isActive(item.href)} onNavigate={onNavigate} />
+            ))}
+          </>
+        )}
 
-        <div className="pt-3 pb-1 px-2">
-          <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/60">
-            Kitchen
-          </span>
-        </div>
-        {kitchenNav.map((item) => (
-          <NavLink key={item.label} item={item} active={isActive(item.href)} />
-        ))}
+        {kitchenNav.length > 0 && (
+          <>
+            <div className="pt-3 pb-1 px-2">
+              <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/60">
+                Kitchen
+              </span>
+            </div>
+            {kitchenNav.map((item) => (
+              <NavLink key={item.label} item={item} active={isActive(item.href)} onNavigate={onNavigate} />
+            ))}
+          </>
+        )}
 
-        <div className="pt-3 pb-1 px-2">
-          <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/60">
-            POS
-          </span>
-        </div>
-        {posNav.map((item) => (
-          <NavLink key={item.label} item={item} active={isActive(item.href)} />
-        ))}
+        {posNav.length > 0 && (
+          <>
+            <div className="pt-3 pb-1 px-2">
+              <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/60">
+                POS
+              </span>
+            </div>
+            {posNav.map((item) => (
+              <NavLink key={item.label} item={item} active={isActive(item.href)} onNavigate={onNavigate} />
+            ))}
+          </>
+        )}
 
-        {isAdmin && (
+        {adminNav.length > 0 && (
           <>
             <div className="pt-3 pb-1 px-2">
               <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/60">
@@ -356,18 +420,14 @@ export function Sidebar() {
               </span>
             </div>
             {adminNav.map((item) => (
-              <NavLink
-                key={item.label}
-                item={item}
-                active={isActive(item.href)}
-              />
+              <NavLink key={item.label} item={item} active={isActive(item.href)} onNavigate={onNavigate} />
             ))}
           </>
         )}
       </nav>
 
-      {/* Ad-hoc task shortcut (admin only) */}
-      {isAdmin && (
+      {/* Ad-hoc task shortcut */}
+      {can('CREATE_ADHOC_TASK') && (
         <div className="px-2 pb-2">
           <button
             onClick={() => setAdHocOpen(true)}
@@ -457,7 +517,7 @@ export function Sidebar() {
   );
 }
 
-function NavLink({ item, active }: { item: NavItem; active: boolean }) {
+function NavLink({ item, active, onNavigate }: { item: NavItem; active: boolean; onNavigate?: () => void }) {
   if (item.disabled) {
     return (
       <div className="flex items-center gap-3 rounded-md px-3 py-2 text-sm text-muted-foreground opacity-60 cursor-not-allowed select-none">
@@ -478,6 +538,7 @@ function NavLink({ item, active }: { item: NavItem; active: boolean }) {
   return (
     <Link
       href={item.href}
+      onClick={onNavigate}
       className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors ${
         active
           ? 'bg-primary text-primary-foreground'
@@ -489,7 +550,7 @@ function NavLink({ item, active }: { item: NavItem; active: boolean }) {
       {item.badge && (
         <Badge
           variant="secondary"
-          className="ml-auto text-[10px] h-4 px-1.5"
+          className={`ml-auto text-[10px] h-4 px-1.5 ${item.badgeClassName ?? ''}`}
         >
           {item.badge}
         </Badge>
