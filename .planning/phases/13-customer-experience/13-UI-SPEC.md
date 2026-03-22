@@ -85,23 +85,27 @@ Two sub-contexts: public pages use slightly larger sizes for readability on phon
 
 ### Public Pages (`/feedback`, `/events`, `/menu`)
 
+Weights: **600 (semibold) + 400 (normal) only.**
+
 | Role | Size | Weight | Line Height | Usage |
 |------|------|--------|-------------|-------|
-| Display | 28px (`text-3xl`) | 700 (`font-bold`) | 1.2 | Page title ("Thank You!", event name on detail) |
+| Display | 28px (`text-3xl`) | 600 (`font-semibold`) | 1.2 | Page title ("Thank You!", event name on detail) |
 | Heading | 20px (`text-xl`) | 600 (`font-semibold`) | 1.3 | Section headings, event card title |
 | Body | 16px (`text-base`) | 400 (`font-normal`) | 1.6 | Form labels, event description, menu item name |
-| Label/Small | 14px (`text-sm`) | 500 (`font-medium`) | 1.4 | Price, capacity status, badge text, helper text |
+| Label/Small | 14px (`text-sm`) | 400 (`font-normal`) | 1.4 | Price, capacity status, badge text, helper text — use `uppercase tracking-wider` for visual distinction instead of heavier weight |
 
 ### Ops Pages (`/operations/feedback`, `/operations/events`)
 
-Matches established ops typography pattern exactly:
+Matches established ops typography pattern exactly.
+
+Weights: **600 (semibold) + 400 (normal) only.**
 
 | Role | Size | Weight | Line Height | Usage |
 |------|------|--------|-------------|-------|
 | Page heading | 20px (`text-xl`) | 600 (`font-semibold`) | 1.2 | Page `<h1>` (source: inventory page pattern) |
 | Body | 14px (`text-sm`) | 400 (`font-normal`) | 1.5 | Table cells, descriptions, card body |
-| Label | 14px (`text-sm`) | 500 (`font-medium`) | 1.4 | Table headers (paired with `uppercase tracking-wider`) |
-| Micro | 12px (`text-xs`) | 500 (`font-medium`) | 1.4 | Column headers, secondary metadata |
+| Label | 14px (`text-sm`) | 600 (`font-semibold`) | 1.4 | Table headers — paired with `uppercase tracking-wider` for distinction |
+| Micro | 12px (`text-xs`) | 600 (`font-semibold`) | 1.4 | Column headers, secondary metadata — paired with `uppercase tracking-wider` |
 
 ---
 
@@ -134,6 +138,19 @@ Accent reserved for: active star rating fill, primary submit/CTA buttons, "Avail
 
 ---
 
+## Visual Focal Points
+
+| Page | Primary Visual Anchor |
+|------|-----------------------|
+| `/feedback/[orderId]` | The 5-star rating widget, centered, largest interactive element on the page — renders above all other form fields with increased vertical spacing to establish dominance |
+| `/events` | EventCard grid — MagicCard spotlight gradient draws eye across the listing |
+| `/events/[id]` | Event image (left col on desktop, full-width on mobile) sets the visual anchor before the booking form |
+| `/menu` | Brand tab switcher — top-of-page, full-width tabs anchor navigation before menu content |
+| `/operations/feedback` | FeedbackStatsCard average rating figure (`text-2xl font-semibold`) at top of page |
+| `/operations/events` | "Create Event" primary button in page header, right-aligned |
+
+---
+
 ## Component Inventory
 
 ### Public Pages — New Components
@@ -156,7 +173,7 @@ Accent reserved for: active star rating fill, primary submit/CTA buttons, "Avail
 | Component | Where Used | shadcn basis |
 |-----------|------------|--------------|
 | `FeedbackRow` | `/operations/feedback` table | Table row — rating stars (display only), comment truncated, order link |
-| `FeedbackStatsCard` | `/operations/feedback` header | shadcn Card with average rating figure (`text-2xl font-bold`) |
+| `FeedbackStatsCard` | `/operations/feedback` header | shadcn Card with average rating figure (`text-2xl font-semibold`) |
 | `RatingFilterTabs` | `/operations/feedback` | shadcn Tabs — All / 5★ / 4★ / 3★ / 2★ / 1★ (or Select on mobile) |
 | `EventForm` | `/operations/events` create/edit | shadcn Sheet — all event fields |
 | `EventRow` | `/operations/events` table | Table row with title, date, capacity fill, booking count |
@@ -236,7 +253,7 @@ Accent reserved for: active star rating fill, primary submit/CTA buttons, "Avail
 
 1. **Load state**: Skeleton for order info area while fetching order. If order not found, show inline info message: "We couldn't find your order, but you can still leave feedback." Form renders regardless.
 2. **Star rating**: 5 clickable stars. Hover previews fill up to hovered star. Selected rating fills stars permanently. Stars are required — submit button disabled until rating selected.
-3. **Submission**: Button shows `Loader2` spinner during POST. On success, form fades out (200ms) and thank-you screen fades in with confetti burst. On error, inline error below button: "Something went wrong. Please try again."
+3. **Submission**: Button shows `Loader2` spinner during POST. On success, form fades out (200ms) and thank-you screen fades in with confetti burst. On error, inline error below button: "Couldn't submit your feedback — please check your connection and try again."
 4. **Thank-you screen**: Static — no redirect, no auto-dismiss. Just the message + confetti. No back button.
 5. **Validation**: Rating required (1-5). Comment optional. Name optional (max 100 chars). Phone optional (max 20 chars). Validate client-side before submission.
 
@@ -305,7 +322,7 @@ Touch targets: all interactive elements minimum 44×44px on public pages. This a
 | Registry | Blocks Used | Safety Gate |
 |----------|-------------|-------------|
 | shadcn official | Button, Card, Input, Textarea, Select, Tabs, Badge, Sheet, Dialog, Skeleton, Separator | not required |
-| @magicui (https://magicui.design/r) | MagicCard (existing), Confetti (existing), BlurFade (existing) | Pre-installed and in use since Phase 2/3 — view passed in prior phases |
+| @magicui (https://magicui.design/r) | MagicCard (existing), Confetti (existing), BlurFade (existing) | view passed — no flags — 2026-03-19 (Phase 02-03) and 2026-03-20 (Phase 03-03). All components pre-installed. |
 
 No new third-party registry blocks are introduced in Phase 13. All animation components referenced above (`MagicCard`, `BlurFade`, `Confetti`) are already installed in `frontend/components/ui/`. No registry vetting gate required.
 
