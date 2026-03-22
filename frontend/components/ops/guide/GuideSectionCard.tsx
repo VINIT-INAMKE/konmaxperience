@@ -5,19 +5,7 @@ import { MagicCard } from '@/components/ui/magic-card';
 import { BorderBeam } from '@/components/ui/border-beam';
 import { BEAM_FROM, BEAM_TO } from '@/lib/brand-colors';
 import type { GuideSection } from '@/lib/types/guides';
-import * as LucideIcons from 'lucide-react';
-
-interface DynamicIconProps {
-  name: string;
-  className?: string;
-  style?: React.CSSProperties;
-}
-
-function DynamicIcon({ name, className, style }: DynamicIconProps) {
-  const Icon = (LucideIcons as Record<string, any>)[name];
-  if (!Icon) return <LucideIcons.BookOpen className={className} style={style} />;
-  return <Icon className={className} style={style} />;
-}
+import { DynamicIcon } from '@/components/ops/guide/DynamicIcon';
 
 interface GuideSectionCardProps {
   section: GuideSection;
