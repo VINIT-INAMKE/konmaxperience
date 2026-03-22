@@ -22,7 +22,7 @@
 - Integer phases (14-20): Planned milestone work
 - Decimal phases (14.1, 15.1): Urgent insertions (marked with INSERTED)
 
-- [ ] **Phase 14: Foundation** - Schema, backend API, role filtering, and security hardening
+- [x] **Phase 14: Foundation** - Schema, backend API, role filtering, and security hardening (completed 2026-03-22)
 - [ ] **Phase 15: Reader View** - Staff-facing guide experience with role-gated content
 - [ ] **Phase 16: Admin CMS** - Tiptap rich text editor with image upload and content management UI
 - [ ] **Phase 17: Search, Preview, and Content Seeding** - Full-text search, admin preview-as-role, and real guide content generated from codebase
@@ -46,7 +46,7 @@
 
 Plans:
 - [x] 14-01-PLAN.md -- Infrastructure: Prisma schema, migration, MANAGE_GUIDE permission, GuidesModule scaffold, presign-guide endpoint
-- [ ] 14-02-PLAN.md -- Implementation: DTOs, GuidesService CRUD with role filtering and XSS sanitization, GuidesController endpoints, unit tests
+- [x] 14-02-PLAN.md -- Implementation: DTOs, GuidesService CRUD with role filtering and XSS sanitization, GuidesController endpoints, unit tests
 
 ### Phase 15: Reader View
 **Goal**: Authenticated team members can browse and read guide pages filtered to their role in a polished, navigable UI
@@ -102,7 +102,7 @@ Phases execute in numeric order: 14 -> 14.x -> 15 -> 15.x -> 16 -> 16.x -> 17 ->
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 14. Foundation | v1.1 | 1/2 | In Progress|  |
+| 14. Foundation | v1.1 | 2/2 | Complete   | 2026-03-22 |
 | 15. Reader View | v1.1 | 0/? | Not started | - |
 | 16. Admin CMS | v1.1 | 0/? | Not started | - |
 | 17. Search, Preview, and Content Seeding | v1.1 | 0/? | Not started | - |

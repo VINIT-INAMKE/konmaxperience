@@ -11,8 +11,8 @@ Requirements for milestone v1.1 — User Guide System. Each maps to roadmap phas
 
 - [x] **GUIDE-01**: Admin can create, edit, and delete guide sections (top-level categories like Kitchen, POS, Inventory)
 - [x] **GUIDE-02**: Admin can create, edit, and delete guide pages within sections
-- [ ] **GUIDE-03**: Admin can assign roles to sections — mapped roles see the section, unmapped don't
-- [ ] **GUIDE-04**: Admin can set page status to draft or published — drafts visible only to admin/tech
+- [x] **GUIDE-03**: Admin can assign roles to sections — mapped roles see the section, unmapped don't
+- [x] **GUIDE-04**: Admin can set page status to draft or published — drafts visible only to admin/tech
 - [x] **GUIDE-05**: Admin can reorder sections and pages via sort position
 
 ### Rich Text Editor
@@ -20,7 +20,7 @@ Requirements for milestone v1.1 — User Guide System. Each maps to roadmap phas
 - [ ] **EDIT-01**: Admin can edit page content with Tiptap rich text editor (headings, lists, bold/italic/underline, links)
 - [ ] **EDIT-02**: Admin can upload and embed images inline via R2 presigned URLs
 - [ ] **EDIT-03**: Admin can insert styled callout blocks (tip, warning, info) within page content
-- [ ] **EDIT-04**: Content is sanitized server-side on save (DOMPurify) to prevent XSS
+- [x] **EDIT-04**: Content is sanitized server-side on save (DOMPurify) to prevent XSS
 
 ### Reader Experience
 
@@ -63,13 +63,13 @@ Which phases cover which requirements. Updated during roadmap creation.
 |-------------|-------|--------|
 | GUIDE-01 | Phase 14 | Complete |
 | GUIDE-02 | Phase 14 | Complete |
-| GUIDE-03 | Phase 14 | Pending |
-| GUIDE-04 | Phase 14 | Pending |
+| GUIDE-03 | Phase 14 | Complete |
+| GUIDE-04 | Phase 14 | Complete |
 | GUIDE-05 | Phase 14 | Complete |
 | EDIT-01 | Phase 16 | Pending |
 | EDIT-02 | Phase 16 | Pending |
 | EDIT-03 | Phase 16 | Pending |
-| EDIT-04 | Phase 14 | Pending |
+| EDIT-04 | Phase 14 | Complete |
 | READ-01 | Phase 15 | Pending |
 | READ-02 | Phase 15 | Pending |
 | READ-03 | Phase 17 | Pending |
