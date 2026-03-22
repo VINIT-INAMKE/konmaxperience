@@ -7,7 +7,7 @@ stopped_at: Phase 14 context gathered
 last_updated: "2026-03-22T13:44:12.961Z"
 last_activity: 2026-03-22 -- Roadmap created for v1.1
 progress:
-  total_phases: 4
+  total_phases: 7
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -65,6 +65,12 @@ Recent decisions affecting current work:
 - [v1.1 Research]: isomorphic-dompurify with jsdom pinned to 25.0.1 for XSS sanitization
 - [v1.1 Research]: Reader view built BEFORE editor to validate backend filtering end-to-end
 - [v1.1 Research]: MANAGE_GUIDE as single new permission; GuidesModule follows existing module pattern
+
+### Roadmap Evolution
+
+- Phase 18 added: Data Export — CSV/XLSX export for 22 report types
+- Phase 19 added: Master Data Import — ingredients, vendors, vendor pricing
+- Phase 20 added: Operations Import — stock, recipes, menu, events, tasks, quests, KPIs
 
 ### Pending Todos
 

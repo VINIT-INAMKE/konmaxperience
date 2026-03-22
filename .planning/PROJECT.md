@@ -110,9 +110,9 @@ Complete data model for Phases 7-13 (22 new entities) defined in `docs/superpowe
 - **Domain Focus**: Food-first for v1. Art and lifestyle domains deferred.
 - **Auth**: JWT-based with role-based permissions (8 distinct roles)
 
-## Current Milestone: v1.1 User Guide System
+## Current Milestone: v1.1 User Guide & Data Management
 
-**Goal:** In-app, admin-editable user guide/manual with role-based access — each team member sees a polished walkthrough of exactly what they can do and how.
+**Goal:** In-app user guide CMS with role-based access + bulk data import/export across the entire system.
 
 **Target features:**
 - Admin CMS for creating/editing guide content (rich text + image uploads via R2)
@@ -120,6 +120,9 @@ Complete data model for Phases 7-13 (22 new entities) defined in `docs/superpowe
 - Role-to-section mapping — users see only their role's guides
 - Admin/tech access to all guide pages
 - Rich, polished UI with MagicUI components (not static docs)
+- CSV/XLSX export for 22 report types (orders, analytics, waste, inventory, procurement, feedback, KPIs, etc.)
+- Bulk import for master data (ingredients, vendors, vendor pricing)
+- Bulk import for operational data (opening stock, recipes, menu, events, tasks, quests, KPIs)
 
 ## Key Decisions
 
