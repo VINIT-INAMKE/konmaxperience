@@ -67,7 +67,7 @@ Each task was committed atomically:
 
 1. **Task 1: Delivery queue page with inline assignment and status progression** - `b63a271` (feat)
 
-**Plan metadata:** [pending final commit] (docs: complete plan)
+**Plan metadata:** `3210215` (docs: complete plan)
 
 ## Files Created/Modified
 - `frontend/app/(ops)/pos/delivery/page.tsx` - Delivery queue page with query, client-side filter, auto-refresh
