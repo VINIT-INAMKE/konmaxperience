@@ -14,6 +14,7 @@ import { RequiresPermission } from '../common/decorators/permissions.decorator';
 import { Permission } from '../types/permissions';
 import { PresignDto } from './dto/presign.dto';
 import { PresignAssetDto } from './dto/presign-asset.dto';
+import { PresignGuideDto } from './dto/presign-guide.dto';
 
 @Controller('storage')
 export class StorageController {
@@ -66,6 +67,16 @@ export class StorageController {
   async presignAsset(@Body() dto: PresignAssetDto) {
     this.storageService.validatePresignRequest(dto.contentType, dto.fileSize);
     const key = `assets/${Date.now()}-${dto.filename.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+    const presignedUrl = await this.storageService.generatePresignedPutUrl(key, dto.contentType);
+    const publicUrl = this.storageService.getPublicUrl(key);
+    return { presignedUrl, key, publicUrl };
+  }
+
+  @Post('presign-guide')
+  @RequiresPermission(Permission.MANAGE_GUIDE)
+  async presignGuide(@Body() dto: PresignGuideDto) {
+    this.storageService.validatePresignRequest(dto.contentType, dto.fileSize);
+    const key = `guide/${Date.now()}-${dto.filename.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
     const presignedUrl = await this.storageService.generatePresignedPutUrl(key, dto.contentType);
     const publicUrl = this.storageService.getPublicUrl(key);
     return { presignedUrl, key, publicUrl };
