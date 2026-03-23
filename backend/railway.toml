@@ -3,6 +3,9 @@ builder = "nixpacks"
 buildCommand = "npx prisma migrate deploy && npx prisma generate && npm run build"
 watchPatterns = ["backend/**"]
 
+[build.nixpacks]
+nixPackages = ["nodejs_22"]
+
 [deploy]
 startCommand = "node dist/src/main.js"
 healthcheckPath = "/"
