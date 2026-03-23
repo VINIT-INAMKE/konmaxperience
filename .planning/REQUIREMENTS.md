@@ -26,7 +26,7 @@ Requirements for milestone v1.1 — User Guide System. Each maps to roadmap phas
 
 - [x] **READ-01**: User sees only guide sections assigned to their role on the guide index page
 - [x] **READ-02**: User can read guide pages in a polished, styled view with MagicUI components
-- [ ] **READ-03**: User can search across all visible guide pages via full-text search
+- [x] **READ-03**: User can search across all visible guide pages via full-text search
 - [ ] **READ-04**: Admin/tech can preview the guide as any role to verify content visibility
 - [x] **READ-05**: Guide pages render with section sidebar navigation for easy browsing
 
@@ -72,7 +72,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | EDIT-04 | Phase 14 | Complete |
 | READ-01 | Phase 15 | Complete |
 | READ-02 | Phase 15 | Complete |
-| READ-03 | Phase 17 | Pending |
+| READ-03 | Phase 17 | Complete |
 | READ-04 | Phase 17 | Pending |
 | READ-05 | Phase 15 | Complete |
 | SEED-01 | Phase 17 | Pending |

@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: User Guide & Data Management
 status: unknown
-stopped_at: Phase 17 UI-SPEC approved
-last_updated: "2026-03-22T19:24:13.287Z"
+stopped_at: Completed 17-03-PLAN.md
+last_updated: "2026-03-23T05:25:11.723Z"
 progress:
   total_phases: 7
   completed_phases: 3
-  total_plans: 6
-  completed_plans: 6
+  total_plans: 9
+  completed_plans: 8
 ---
 
 # Project State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-22)
 
 **Core value:** Every piece of work must be evidence-backed, approved, and validated before it counts -- turning real execution into measurable readiness and progress.
-**Current focus:** Phase 16 — admin-cms
+**Current focus:** Phase 17 — search-preview-and-content-seeding
 
 ## Current Position
 
-Phase: 18
-Plan: Not started
+Phase: 17 (search-preview-and-content-seeding) — EXECUTING
+Plan: 3 of 3
 
 ## Performance Metrics
 
@@ -52,6 +52,8 @@ Plan: Not started
 | Phase 15 P02 | 8min | 3 tasks | 9 files |
 | Phase 16 P01 | 6min | 2 tasks | 8 files |
 | Phase 16 P02 | 10min | 2 tasks | 7 files |
+| Phase 17 P01 | 9min | 2 tasks | 10 files |
+| Phase 17-03 P03 | 10min | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -79,6 +81,10 @@ Recent decisions affecting current work:
 - [Phase 16]: BubbleMenuPlugin registered programmatically via editor.registerPlugin (Tiptap v3 changed BubbleMenu from React component to Extension)
 - [Phase 16]: GuideEditorClient fetches page data client-side via React Query (avoids auth cookie forwarding in SSR)
 - [Phase 16]: Content hash uses SHA-256 of getHTML() not getJSON() for autosave (Tiptap v3 JSON is non-deterministic)
+- [Phase 17]: Used prisma migrate resolve for migration drift (consistent with Phase 14 approach)
+- [Phase 17]: tsvector search pattern: search_text column + trigger sync + GIN index + websearch_to_tsquery
+- [Phase 17-03]: Tiptap JSON builder helpers (p, h2, h3, ul, ol, li, doc) for readable seed content generation
+- [Phase 17-03]: Word-count read time (200 wpm) replacing JSON string length heuristic for accurate read estimates
 
 ### Roadmap Evolution
 
@@ -96,6 +102,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-22T19:24:13.282Z
-Stopped at: Phase 17 UI-SPEC approved
-Resume file: .planning/phases/17-search-preview-and-content-seeding/17-UI-SPEC.md
+Last session: 2026-03-23T05:25:11.717Z
+Stopped at: Completed 17-03-PLAN.md
+Resume file: None
