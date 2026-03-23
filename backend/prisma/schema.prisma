@@ -787,6 +787,7 @@ model GuidePage {
   summary             String?
   estimated_read_time Int?
   status              String       @default("draft")
+  search_text         String       @default("")
   created_at          DateTime     @default(now())
   updated_at          DateTime     @updatedAt
 

@@ -6,6 +6,15 @@ import { CreatePageDto } from './dto/create-page.dto';
 import { UpdatePageDto } from './dto/update-page.dto';
 import DOMPurify from 'isomorphic-dompurify';
 
+interface SearchResult {
+  pageId: string;
+  pageTitle: string;
+  pageSlug: string;
+  sectionTitle: string;
+  sectionSlug: string;
+  snippet: string;
+}
+
 @Injectable()
 export class GuidesService {
   constructor(private readonly prisma: PrismaService) {}
@@ -56,6 +65,7 @@ export class GuidesService {
       ALLOWED_TAGS: [
         'p', 'br', 'strong', 'em', 'u', 's', 'a', 'ul', 'ol', 'li',
         'h1', 'h2', 'h3', 'h4', 'blockquote', 'img', 'figure', 'figcaption',
+        'mark',
       ],
       ALLOWED_ATTR: ['href', 'src', 'alt', 'target', 'rel', 'class', 'data-type'],
       FORBID_TAGS: ['script', 'iframe', 'object', 'embed'],
@@ -235,5 +245,69 @@ export class GuidesService {
     if (!existing) throw new NotFoundException('Page not found');
 
     return this.prisma.guidePage.delete({ where: { id } });
+  }
+
+  // ==================== SEARCH ====================
+
+  async searchPages(query: string, roleCode: string): Promise<SearchResult[]> {
+    if (!query || query.trim().length < 2) return [];
+
+    const safeQuery = query.trim();
+    const isAdmin = this.isAdmin(roleCode);
+
+    const results = isAdmin
+      ? await this.prisma.$queryRaw<SearchResult[]>`
+          SELECT
+            p.id          AS "pageId",
+            p.title       AS "pageTitle",
+            p.slug        AS "pageSlug",
+            s.title       AS "sectionTitle",
+            s.slug        AS "sectionSlug",
+            ts_headline(
+              'english', p.search_text,
+              websearch_to_tsquery('english', ${safeQuery}),
+              'MaxWords=20,MinWords=10,StartSel=<mark>,StopSel=</mark>'
+            ) AS snippet
+          FROM "GuidePage" p
+          JOIN "GuideSection" s ON s.id = p.section_id
+          WHERE to_tsvector('english', p.search_text)
+                @@ websearch_to_tsquery('english', ${safeQuery})
+          ORDER BY ts_rank(
+            to_tsvector('english', p.search_text),
+            websearch_to_tsquery('english', ${safeQuery})
+          ) DESC
+          LIMIT 10
+        `
+      : await this.prisma.$queryRaw<SearchResult[]>`
+          SELECT
+            p.id          AS "pageId",
+            p.title       AS "pageTitle",
+            p.slug        AS "pageSlug",
+            s.title       AS "sectionTitle",
+            s.slug        AS "sectionSlug",
+            ts_headline(
+              'english', p.search_text,
+              websearch_to_tsquery('english', ${safeQuery}),
+              'MaxWords=20,MinWords=10,StartSel=<mark>,StopSel=</mark>'
+            ) AS snippet
+          FROM "GuidePage" p
+          JOIN "GuideSection" s ON s.id = p.section_id
+          WHERE p.status = 'published'
+            AND s.status = 'published'
+            AND s.role_codes @> ARRAY[${roleCode}]::text[]
+            AND to_tsvector('english', p.search_text)
+                @@ websearch_to_tsquery('english', ${safeQuery})
+          ORDER BY ts_rank(
+            to_tsvector('english', p.search_text),
+            websearch_to_tsquery('english', ${safeQuery})
+          ) DESC
+          LIMIT 10
+        `;
+
+    // Sanitize snippets before returning (defense-in-depth)
+    return results.map(r => ({
+      ...r,
+      snippet: this.sanitizeContent(r.snippet),
+    }));
   }
 }

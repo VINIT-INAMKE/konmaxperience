@@ -6,6 +6,7 @@ import {
   Delete,
   Param,
   Body,
+  Query,
   Req,
   ParseUUIDPipe,
 } from '@nestjs/common';
@@ -21,6 +22,14 @@ import { UpdatePageDto } from './dto/update-page.dto';
 @Controller('guide')
 export class GuidesController {
   constructor(private readonly guidesService: GuidesService) {}
+
+  // ==================== SEARCH ====================
+
+  @Get('search')
+  search(@Query('q') q: string, @Req() req: express.Request) {
+    const user = (req as any).user;
+    return this.guidesService.searchPages(q, user.roleCode);
+  }
 
   // ==================== SECTIONS (Read) ====================
 

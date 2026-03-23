@@ -196,3 +196,9 @@
 ::view-transition-old(root), ::view-transition-new(root) {
     animation: none;
     mix-blend-mode: normal;}
+
+mark {
+  background: transparent;
+  color: #9E7AFF;
+  font-weight: 600;
+}
