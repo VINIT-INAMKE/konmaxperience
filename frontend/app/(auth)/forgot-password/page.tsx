@@ -5,10 +5,6 @@ import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { ArrowLeft, Loader2, CheckCircle } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { forgotPassword } from '@/lib/auth';
 import { ApiError } from '@/lib/api-client';
 
@@ -81,27 +77,26 @@ export default function ForgotPasswordPage() {
   if (successEmail) {
     return (
       <div className="w-full max-w-sm space-y-6 text-center">
-        <CheckCircle className="size-10 text-success mx-auto" />
+        <CheckCircle className="size-10 text-emerald-600 mx-auto" />
         <div className="space-y-2">
-          <h1 className="text-2xl font-bold tracking-tight">Check your email</h1>
-          <p className="text-sm text-muted-foreground">
-            Reset link sent to <span className="font-medium text-foreground">{successEmail}</span>.
+          <h1 className="text-2xl font-bold tracking-tight text-[var(--public-fg)]">Check your email</h1>
+          <p className="text-sm text-[var(--public-muted)]">
+            Reset link sent to <span className="font-medium text-[var(--public-fg)]">{successEmail}</span>.
             It expires in 15 minutes.
           </p>
         </div>
-        <Button
-          variant="outline"
+        <button
           onClick={handleResend}
           disabled={resendCountdown > 0 || isLoading}
-          className="w-full"
+          className="w-full h-10 rounded-lg border border-[var(--public-border)] bg-white text-sm font-medium text-[var(--public-fg)] hover:bg-[var(--public-surface)] transition-colors disabled:opacity-50"
         >
           {resendCountdown > 0
             ? `Resend email (${resendCountdown}s)`
             : 'Resend email'}
-        </Button>
+        </button>
         <Link
           href="/login"
-          className="text-sm text-muted-foreground hover:text-foreground transition-colors inline-flex items-center gap-1"
+          className="text-sm text-[var(--public-muted)] hover:text-[var(--public-fg)] transition-colors inline-flex items-center gap-1"
         >
           <ArrowLeft className="size-3" />
           Back to sign in
@@ -115,53 +110,58 @@ export default function ForgotPasswordPage() {
       <div className="space-y-2">
         <Link
           href="/login"
-          className="text-sm text-muted-foreground hover:text-foreground transition-colors inline-flex items-center gap-1 mb-4"
+          className="text-sm text-[var(--public-muted)] hover:text-[var(--public-fg)] transition-colors inline-flex items-center gap-1 mb-4"
         >
           <ArrowLeft className="size-3" />
           Back to sign in
         </Link>
-        <h1 className="text-2xl font-bold tracking-tight">Reset your password</h1>
-        <p className="text-sm text-muted-foreground">
+        <h1 className="text-2xl font-bold tracking-tight text-[var(--public-fg)]">Reset your password</h1>
+        <p className="text-sm text-[var(--public-muted)]">
           Enter your email and we&apos;ll send a reset link.
         </p>
       </div>
 
       {error && (
-        <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {error}
+        </div>
       )}
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
         <div className="space-y-2">
-          <Label htmlFor="email">Email</Label>
-          <Input
+          <label htmlFor="email" className="text-sm font-medium text-[var(--public-fg)]">Email</label>
+          <input
             id="email"
             type="email"
             autoComplete="email"
             placeholder="you@example.com"
             disabled={isLoading}
+            className="flex h-10 w-full rounded-lg border border-[var(--public-border)] bg-white px-3 py-2 text-sm text-[var(--public-fg)] placeholder:text-[var(--public-muted-stone)] focus:outline-none focus:ring-2 focus:ring-[var(--public-accent)]/30 focus:border-[var(--public-accent)] disabled:opacity-50"
             aria-invalid={!!errors.email}
             aria-describedby={errors.email ? 'email-error' : undefined}
             {...register('email', { required: 'Email is required' })}
           />
           {errors.email && (
-            <p id="email-error" className="text-xs text-destructive">
+            <p id="email-error" className="text-xs text-red-600">
               {errors.email.message}
             </p>
           )}
         </div>
 
-        <Button type="submit" className="w-full h-11" disabled={isLoading}>
+        <button
+          type="submit"
+          className="w-full h-11 rounded-lg bg-[var(--public-fg)] text-[var(--public-bg)] text-sm font-medium hover:bg-[var(--public-fg-hover)] transition-colors disabled:opacity-50"
+          disabled={isLoading}
+        >
           {isLoading ? (
-            <>
-              <Loader2 className="size-4 animate-spin motion-reduce:animate-none" />
+            <span className="flex items-center justify-center gap-2">
+              <Loader2 className="size-4 animate-spin" />
               Sending...
-            </>
+            </span>
           ) : (
             'Send reset link'
           )}
-        </Button>
+        </button>
       </form>
     </div>
   );
