@@ -1,6 +1,7 @@
 [build]
 builder = "nixpacks"
-buildCommand = "npx prisma generate && npm run build"
+buildCommand = "npx prisma migrate deploy && npx prisma generate && npm run build"
+watchPatterns = ["backend/**"]
 
 [deploy]
 startCommand = "npm run start:prod"

@@ -1,6 +1,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
+import { CalendarDays } from 'lucide-react';
 import { BlurFade } from '@/components/ui/blur-fade';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
@@ -44,11 +45,12 @@ export default function EventsPage() {
         )}
 
         {!isLoading && !error && (!events || events.length === 0) && (
-          <div className="py-16 text-center space-y-2">
+          <div className="flex flex-col items-center justify-center py-16 text-center space-y-3">
+            <CalendarDays className="size-12 text-muted-foreground/30" />
             <h2 className="text-xl font-semibold">
-              No upcoming events
+              No Upcoming Events
             </h2>
-            <p className="text-base text-muted-foreground">
+            <p className="text-sm text-muted-foreground max-w-md">
               Check back soon &mdash; we&apos;re always planning something new.
             </p>
           </div>

@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { UtensilsCrossed } from 'lucide-react';
 import { BlurFade } from '@/components/ui/blur-fade';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
@@ -122,9 +123,11 @@ export default function MenuPage() {
 
         {/* No brands / empty state */}
         {!isLoading && !hasError && brands.length === 0 && (
-          <div className="py-16 text-center space-y-2">
-            <p className="text-base text-muted-foreground">
-              Menu is being updated. Check back shortly.
+          <div className="flex flex-col items-center justify-center py-16 text-center space-y-3">
+            <UtensilsCrossed className="size-12 text-muted-foreground/30" />
+            <h2 className="text-lg font-semibold">Menu Coming Soon</h2>
+            <p className="text-sm text-muted-foreground max-w-md">
+              Our menu is being prepared. Check back shortly to see what we have to offer.
             </p>
           </div>
         )}
@@ -139,9 +142,11 @@ export default function MenuPage() {
             />
 
             {filteredCategories.length === 0 && (
-              <div className="py-16 text-center space-y-2">
-                <p className="text-base text-muted-foreground">
-                  Menu is being updated. Check back shortly.
+              <div className="flex flex-col items-center justify-center py-16 text-center space-y-3">
+                <UtensilsCrossed className="size-12 text-muted-foreground/30" />
+                <h2 className="text-lg font-semibold">Menu Coming Soon</h2>
+                <p className="text-sm text-muted-foreground max-w-md">
+                  This brand&apos;s menu is being updated. Check back shortly for new dishes.
                 </p>
               </div>
             )}

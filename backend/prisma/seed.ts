@@ -5,7 +5,6 @@ import { Permission } from '../src/types/permissions';
 
 const prisma = new PrismaClient();
 
-const TEMP_PASSWORD = 'KonmaTemp123!';
 const BCRYPT_ROUNDS = 12;
 
 interface RoleSeed {
@@ -16,6 +15,7 @@ interface RoleSeed {
   functionDomain: string;
   userName: string;
   userEmail: string;
+  password: string;
 }
 
 const ROLE_SEEDS: RoleSeed[] = [
@@ -27,6 +27,7 @@ const ROLE_SEEDS: RoleSeed[] = [
     functionDomain: 'operations',
     userName: 'Admin',
     userEmail: 'admin@konma.store',
+    password: 'admin@konma123',
   },
   {
     code: RoleCode.FRONTEND_LEAD,
@@ -42,8 +43,9 @@ const ROLE_SEEDS: RoleSeed[] = [
       Permission.CREATE_DECISION,
     ],
     functionDomain: 'food',
-    userName: 'Anchitha',
-    userEmail: 'anchitha@konma.store',
+    userName: 'Advitha2',
+    userEmail: 'advitha2@konma.store',
+    password: 'advitha2@konma123',
   },
   {
     code: RoleCode.BACKEND_LEAD,
@@ -61,6 +63,7 @@ const ROLE_SEEDS: RoleSeed[] = [
     functionDomain: 'food',
     userName: 'Sadhana',
     userEmail: 'sadhana@konma.store',
+    password: 'sadhana@konma123',
   },
   {
     code: RoleCode.BI_LEAD,
@@ -77,6 +80,7 @@ const ROLE_SEEDS: RoleSeed[] = [
     functionDomain: 'bi',
     userName: 'Hasmitha',
     userEmail: 'hasmitha@konma.store',
+    password: 'hasmitha@konma123',
   },
   {
     code: RoleCode.PROCUREMENT_LEAD,
@@ -96,6 +100,7 @@ const ROLE_SEEDS: RoleSeed[] = [
     functionDomain: 'procurement',
     userName: 'Surya',
     userEmail: 'surya@konma.store',
+    password: 'surya@konma123',
   },
   {
     code: RoleCode.TALENT_LEAD,
@@ -110,6 +115,7 @@ const ROLE_SEEDS: RoleSeed[] = [
     functionDomain: 'talent',
     userName: 'Sathya',
     userEmail: 'sathya@konma.store',
+    password: 'sathya@konma123',
   },
   {
     code: RoleCode.TECH_LEAD,
@@ -119,6 +125,7 @@ const ROLE_SEEDS: RoleSeed[] = [
     functionDomain: 'tech',
     userName: 'Vinit',
     userEmail: 'vinit@konma.store',
+    password: 'vinit@konma123',
   },
   {
     code: RoleCode.DESIGN_OUTREACH_LEAD,
@@ -134,6 +141,7 @@ const ROLE_SEEDS: RoleSeed[] = [
     functionDomain: 'design',
     userName: 'Advitha',
     userEmail: 'advitha@konma.store',
+    password: 'advitha@konma123',
   },
 ];
 
@@ -1531,8 +1539,6 @@ const guideSections = [
 async function main() {
   console.log('Seeding database...');
 
-  const passwordHash = await bcrypt.hash(TEMP_PASSWORD, BCRYPT_ROUNDS);
-
   await prisma.$transaction(async (tx) => {
     // Upsert roles
     const roleRecords: Record<string, string> = {};
@@ -1554,14 +1560,16 @@ async function main() {
       roleRecords[seed.code] = role.id;
     }
 
-    // Upsert users (one per role)
+    // Upsert users (one per role, per-user password)
     for (const seed of ROLE_SEEDS) {
+      const passwordHash = await bcrypt.hash(seed.password, BCRYPT_ROUNDS);
       await tx.user.upsert({
         where: { email: seed.userEmail },
         update: {
           name: seed.userName,
           role_id: roleRecords[seed.code],
           function: seed.functionDomain,
+          password_hash: passwordHash,
         },
         create: {
           name: seed.userName,
@@ -1640,7 +1648,7 @@ async function main() {
         });
       }
     }
-  });
+  }, { timeout: 30000 });
 
   console.log('Seed completed successfully!');
   console.log(`  - ${ROLE_SEEDS.length} roles`);

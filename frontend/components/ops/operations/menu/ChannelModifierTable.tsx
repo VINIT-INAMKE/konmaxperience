@@ -96,7 +96,7 @@ export function ChannelModifierTable({ modifiers }: ChannelModifierTableProps) {
     }
     return (
       <span className="text-xs text-muted-foreground">
-        Base + INR {mod.modifier_value}
+        Base + ₹{mod.modifier_value}
       </span>
     );
   };

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { BookOpen, ChevronDown, ChevronRight, Search, X } from 'lucide-react';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
-import { ScrollArea } from '@/components/ui/scroll-area';
+
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { DynamicIcon } from './DynamicIcon';
@@ -46,7 +46,7 @@ export function GuideSidebarSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="left" className="w-[280px] p-0" showCloseButton={false}>
+      <SheetContent side="left" className="w-[280px] p-0 flex flex-col h-full overflow-hidden" showCloseButton={false}>
         {/* Header */}
         <div className="px-4 py-3 border-b flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -75,8 +75,8 @@ export function GuideSidebarSheet({
           <Separator className="my-2" />
         </div>
 
-        {/* Body */}
-        <ScrollArea className="flex-1">
+        {/* Body — overflow contained within sheet */}
+        <div className="flex-1 min-h-0 overflow-y-auto">
           <nav className="p-2">
             {sections.map((section) => {
               const isExpanded = expandedSections.has(section.id);
@@ -136,7 +136,7 @@ export function GuideSidebarSheet({
               );
             })}
           </nav>
-        </ScrollArea>
+        </div>
       </SheetContent>
     </Sheet>
   );

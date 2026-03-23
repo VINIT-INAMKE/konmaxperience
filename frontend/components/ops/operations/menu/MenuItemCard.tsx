@@ -55,7 +55,7 @@ export function MenuItemCard({
       {/* Row 2: base price + food cost badge */}
       <div className="flex items-center gap-3 flex-wrap">
         <span className="text-sm text-muted-foreground">
-          INR {item.base_price.toLocaleString()}
+          ₹{item.base_price.toLocaleString()}
         </span>
         <FoodCostBadge percent={foodCostPercent} />
       </div>

@@ -3,7 +3,7 @@
 import { useParams } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import Image from 'next/image';
-import { Loader2 } from 'lucide-react';
+import { Loader2, CalendarX2 } from 'lucide-react';
 import { BlurFade } from '@/components/ui/blur-fade';
 import { Badge } from '@/components/ui/badge';
 import { CapacityBadge } from '@/components/public/CapacityBadge';
@@ -36,11 +36,12 @@ export default function EventDetailPage() {
 
   if (error || !event) {
     return (
-      <div className="max-w-2xl mx-auto px-4 py-16 text-center space-y-2">
+      <div className="flex flex-col items-center justify-center max-w-2xl mx-auto px-4 py-16 text-center space-y-3">
+        <CalendarX2 className="size-12 text-muted-foreground/30" />
         <h2 className="text-xl font-semibold">
-          Event not found
+          Event Not Found
         </h2>
-        <p className="text-base text-muted-foreground">
+        <p className="text-sm text-muted-foreground max-w-md">
           This event may have been removed or the link may be incorrect.
         </p>
       </div>
@@ -92,7 +93,7 @@ export default function EventDetailPage() {
                   {EVENT_TYPE_LABELS[event.event_type]}
                 </Badge>
                 <span className="text-sm font-normal">
-                  Rs. {event.price}
+                  ₹{event.price}
                 </span>
                 <CapacityBadge
                   spotsRemaining={event.spots_remaining ?? 0}

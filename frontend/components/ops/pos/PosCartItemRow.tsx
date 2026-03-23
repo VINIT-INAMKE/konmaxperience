@@ -48,7 +48,7 @@ export function PosCartItemRow({ item, onUpdateQuantity }: PosCartItemRowProps) 
             </Button>
           </div>
           <span className="font-mono text-sm font-bold tabular-nums">
-            INR {lineTotal}
+            ₹{lineTotal}
           </span>
         </div>
       </div>

@@ -48,7 +48,7 @@ export function RevenueTrendChart({ data, isLoading }: RevenueTrendChartProps) {
               <Line
                 type="monotone"
                 dataKey="revenue"
-                stroke="hsl(var(--chart-1))"
+                stroke="var(--chart-1)"
                 strokeWidth={2}
                 dot={false}
                 activeDot={{ r: 4 }}

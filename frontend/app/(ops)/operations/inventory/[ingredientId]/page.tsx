@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { ArrowLeft, Clock } from 'lucide-react';
+import { ArrowLeft, Clock, ArrowUpDown } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { MagicCard } from '@/components/ui/magic-card';
@@ -94,8 +94,10 @@ export default function IngredientMovementsPage() {
         )}
 
         {!movementsLoading && (!movements || movements.length === 0) && (
-          <div className="py-16 text-center space-y-3">
-            <p className="text-sm text-muted-foreground">
+          <div className="flex flex-col items-center justify-center py-16 text-center space-y-3">
+            <ArrowUpDown className="size-12 text-muted-foreground/30" />
+            <h2 className="text-lg font-semibold">No Movements Yet</h2>
+            <p className="text-sm text-muted-foreground max-w-md">
               No stock movements recorded yet. Stock updates automatically when purchase orders are received.
             </p>
           </div>

@@ -14,7 +14,7 @@ export class EmailService {
     this.mailerSend = new MailerSend({ apiKey });
     this.fromEmail =
       this.configService.get<string>('MAILERSEND_FROM_EMAIL') ||
-      'noreply@konmaxperience.com';
+      'noreply@konma.store';
     this.frontendUrl =
       this.configService.get<string>('FRONTEND_URL') ||
       'http://localhost:3000';

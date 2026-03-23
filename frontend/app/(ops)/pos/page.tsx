@@ -319,7 +319,7 @@ export default function PosPage() {
         >
           <ShoppingCart className="size-4" />
           View Cart ({totalItems})
-          <span className="font-mono tabular-nums">INR {subtotal}</span>
+          <span className="font-mono tabular-nums">₹{subtotal}</span>
         </button>
       )}
 

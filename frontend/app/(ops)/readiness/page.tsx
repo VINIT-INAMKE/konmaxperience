@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, Gauge } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { ReadinessGrid } from '@/components/ops/readiness/ReadinessGrid';
@@ -66,7 +66,9 @@ export default function ReadinessPage() {
 
         {/* Empty state */}
         {isEmpty && (
-          <div className="flex flex-col items-center justify-center py-16 text-center space-y-2">
+          <div className="flex flex-col items-center justify-center py-16 text-center space-y-3">
+            <Gauge className="size-12 text-muted-foreground/30" />
+            <h2 className="text-lg font-semibold">No Readiness Data</h2>
             <p className="text-sm text-muted-foreground max-w-md">
               No validated tasks yet. Readiness meters update when tasks are validated with approved evidence.
             </p>

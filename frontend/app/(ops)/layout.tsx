@@ -35,6 +35,12 @@ export default function OpsLayout({
   const [ready, setReady] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  // Lock body scroll — ops layout handles its own scrolling via overflow-y-auto on main
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = ''; };
+  }, []);
+
   useEffect(() => {
     async function initUser() {
       if (user) {
@@ -71,7 +77,7 @@ export default function OpsLayout({
 
   return (
     <ErrorBoundary>
-      <div className="flex h-screen bg-background">
+      <div className="flex h-screen overflow-hidden bg-background">
         {/* Desktop sidebar */}
         <div className="hidden lg:flex w-[240px] shrink-0">
           <Sidebar />
@@ -102,7 +108,7 @@ export default function OpsLayout({
           </header>
 
           <main className="flex-1 overflow-y-auto">
-            <div className="p-6 max-w-[1200px] mx-auto w-full">{children}</div>
+            <div className="p-4 sm:p-6 max-w-[1200px] mx-auto w-full">{children}</div>
           </main>
         </div>
       </div>

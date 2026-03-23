@@ -11,8 +11,7 @@ interface AnalyticsSummaryCardsProps {
   isLoading: boolean;
 }
 
-const cards = [
-  { key: 'revenue', label: 'Total Revenue', icon: IndianRupee, field: 'total_revenue' as const, prefix: '₹' },
+const secondaryCards = [
   { key: 'food_cost', label: 'Avg Food Cost', icon: Percent, field: 'avg_food_cost_pct' as const, suffix: '%' },
   { key: 'orders', label: 'Total Orders', icon: ShoppingCart, field: 'total_orders' as const },
   { key: 'aov', label: 'Avg Order Value', icon: TrendingUp, field: 'avg_order_value' as const, prefix: '₹' },
@@ -22,11 +21,17 @@ export function AnalyticsSummaryCards({ summary, isLoading }: AnalyticsSummaryCa
   if (isLoading) {
     return (
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {[1, 2, 3, 4].map((i) => (
-          <Card key={i}>
+        <Card className="col-span-2 lg:col-span-2 border-l-4 border-l-amber-500/30">
+          <CardContent className="p-5 space-y-3">
+            <Skeleton className="h-3 w-24" />
+            <Skeleton className="h-10 w-28" />
+          </CardContent>
+        </Card>
+        {[1, 2, 3].map((i) => (
+          <Card key={i} className={i === 3 ? 'col-span-2 lg:col-span-1' : ''}>
             <CardContent className="p-4 space-y-2">
               <Skeleton className="h-3 w-20" />
-              <Skeleton className="h-8 w-16" />
+              <Skeleton className="h-7 w-16" />
             </CardContent>
           </Card>
         ))}
@@ -36,14 +41,30 @@ export function AnalyticsSummaryCards({ summary, isLoading }: AnalyticsSummaryCa
 
   if (!summary) return null;
 
+  const revenueValue = Math.round(summary.total_revenue);
+
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-      {cards.map((card) => {
+      {/* Hero: Total Revenue */}
+      <Card className="col-span-2 lg:col-span-2 border-l-4 border-l-amber-500/30">
+        <CardContent className="p-5">
+          <div className="flex items-start justify-between">
+            <span className="text-xs font-bold text-muted-foreground uppercase tracking-wide">Total Revenue</span>
+            <IndianRupee className="size-5 text-amber-500/70" />
+          </div>
+          <p className="mt-3 text-4xl font-bold leading-tight">
+            ₹<NumberTicker value={revenueValue} />
+          </p>
+        </CardContent>
+      </Card>
+
+      {/* Secondary metric cards */}
+      {secondaryCards.map((card) => {
         const Icon = card.icon;
         const value = Math.round(summary[card.field]);
 
         return (
-          <Card key={card.key}>
+          <Card key={card.key} className={card.key === 'aov' ? 'col-span-2 lg:col-span-1' : ''}>
             <CardContent className="p-4">
               <div className="flex items-start justify-between">
                 <span className="text-xs font-bold text-muted-foreground">{card.label}</span>

@@ -128,7 +128,7 @@ export function PrepBatchWizard({ open, onOpenChange, onSuccess }: PrepBatchWiza
 
   return (
     <Sheet open={open} onOpenChange={handleOpenChange}>
-      <SheetContent side="right" className="w-[520px] flex flex-col h-full overflow-hidden">
+      <SheetContent side="right" className="w-full sm:w-[520px] flex flex-col h-full overflow-hidden">
         <SheetHeader>
           <SheetTitle>{STEP_LABELS[step - 1]}</SheetTitle>
         </SheetHeader>

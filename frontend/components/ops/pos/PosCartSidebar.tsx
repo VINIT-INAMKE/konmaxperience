@@ -115,7 +115,7 @@ export function PosCartSidebar({
         <div className="flex items-center justify-between">
           <span className="text-sm font-normal">Subtotal</span>
           <span className="font-mono text-sm font-bold tabular-nums">
-            INR {subtotal}
+            ₹{subtotal}
           </span>
         </div>
 
@@ -128,7 +128,7 @@ export function PosCartSidebar({
         <div className="flex items-center justify-between">
           <span className="text-sm font-bold">Total</span>
           <span className="font-mono text-sm font-bold tabular-nums">
-            INR {subtotal}
+            ₹{subtotal}
           </span>
         </div>
 

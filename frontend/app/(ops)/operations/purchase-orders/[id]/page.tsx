@@ -182,7 +182,7 @@ export default function PurchaseOrderDetailPage() {
         </div>
         <div className="text-right">
           <p className="font-mono text-xl font-semibold">
-            INR {Number(po.total_amount).toLocaleString('en-IN')}
+            ₹{Number(po.total_amount).toLocaleString('en-IN')}
           </p>
           {po.ordered_by_user?.name && (
             <p className="text-xs text-muted-foreground mt-1">

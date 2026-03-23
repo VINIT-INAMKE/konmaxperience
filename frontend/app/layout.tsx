@@ -5,7 +5,7 @@ import { Providers } from "@/lib/providers";
 import "./globals.css";
 
 const plusJakarta = Plus_Jakarta_Sans({
-  variable: "--font-geist-sans",
+  variable: "--font-plus-jakarta",
   subsets: ["latin"],
   display: "swap",
 });

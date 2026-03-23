@@ -93,7 +93,7 @@ export function VendorPriceForm({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-[420px]">
+      <SheetContent side="right" className="w-full sm:w-[420px]">
         <SheetHeader>
           <SheetTitle>Add Price</SheetTitle>
         </SheetHeader>

@@ -182,7 +182,7 @@ export function RecipeWizard({ open, onOpenChange, recipe, onSuccess }: RecipeWi
   return (
     <>
       <Sheet open={open} onOpenChange={handleOpenChange}>
-        <SheetContent side="right" className="w-[560px] flex flex-col h-full overflow-hidden">
+        <SheetContent side="right" className="w-full sm:w-[560px] flex flex-col h-full overflow-hidden">
           <SheetHeader>
             <SheetTitle>{isEditMode ? 'Edit Recipe' : 'Create Recipe'}</SheetTitle>
           </SheetHeader>

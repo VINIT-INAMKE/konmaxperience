@@ -23,10 +23,10 @@ export function ReceivingLineRow({
         {line.quantity} {line.unit}
       </td>
       <td className="px-4 py-2 font-mono text-xs text-muted-foreground">
-        INR {Number(line.unit_cost).toLocaleString('en-IN')}
+        ₹{Number(line.unit_cost).toLocaleString('en-IN')}
       </td>
       <td className="px-4 py-2 font-mono text-sm text-muted-foreground">
-        INR {(Number(line.quantity) * Number(line.unit_cost)).toLocaleString('en-IN')}
+        ₹{(Number(line.quantity) * Number(line.unit_cost)).toLocaleString('en-IN')}
       </td>
       <td className="px-4 py-2">
         <Input

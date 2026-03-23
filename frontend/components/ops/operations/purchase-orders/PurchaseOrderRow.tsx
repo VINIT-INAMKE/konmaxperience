@@ -33,7 +33,7 @@ export function PurchaseOrderRow({ po, onCancel }: PurchaseOrderRowProps) {
         {po.lines?.length ?? 0} items
       </td>
       <td className="px-4 py-2 font-mono text-sm">
-        INR {Number(po.total_amount).toLocaleString('en-IN')}
+        ₹{Number(po.total_amount).toLocaleString('en-IN')}
       </td>
       <td className="px-4 py-2">
         <Badge

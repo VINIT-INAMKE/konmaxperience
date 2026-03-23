@@ -33,7 +33,7 @@ export function MenuItemPublicCard({ item, available }: MenuItemPublicCardProps)
       <div className="p-4 space-y-2">
         <h4 className="text-base font-semibold text-foreground truncate">{item.name}</h4>
         <div className="flex items-center justify-between">
-          <span className="text-sm text-foreground">Rs. {item.base_price}</span>
+          <span className="text-sm text-foreground">₹{item.base_price}</span>
           <AvailabilityBadge available={available} />
         </div>
       </div>

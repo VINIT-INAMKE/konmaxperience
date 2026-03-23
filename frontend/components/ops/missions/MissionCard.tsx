@@ -94,8 +94,8 @@ export function MissionCard({
           <div className="flex items-center gap-4">
             <AnimatedCircularProgressBar
               value={mission.progress_percent}
-              gaugePrimaryColor="hsl(var(--primary))"
-              gaugeSecondaryColor="hsl(var(--muted))"
+              gaugePrimaryColor="var(--primary)"
+              gaugeSecondaryColor="var(--muted)"
               className="size-12 text-xs"
             />
             <div className="flex-1">

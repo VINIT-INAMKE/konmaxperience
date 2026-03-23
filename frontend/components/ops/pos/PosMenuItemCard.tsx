@@ -68,7 +68,7 @@ export function PosMenuItemCard({
 
           {/* Price */}
           <span className="font-mono text-sm font-bold">
-            INR {menuItem.base_price}
+            ₹{menuItem.base_price}
           </span>
 
           {/* Separator */}
@@ -90,11 +90,7 @@ export function PosMenuItemCard({
           )}
 
           {isSoldOut && (
-            <div className="flex items-center justify-center h-9">
-              <span className="text-xs font-bold text-muted-foreground">
-                Sold Out
-              </span>
-            </div>
+            <div className="h-9" />
           )}
         </div>
       </MagicCard>

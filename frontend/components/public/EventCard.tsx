@@ -30,7 +30,7 @@ export function EventCard({ event }: EventCardProps) {
             <Badge variant="secondary">
               {EVENT_TYPE_LABELS[event.event_type]}
             </Badge>
-            <span className="text-sm">Rs. {event.price}</span>
+            <span className="text-sm">₹{event.price}</span>
             <CapacityBadge spotsRemaining={event.spots_remaining ?? 0} />
           </div>
           {(event.zone || event.brand) && (

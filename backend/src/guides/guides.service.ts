@@ -6,7 +6,7 @@ import { CreatePageDto } from './dto/create-page.dto';
 import { UpdatePageDto } from './dto/update-page.dto';
 import DOMPurify from 'isomorphic-dompurify';
 
-interface SearchResult {
+export interface SearchResult {
   pageId: string;
   pageTitle: string;
   pageSlug: string;

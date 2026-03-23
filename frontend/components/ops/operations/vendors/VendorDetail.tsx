@@ -83,7 +83,7 @@ export function VendorDetail({ open, onOpenChange, vendor }: VendorDetailProps) 
   return (
     <>
       <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent side="right" className="w-[560px] overflow-y-auto">
+        <SheetContent side="right" className="w-full sm:w-[560px] overflow-y-auto">
           <SheetHeader>
             <SheetTitle>{vendor.name}</SheetTitle>
           </SheetHeader>

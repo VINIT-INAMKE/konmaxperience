@@ -80,7 +80,7 @@ export default function MissionsPage() {
         {/* Empty state */}
         {isEmpty && (
           <div className="flex flex-col items-center justify-center py-16 space-y-4 text-center">
-            <Rocket className="size-12 text-muted-foreground" />
+            <Rocket className="size-12 text-muted-foreground/30" />
             <div className="space-y-1">
               <h2 className="text-xl font-semibold">No missions yet</h2>
               <p className="text-sm text-muted-foreground">

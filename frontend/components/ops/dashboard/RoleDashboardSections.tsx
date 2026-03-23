@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { CheckCircle, Rocket } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -161,7 +162,10 @@ export function RoleDashboardSections() {
                 ))}
               </div>
             ) : myTasks.length === 0 ? (
-              <p className="text-sm text-muted-foreground mt-3">No active tasks</p>
+              <div className="flex flex-col items-center gap-2 py-6 text-center">
+                <CheckCircle className="size-8 text-muted-foreground/30" />
+                <p className="text-sm text-muted-foreground">All caught up — new tasks appear when quests are assigned.</p>
+              </div>
             ) : (
               <div className="space-y-2 mt-3">
                 {myTasks.slice(0, 8).map((task) => (
@@ -208,7 +212,10 @@ export function RoleDashboardSections() {
                 <div className="h-4 w-1/4 rounded bg-muted animate-pulse" />
               </div>
             ) : !activeQuest ? (
-              <p className="text-sm text-muted-foreground mt-3">No active quest</p>
+              <div className="flex flex-col items-center gap-2 py-6 text-center">
+                <Rocket className="size-8 text-muted-foreground/30" />
+                <p className="text-sm text-muted-foreground">No active quest — check Missions for available quests.</p>
+              </div>
             ) : (
               <div className="space-y-3 mt-3">
                 <p className="text-base font-medium">{activeQuest.title}</p>
@@ -261,8 +268,8 @@ export function RoleDashboardSections() {
                     <AnimatedCircularProgressBar
                       value={meter.current_value}
                       max={meter.target_value || 100}
-                      gaugePrimaryColor="hsl(var(--primary))"
-                      gaugeSecondaryColor="hsl(var(--muted))"
+                      gaugePrimaryColor="var(--primary)"
+                      gaugeSecondaryColor="var(--muted)"
                       className="size-16 text-xs"
                     />
                     <span className="text-[10px] text-muted-foreground text-center truncate max-w-[80px]">

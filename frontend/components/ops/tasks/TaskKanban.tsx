@@ -159,8 +159,8 @@ export function TaskKanban({
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <div className="overflow-x-auto -mx-6 px-6">
-      <div className="grid grid-cols-4 gap-4 h-[calc(100vh-280px)] min-w-[900px]">
+      <div className="overflow-x-auto -mx-4 px-4 sm:-mx-6 sm:px-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 min-h-[50vh] lg:h-[calc(100vh-280px)] min-w-[600px] lg:min-w-0">
         {KANBAN_COLUMNS.map((status) => {
           const columnTasks = tasksByColumn[status] || [];
           return (
