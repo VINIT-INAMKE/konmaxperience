@@ -242,11 +242,30 @@ export default function ImportTypePage() {
       formData.append('file', file);
       formData.append('importType', importType);
 
-      const response = await fetch(`${API_BASE_URL}/imports/parse`, {
+      let response = await fetch(`${API_BASE_URL}/imports/parse`, {
         method: 'POST',
         credentials: 'include',
         body: formData,
       });
+
+      // Mirror apiClient auth: retry once after silent token refresh on 401
+      if (response.status === 401) {
+        try {
+          const refreshRes = await fetch(`${API_BASE_URL}/auth/refresh`, {
+            method: 'POST',
+            credentials: 'include',
+          });
+          if (refreshRes.ok) {
+            response = await fetch(`${API_BASE_URL}/imports/parse`, {
+              method: 'POST',
+              credentials: 'include',
+              body: formData,
+            });
+          }
+        } catch {
+          // refresh failed — fall through to error handling below
+        }
+      }
 
       if (!response.ok) {
         let message = 'Could not read this file. Make sure it is a valid CSV or XLSX and try again.';
@@ -292,6 +311,19 @@ export default function ImportTypePage() {
     if (!editingCell) return;
 
     const { rowIdx, field } = editingCell;
+
+    // Propagate recipe name edits to BOM rows
+    if (importType === 'recipes' && field === 'name' && recipeParseResult) {
+      const oldName = rows[rowIdx]?.raw.name;
+      if (oldName && oldName !== editValue) {
+        recipeParseResult.bomRows.forEach(bom => {
+          if (((bom.raw.recipe_name || '') as string).trim().toLowerCase() === (oldName as string).trim().toLowerCase()) {
+            bom.raw.recipe_name = editValue;
+          }
+        });
+      }
+    }
+
     setRows((prev) => {
       const next = [...prev];
       const row = { ...next[rowIdx] };
@@ -317,7 +349,7 @@ export default function ImportTypePage() {
 
     setEditingCell(null);
     setEditValue('');
-  }, [editingCell, editValue]);
+  }, [editingCell, editValue, importType, recipeParseResult, rows]);
 
   const handleEditKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -357,7 +389,7 @@ export default function ImportTypePage() {
       if (total > 0 && result.errors === 0) {
         toast.success(`${total} records imported successfully`);
       } else if (total > 0 && result.errors > 0) {
-        toast.success(`${result.imported} imported, ${result.skipped} skipped`);
+        toast.warning(`${result.imported} imported, ${result.errors} failed, ${result.skipped} skipped`);
       } else {
         toast.error('Import failed. Try again or contact support.');
       }
@@ -534,7 +566,9 @@ export default function ImportTypePage() {
           <Upload className="size-12 text-muted-foreground" />
           <div className="text-center">
             <p className="text-sm font-medium">
-              Drag and drop your CSV or XLSX file here
+              {importType === 'recipes'
+                ? 'Drag and drop your XLSX file here'
+                : 'Drag and drop your CSV or XLSX file here'}
             </p>
             <p className="text-sm text-muted-foreground mt-1">
               or click to browse
@@ -697,6 +731,7 @@ export default function ImportTypePage() {
                         {/* BOM line rows (collapsible) */}
                         {isExpanded && bomLines.map((bomRow, bomIdx) => {
                           const isParentInvalid = headerRow.status === 'invalid' || headerRow.status === 'blocked';
+                          const bomCols = recipeParseResult.bomColumns || [];
                           return (
                             <TableRow
                               key={`bom-${idx}-${bomIdx}`}
@@ -706,15 +741,33 @@ export default function ImportTypePage() {
                               <TableCell className="pl-6">
                                 {renderStatusBadge(bomRow)}
                               </TableCell>
-                              <TableCell className="text-muted-foreground">{String(bomRow.raw.recipe_name || '')}</TableCell>
-                              <TableCell>{String(bomRow.raw.input_type || '')}</TableCell>
-                              <TableCell>{String(bomRow.raw.ingredient_name || '')}</TableCell>
-                              <TableCell>{String(bomRow.raw.quantity || '')}</TableCell>
-                              <TableCell>{String(bomRow.raw.unit || '')}</TableCell>
-                              <TableCell>{String(bomRow.raw.prep_notes || '')}</TableCell>
+                              {bomCols.map((col) => {
+                                const cellError = getCellError(bomRow, col);
+                                return (
+                                  <TableCell
+                                    key={col}
+                                    className={cellError ? 'border-b-2 border-[var(--destructive)]' : ''}
+                                  >
+                                    {cellError ? (
+                                      <Tooltip>
+                                        <TooltipTrigger className="text-left w-full">
+                                          <span className="text-destructive">
+                                            {String(bomRow.raw[col] || '(empty)')}
+                                          </span>
+                                        </TooltipTrigger>
+                                        <TooltipContent>{cellError}</TooltipContent>
+                                      </Tooltip>
+                                    ) : (
+                                      <span className={col === 'recipe_name' ? 'text-muted-foreground' : ''}>
+                                        {String(bomRow.raw[col] || '')}
+                                      </span>
+                                    )}
+                                  </TableCell>
+                                );
+                              })}
                               {/* Fill remaining recipe header columns with empty cells */}
-                              {recipeParseResult.columns.slice(6).map((col, i) => (
-                                <TableCell key={i}></TableCell>
+                              {recipeParseResult.columns.slice(bomCols.length).map((col, i) => (
+                                <TableCell key={`pad-${i}`}></TableCell>
                               ))}
                             </TableRow>
                           );
