@@ -26,6 +26,7 @@ Every piece of work must be evidence-backed, approved, and validated before it c
 - [x] Guide Reader View — section index with MagicCard grid, page reading view with Tiptap prose renderer, slide-in sidebar navigation, DOMPurify defense-in-depth, skeleton loading states (Phase 15)
 - [x] Admin CMS — Tiptap rich text editor with dual toolbar, image upload (3 paths), callout blocks, 5s debounced autosave, publish/unpublish workflow, unsaved changes warning (Phase 16)
 - [x] Search, Preview & Seeding — Cmd+K search overlay with tsvector full-text search, admin preview-as-role dropdown, 12 sections with 39 pages of real walkthrough content from codebase (Phase 17)
+- [x] Data Export — CSV/XLSX export for 22 report types with R2 storage, export history, admin exports page, ExportButton on 13 data pages (Phase 18)
 
 ### Active
 
@@ -163,4 +164,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-03-23 after Phase 17 (Search, Preview & Seeding) completion*
+*Last updated: 2026-03-23 after Phase 18 (Data Export) completion*
