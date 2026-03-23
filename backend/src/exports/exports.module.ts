@@ -8,6 +8,7 @@ import { TasksModule } from '../tasks/tasks.module';
 import { KpisModule } from '../kpis/kpis.module';
 import { MenuModule } from '../menu/menu.module';
 import { FeedbackModule } from '../feedback/feedback.module';
+import { KitchenModule } from '../kitchen/kitchen.module';
 import { OrdersExportBuilder } from './builders/orders.builder';
 import {
   InventoryLevelsExportBuilder,
@@ -35,6 +36,7 @@ import {
     KpisModule,
     MenuModule,
     FeedbackModule,
+    KitchenModule,
   ],
   controllers: [ExportsController],
   providers: [
@@ -46,6 +48,8 @@ import {
     KpisExportBuilder,
     MenuItemsExportBuilder,
     FeedbackExportBuilder,
+    WasteLogExportBuilder,
+    PrepBatchesExportBuilder,
   ],
   exports: [ExportsService],
 })
@@ -59,6 +63,8 @@ export class ExportsModule implements OnModuleInit {
     private readonly kpisExportBuilder: KpisExportBuilder,
     private readonly menuItemsExportBuilder: MenuItemsExportBuilder,
     private readonly feedbackExportBuilder: FeedbackExportBuilder,
+    private readonly wasteLogExportBuilder: WasteLogExportBuilder,
+    private readonly prepBatchesExportBuilder: PrepBatchesExportBuilder,
   ) {}
 
   onModuleInit() {
@@ -80,6 +86,14 @@ export class ExportsModule implements OnModuleInit {
     this.exportsService.registerBuilder(
       'feedback',
       this.feedbackExportBuilder,
+    );
+    this.exportsService.registerBuilder(
+      'waste_log',
+      this.wasteLogExportBuilder,
+    );
+    this.exportsService.registerBuilder(
+      'prep_batches',
+      this.prepBatchesExportBuilder,
     );
   }
 }

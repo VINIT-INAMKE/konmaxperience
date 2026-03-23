@@ -61,6 +61,21 @@ export class FeedbackService {
     });
   }
 
+  async findAllForExport(dateFrom?: string, dateTo?: string) {
+    const where: Record<string, unknown> = {};
+    if (dateFrom || dateTo) {
+      const createdAt: Record<string, unknown> = {};
+      if (dateFrom) createdAt.gte = new Date(dateFrom);
+      if (dateTo) createdAt.lte = new Date(dateTo + 'T23:59:59.999Z');
+      where.created_at = createdAt;
+    }
+    return this.prisma.feedback.findMany({
+      where,
+      orderBy: { created_at: 'desc' },
+      include: { order: { select: { id: true } } },
+    });
+  }
+
   async getStats() {
     const result = await this.prisma.feedback.aggregate({
       _avg: { rating: true },

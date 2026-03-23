@@ -199,6 +199,20 @@ export class MenuService {
   }
 
   // ----------------------------------------------------------------
+  // Export
+  // ----------------------------------------------------------------
+
+  async findAllForExport() {
+    return this.prisma.menuItem.findMany({
+      orderBy: { name: 'asc' },
+      include: {
+        recipe: { select: { name: true, computed_cost: true } },
+        category: { select: { name: true } },
+      },
+    });
+  }
+
+  // ----------------------------------------------------------------
   // Channel Modifiers
   // ----------------------------------------------------------------
 
