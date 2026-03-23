@@ -108,7 +108,7 @@ Phases execute in numeric order: 14 -> 14.x -> 15 -> 15.x -> 16 -> 16.x -> 17 ->
 | 17. Search, Preview, and Content Seeding | v1.1 | 3/3 | Complete    | 2026-03-23 |
 | 18. Data Export | v1.1 | 7/7 | Complete    | 2026-03-23 |
 | 19. Master Data Import | v1.1 | 3/3 | Complete    | 2026-03-23 |
-| 20. Operations Import | v1.1 | 5/5 | Complete   | 2026-03-23 |
+| 20. Operations Import | v1.1 | 5/5 | Complete    | 2026-03-23 |
 | 21. In-App Chat | v1.1 | 4/4 | Complete    | 2026-03-23 |
 
 ### Phase 18: Data Export
