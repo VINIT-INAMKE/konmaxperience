@@ -16,7 +16,7 @@ export async function parseXLSX(
 
   sheet.eachRow((row, rowNumber) => {
     if (rowNumber === 1) {
-      row.eachCell((cell) => {
+      row.eachCell({ includeEmpty: true }, (cell) => {
         headers.push(String(cell.value ?? '').trim().toLowerCase());
       });
       return;
