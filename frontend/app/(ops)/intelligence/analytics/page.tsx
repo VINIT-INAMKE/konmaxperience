@@ -37,6 +37,7 @@ import type {
   RecipeCostRow,
 } from '@/lib/types/analytics';
 import { ShieldAlert } from 'lucide-react';
+import { ExportButton } from '@/components/ops/exports/ExportButton';
 
 type TimeRange = 'today' | '7d' | '30d' | 'custom';
 
@@ -121,7 +122,6 @@ export default function AnalyticsPage() {
 
   if (!isAuthorized) {
     return (
-      <BlurFade>
         <div className="flex items-center justify-center min-h-[60vh]">
           <Card className="max-w-md">
             <CardContent className="p-8 text-center space-y-4">
@@ -132,17 +132,22 @@ export default function AnalyticsPage() {
             </CardContent>
           </Card>
         </div>
-      </BlurFade>
     );
   }
 
   return (
-    <BlurFade>
+    <>
       <div className="space-y-8">
         {/* Header: title + time range toggle */}
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <h1 className="text-2xl font-bold">Analytics</h1>
           <div className="flex items-center gap-2">
+            <ExportButton
+              reportType="revenue_summary"
+              reportName="Analytics"
+              isTimeSeries={true}
+              currentFilters={{ dateFrom: from, dateTo: to }}
+            />
             {(['today', '7d', '30d'] as const).map((range) => (
               <Button
                 key={range}
@@ -214,6 +219,6 @@ export default function AnalyticsPage() {
         {/* Recipe cost table — full width */}
         <RecipeCostTable data={recipeCosts ?? []} />
       </div>
-    </BlurFade>
+    </>
   );
 }

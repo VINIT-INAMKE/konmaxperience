@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { Search } from 'lucide-react';
+import { Search, ChefHat } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
@@ -28,6 +28,7 @@ import { useAuthStore } from '@/lib/stores/auth-store';
 import { RoleCode } from '@/lib/types/roles';
 import type { Recipe, RecipeStatus } from '@/lib/types/recipe';
 import { RECIPE_STATUS_LABELS } from '@/lib/types/recipe';
+import { ExportButton } from '@/components/ops/exports/ExportButton';
 import type { Brand } from '@/lib/types/brand';
 
 type StatusFilter = 'all' | RecipeStatus;
@@ -166,6 +167,11 @@ export default function RecipesPage() {
               className="pl-9"
             />
           </div>
+          <ExportButton
+            reportType="recipes"
+            reportName="Recipes"
+            isTimeSeries={false}
+          />
         </div>
 
         {/* Content */}
@@ -178,18 +184,19 @@ export default function RecipesPage() {
           </div>
         )}
         {!isLoading && !isError && filteredRecipes.length === 0 && (
-          <div className="py-16 text-center space-y-2">
+          <div className="flex flex-col items-center justify-center py-16 text-center space-y-3">
+            <ChefHat className="size-12 text-muted-foreground/30" />
             {hasFilters ? (
               <>
-                <h2 className="text-base font-semibold">No recipes match this filter</h2>
-                <p className="text-sm text-muted-foreground">
+                <h2 className="text-lg font-semibold">No Recipes Match</h2>
+                <p className="text-sm text-muted-foreground max-w-md">
                   Try adjusting the brand, status, or search filters.
                 </p>
               </>
             ) : (
               <>
-                <h2 className="text-base font-semibold">No recipes yet</h2>
-                <p className="text-sm text-muted-foreground">
+                <h2 className="text-lg font-semibold">No Recipes Yet</h2>
+                <p className="text-sm text-muted-foreground max-w-md">
                   Create your first recipe to get started with the food menu.
                 </p>
               </>

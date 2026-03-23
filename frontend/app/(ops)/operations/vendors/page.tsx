@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { Truck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -19,6 +20,7 @@ import { apiClient } from '@/lib/api-client';
 import { useAuthStore } from '@/lib/stores/auth-store';
 import { RoleCode } from '@/lib/types/roles';
 import type { Vendor } from '@/lib/types/vendor';
+import { ExportButton } from '@/components/ops/exports/ExportButton';
 
 export default function VendorsPage() {
   const queryClient = useQueryClient();
@@ -91,7 +93,14 @@ export default function VendorsPage() {
         {/* Page header */}
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <h1 className="text-2xl font-bold">Vendors</h1>
-          <Button onClick={handleAddClick}>Add Vendor</Button>
+          <div className="flex items-center gap-2">
+            <ExportButton
+              reportType="vendors"
+              reportName="Vendors"
+              isTimeSeries={false}
+            />
+            <Button onClick={handleAddClick}>Add Vendor</Button>
+          </div>
         </div>
 
         {/* Table */}
@@ -105,9 +114,10 @@ export default function VendorsPage() {
         )}
 
         {!isLoading && !isError && (!vendors || vendors.length === 0) && (
-          <div className="py-16 text-center space-y-3">
-            <h2 className="text-base font-semibold">No vendors yet</h2>
-            <p className="text-sm text-muted-foreground">
+          <div className="flex flex-col items-center justify-center py-16 text-center space-y-3">
+            <Truck className="size-12 text-muted-foreground/30" />
+            <h2 className="text-lg font-semibold">No Vendors Yet</h2>
+            <p className="text-sm text-muted-foreground max-w-md">
               Add your ingredient suppliers. Each vendor can have a price history per ingredient.
             </p>
             <Button onClick={handleAddClick}>Add Vendor</Button>

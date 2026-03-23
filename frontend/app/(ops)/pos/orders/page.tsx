@@ -17,6 +17,7 @@ import { OrderDetailSheet } from '@/components/ops/pos/OrderDetailSheet';
 import { apiClient } from '@/lib/api-client';
 import type { Order, DailySummary } from '@/lib/types/orders';
 import type { OrderStatus, OrderChannel, PaymentMethod } from '@/lib/types/kds';
+import { ExportButton } from '@/components/ops/exports/ExportButton';
 
 function todayStr(): string {
   return new Date().toISOString().slice(0, 10);
@@ -76,7 +77,7 @@ export default function OrderHistoryPage() {
   });
 
   return (
-    <BlurFade>
+    <>
       <div className="space-y-6">
         {/* Page header */}
         <h1 className="text-2xl font-bold">Order History</h1>
@@ -167,6 +168,12 @@ export default function OrderHistoryPage() {
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
+          <ExportButton
+            reportType="orders"
+            reportName="Orders"
+            isTimeSeries={true}
+            currentFilters={{ channel, status, dateFrom, dateTo }}
+          />
         </div>
 
         {/* Orders table */}
@@ -188,6 +195,6 @@ export default function OrderHistoryPage() {
           }}
         />
       </div>
-    </BlurFade>
+    </>
   );
 }

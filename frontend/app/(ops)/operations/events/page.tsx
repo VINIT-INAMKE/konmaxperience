@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { CalendarDays } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -17,6 +18,7 @@ import { EventRow } from '@/components/ops/operations/events/EventRow';
 import { BookingListSheet } from '@/components/ops/operations/events/BookingListSheet';
 import { apiClient } from '@/lib/api-client';
 import type { Event } from '@/lib/types/events';
+import { ExportButton } from '@/components/ops/exports/ExportButton';
 
 export default function EventsPage() {
   const queryClient = useQueryClient();
@@ -80,7 +82,14 @@ export default function EventsPage() {
         {/* Header */}
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <h1 className="text-2xl font-bold">Experience Events</h1>
-          <Button onClick={handleCreate}>Create Event</Button>
+          <div className="flex items-center gap-2">
+            <ExportButton
+              reportType="events"
+              reportName="Events"
+              isTimeSeries={false}
+            />
+            <Button onClick={handleCreate}>Create Event</Button>
+          </div>
         </div>
 
         {/* Loading */}
@@ -97,9 +106,10 @@ export default function EventsPage() {
 
         {/* Empty state */}
         {!isLoading && !isError && events && events.length === 0 && (
-          <div className="py-16 text-center space-y-2">
-            <h2 className="text-base font-semibold">No events created</h2>
-            <p className="text-sm text-muted-foreground">
+          <div className="flex flex-col items-center justify-center py-16 text-center space-y-3">
+            <CalendarDays className="size-12 text-muted-foreground/30" />
+            <h2 className="text-lg font-semibold">No Events Created</h2>
+            <p className="text-sm text-muted-foreground max-w-md">
               Create an event to start collecting bookings.
             </p>
           </div>

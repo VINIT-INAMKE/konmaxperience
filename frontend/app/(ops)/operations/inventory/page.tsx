@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { Search, AlertTriangle } from 'lucide-react';
+import { Search, AlertTriangle, Package } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,6 +19,7 @@ import { apiClient } from '@/lib/api-client';
 import type { IngredientStock } from '@/lib/types/inventory';
 import type { IngredientCategory } from '@/lib/types/ingredient';
 import { INGREDIENT_CATEGORIES, INGREDIENT_CATEGORY_LABELS } from '@/lib/types/ingredient';
+import { ExportButton } from '@/components/ops/exports/ExportButton';
 
 interface Zone {
   id: string;
@@ -132,6 +133,11 @@ export default function InventoryPage() {
               className="pl-9"
             />
           </div>
+          <ExportButton
+            reportType="inventory_levels"
+            reportName="Inventory Levels"
+            isTimeSeries={false}
+          />
         </div>
 
         {/* Table */}
@@ -145,8 +151,10 @@ export default function InventoryPage() {
         )}
 
         {!isLoading && !isError && filteredStocks.length === 0 && (
-          <div className="py-16 text-center space-y-3">
-            <p className="text-sm text-muted-foreground">
+          <div className="flex flex-col items-center justify-center py-16 text-center space-y-3">
+            <Package className="size-12 text-muted-foreground/30" />
+            <h2 className="text-lg font-semibold">No Inventory Data</h2>
+            <p className="text-sm text-muted-foreground max-w-md">
               No ingredients found. Add ingredients first in the Ingredients section.
             </p>
           </div>

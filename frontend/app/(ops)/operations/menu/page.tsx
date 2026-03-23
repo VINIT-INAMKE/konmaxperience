@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { Plus, Loader2 } from 'lucide-react';
+import { Plus, Loader2, UtensilsCrossed, LayoutList } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { ShimmerButton } from '@/components/ui/shimmer-button';
@@ -31,6 +31,7 @@ import { useAuthStore } from '@/lib/stores/auth-store';
 import { RoleCode } from '@/lib/types/roles';
 import type { Brand } from '@/lib/types/brand';
 import type { MenuCategory, MenuItem, ChannelModifier } from '@/lib/types/menu';
+import { ExportButton } from '@/components/ops/exports/ExportButton';
 
 export default function MenuPage() {
   const queryClient = useQueryClient();
@@ -214,12 +215,19 @@ export default function MenuPage() {
         {/* Page header */}
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <h1 className="text-2xl font-bold">Menu</h1>
-          {effectiveBrandId && (
-            <Button onClick={() => handleOpenCategoryForm()}>
-              <Plus className="size-4 mr-1" />
-              Add Category
-            </Button>
-          )}
+          <div className="flex items-center gap-2">
+            <ExportButton
+              reportType="menu_items"
+              reportName="Menu Items"
+              isTimeSeries={false}
+            />
+            {effectiveBrandId && (
+              <Button onClick={() => handleOpenCategoryForm()}>
+                <Plus className="size-4 mr-1" />
+                Add Category
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* Brand tabs */}
@@ -248,9 +256,10 @@ export default function MenuPage() {
 
         {/* No food brands state */}
         {!brandsLoading && brands.length === 0 && (
-          <div className="py-16 text-center space-y-2">
-            <h2 className="text-base font-semibold">No active food brands</h2>
-            <p className="text-sm text-muted-foreground">
+          <div className="flex flex-col items-center justify-center py-16 text-center space-y-3">
+            <UtensilsCrossed className="size-12 text-muted-foreground/30" />
+            <h2 className="text-lg font-semibold">No Active Food Brands</h2>
+            <p className="text-sm text-muted-foreground max-w-md">
               Create an active food brand in the Brands page to manage its menu.
             </p>
           </div>
@@ -261,9 +270,10 @@ export default function MenuPage() {
           <div className="space-y-6">
             {/* No categories state */}
             {categories.length === 0 ? (
-              <div className="py-16 text-center space-y-3 border border-dashed rounded-lg">
-                <h2 className="text-base font-semibold">No categories yet</h2>
-                <p className="text-sm text-muted-foreground">
+              <div className="flex flex-col items-center justify-center py-16 text-center space-y-3 border border-dashed rounded-lg">
+                <LayoutList className="size-12 text-muted-foreground/30" />
+                <h2 className="text-lg font-semibold">No Categories Yet</h2>
+                <p className="text-sm text-muted-foreground max-w-md">
                   Create a category for this brand to start organising menu items.
                 </p>
                 <Button
@@ -311,7 +321,7 @@ export default function MenuPage() {
 
         {/* Category Form Sheet */}
         <Sheet open={categoryFormOpen} onOpenChange={(open) => { if (!open) handleCategoryFormClose(); }}>
-          <SheetContent side="right" className="w-[480px]">
+          <SheetContent side="right" className="w-full sm:max-w-[480px]">
             <SheetHeader>
               <SheetTitle>
                 {editingCategory ? 'Edit Category' : 'Add Category'}

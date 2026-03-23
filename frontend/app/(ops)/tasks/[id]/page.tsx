@@ -21,7 +21,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { BlurFade } from '@/components/ui/blur-fade';
 import { AvatarCircles } from '@/components/ui/avatar-circles';
 import { BlockerDialog } from '@/components/ops/tasks/BlockerDialog';
 import { EvidenceSection } from '@/components/ops/evidence/EvidenceSection';
@@ -36,6 +35,7 @@ import {
   TASK_DOMAIN_LABELS,
   TASK_TYPE_XP_WEIGHT,
 } from '@/lib/types/tasks';
+import { ExportButton } from '@/components/ops/exports/ExportButton';
 
 function getTypeBadgeClass(type: string) {
   switch (type) {
@@ -165,7 +165,6 @@ export default function TaskDetailPage(props: {
     : [];
 
   return (
-    <BlurFade>
       <div className="space-y-6">
         {/* Back link */}
         <Link
@@ -180,6 +179,11 @@ export default function TaskDetailPage(props: {
         <div className="space-y-2">
           <div className="flex items-center gap-3 flex-wrap">
             <h1 className="text-2xl font-bold">{task.title}</h1>
+            <ExportButton
+              reportType="tasks"
+              reportName="Tasks"
+              isTimeSeries={false}
+            />
             <Badge
               variant="secondary"
               className={getStatusBadgeClass(task.status)}
@@ -472,6 +476,5 @@ export default function TaskDetailPage(props: {
           onBlocked={handleBlocked}
         />
       </div>
-    </BlurFade>
   );
 }

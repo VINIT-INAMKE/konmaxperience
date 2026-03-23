@@ -1,14 +1,17 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, Trophy } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { LeaderboardTable } from '@/components/ops/leaderboard/LeaderboardTable';
+import { LeaderboardPodium } from '@/components/ops/leaderboard/LeaderboardPodium';
+import { BlurFade } from '@/components/ui/blur-fade';
 import { apiClient } from '@/lib/api-client';
 import { useAuthStore } from '@/lib/stores/auth-store';
 import type { LeaderboardResponse } from '@/lib/types/leaderboard';
+import { ExportButton } from '@/components/ops/exports/ExportButton';
 
 export default function LeaderboardPage() {
   const currentUserId = useAuthStore((s) => s.user?.id ?? '');
@@ -28,7 +31,14 @@ export default function LeaderboardPage() {
 
   return (
       <div className="space-y-6">
-        <h1 className="text-2xl font-bold">Team Leaderboard</h1>
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <h1 className="text-2xl font-bold">Team Leaderboard</h1>
+          <ExportButton
+            reportType="leaderboard"
+            reportName="Leaderboard"
+            isTimeSeries={false}
+          />
+        </div>
 
         {/* Loading state */}
         {isLoading && (
@@ -62,7 +72,8 @@ export default function LeaderboardPage() {
         {/* Kill switch off state */}
         {!isLoading && !isError && data?.enabled === false && (
           <Card>
-            <CardContent className="flex flex-col items-center justify-center py-16 text-center space-y-2">
+            <CardContent className="flex flex-col items-center justify-center py-16 text-center space-y-3">
+              <Trophy className="size-12 text-muted-foreground/30" />
               <h2 className="text-lg font-semibold">Leaderboard Paused</h2>
               <p className="text-sm text-muted-foreground max-w-md">
                 Rankings are currently hidden. Keep completing tasks to earn XP — your progress is being tracked.
@@ -73,20 +84,32 @@ export default function LeaderboardPage() {
 
         {/* Empty state */}
         {isEmpty && (
-          <div className="flex flex-col items-center justify-center py-16 text-center space-y-2">
+          <div className="flex flex-col items-center justify-center py-16 text-center space-y-3">
+            <Trophy className="size-12 text-muted-foreground/30" />
+            <h2 className="text-lg font-semibold">No Rankings Yet</h2>
             <p className="text-sm text-muted-foreground max-w-md">
-              No rankings yet. Complete and validate tasks to earn XP and appear on the leaderboard.
+              Complete and validate tasks to earn XP and appear on the leaderboard.
             </p>
           </div>
         )}
 
-        {/* Populated state — ranked list only, no podium */}
+        {/* Populated state — podium + ranked table */}
         {!isLoading && !isError && data?.enabled && data.users && data.users.length > 0 && (
-          <LeaderboardTable
-            users={data.users}
-            currentUserId={currentUserId}
-            startRank={1}
-          />
+          <BlurFade>
+            <div className="space-y-6">
+              {data.users.length >= 2 && (
+                <LeaderboardPodium
+                  users={data.users}
+                  currentUserId={currentUserId}
+                />
+              )}
+              <LeaderboardTable
+                users={data.users}
+                currentUserId={currentUserId}
+                startRank={1}
+              />
+            </div>
+          </BlurFade>
         )}
       </div>
   );

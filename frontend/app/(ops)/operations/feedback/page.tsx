@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { MessageSquare } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -15,6 +16,7 @@ import { RatingFilterTabs } from '@/components/ops/operations/feedback/RatingFil
 import { FeedbackRow } from '@/components/ops/operations/feedback/FeedbackRow';
 import { apiClient } from '@/lib/api-client';
 import type { Feedback, FeedbackStats } from '@/lib/types/feedback';
+import { ExportButton } from '@/components/ops/exports/ExportButton';
 
 function getDateFrom(filter: string): string | null {
   const now = new Date();
@@ -84,6 +86,11 @@ export default function FeedbackPage() {
               <SelectItem value="month">This Month</SelectItem>
             </SelectContent>
           </Select>
+          <ExportButton
+            reportType="feedback"
+            reportName="Feedback"
+            isTimeSeries={true}
+          />
         </div>
 
         {/* Loading skeleton */}
@@ -123,9 +130,10 @@ export default function FeedbackPage() {
 
         {/* Empty state */}
         {!isLoading && !isError && feedbackList && feedbackList.length === 0 && (
-          <div className="py-16 text-center space-y-2">
-            <h2 className="text-base font-semibold">No feedback yet</h2>
-            <p className="text-sm text-muted-foreground">
+          <div className="flex flex-col items-center justify-center py-16 text-center space-y-3">
+            <MessageSquare className="size-12 text-muted-foreground/30" />
+            <h2 className="text-lg font-semibold">No Feedback Yet</h2>
+            <p className="text-sm text-muted-foreground max-w-md">
               Feedback submitted via QR codes and links will appear here.
             </p>
           </div>

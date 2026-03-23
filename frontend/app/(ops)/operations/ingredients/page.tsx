@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { Search } from 'lucide-react';
+import { Search, Leaf } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -22,6 +22,7 @@ import { useAuthStore } from '@/lib/stores/auth-store';
 import { RoleCode } from '@/lib/types/roles';
 import type { Ingredient, IngredientCategory } from '@/lib/types/ingredient';
 import { INGREDIENT_CATEGORIES, INGREDIENT_CATEGORY_LABELS } from '@/lib/types/ingredient';
+import { ExportButton } from '@/components/ops/exports/ExportButton';
 import type { IngredientStock } from '@/lib/types/inventory';
 
 type CategoryFilter = 'all' | IngredientCategory;
@@ -143,6 +144,11 @@ export default function IngredientsPage() {
               className="pl-9"
             />
           </div>
+          <ExportButton
+            reportType="ingredients"
+            reportName="Ingredients"
+            isTimeSeries={false}
+          />
         </div>
 
         {/* Table */}
@@ -156,9 +162,10 @@ export default function IngredientsPage() {
         )}
 
         {!isLoading && !isError && filteredIngredients.length === 0 && (
-          <div className="py-16 text-center space-y-3">
-            <h2 className="text-base font-semibold">No ingredients yet</h2>
-            <p className="text-sm text-muted-foreground">
+          <div className="flex flex-col items-center justify-center py-16 text-center space-y-3">
+            <Leaf className="size-12 text-muted-foreground/30" />
+            <h2 className="text-lg font-semibold">No Ingredients Yet</h2>
+            <p className="text-sm text-muted-foreground max-w-md">
               Add the raw ingredients your kitchen uses. Each ingredient has a base unit and minimum stock level.
             </p>
             <Button onClick={handleAddClick}>Add Ingredient</Button>
