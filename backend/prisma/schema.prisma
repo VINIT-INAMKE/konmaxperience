@@ -55,6 +55,7 @@ model User {
   wasteLogs               WasteLog[]           @relation("WasteLogCreator")
   orders                  Order[]              @relation("OrderCreator")
   notifications           Notification[]
+  export_records          ExportRecord[]
 
   // Optimizes: leaderboard query (active users sorted by xp_total desc)
   @@index([status, xp_total(sort: Desc)])
@@ -794,4 +795,22 @@ model GuidePage {
   @@unique([section_id, slug])
   @@index([section_id, sort_order])
   @@index([status])
+}
+
+model ExportRecord {
+  id              String   @id @default(uuid())
+  report_type     String
+  format          String   // "csv" | "xlsx"
+  filters_applied String?  @db.Text
+  file_size_bytes Int
+  r2_key          String
+  download_url    String
+  generated_by    String
+  user            User     @relation(fields: [generated_by], references: [id])
+  status          String   @default("completed")
+  created_at      DateTime @default(now())
+
+  @@index([report_type, created_at(sort: Desc)])
+  @@index([generated_by, created_at(sort: Desc)])
+  @@index([status, created_at(sort: Desc)])
 }
