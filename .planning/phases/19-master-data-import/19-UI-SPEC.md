@@ -54,15 +54,15 @@ Exceptions:
 | Role | Size | Weight | Line Height |
 |------|------|--------|-------------|
 | Body | 14px | 400 (regular) | 1.5 |
-| Label | 12px | 600 (semibold) | 1.4 |
+| Label | 12px | 700 (bold) | 1.4 |
 | Heading | 20px | 700 (bold) | 1.2 |
 | Display | 24px | 700 (bold) | 1.2 |
 
 Notes:
 - Table cell text uses Body (14px / 400)
-- Column headers use Label (12px / 600 / uppercase tracking)
+- Column headers use Label (12px / 700 / uppercase letter-spacing)
 - Page h1 uses Display (24px / bold) — matches `/admin/exports` established pattern (`text-2xl font-bold`)
-- Error tooltip text uses Label (12px / 400 / destructive color)
+- Error tooltip text uses Body weight (14px / 400 / destructive color)
 
 Source: Inferred from existing admin page pattern at `frontend/app/(ops)/admin/exports/page.tsx` (text-2xl font-bold for h1, text-sm for subtext, text-xs font-bold for form labels).
 
@@ -138,7 +138,7 @@ All components must use existing shadcn/base-ui components only. No new third-pa
 
 - Default state: dashed border `var(--border)`, `Upload` icon (48px), "Drag & drop your CSV or XLSX file here" primary label, "or click to browse" secondary label in muted color
 - Drag-over state: border color switches to `var(--primary)`, background tints to `var(--muted)`, scale transform 1.01
-- File accepted state: zone collapses to a compact file chip (filename + size + `X` remove button), "Parse File" button appears below
+- File accepted state: zone collapses to a compact file chip (filename + size + `X` remove button with `aria-label="Remove file"`), "Parse File" button appears below
 - Error state (unsupported format): red border + "Only CSV and XLSX files are accepted" inline message
 
 ### Preview Table
