@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: User Guide & Data Management
 status: unknown
-stopped_at: Completed 19-01-PLAN.md
-last_updated: "2026-03-23T16:36:49.821Z"
+stopped_at: Completed 19-02-PLAN.md
+last_updated: "2026-03-23T16:43:27.377Z"
 progress:
   total_phases: 8
   completed_phases: 6
   total_plans: 23
-  completed_plans: 21
+  completed_plans: 22
 ---
 
 # Project State
@@ -24,7 +24,7 @@ See: .planning/PROJECT.md (updated 2026-03-22)
 ## Current Position
 
 Phase: 19 (master-data-import) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 
 ## Performance Metrics
 
@@ -66,6 +66,7 @@ Plan: 2 of 3
 | Phase 21 P03 | 11min | 2 tasks | 12 files |
 | Phase 21 P04 | 15min | 2 tasks | 13 files |
 | Phase 19 P01 | 5min | 2 tasks | 11 files |
+| Phase 19 P02 | 11min | 3 tasks | 16 files |
 
 ## Accumulated Context
 
@@ -133,6 +134,9 @@ Recent decisions affecting current work:
 - [Phase 19]: MissionsExportBuilder and QuestsExportBuilder use MANAGE_KPIS permission matching tasks/decisions pattern
 - [Phase 19]: Quest detail page uses tasks reportType since it displays quest task list (per D-25)
 - [Phase 19]: IST timezone confirmed working via process.env.TZ in main.ts; XLSX date columns use numFmt styles
+- [Phase 19]: @fast-csv/parse v5 uses parseString (not parse) for string input; ignoreEmpty replaces skipEmptyLines
+- [Phase 19]: ImportsService uses PrismaService directly for create/update in transaction (not IngredientsService/VendorsService) to keep tx boundary clean
+- [Phase 19]: Import validator pattern: pure async function taking (raw, rowIndex, prisma) returning ImportRow
 
 ### Roadmap Evolution
 
@@ -152,6 +156,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-23T16:36:49.810Z
-Stopped at: Completed 19-01-PLAN.md
+Last session: 2026-03-23T16:43:27.363Z
+Stopped at: Completed 19-02-PLAN.md
 Resume file: None

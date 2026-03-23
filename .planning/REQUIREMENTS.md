@@ -55,9 +55,9 @@ Requirements for milestone v1.1 — User Guide System & Data Management. Each ma
 
 ### Master Data Import
 
-- [ ] **IMPORT-01**: ImportsModule backend with CSV/XLSX file parsing (Multer upload, @fast-csv/parse, ExcelJS), validation, and commit endpoints
-- [ ] **IMPORT-02**: Schema-strict validation for ingredients, vendors, and vendor pricing with per-cell errors, foreign key name resolution, and duplicate detection
-- [ ] **IMPORT-03**: Downloadable XLSX/CSV templates per import type with exact column headers, sample row, and Instructions sheet
+- [x] **IMPORT-01**: ImportsModule backend with CSV/XLSX file parsing (Multer upload, @fast-csv/parse, ExcelJS), validation, and commit endpoints
+- [x] **IMPORT-02**: Schema-strict validation for ingredients, vendors, and vendor pricing with per-cell errors, foreign key name resolution, and duplicate detection
+- [x] **IMPORT-03**: Downloadable XLSX/CSV templates per import type with exact column headers, sample row, and Instructions sheet
 - [ ] **IMPORT-04**: Frontend import index page at /admin/import with 3 import type cards, and type-specific pages at /admin/import/[type] with drag-drop upload
 - [ ] **IMPORT-05**: Preview table after parse showing row status (valid/invalid/duplicate), per-cell error tooltips, and inline cell editing
 - [ ] **IMPORT-06**: Import commit with "Update existing records" toggle, result summary (imported/updated/skipped/errors), Prisma transaction
