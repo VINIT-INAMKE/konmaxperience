@@ -35,7 +35,7 @@ export interface ParseResult {
   validCount: number;
   invalidCount: number;
   duplicateCount: number;
-  blockedCount?: number;
+  blockedCount: number;
   columns: string[];
   warning?: string;
 }

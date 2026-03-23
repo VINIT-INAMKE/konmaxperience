@@ -99,7 +99,7 @@ export default function AdminImportPage() {
         </p>
         {prereqs && (
           <p className="text-xs text-muted-foreground mt-2">
-            {prereqs.ingredients} ingredients &middot; {prereqs.vendors} vendors &middot; {prereqs.zones} zones &middot; {prereqs.brands} brands &middot; {prereqs.missions} missions &middot; {prereqs.approved_recipes} recipes (approved)
+            {prereqs.ingredients} ingredients &middot; {prereqs.vendors} vendors &middot; {prereqs.zones} zones &middot; {prereqs.brands} brands &middot; {prereqs.missions} missions &middot; {prereqs.quests} quests &middot; {prereqs.approved_recipes} recipes (approved) &middot; {prereqs.menu_categories} menu categories
           </p>
         )}
       </div>
