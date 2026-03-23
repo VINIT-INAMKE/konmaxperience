@@ -173,5 +173,13 @@ export class ExportsModule implements OnModuleInit {
       'event_guest_lists',
       this.eventGuestListsExportBuilder,
     );
+    this.exportsService.registerBuilder(
+      'decision_log',
+      this.decisionLogExportBuilder,
+    );
+    this.exportsService.registerBuilder(
+      'leaderboard',
+      this.leaderboardExportBuilder,
+    );
   }
 }
