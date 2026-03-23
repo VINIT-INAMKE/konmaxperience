@@ -105,25 +105,31 @@ Phases execute in numeric order: 14 -> 14.x -> 15 -> 15.x -> 16 -> 16.x -> 17 ->
 | 15. Reader View | v1.1 | 2/2 | Complete    | 2026-03-22 |
 | 16. Admin CMS | v1.1 | 2/2 | Complete    | 2026-03-22 |
 | 17. Search, Preview, and Content Seeding | v1.1 | 3/3 | Complete    | 2026-03-23 |
-| 18. Data Export | v1.1 | 0/? | Not started | - |
+| 18. Data Export | v1.1 | 0/7 | Not started | - |
 | 19. Master Data Import | v1.1 | 0/? | Not started | - |
 | 20. Operations Import | v1.1 | 0/? | Not started | - |
 
 ### Phase 18: Data Export
-**Goal**: CSV/XLSX export endpoints for all major report types — orders, revenue, analytics, waste logs, recipes, menu pricing, stock levels, stock movements, POs, vendor pricing, ingredients, vendors, feedback, events, guest lists, tasks, KPIs, decisions, leaderboard (22 report types)
+**Goal**: CSV/XLSX export for all 22 report types with server-side file generation, R2 storage, export history, and export buttons on 13 data pages
 **Depends on**: v1.0 (Phase 13) -- existing analytics, orders, inventory, kitchen, procurement services
-**Requirements**: TBD (to be defined during planning)
+**Requirements**: EXPORT-01, EXPORT-02, EXPORT-03, EXPORT-04, EXPORT-05, EXPORT-06, EXPORT-07, EXPORT-08, EXPORT-09, EXPORT-10, EXPORT-11
 **Success Criteria** (what must be TRUE):
   1. User can download CSV/XLSX from any report page via export button
   2. Exports respect role-based access — users only export data they can view
   3. Date range filtering available on time-series exports (orders, waste, stock movements)
   4. XLSX files have proper column headers, formatting, and sheet names
-**Plans**: TBD
+  5. Multi-sheet XLSX for Purchase Orders and Recipes (header + line items)
+  6. Admin can view export history at /admin/exports with re-download capability
+**Plans**: 7 plans
 
 Plans:
-- [ ] 18-01: TBD
-- [ ] 18-02: TBD
-- [ ] 18-03: TBD
+- [ ] 18-01-PLAN.md -- Foundation: ExportRecord Prisma model, ExportsModule skeleton, StorageService putObjectDirect, export type config
+- [ ] 18-02-PLAN.md -- Financial/analytics export builders: Orders, Revenue Summary, Top Items, Channel Breakdown, Recipe Costs
+- [ ] 18-03-PLAN.md -- Inventory/procurement export builders: Inventory Levels, Stock Movements, Purchase Orders (multi-sheet), Vendor Pricing
+- [ ] 18-04-PLAN.md -- Kitchen/F&B export builders: Waste Log, Prep Batches, Ingredients, Vendors, Recipes (multi-sheet)
+- [ ] 18-05-PLAN.md -- Menu/events/feedback export builders: Menu Items, Feedback, Events, Event Guest Lists
+- [ ] 18-06-PLAN.md -- Operations/intelligence export builders: Tasks, KPIs, Decision Log, Leaderboard
+- [ ] 18-07-PLAN.md -- Frontend: ExportButton + ExportDialog on 13 pages, admin exports history page, sidebar nav
 
 ### Phase 19: Master Data Import
 **Goal**: Bulk CSV/XLSX import for foundation data — ingredients, vendors, and vendor pricing with validation, error reporting, and preview before commit
