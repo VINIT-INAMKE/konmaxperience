@@ -104,7 +104,7 @@ Phases execute in numeric order: 14 -> 14.x -> 15 -> 15.x -> 16 -> 16.x -> 17 ->
 | 14. Foundation | v1.1 | 2/2 | Complete    | 2026-03-22 |
 | 15. Reader View | v1.1 | 2/2 | Complete    | 2026-03-22 |
 | 16. Admin CMS | v1.1 | 2/2 | Complete    | 2026-03-22 |
-| 17. Search, Preview, and Content Seeding | v1.1 | 3/3 | Complete   | 2026-03-23 |
+| 17. Search, Preview, and Content Seeding | v1.1 | 3/3 | Complete    | 2026-03-23 |
 | 18. Data Export | v1.1 | 0/? | Not started | - |
 | 19. Master Data Import | v1.1 | 0/? | Not started | - |
 | 20. Operations Import | v1.1 | 0/? | Not started | - |
