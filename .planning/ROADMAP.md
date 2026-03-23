@@ -25,7 +25,7 @@
 - [x] **Phase 14: Foundation** - Schema, backend API, role filtering, and security hardening (completed 2026-03-22)
 - [x] **Phase 15: Reader View** - Staff-facing guide experience with role-gated content (completed 2026-03-22)
 - [x] **Phase 16: Admin CMS** - Tiptap rich text editor with image upload and content management UI (completed 2026-03-22)
-- [ ] **Phase 17: Search, Preview, and Content Seeding** - Full-text search, admin preview-as-role, and real guide content generated from codebase
+- [x] **Phase 17: Search, Preview, and Content Seeding** - Full-text search, admin preview-as-role, and real guide content generated from codebase (completed 2026-03-23)
 - [ ] **Phase 18: Data Export** - CSV/XLSX export for 22 report types across all modules
 - [ ] **Phase 19: Master Data Import** - Bulk import for ingredients, vendors, and vendor pricing
 - [ ] **Phase 20: Operations Import** - Bulk import for stock, recipes, menu, events, tasks, quests, KPIs
@@ -91,7 +91,7 @@ Plans:
 
 Plans:
 - [x] 17-01-PLAN.md -- Backend search infrastructure: Prisma migration with tsvector trigger and GIN index, search endpoint with role filtering, unit tests, shadcn Command install
-- [ ] 17-02-PLAN.md -- Frontend search overlay (Cmd+K CommandDialog), preview-as-role dropdown with amber banner, search triggers, guide layout
+- [x] 17-02-PLAN.md -- Frontend search overlay (Cmd+K CommandDialog), preview-as-role dropdown with amber banner, search triggers, guide layout
 - [x] 17-03-PLAN.md -- Content seeding: expand seed.ts from 5 sections/8 pages to 12 sections/39+ pages of real walkthrough content
 
 ## Progress
@@ -104,7 +104,7 @@ Phases execute in numeric order: 14 -> 14.x -> 15 -> 15.x -> 16 -> 16.x -> 17 ->
 | 14. Foundation | v1.1 | 2/2 | Complete    | 2026-03-22 |
 | 15. Reader View | v1.1 | 2/2 | Complete    | 2026-03-22 |
 | 16. Admin CMS | v1.1 | 2/2 | Complete    | 2026-03-22 |
-| 17. Search, Preview, and Content Seeding | v1.1 | 2/3 | In Progress|  |
+| 17. Search, Preview, and Content Seeding | v1.1 | 3/3 | Complete   | 2026-03-23 |
 | 18. Data Export | v1.1 | 0/? | Not started | - |
 | 19. Master Data Import | v1.1 | 0/? | Not started | - |
 | 20. Operations Import | v1.1 | 0/? | Not started | - |
