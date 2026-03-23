@@ -16,8 +16,25 @@ import { LoginDto } from './dto/login.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 
+function getCookieDomain(): string | undefined {
+  const frontendUrl = process.env.FRONTEND_URL;
+  if (!frontendUrl) return undefined;
+  try {
+    const hostname = new URL(frontendUrl).hostname;
+    // Strip www. prefix and prepend dot for subdomain sharing
+    const root = hostname.replace(/^www\./, '');
+    // Don't set domain for localhost
+    if (root === 'localhost' || root.startsWith('127.')) return undefined;
+    return `.${root}`;
+  } catch {
+    return undefined;
+  }
+}
+
 @Controller('auth')
 export class AuthController {
+  private readonly cookieDomain = getCookieDomain();
+
   constructor(private readonly authService: AuthService) {}
 
   @Public()
@@ -44,6 +61,7 @@ export class AuthController {
       sameSite: 'lax',
       path: '/auth',
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      ...(this.cookieDomain && { domain: this.cookieDomain }),
     });
 
     // Set access token as httpOnly cookie for Next.js middleware
@@ -52,6 +70,7 @@ export class AuthController {
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       maxAge: 15 * 60 * 1000, // 15 minutes
+      ...(this.cookieDomain && { domain: this.cookieDomain }),
     });
 
     return {
@@ -81,6 +100,7 @@ export class AuthController {
       sameSite: 'lax',
       path: '/auth',
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      ...(this.cookieDomain && { domain: this.cookieDomain }),
     });
 
     // Set new access_token cookie
@@ -89,6 +109,7 @@ export class AuthController {
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       maxAge: 15 * 60 * 1000,
+      ...(this.cookieDomain && { domain: this.cookieDomain }),
     });
 
     return {
@@ -111,8 +132,8 @@ export class AuthController {
       await this.authService.logout(tokenHash);
     }
 
-    response.clearCookie('refresh_token', { path: '/auth' });
-    response.clearCookie('access_token');
+    response.clearCookie('refresh_token', { path: '/auth', ...(this.cookieDomain && { domain: this.cookieDomain }) });
+    response.clearCookie('access_token', { ...(this.cookieDomain && { domain: this.cookieDomain }) });
 
     return { message: 'Logged out' };
   }
@@ -125,8 +146,8 @@ export class AuthController {
     const user = (request as any).user;
     await this.authService.logoutAll(user.id);
 
-    response.clearCookie('refresh_token', { path: '/auth' });
-    response.clearCookie('access_token');
+    response.clearCookie('refresh_token', { path: '/auth', ...(this.cookieDomain && { domain: this.cookieDomain }) });
+    response.clearCookie('access_token', { ...(this.cookieDomain && { domain: this.cookieDomain }) });
 
     return { message: 'Logged out of all devices' };
   }
