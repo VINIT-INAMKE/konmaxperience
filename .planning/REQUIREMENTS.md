@@ -51,6 +51,19 @@ Requirements for milestone v1.1 — User Guide System & Data Management. Each ma
 - [x] **EXPORT-10**: Export button on all 13 data pages with dialog for format selection (CSV/XLSX) and date range filtering
 - [x] **EXPORT-11**: Sidebar nav entry for Exports under Admin section (MANAGE_SYSTEM gated)
 
+### In-App Chat
+
+- [ ] **CHAT-01**: Prisma schema with Conversation, Message, ConversationParticipant models and migration applied
+- [ ] **CHAT-02**: PusherService singleton in NestJS with trigger() and authorizeChannel() methods, private channel auth endpoint with admin bypass
+- [ ] **CHAT-03**: Dedicated /chat page with split-panel layout (conversation list left, message thread right) per Slack/Teams style
+- [ ] **CHAT-04**: "Chat" nav item in ops sidebar for all authenticated users (no badge/indicator)
+- [ ] **CHAT-05**: 1-1 chats: any user can start a chat with any active user; duplicate detection returns existing conversation
+- [ ] **CHAT-06**: Group chats: only FOUNDER_ADMIN can create groups with name and selected members; admin can add/remove members
+- [ ] **CHAT-07**: Messages support text + images + file attachments via R2 presign pattern; messages are permanent (no edit/delete)
+- [ ] **CHAT-08**: Admin/tech "All Conversations" tab to view any chat read-only; policy notice banner displayed in thread
+- [ ] **CHAT-09**: Real-time message delivery via Pusher.js private channels — messages appear instantly without page refresh
+- [ ] **CHAT-10**: Typing indicators via Pusher client events (no server round-trip) and read receipts via last_read_at with Pusher broadcast
+
 ## Future Requirements
 
 ### Guide Enhancements
@@ -58,6 +71,14 @@ Requirements for milestone v1.1 — User Guide System & Data Management. Each ma
 - **GUIDE-06**: Version history with single-step undo for guide pages
 - **GUIDE-07**: PDF/print export of guide pages
 - **GUIDE-08**: Contextual "?" help links in app headers linking to relevant guide section
+
+### Chat Enhancements
+
+- **CHAT-11**: Message search and filtering within conversations
+- **CHAT-12**: Emoji reactions on messages
+- **CHAT-13**: Thread replies within messages
+- **CHAT-14**: Push/email notifications for new chat messages
+- **CHAT-15**: Pinned messages in group conversations
 
 ## Out of Scope
 
@@ -72,6 +93,9 @@ Requirements for milestone v1.1 — User Guide System & Data Management. Each ma
 | Email delivery of exports | Future enhancement — download via R2 URL is immediate |
 | Export templates (saved filter presets) | Future enhancement — filters are simple enough to re-enter |
 | Bulk export (all reports at once) | Future enhancement — per-report export covers all use cases |
+| Voice/video calls in chat | Out of scope for v1.1 — text messaging sufficient for team coordination |
+| Chat export/download | Future enhancement — conversations are retained in-app |
+| Message reactions (emoji) | Future enhancement — not needed for initial chat launch |
 
 ## Traceability
 
@@ -108,12 +132,22 @@ Which phases cover which requirements. Updated during roadmap creation.
 | EXPORT-09 | Phase 18 | Planned |
 | EXPORT-10 | Phase 18 | Planned |
 | EXPORT-11 | Phase 18 | Planned |
+| CHAT-01 | Phase 21 | Planned |
+| CHAT-02 | Phase 21 | Planned |
+| CHAT-03 | Phase 21 | Planned |
+| CHAT-04 | Phase 21 | Planned |
+| CHAT-05 | Phase 21 | Planned |
+| CHAT-06 | Phase 21 | Planned |
+| CHAT-07 | Phase 21 | Planned |
+| CHAT-08 | Phase 21 | Planned |
+| CHAT-09 | Phase 21 | Planned |
+| CHAT-10 | Phase 21 | Planned |
 
 **Coverage:**
-- v1.1 requirements: 29 total
-- Mapped to phases: 29
+- v1.1 requirements: 39 total
+- Mapped to phases: 39
 - Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-22*
-*Last updated: 2026-03-23 after Phase 18 planning*
+*Last updated: 2026-03-23 after Phase 21 planning*
