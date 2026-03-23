@@ -119,6 +119,8 @@ Recent decisions affecting current work:
 - Phase 18 added: Data Export — CSV/XLSX export for 22 report types
 - Phase 19 added: Master Data Import — ingredients, vendors, vendor pricing
 - Phase 20 added: Operations Import — stock, recipes, menu, events, tasks, quests, KPIs
+- Phase 21 added: In-App Chat — 1-1 and group messaging with Pusher.js, role-scoped visibility
+- Phase 20 added: Operations Import — stock, recipes, menu, events, tasks, quests, KPIs
 
 ### Pending Todos
 

@@ -3,7 +3,7 @@
 ## Milestones
 
 - ✅ **v1.0 MVP** - Phases 1-13 (shipped 2026-03-22)
-- 🚧 **v1.1 User Guide & Data Management** - Phases 14-20 (in progress)
+- 🚧 **v1.1 User Guide & Data Management** - Phases 14-21 (in progress)
 
 ## Phases
 
@@ -29,6 +29,7 @@
 - [x] **Phase 18: Data Export** - CSV/XLSX export for 22 report types across all modules (completed 2026-03-23)
 - [ ] **Phase 19: Master Data Import + Export Gaps + Timezone** - Bulk import, missing exports (missions/quests), IST timezone
 - [ ] **Phase 20: Operations Import** - Bulk import for stock, recipes, menu, events, tasks, quests, KPIs
+- [ ] **Phase 21: In-App Chat** - Real-time 1-1 and group messaging with Pusher.js, role-scoped visibility
 
 ## Phase Details
 
@@ -97,7 +98,7 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 14 -> 14.x -> 15 -> 15.x -> 16 -> 16.x -> 17 -> 17.x -> 18 -> 18.x -> 19 -> 19.x -> 20
+Phases execute in numeric order: 14 -> 14.x -> 15 -> 15.x -> 16 -> 16.x -> 17 -> 17.x -> 18 -> 18.x -> 19 -> 19.x -> 20 -> 20.x -> 21
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -108,6 +109,7 @@ Phases execute in numeric order: 14 -> 14.x -> 15 -> 15.x -> 16 -> 16.x -> 17 ->
 | 18. Data Export | v1.1 | 7/7 | Complete    | 2026-03-23 |
 | 19. Master Data Import | v1.1 | 0/? | Not started | - |
 | 20. Operations Import | v1.1 | 0/? | Not started | - |
+| 21. In-App Chat | v1.1 | 0/? | Not started | - |
 
 ### Phase 18: Data Export
 **Goal**: CSV/XLSX export for all 22 report types with server-side file generation, R2 storage, export history, and export buttons on 13 data pages
@@ -165,3 +167,21 @@ Plans:
 - [ ] 20-01: TBD
 - [ ] 20-02: TBD
 - [ ] 20-03: TBD
+
+### Phase 21: In-App Chat
+**Goal**: Real-time 1-1 and group messaging using Pusher.js — users can start 1-1 chats, admin creates group chats, admin/tech can view all conversations, normal users see only their own chats
+**Depends on**: Phase 20
+**Requirements**: TBD (to be defined during planning)
+**Success Criteria** (what must be TRUE):
+  1. Users can start 1-1 chats with any team member and send/receive messages in real-time via Pusher.js
+  2. Admin can create group chats with selected members and a group name
+  3. Admin and tech lead can view any 1-1 or group chat (oversight capability)
+  4. Normal users can only see their own 1-1 chats and groups they belong to
+  5. Messages appear instantly without page refresh (Pusher real-time events)
+  6. Chat UI with conversation list, message thread, and unread indicators
+**Plans**: TBD
+
+Plans:
+- [ ] 21-01: TBD
+- [ ] 21-02: TBD
+- [ ] 21-03: TBD
