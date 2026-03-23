@@ -1,3 +1,6 @@
+// Force IST timezone — server is in Singapore but business operates in India
+process.env.TZ = 'Asia/Kolkata';
+
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { json, urlencoded } from 'express';
