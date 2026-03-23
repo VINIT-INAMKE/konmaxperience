@@ -65,6 +65,7 @@ export class ImportsService {
       invalidCount: validatedRows.filter((r) => r.status === 'invalid').length,
       duplicateCount: validatedRows.filter((r) => r.status === 'duplicate')
         .length,
+      blockedCount: validatedRows.filter((r) => r.status === 'blocked').length,
       columns: config.columns,
     };
   }
