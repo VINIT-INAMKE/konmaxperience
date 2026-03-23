@@ -724,9 +724,49 @@ export default function ImportTypePage() {
                               )}
                             </div>
                           </TableCell>
-                          {recipeParseResult.columns.map(col => (
-                            <TableCell key={col}>{String(headerRow.raw[col] || '')}</TableCell>
-                          ))}
+                          {recipeParseResult.columns.map(col => {
+                            const cellError = getCellError(headerRow, col);
+                            const isEditing =
+                              editingCell?.rowIdx === idx &&
+                              editingCell?.field === col;
+                            return (
+                              <TableCell
+                                key={col}
+                                className={`cursor-pointer ${
+                                  cellError
+                                    ? 'border-b-2 border-[var(--destructive)]'
+                                    : ''
+                                }`}
+                                onClick={() => {
+                                  if (!isEditing) startEditing(idx, col);
+                                }}
+                              >
+                                {isEditing ? (
+                                  <Input
+                                    value={editValue}
+                                    onChange={(e) => setEditValue(e.target.value)}
+                                    onBlur={commitEdit}
+                                    onKeyDown={handleEditKeyDown}
+                                    className="h-7 text-sm"
+                                    autoFocus
+                                  />
+                                ) : cellError ? (
+                                  <Tooltip>
+                                    <TooltipTrigger className="text-left w-full">
+                                      <span className="text-destructive">
+                                        {headerRow.raw[col] || '(empty)'}
+                                      </span>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      {cellError}
+                                    </TooltipContent>
+                                  </Tooltip>
+                                ) : (
+                                  <span>{String(headerRow.raw[col] || '')}</span>
+                                )}
+                              </TableCell>
+                            );
+                          })}
                         </TableRow>
                         {/* BOM line rows (collapsible) */}
                         {isExpanded && bomLines.map((bomRow, bomIdx) => {

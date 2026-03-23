@@ -571,8 +571,13 @@ export class ImportsService {
               const inputType = bv.input_type as string;
 
               // D-19: Cycle detection for sub-recipe references — recursive BFS (M1 fix)
-              if (inputType === 'recipe' && bv.source_recipe_id) {
-                const sourceId = bv.source_recipe_id as string;
+              // Also check same-file sub-recipes resolved via recipeIdMap (NEW-3 fix)
+              const resolvedSourceId = (bv.source_recipe_id as string | undefined)
+                || (inputType === 'recipe' && bv.source_recipe_name
+                  ? recipeIdMap.get((bv.source_recipe_name as string).toLowerCase())
+                  : undefined);
+              if (inputType === 'recipe' && resolvedSourceId) {
+                const sourceId = resolvedSourceId;
                 // Check if source_recipe_id points back to this recipe
                 if (sourceId === recipeId) {
                   throw new Error(
@@ -943,6 +948,7 @@ export class ImportsService {
         await tx.event.update({
           where: { id },
           data: {
+            title: v.title as string,
             description: v.description ? (v.description as string) : undefined,
             price: v.price as number,
             event_type: v.event_type as string,
