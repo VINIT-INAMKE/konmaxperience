@@ -37,23 +37,23 @@ export class NotificationsController {
 
   @Get()
   async findForUser(@Request() req, @Query() query: NotificationQueryDto) {
-    return this.notifications.findForUser(req.user.sub, query);
+    return this.notifications.findForUser(req.user.id, query);
   }
 
   @Get('unread-count')
   async unreadCount(@Request() req) {
-    return this.notifications.unreadCount(req.user.sub);
+    return this.notifications.unreadCount(req.user.id);
   }
 
   @Patch(':id/read')
   async markRead(@Param('id', ParseUUIDPipe) id: string, @Request() req) {
-    await this.notifications.markRead(id, req.user.sub);
+    await this.notifications.markRead(id, req.user.id);
     return { success: true };
   }
 
   @Post('read-all')
   async markAllRead(@Request() req) {
-    await this.notifications.markAllRead(req.user.sub);
+    await this.notifications.markAllRead(req.user.id);
     return { success: true };
   }
 
@@ -64,7 +64,7 @@ export class NotificationsController {
       title: dto.title,
       body: dto.body,
       link_url: dto.link_url,
-      sent_by: req.user.sub,
+      sent_by: req.user.id,
     });
     return { success: true, count: result.count };
   }
