@@ -46,8 +46,19 @@ async function bootstrap() {
   app.use(cookieParser());
 
   // CORS (hardened)
+  const allowedOrigins = [
+    process.env.FRONTEND_URL || 'http://localhost:3000',
+    'http://localhost:3000',
+  ];
+  // Also allow www subdomain if FRONTEND_URL is set
+  if (process.env.FRONTEND_URL) {
+    const url = new URL(process.env.FRONTEND_URL);
+    if (!url.hostname.startsWith('www.')) {
+      allowedOrigins.push(`${url.protocol}//www.${url.hostname}`);
+    }
+  }
   app.enableCors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    origin: allowedOrigins,
     credentials: true,
     methods: ['GET', 'POST', 'PATCH', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization'],
