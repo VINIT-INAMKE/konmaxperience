@@ -183,15 +183,17 @@ export function Sidebar({ onNavigate }: SidebarProps = {}) {
   });
   const proposedCount = proposedDecisions?.length ?? 0;
 
-  // Fetch leaderboard kill switch setting
+  // Fetch leaderboard kill switch setting (admin/tech only — requires MANAGE_SYSTEM)
+  const isAdminOrTech = permissions.includes('MANAGE_SYSTEM');
   const { data: leaderboardSetting } = useQuery({
     queryKey: ['settings', 'leaderboard_enabled'],
     queryFn: () =>
       apiClient.get<{ key: string; value: string }>('/settings/leaderboard_enabled'),
+    enabled: isAdminOrTech,
     retry: false,
   });
-  // Default to true — leaderboard shows unless explicitly disabled
-  const leaderboardEnabled = leaderboardSetting?.value !== 'false';
+  // Default to true — leaderboard shows unless admin explicitly disabled it
+  const leaderboardEnabled = isAdminOrTech ? leaderboardSetting?.value !== 'false' : true;
 
   // Helper: check if user has a permission
   const can = (perm: string) => permissions.includes(perm);
