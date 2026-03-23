@@ -16,6 +16,16 @@ export class ChatService {
     private readonly pusherService: PusherService,
   ) {}
 
+  // ==================== Team Members (for user picker) ====================
+
+  async getTeamMembers() {
+    return this.prisma.user.findMany({
+      where: { status: 'active' },
+      select: { id: true, name: true, email: true, role: { select: { name: true, code: true } } },
+      orderBy: { name: 'asc' },
+    });
+  }
+
   // ==================== Participant Access ====================
 
   async checkParticipantAccess(

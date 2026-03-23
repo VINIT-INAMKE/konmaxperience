@@ -15,6 +15,7 @@ import { Permission } from '../types/permissions';
 import { PresignDto } from './dto/presign.dto';
 import { PresignAssetDto } from './dto/presign-asset.dto';
 import { PresignGuideDto } from './dto/presign-guide.dto';
+import { PresignChatDto } from './dto/presign-chat.dto';
 
 @Controller('storage')
 export class StorageController {
@@ -77,6 +78,16 @@ export class StorageController {
   async presignGuide(@Body() dto: PresignGuideDto) {
     this.storageService.validatePresignRequest(dto.contentType, dto.fileSize);
     const key = `guide/${Date.now()}-${dto.filename.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+    const presignedUrl = await this.storageService.generatePresignedPutUrl(key, dto.contentType);
+    const publicUrl = this.storageService.getPublicUrl(key);
+    return { presignedUrl, key, publicUrl };
+  }
+
+  @Post('presign-chat')
+  async presignChat(@Body() dto: PresignChatDto) {
+    // Any authenticated user can upload chat attachments (no special permission needed)
+    this.storageService.validatePresignRequest(dto.contentType, dto.fileSize);
+    const key = `chat/${Date.now()}-${dto.filename.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
     const presignedUrl = await this.storageService.generatePresignedPutUrl(key, dto.contentType);
     const publicUrl = this.storageService.getPublicUrl(key);
     return { presignedUrl, key, publicUrl };

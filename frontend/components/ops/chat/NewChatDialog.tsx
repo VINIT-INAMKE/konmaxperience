@@ -60,8 +60,8 @@ export function NewChatDialog({
   const [creating, setCreating] = useState(false);
 
   const { data: users = [] } = useQuery({
-    queryKey: ['users'],
-    queryFn: () => apiClient.get<User[]>('/users'),
+    queryKey: ['chat-team-members'],
+    queryFn: () => apiClient.get<User[]>('/chat/team-members'),
     enabled: open,
   });
 

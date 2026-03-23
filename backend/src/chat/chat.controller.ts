@@ -54,6 +54,20 @@ export class ChatController {
     return this.pusherService.authorizeChannel(dto.socket_id, dto.channel_name);
   }
 
+  // ==================== Team Members (user picker) ====================
+
+  @Get('team-members')
+  async getTeamMembers() {
+    const users = await this.chatService.getTeamMembers();
+    return users.map((u) => ({
+      id: u.id,
+      name: u.name,
+      email: u.email,
+      roleName: u.role.name,
+      roleCode: u.role.code,
+    }));
+  }
+
   // ==================== Conversations ====================
 
   @Post('conversations')

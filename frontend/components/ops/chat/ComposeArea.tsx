@@ -27,7 +27,7 @@ interface ComposeAreaProps {
 }
 
 interface PresignResponse {
-  url: string;
+  presignedUrl: string;
   key: string;
   publicUrl: string;
 }
@@ -143,18 +143,18 @@ export function ComposeArea({
 
       setUploading(true);
       try {
-        // 1. Get presigned URL
+        // 1. Get presigned URL for chat attachment
         const presign = await apiClient.post<PresignResponse>(
-          '/storage/presign',
+          '/storage/presign-chat',
           {
-            fileName: file.name,
+            filename: file.name,
             contentType: file.type,
-            prefix: 'chat',
+            fileSize: file.size,
           },
         );
 
         // 2. Upload to R2
-        await fetch(presign.url, {
+        await fetch(presign.presignedUrl, {
           method: 'PUT',
           body: file,
           headers: { 'Content-Type': file.type },
