@@ -23,6 +23,12 @@ export class IngredientsService {
     });
   }
 
+  async findAllForExport() {
+    return this.prisma.ingredient.findMany({
+      orderBy: { name: 'asc' },
+    });
+  }
+
   async findOne(id: string) {
     const ingredient = await this.prisma.ingredient.findUnique({
       where: { id },

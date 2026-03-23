@@ -198,5 +198,17 @@ export class ExportsModule implements OnModuleInit {
       'leaderboard',
       this.leaderboardExportBuilder,
     );
+    this.exportsService.registerBuilder(
+      'ingredients',
+      this.ingredientsExportBuilder,
+    );
+    this.exportsService.registerBuilder(
+      'vendors',
+      this.vendorsExportBuilder,
+    );
+    this.exportsService.registerBuilder(
+      'recipes',
+      this.recipesExportBuilder,
+    );
   }
 }

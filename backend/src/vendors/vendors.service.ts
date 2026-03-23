@@ -37,6 +37,12 @@ export class VendorsService {
     });
   }
 
+  async findAllForExport() {
+    return this.prisma.vendor.findMany({
+      orderBy: { name: 'asc' },
+    });
+  }
+
   async findOne(id: string) {
     const vendor = await this.prisma.vendor.findUnique({
       where: { id },

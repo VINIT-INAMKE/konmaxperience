@@ -95,6 +95,21 @@ export class RecipesService {
     });
   }
 
+  async findAllForExport() {
+    return this.prisma.recipe.findMany({
+      orderBy: { name: 'asc' },
+      include: {
+        RecipeLines: {
+          include: {
+            ingredient: { select: { name: true, base_unit: true } },
+          },
+          orderBy: { sort_order: 'asc' as const },
+        },
+        creator: { select: { name: true } },
+      },
+    });
+  }
+
   async findOne(id: string) {
     const recipe = await this.prisma.recipe.findUnique({
       where: { id },

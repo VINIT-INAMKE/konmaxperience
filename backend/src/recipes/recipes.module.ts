@@ -6,6 +6,6 @@ import { CostCalculatorService } from './cost-calculator.service';
 @Module({
   controllers: [RecipesController],
   providers: [RecipesService, CostCalculatorService],
-  exports: [CostCalculatorService],
+  exports: [CostCalculatorService, RecipesService],
 })
 export class RecipesModule {}
