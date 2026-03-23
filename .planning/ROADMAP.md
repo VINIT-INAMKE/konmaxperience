@@ -191,3 +191,13 @@ Plans:
 - [x] 21-02-PLAN.md -- Backend API: Conversation CRUD, message CRUD with cursor pagination, read receipts, Pusher triggers, admin oversight endpoints, unit tests
 - [x] 21-03-PLAN.md -- Frontend chat page: split-panel layout, ConversationList with admin tabs, ConversationItem, NewChatDialog, NewGroupDialog, Sidebar nav, Pusher client, types
 - [x] 21-04-PLAN.md -- Frontend messages + real-time: MessageThread, MessageBubble, ComposeArea, file upload, typing indicators, read receipts, GroupMembersSheet, Pusher integration
+
+### Phase 22: Recipe Page Redesign
+
+**Goal:** Replace the sidebar recipe wizard with a dedicated full-page recipe builder — proper BOM table editing, live cost preview, inline approval workflow, and better UX for complex multi-ingredient recipes
+**Requirements**: TBD
+**Depends on:** Phase 20 -- recipes and BOM infrastructure
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 22 to break down)
