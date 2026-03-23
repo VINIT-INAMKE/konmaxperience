@@ -55,17 +55,19 @@ Source: Phase 19 `app/(ops)/admin/import/[type]/page.tsx` patterns
 | Role | Size | Weight | Line Height |
 |------|------|--------|-------------|
 | Body | 14px (text-sm) | 400 (regular) | 1.5 |
-| Label | 12px (text-xs) | 400 (regular) | 1.4 |
+| Label / badge | 12px (text-xs) | 400 (regular) | 1.4 |
 | Heading | 24px (text-2xl) | 700 (bold) | 1.2 |
-| Section header | 18px (text-lg) | 600 (semibold) | 1.3 |
+| Section header / card entity label | 18px (text-lg) | 700 (bold) | 1.3 |
 
 Notes:
 - Column header cells in preview table: 12px, weight 700, uppercase, tracking-wider (established Phase 19 pattern)
-- Card entity labels: 18px, weight 600 (text-lg font-semibold)
 - Result stat numbers: 24px, weight 700 (text-2xl font-bold) — matches Phase 19 commit result cards
-- Status badge text: 10px (text-[10px]) — carries over from Phase 19
+- Status badge text: 12px (text-xs) — badge text merged into label size; no sub-12px text used in this phase
+- All previously font-semibold (600) declarations are replaced with font-bold (700): section headers, card entity labels, recipe header rows in preview table
 
-Source: Phase 19 `[type]/page.tsx` className audit
+Max 4 sizes: 12, 14, 18, 24px. Max 2 weights: 400, 700.
+
+Source: Phase 19 `[type]/page.tsx` className audit; revised per checker dimension 4 constraints
 
 ---
 
@@ -101,6 +103,11 @@ Source: `globals.css` CSS variables, Phase 19 `[type]/page.tsx` semantic color c
 
 Components already installed — do NOT re-install:
 `alert, badge, button, card, checkbox, combobox, dialog, dropdown-menu, input, label, popover, progress, scroll-area, select, separator, sheet, skeleton, sonner, switch, table, tabs, textarea, tooltip`
+
+### Focal Point Declaration
+
+- **Primary focal point on page load:** the upload drop zone. It is the largest interactive element on the page and receives the visual emphasis (prominent dashed border, centered icon + copy).
+- **After parse:** the focal point shifts to the preview table and the "Import N Records" CTA. The table summary row count and the primary button are the most visually salient elements.
 
 ### Import Index Page (restructured — D-12)
 
@@ -142,9 +149,9 @@ dark:border-amber-800 dark:bg-amber-950/20
 - Copy below badge: "Recipes require two sheets (Recipe headers + BOM lines). CSV format is not supported."
 
 **Recipe grouped preview table (D-14):**
-- Recipe header row: `bg-[var(--muted)] font-semibold` with full-width recipe name as leading cell; BOM lines count shown as badge
+- Recipe header row: `bg-[var(--muted)] font-bold` with full-width recipe name as leading cell; BOM lines count shown as badge
 - BOM line rows: indented 24px in the first cell, `text-sm text-muted-foreground` for recipe_name column
-- Expand/collapse toggle per recipe: `<ChevronDown>` / `<ChevronRight>` icon button at start of header row; `size-4`
+- Expand/collapse toggle per recipe: `<ChevronDown>` / `<ChevronRight>` icon button at start of header row; `size-4`; `aria-label="Expand recipe {name}"` when collapsed, `aria-label="Collapse recipe {name}"` when expanded
 - Recipe header row status badge uses same dot indicator pattern, but block icon if any BOM lines have errors
 
 **Update Existing toggle — entity-specific label:**
@@ -158,7 +165,7 @@ dark:border-amber-800 dark:bg-amber-950/20
 **Blocked field error display:**
 - Inline in table: cell shows destructive bottom border (2px, `border-[var(--destructive)]`) + tooltip with exact reason
 - Example tooltip: "Cannot change base_unit — stock records use g" or "Cannot modify approved recipe"
-- Row badge: `<Badge variant="destructive" className="text-[10px]">Blocked</Badge>` (distinct from "Invalid")
+- Row badge: `<Badge variant="destructive" className="text-xs">Blocked</Badge>` (distinct from "Invalid")
 
 **Row status dot legend:**
 - Valid: `bg-green-500` dot
@@ -199,7 +206,7 @@ Source: Lucide icon library (already installed), CONTEXT.md Claude's Discretion 
 | Index tier 4 label | "Menu" |
 | Empty state heading (upload zone) | "Drag and drop your CSV or XLSX file here" |
 | Empty state body (upload zone) | "or click to browse" |
-| Empty state heading (post-parse, 0 rows) | "No data found in file" |
+| Empty state heading (post-parse, 0 rows) | "File parsed — no importable rows found" |
 | Empty state body (post-parse, 0 rows) | "Download the template to see the required column format, then re-upload." |
 | Parse error — wrong file type | "Only CSV and XLSX files are accepted" (for non-recipe types); "Recipes require XLSX format — CSV is not supported" (for recipes) |
 | Parse error — file read failure | "Could not read this file. Make sure it is a valid CSV or XLSX and try again." |
@@ -293,9 +300,9 @@ No third-party blocks are declared for Phase 20. All interactions use existing P
 - Download Template section: render only `.xlsx` button (no `.csv` button).
 - Add a `<Badge variant="outline">XLSX only</Badge>` next to the download button.
 - Preview table: grouped display — recipe header row + collapsible BOM line rows beneath.
-- Recipe header row background: `bg-[var(--muted)]` with `font-semibold`.
+- Recipe header row background: `bg-[var(--muted)]` with `font-bold`.
 - BOM line rows: `pl-6` indentation on status column cell; `text-muted-foreground` for recipe_name column.
-- Expand/collapse: `<button>` with `<ChevronDown>` / `<ChevronRight>` icon; all recipes default to expanded.
+- Expand/collapse: `<button>` with `<ChevronDown>` / `<ChevronRight>` icon; all recipes default to expanded; `aria-label="Expand recipe {name}"` when collapsed, `aria-label="Collapse recipe {name}"` when expanded.
 - Per-recipe "block" state: if recipe header is invalid, all BOM rows show as `opacity-50 pointer-events-none`.
 - Add static info banner: "Recipes import as drafts. Approve them in the app before linking to menu items." (info blue styling: `border-blue-300 bg-blue-50 dark:border-blue-800 dark:bg-blue-950/20`, `text-blue-800 dark:text-blue-200`, `<Info className="size-4 text-blue-600" />`).
 
