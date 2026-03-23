@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: User Guide & Data Management
 status: unknown
-stopped_at: Phase 20 UI-SPEC approved
-last_updated: "2026-03-23T19:58:30.217Z"
+stopped_at: Completed 20-01-PLAN.md
+last_updated: "2026-03-23T20:06:16.737Z"
 progress:
   total_phases: 8
   completed_phases: 7
   total_plans: 28
-  completed_plans: 23
+  completed_plans: 24
 ---
 
 # Project State
@@ -24,7 +24,7 @@ See: .planning/PROJECT.md (updated 2026-03-22)
 ## Current Position
 
 Phase: 20 (operations-import) — EXECUTING
-Plan: 1 of 5
+Plan: 2 of 5
 
 ## Performance Metrics
 
@@ -68,6 +68,7 @@ Plan: 1 of 5
 | Phase 19 P01 | 5min | 2 tasks | 11 files |
 | Phase 19 P02 | 11min | 3 tasks | 16 files |
 | Phase 19 P03 | 8min | 2 tasks | 5 files |
+| Phase 20 P01 | 5min | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -141,6 +142,7 @@ Recent decisions affecting current work:
 - [Phase 19]: Multipart parse uses raw fetch with credentials:include (apiClient forces JSON Content-Type)
 - [Phase 19]: Inline cell edit updates both raw and validated fields to keep commitImport data contract correct
 - [Phase 19]: Local error clearing on inline edit (no re-parse API call) - server re-validates at commit time
+- [Phase 20]: Recipe XLSX parser extracts parseSheet helper; transaction errors re-thrown for full rollback; new types get pass-through validation until Plan 03
 
 ### Roadmap Evolution
 
@@ -160,6 +162,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-23T18:52:35.680Z
-Stopped at: Phase 20 UI-SPEC approved
-Resume file: .planning/phases/20-operations-import/20-UI-SPEC.md
+Last session: 2026-03-23T20:06:16.732Z
+Stopped at: Completed 20-01-PLAN.md
+Resume file: None

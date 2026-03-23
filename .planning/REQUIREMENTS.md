@@ -69,8 +69,8 @@ Requirements for milestone v1.1 — User Guide System & Data Management. Each ma
 
 ### Operations Import
 
-- [ ] **OPSIMPORT-01**: 10 new import types registered in ImportType enum, IMPORT_TYPE_CONFIG, SAMPLE_DATA, INSTRUCTIONS (opening stock, missions, quests, tasks, KPIs, events, recipes, menu categories, menu items)
-- [ ] **OPSIMPORT-02**: Infrastructure fixes — transaction rollback (D-26), userId audit trail (D-27), base_unit protection (D-28), enum enforcement (D-29), 500-row limit (D-30), number sanitization (D-31)
+- [x] **OPSIMPORT-01**: 10 new import types registered in ImportType enum, IMPORT_TYPE_CONFIG, SAMPLE_DATA, INSTRUCTIONS (opening stock, missions, quests, tasks, KPIs, events, recipes, menu categories, menu items)
+- [x] **OPSIMPORT-02**: Infrastructure fixes — transaction rollback (D-26), userId audit trail (D-27), base_unit protection (D-28), enum enforcement (D-29), 500-row limit (D-30), number sanitization (D-31)
 - [ ] **OPSIMPORT-03**: Opening stock import with inventoryService.adjust(), unit conversion validation, additive behavior (no update toggle), SHA-256 re-import detection
 - [ ] **OPSIMPORT-04**: Mission, KPI, event validators with enum enforcement (D-11), FK resolution (D-04), duplicate detection, and blocked field checks (D-02)
 - [ ] **OPSIMPORT-05**: Quest and task validators with dependency guards — quest requires mission, task blocks import into non-planned quests (D-24), created_by from JWT (D-25)
