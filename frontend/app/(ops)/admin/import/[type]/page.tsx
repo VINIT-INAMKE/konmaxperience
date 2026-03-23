@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, Fragment } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -10,9 +10,21 @@ import {
   ArrowLeft,
   X,
   AlertTriangle,
+  Info,
   Package,
   Store,
   DollarSign,
+  Warehouse,
+  Target,
+  Flag,
+  CheckSquare,
+  TrendingUp,
+  Calendar,
+  ChefHat,
+  LayoutGrid,
+  UtensilsCrossed,
+  ChevronDown,
+  ChevronRight,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -41,6 +53,7 @@ import {
   type ImportType,
   type ImportRow,
   type ParseResult,
+  type RecipeParseResult,
   type CommitResult,
 } from '@/lib/types/imports';
 
@@ -50,12 +63,36 @@ const ICON_MAP: Record<ImportType, React.ReactNode> = {
   ingredients: <Package className="size-6 text-muted-foreground" />,
   vendors: <Store className="size-6 text-muted-foreground" />,
   vendor_pricing: <DollarSign className="size-6 text-muted-foreground" />,
+  opening_stock: <Warehouse className="size-6 text-muted-foreground" />,
+  missions: <Target className="size-6 text-muted-foreground" />,
+  quests: <Flag className="size-6 text-muted-foreground" />,
+  tasks: <CheckSquare className="size-6 text-muted-foreground" />,
+  kpis: <TrendingUp className="size-6 text-muted-foreground" />,
+  events: <Calendar className="size-6 text-muted-foreground" />,
+  recipes: <ChefHat className="size-6 text-muted-foreground" />,
+  menu_categories: <LayoutGrid className="size-6 text-muted-foreground" />,
+  menu_items: <UtensilsCrossed className="size-6 text-muted-foreground" />,
 };
 
 function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function getUpdateLabel(type: ImportType): string {
+  switch (type) {
+    case 'recipes':
+      return 'Replace BOM lines for matching draft recipes. Approved recipes are never modified.';
+    case 'quests':
+      return 'Update matching quests. Quests with status other than "planned" cannot be modified.';
+    case 'tasks':
+      return 'Update matching tasks. Completed tasks (status = "done") cannot be modified.';
+    case 'events':
+      return 'Update matching events. Capacity cannot be reduced below existing bookings.';
+    default:
+      return 'Update existing records. Matching by name \u2014 existing records will be overwritten.';
+  }
 }
 
 export default function ImportTypePage() {
@@ -82,6 +119,7 @@ export default function ImportTypePage() {
   const [updateExisting, setUpdateExisting] = useState(false);
   const [commitResult, setCommitResult] = useState<CommitResult | null>(null);
   const [isCommitting, setIsCommitting] = useState(false);
+  const [expandedRecipes, setExpandedRecipes] = useState<Set<string>>(new Set());
 
   // Redirect if invalid type
   if (!isValidType) {
@@ -90,6 +128,9 @@ export default function ImportTypePage() {
   }
 
   const config = IMPORT_TYPE_CONFIG[importType];
+
+  // Cast parseResult for recipe type
+  const recipeParseResult = importType === 'recipes' ? (parseResult as RecipeParseResult | null) : null;
 
   // Compute importable row count
   const importableCount = rows.filter(
@@ -100,6 +141,11 @@ export default function ImportTypePage() {
 
   // ── File validation ──
   const isValidFile = (f: File): boolean => {
+    // Recipe imports require XLSX only
+    if (importType === 'recipes') {
+      const ext = f.name.toLowerCase().slice(f.name.lastIndexOf('.'));
+      return ext === '.xlsx' || f.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+    }
     const validTypes = [
       'text/csv',
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -107,6 +153,13 @@ export default function ImportTypePage() {
     const validExtensions = ['.csv', '.xlsx'];
     const ext = f.name.toLowerCase().slice(f.name.lastIndexOf('.'));
     return validTypes.includes(f.type) || validExtensions.includes(ext);
+  };
+
+  const getFileTypeError = (): string => {
+    if (importType === 'recipes') {
+      return 'Recipes require XLSX format \u2014 CSV is not supported';
+    }
+    return 'Only CSV and XLSX files are accepted';
   };
 
   // ── Drag-drop handlers ──
@@ -133,7 +186,7 @@ export default function ImportTypePage() {
       if (!droppedFile) return;
 
       if (!isValidFile(droppedFile)) {
-        setFileError('Only CSV and XLSX files are accepted');
+        setFileError(getFileTypeError());
         return;
       }
 
@@ -142,7 +195,8 @@ export default function ImportTypePage() {
       setRows([]);
       setCommitResult(null);
     },
-    [],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [importType],
   );
 
   const handleFileSelect = useCallback(
@@ -152,7 +206,7 @@ export default function ImportTypePage() {
       if (!selectedFile) return;
 
       if (!isValidFile(selectedFile)) {
-        setFileError('Only CSV and XLSX files are accepted');
+        setFileError(getFileTypeError());
         return;
       }
 
@@ -161,7 +215,8 @@ export default function ImportTypePage() {
       setRows([]);
       setCommitResult(null);
     },
-    [],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [importType],
   );
 
   const removeFile = useCallback(() => {
@@ -209,6 +264,11 @@ export default function ImportTypePage() {
       setParseResult(result);
       // Deep copy rows for inline editing
       setRows(JSON.parse(JSON.stringify(result.rows)));
+
+      // For recipes, expand all recipes by default
+      if (importType === 'recipes' && result.rows) {
+        setExpandedRecipes(new Set(result.rows.map(r => ((r.raw.name || '') as string).trim().toLowerCase())));
+      }
     } catch {
       toast.error(
         'Could not read this file. Make sure it is a valid CSV or XLSX and try again.',
@@ -279,11 +339,17 @@ export default function ImportTypePage() {
     setIsCommitting(true);
 
     try {
-      const result = await apiClient.post<CommitResult>('/imports/commit', {
+      // Build commit body — include bomRows for recipes
+      const commitBody: Record<string, unknown> = {
         importType,
         rows,
         updateExisting,
-      });
+      };
+      if (importType === 'recipes' && recipeParseResult?.bomRows) {
+        commitBody.bomRows = recipeParseResult.bomRows;
+      }
+
+      const result = await apiClient.post<CommitResult>('/imports/commit', commitBody);
 
       setCommitResult(result);
 
@@ -300,10 +366,10 @@ export default function ImportTypePage() {
     } finally {
       setIsCommitting(false);
     }
-  }, [importType, rows, updateExisting, importableCount]);
+  }, [importType, rows, updateExisting, importableCount, recipeParseResult]);
 
   // ── Row status helpers ──
-  const getStatusBadge = (row: ImportRow) => {
+  const renderStatusBadge = (row: ImportRow) => {
     switch (row.status) {
       case 'valid':
         return (
@@ -311,20 +377,37 @@ export default function ImportTypePage() {
         );
       case 'invalid':
         return (
-          <span className="inline-block size-2.5 rounded-full bg-red-500" />
+          <>
+            <span className="inline-block size-2.5 rounded-full bg-red-500 mr-2" />
+            <Badge variant="destructive" className="text-xs">
+              Invalid
+            </Badge>
+          </>
         );
       case 'duplicate':
         return (
-          <span className="inline-block size-2.5 rounded-full bg-amber-500" />
+          <>
+            <span className="inline-block size-2.5 rounded-full bg-amber-500 mr-2" />
+            <Badge
+              variant={updateExisting ? 'secondary' : 'outline'}
+              className="text-xs whitespace-nowrap"
+            >
+              {updateExisting ? 'Duplicate \u2014 will update' : 'Duplicate \u2014 will skip'}
+            </Badge>
+          </>
+        );
+      case 'blocked':
+        return (
+          <>
+            <span className="inline-block size-2.5 rounded-full bg-red-500 mr-2" />
+            <Badge variant="destructive" className="text-xs">
+              Blocked
+            </Badge>
+          </>
         );
       default:
         return null;
     }
-  };
-
-  const getDuplicateLabel = (row: ImportRow) => {
-    if (row.status !== 'duplicate') return null;
-    return updateExisting ? 'Duplicate — will update' : 'Duplicate — will skip';
   };
 
   // ── Error helpers ──
@@ -337,6 +420,12 @@ export default function ImportTypePage() {
   const validCount = rows.filter((r) => r.status === 'valid').length;
   const invalidCount = rows.filter((r) => r.status === 'invalid').length;
   const duplicateCount = rows.filter((r) => r.status === 'duplicate').length;
+  const blockedCount = rows.filter((r) => r.status === 'blocked').length;
+
+  // ── Template download handler for XLSX ──
+  const handleDownloadXlsxTemplate = () => {
+    window.open(`${API_BASE_URL}/imports/template/${importType}`, '_blank');
+  };
 
   return (
     <div className="space-y-6">
@@ -360,26 +449,63 @@ export default function ImportTypePage() {
         </div>
       </div>
 
+      {/* Stock additive warning banner (D-23) */}
+      {importType === 'opening_stock' && (
+        <div className="flex items-start gap-3 rounded-lg border border-amber-300 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950/20">
+          <AlertTriangle className="size-4 text-amber-600 shrink-0 mt-0.5" />
+          <p className="text-sm text-amber-800 dark:text-amber-200">
+            Stock imports are ADDITIVE. Each row adds to current inventory. If you import this file twice, quantities will be doubled.
+          </p>
+        </div>
+      )}
+
+      {/* Recipe draft notice info banner */}
+      {importType === 'recipes' && (
+        <div className="flex items-start gap-3 rounded-lg border border-blue-300 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-950/20">
+          <Info className="size-4 text-blue-600 shrink-0 mt-0.5" />
+          <p className="text-sm text-blue-800 dark:text-blue-200">
+            Recipes import as drafts. Approve them in the app before linking to menu items.
+          </p>
+        </div>
+      )}
+
       {/* Download Template section */}
-      <div className="flex items-center gap-3">
-        <a
-          href={`${API_BASE_URL}/imports/template/${importType}`}
-          download
-        >
-          <Button variant="outline" size="sm">
-            <FileDown className="size-4 mr-1.5" />
-            Download Template (.xlsx)
-          </Button>
-        </a>
-        <a
-          href={`${API_BASE_URL}/imports/template/${importType}/csv`}
-          download
-        >
-          <Button variant="outline" size="sm">
-            <FileDown className="size-4 mr-1.5" />
-            Download Template (.csv)
-          </Button>
-        </a>
+      <div className="flex flex-col gap-2">
+        {importType === 'recipes' ? (
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={handleDownloadXlsxTemplate}>
+              <FileDown className="size-4 mr-2" />
+              Download Template (.xlsx)
+            </Button>
+            <Badge variant="outline">XLSX only</Badge>
+          </div>
+        ) : (
+          <div className="flex items-center gap-3">
+            <a
+              href={`${API_BASE_URL}/imports/template/${importType}`}
+              download
+            >
+              <Button variant="outline" size="sm">
+                <FileDown className="size-4 mr-1.5" />
+                Download Template (.xlsx)
+              </Button>
+            </a>
+            <a
+              href={`${API_BASE_URL}/imports/template/${importType}/csv`}
+              download
+            >
+              <Button variant="outline" size="sm">
+                <FileDown className="size-4 mr-1.5" />
+                Download Template (.csv)
+              </Button>
+            </a>
+          </div>
+        )}
+        {importType === 'recipes' && (
+          <p className="text-xs text-muted-foreground">
+            Recipes require two sheets (Recipe headers + BOM lines). CSV format is not supported.
+          </p>
+        )}
       </div>
 
       {/* Upload Zone */}
@@ -420,7 +546,7 @@ export default function ImportTypePage() {
           <input
             ref={fileInputRef}
             type="file"
-            accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            accept={importType === 'recipes' ? '.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' : '.csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}
             className="hidden"
             onChange={handleFileSelect}
           />
@@ -465,19 +591,26 @@ export default function ImportTypePage() {
         </div>
       )}
 
-      {/* Update existing records toggle */}
-      {parseResult && !commitResult && (
-        <div className="flex items-center gap-3">
+      {/* Stock re-import warning banner (D-09, D-22) */}
+      {parseResult?.warning && (
+        <div className="flex items-start gap-3 rounded-lg border border-amber-300 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950/20">
+          <AlertTriangle className="size-4 text-amber-600 shrink-0 mt-0.5" />
+          <p className="text-sm text-amber-800 dark:text-amber-200">
+            {parseResult.warning}
+          </p>
+        </div>
+      )}
+
+      {/* Update existing records toggle — hidden for opening_stock */}
+      {parseResult && !commitResult && importType !== 'opening_stock' && (
+        <div className="flex items-center gap-2">
           <Switch
             checked={updateExisting}
             onCheckedChange={setUpdateExisting}
           />
-          <div>
-            <p className="text-sm font-medium">Update existing records</p>
-            <p className="text-xs text-muted-foreground">
-              Matching by name — existing records will be overwritten
-            </p>
-          </div>
+          <label className="text-sm">
+            {getUpdateLabel(importType)}
+          </label>
         </div>
       )}
 
@@ -498,105 +631,182 @@ export default function ImportTypePage() {
               <strong>{duplicateCount}</strong> duplicates
             </span>
           )}
+          {blockedCount > 0 && (
+            <span className="text-red-600">
+              <strong>{blockedCount}</strong> blocked
+            </span>
+          )}
         </div>
       )}
 
-      {/* Preview Table */}
-      {parseResult && rows.length > 0 && (
+      {/* Recipe grouped preview table (D-14) */}
+      {importType === 'recipes' && recipeParseResult && rows.length > 0 ? (
         <TooltipProvider delay={200}>
-          <div className="overflow-x-auto rounded-lg border">
-            <Table>
-              <TableHeader className="sticky top-0 z-10 bg-[var(--background)]">
-                <TableRow>
-                  <TableHead className="text-xs font-bold uppercase tracking-wider w-[80px]">
-                    Status
-                  </TableHead>
-                  {parseResult.columns.map((col) => (
-                    <TableHead
-                      key={col}
-                      className="text-xs font-bold uppercase tracking-wider"
-                    >
-                      {col}
-                    </TableHead>
-                  ))}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {rows.map((row, idx) => (
-                  <TableRow key={row.rowIndex}>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        {getStatusBadge(row)}
-                        {row.status === 'duplicate' && (
-                          <Badge
-                            variant={
-                              updateExisting ? 'secondary' : 'outline'
-                            }
-                            className="text-[10px] whitespace-nowrap"
-                          >
-                            {getDuplicateLabel(row)}
-                          </Badge>
-                        )}
-                        {row.status === 'invalid' && (
-                          <Badge
-                            variant="destructive"
-                            className="text-[10px]"
-                          >
-                            Invalid
-                          </Badge>
-                        )}
-                      </div>
-                    </TableCell>
-                    {parseResult.columns.map((col) => {
-                      const cellError = getCellError(row, col);
-                      const isEditing =
-                        editingCell?.rowIdx === idx &&
-                        editingCell?.field === col;
+          <div>
+            <p className="text-sm text-muted-foreground mb-3">
+              {recipeParseResult.rows.length} recipes, {recipeParseResult.bomRows?.length || 0} BOM lines
+            </p>
 
-                      return (
-                        <TableCell
-                          key={col}
-                          className={`cursor-pointer ${
-                            cellError
-                              ? 'border-b-2 border-[var(--destructive)]'
-                              : ''
-                          }`}
-                          onClick={() => {
-                            if (!isEditing) startEditing(idx, col);
-                          }}
-                        >
-                          {isEditing ? (
-                            <Input
-                              value={editValue}
-                              onChange={(e) => setEditValue(e.target.value)}
-                              onBlur={commitEdit}
-                              onKeyDown={handleEditKeyDown}
-                              className="h-7 text-sm"
-                              autoFocus
-                            />
-                          ) : cellError ? (
-                            <Tooltip>
-                              <TooltipTrigger className="text-left w-full">
-                                <span className="text-destructive">
-                                  {row.raw[col] || '(empty)'}
-                                </span>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                {cellError}
-                              </TooltipContent>
-                            </Tooltip>
-                          ) : (
-                            <span>{row.raw[col] || ''}</span>
-                          )}
-                        </TableCell>
-                      );
-                    })}
+            <div className="overflow-x-auto rounded-lg border">
+              <Table>
+                <TableHeader className="sticky top-0 z-10 bg-[var(--background)]">
+                  <TableRow>
+                    <TableHead className="w-8"></TableHead>
+                    <TableHead className="text-xs font-bold uppercase tracking-wider">Status</TableHead>
+                    {recipeParseResult.columns.map(col => (
+                      <TableHead key={col} className="text-xs font-bold uppercase tracking-wider">{col}</TableHead>
+                    ))}
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {rows.map((headerRow, idx) => {
+                    const recipeName = ((headerRow.raw.name || '') as string).trim().toLowerCase();
+                    const isExpanded = expandedRecipes.has(recipeName);
+                    const bomLines = (recipeParseResult.bomRows || []).filter(
+                      b => ((b.raw.recipe_name || '') as string).trim().toLowerCase() === recipeName
+                    );
+
+                    return (
+                      <Fragment key={idx}>
+                        {/* Recipe header row */}
+                        <TableRow className="bg-[var(--muted)] font-bold">
+                          <TableCell>
+                            <button
+                              onClick={() => {
+                                const next = new Set(expandedRecipes);
+                                isExpanded ? next.delete(recipeName) : next.add(recipeName);
+                                setExpandedRecipes(next);
+                              }}
+                              aria-label={isExpanded ? `Collapse recipe ${headerRow.raw.name}` : `Expand recipe ${headerRow.raw.name}`}
+                            >
+                              {isExpanded ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
+                            </button>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1">
+                              {renderStatusBadge(headerRow)}
+                              {bomLines.length > 0 && (
+                                <Badge variant="outline" className="ml-2 text-xs">{bomLines.length} lines</Badge>
+                              )}
+                            </div>
+                          </TableCell>
+                          {recipeParseResult.columns.map(col => (
+                            <TableCell key={col}>{String(headerRow.raw[col] || '')}</TableCell>
+                          ))}
+                        </TableRow>
+                        {/* BOM line rows (collapsible) */}
+                        {isExpanded && bomLines.map((bomRow, bomIdx) => {
+                          const isParentInvalid = headerRow.status === 'invalid' || headerRow.status === 'blocked';
+                          return (
+                            <TableRow
+                              key={`bom-${idx}-${bomIdx}`}
+                              className={isParentInvalid ? 'opacity-50 pointer-events-none' : ''}
+                            >
+                              <TableCell></TableCell>
+                              <TableCell className="pl-6">
+                                {renderStatusBadge(bomRow)}
+                              </TableCell>
+                              <TableCell className="text-muted-foreground">{String(bomRow.raw.recipe_name || '')}</TableCell>
+                              <TableCell>{String(bomRow.raw.input_type || '')}</TableCell>
+                              <TableCell>{String(bomRow.raw.ingredient_name || '')}</TableCell>
+                              <TableCell>{String(bomRow.raw.quantity || '')}</TableCell>
+                              <TableCell>{String(bomRow.raw.unit || '')}</TableCell>
+                              <TableCell>{String(bomRow.raw.prep_notes || '')}</TableCell>
+                              {/* Fill remaining recipe header columns with empty cells */}
+                              {recipeParseResult.columns.slice(6).map((col, i) => (
+                                <TableCell key={i}></TableCell>
+                              ))}
+                            </TableRow>
+                          );
+                        })}
+                      </Fragment>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
           </div>
         </TooltipProvider>
+      ) : (
+        /* Standard Preview Table */
+        parseResult && rows.length > 0 && (
+          <TooltipProvider delay={200}>
+            <div className="overflow-x-auto rounded-lg border">
+              <Table>
+                <TableHeader className="sticky top-0 z-10 bg-[var(--background)]">
+                  <TableRow>
+                    <TableHead className="text-xs font-bold uppercase tracking-wider w-[80px]">
+                      Status
+                    </TableHead>
+                    {parseResult.columns.map((col) => (
+                      <TableHead
+                        key={col}
+                        className="text-xs font-bold uppercase tracking-wider"
+                      >
+                        {col}
+                      </TableHead>
+                    ))}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {rows.map((row, idx) => (
+                    <TableRow key={row.rowIndex}>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          {renderStatusBadge(row)}
+                        </div>
+                      </TableCell>
+                      {parseResult.columns.map((col) => {
+                        const cellError = getCellError(row, col);
+                        const isEditing =
+                          editingCell?.rowIdx === idx &&
+                          editingCell?.field === col;
+
+                        return (
+                          <TableCell
+                            key={col}
+                            className={`cursor-pointer ${
+                              cellError
+                                ? 'border-b-2 border-[var(--destructive)]'
+                                : ''
+                            }`}
+                            onClick={() => {
+                              if (!isEditing) startEditing(idx, col);
+                            }}
+                          >
+                            {isEditing ? (
+                              <Input
+                                value={editValue}
+                                onChange={(e) => setEditValue(e.target.value)}
+                                onBlur={commitEdit}
+                                onKeyDown={handleEditKeyDown}
+                                className="h-7 text-sm"
+                                autoFocus
+                              />
+                            ) : cellError ? (
+                              <Tooltip>
+                                <TooltipTrigger className="text-left w-full">
+                                  <span className="text-destructive">
+                                    {row.raw[col] || '(empty)'}
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  {cellError}
+                                </TooltipContent>
+                              </Tooltip>
+                            ) : (
+                              <span>{row.raw[col] || ''}</span>
+                            )}
+                          </TableCell>
+                        );
+                      })}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </TooltipProvider>
+        )
       )}
 
       {/* Import N Records button */}
@@ -661,10 +871,9 @@ export default function ImportTypePage() {
       {/* Empty state when parse returns 0 rows */}
       {parseResult && rows.length === 0 && (
         <div className="text-center py-8">
-          <h3 className="text-lg font-semibold">No imports yet</h3>
+          <h3 className="text-lg font-bold">File parsed &mdash; no importable rows found</h3>
           <p className="text-sm text-muted-foreground mt-1">
-            Upload a CSV or XLSX file above to get started. Download the
-            template to see the required column format.
+            Download the template to see the required column format, then re-upload.
           </p>
         </div>
       )}
