@@ -41,6 +41,7 @@ import {
   BookOpen,
   ChevronDown,
   Download,
+  Upload,
   Megaphone,
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
@@ -378,6 +379,7 @@ export function Sidebar({ onNavigate }: SidebarProps = {}) {
     ...(can('MANAGE_SYSTEM')
       ? [
           { label: 'Exports', href: '/admin/exports', icon: <Download className="size-4" /> },
+          { label: 'Import', href: '/admin/import', icon: <Upload className="size-4" /> },
           { label: 'Notices', href: '/admin/notices', icon: <Megaphone className="size-4" /> },
         ]
       : []),
