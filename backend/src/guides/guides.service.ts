@@ -4,7 +4,7 @@ import { CreateSectionDto } from './dto/create-section.dto';
 import { UpdateSectionDto } from './dto/update-section.dto';
 import { CreatePageDto } from './dto/create-page.dto';
 import { UpdatePageDto } from './dto/update-page.dto';
-import DOMPurify from 'isomorphic-dompurify';
+import sanitizeHtml from 'sanitize-html';
 
 export interface SearchResult {
   pageId: string;
@@ -61,15 +61,17 @@ export class GuidesService {
 
   // --- Content sanitization (D-14, EDIT-04) ---
   sanitizeContent(content: string): string {
-    return DOMPurify.sanitize(content, {
-      ALLOWED_TAGS: [
+    return sanitizeHtml(content, {
+      allowedTags: [
         'p', 'br', 'strong', 'em', 'u', 's', 'a', 'ul', 'ol', 'li',
         'h1', 'h2', 'h3', 'h4', 'blockquote', 'img', 'figure', 'figcaption',
         'mark',
       ],
-      ALLOWED_ATTR: ['href', 'src', 'alt', 'target', 'rel', 'class', 'data-type'],
-      FORBID_TAGS: ['script', 'iframe', 'object', 'embed'],
-      FORBID_ATTR: ['onerror', 'onload', 'onclick'],
+      allowedAttributes: {
+        a: ['href', 'target', 'rel'],
+        img: ['src', 'alt', 'class'],
+        '*': ['class', 'data-type'],
+      },
     });
   }
 

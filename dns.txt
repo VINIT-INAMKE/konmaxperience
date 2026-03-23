@@ -1,0 +1,28 @@
+	Type
+Name
+Data
+TTL
+Delete
+Edit
+
+a	@	216.198.79.1	600 seconds		
+
+ns	@	ns23.domaincontrol.com.	1 Hour	
+Can't delete
+Can't edit
+
+ns	@	ns24.domaincontrol.com.	1 Hour	
+Can't delete
+Can't edit
+
+cname	app	6fee4199a433c3d5.vercel-dns-017.com.	1 Hour		
+
+cname	backend	98c5e1e1c2deec95.vercel-dns-017.com.	1 Hour		
+
+cname	www	946d0c6e54e7c0a9.vercel-dns-017.com.	1 Hour		
+
+cname	_domainconnect	_domainconnect.gd.domaincontrol.com.	1 Hour		
+
+soa	@	Primary nameserver: ns23.domaincontrol.com.	1 Hour		
+
+txt	_dmarc	v=DMARC1; p=quarantine; adkim=r; aspf=r; rua=mailto:dmarc_rua@onsecureserver.net;	1 Hour		
