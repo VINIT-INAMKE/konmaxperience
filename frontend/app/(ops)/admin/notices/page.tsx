@@ -104,8 +104,8 @@ export default function AdminNoticesPage() {
         </div>
 
         <Button
-          onClick={() => broadcast.mutate()}
-          disabled={!canSend || broadcast.isPending}
+          onClick={() => { if (!broadcast.isPending && !sent) broadcast.mutate(); }}
+          disabled={!canSend || broadcast.isPending || sent}
           className="w-full h-11"
         >
           {broadcast.isPending ? (
