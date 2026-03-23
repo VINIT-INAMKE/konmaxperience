@@ -209,6 +209,11 @@ export function Sidebar({ onNavigate }: SidebarProps = {}) {
       href: '/guide',
       icon: <BookOpen className="size-4" />,
     },
+    {
+      label: 'Chat',
+      href: '/chat',
+      icon: <MessageSquare className="size-4" />,
+    },
   ];
 
   // ── Work (permission-filtered) ──
