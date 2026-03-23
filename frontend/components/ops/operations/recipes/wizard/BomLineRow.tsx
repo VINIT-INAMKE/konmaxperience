@@ -49,12 +49,14 @@ export function BomLineRow({ line, index, onChange, onRemove }: BomLineRowProps)
     queryKey: ['ingredients'],
     queryFn: () => apiClient.get<Ingredient[]>('/ingredients'),
     enabled: line.input_type === 'ingredient',
+    staleTime: 5 * 60 * 1000, // 5 min — shared across all BOM rows, prevents parallel fetches
   });
 
   const { data: recipes = [] } = useQuery({
     queryKey: ['recipes'],
     queryFn: () => apiClient.get<Recipe[]>('/recipes'),
     enabled: line.input_type === 'recipe',
+    staleTime: 5 * 60 * 1000,
   });
 
   const { data: compatibleUnits } = useQuery({
@@ -62,6 +64,7 @@ export function BomLineRow({ line, index, onChange, onRemove }: BomLineRowProps)
     queryFn: () =>
       apiClient.get<CompatibleUnitsResponse>(`/ingredients/${line.item_id}/compatible-units`),
     enabled: line.input_type === 'ingredient' && !!line.item_id,
+    staleTime: 5 * 60 * 1000, // unit conversions don't change often
   });
 
   const unitOptions =
