@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: User Guide & Data Management
 status: unknown
-stopped_at: Phase 21 UI-SPEC approved
-last_updated: "2026-03-23T13:01:39.238Z"
+stopped_at: Completed 21-01-PLAN.md
+last_updated: "2026-03-23T13:34:10.135Z"
 progress:
   total_phases: 8
   completed_phases: 5
-  total_plans: 16
-  completed_plans: 16
+  total_plans: 20
+  completed_plans: 17
 ---
 
 # Project State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-22)
 
 **Core value:** Every piece of work must be evidence-backed, approved, and validated before it counts -- turning real execution into measurable readiness and progress.
-**Current focus:** Phase 18 — data-export
+**Current focus:** Phase 21 — in-app-chat
 
 ## Current Position
 
-Phase: 19
-Plan: Not started
+Phase: 21 (in-app-chat) — EXECUTING
+Plan: 2 of 4
 
 ## Performance Metrics
 
@@ -61,6 +61,7 @@ Plan: Not started
 | Phase 18 P02 | 6min | 2 tasks | 5 files |
 | Phase 18 P04 | 9min | 2 tasks | 10 files |
 | Phase 18 P07 | 23min | 3 tasks | 22 files |
+| Phase 21 P01 | 6min | 2 tasks | 14 files |
 
 ## Accumulated Context
 
@@ -113,6 +114,8 @@ Recent decisions affecting current work:
 - [Phase 18]: TooltipProvider delay prop (not Tooltip delay) for base-ui tooltip component API compatibility
 - [Phase 18]: KDS export button placed in fullscreen top bar (no filter bar available)
 - [Phase 18]: MANAGE_SYSTEM permission guard for Exports sidebar nav item
+- [Phase 21]: PusherService uses graceful fallback (null pusher) when env vars missing, allowing app to start without Pusher for dev
+- [Phase 21]: Admin/tech bypass checks role BEFORE participant membership in chat auth endpoint (per D-15, D-16)
 
 ### Roadmap Evolution
 
@@ -132,6 +135,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-23T13:01:39.228Z
-Stopped at: Phase 21 UI-SPEC approved
-Resume file: .planning/phases/21-in-app-chat/21-UI-SPEC.md
+Last session: 2026-03-23T13:34:10.126Z
+Stopped at: Completed 21-01-PLAN.md
+Resume file: None

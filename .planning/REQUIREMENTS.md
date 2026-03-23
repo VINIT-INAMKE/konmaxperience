@@ -53,15 +53,15 @@ Requirements for milestone v1.1 — User Guide System & Data Management. Each ma
 
 ### In-App Chat
 
-- [ ] **CHAT-01**: Prisma schema with Conversation, Message, ConversationParticipant models and migration applied
-- [ ] **CHAT-02**: PusherService singleton in NestJS with trigger() and authorizeChannel() methods, private channel auth endpoint with admin bypass
+- [x] **CHAT-01**: Prisma schema with Conversation, Message, ConversationParticipant models and migration applied
+- [x] **CHAT-02**: PusherService singleton in NestJS with trigger() and authorizeChannel() methods, private channel auth endpoint with admin bypass
 - [ ] **CHAT-03**: Dedicated /chat page with split-panel layout (conversation list left, message thread right) per Slack/Teams style
 - [ ] **CHAT-04**: "Chat" nav item in ops sidebar for all authenticated users (no badge/indicator)
 - [ ] **CHAT-05**: 1-1 chats: any user can start a chat with any active user; duplicate detection returns existing conversation
 - [ ] **CHAT-06**: Group chats: only FOUNDER_ADMIN can create groups with name and selected members; admin can add/remove members
 - [ ] **CHAT-07**: Messages support text + images + file attachments via R2 presign pattern; messages are permanent (no edit/delete)
 - [ ] **CHAT-08**: Admin/tech "All Conversations" tab to view any chat read-only; policy notice banner displayed in thread
-- [ ] **CHAT-09**: Real-time message delivery via Pusher.js private channels — messages appear instantly without page refresh
+- [x] **CHAT-09**: Real-time message delivery via Pusher.js private channels — messages appear instantly without page refresh
 - [ ] **CHAT-10**: Typing indicators via Pusher client events (no server round-trip) and read receipts via last_read_at with Pusher broadcast
 
 ## Future Requirements
