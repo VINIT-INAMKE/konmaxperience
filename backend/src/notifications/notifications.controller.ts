@@ -12,7 +12,7 @@ import {
 import { IsString, IsNotEmpty, IsOptional, MaxLength } from 'class-validator';
 import { NotificationsService } from './notifications.service';
 import { NotificationQueryDto } from './dto/notification-query.dto';
-import { RequiresPermission } from '../common/decorators/requires-permission.decorator';
+import { RequiresPermission } from '../common/decorators/permissions.decorator';
 import { Permission } from '../types/permissions';
 
 class BroadcastNoticeDto {
