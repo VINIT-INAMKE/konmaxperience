@@ -175,7 +175,17 @@ export function WasteLogForm({ onSuccess }: WasteLogFormProps) {
               disabled={mutation.isPending}
             >
               <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select item" />
+                <SelectValue placeholder="Select item">
+                  {(value: string) => {
+                    if (!value) return 'Select item';
+                    if (wasteType === 'ingredient') {
+                      const ing = ingredients?.find(i => i.id === value);
+                      return ing ? `${ing.name} (${ing.base_unit})` : 'Select item';
+                    }
+                    const batch = prepBatches?.find(b => b.id === value);
+                    return batch ? `${batch.recipe?.name ?? 'Batch'} \u2014 ${batch.quantity_remaining} ${batch.unit} remaining` : 'Select item';
+                  }}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {wasteType === 'ingredient'
@@ -266,7 +276,12 @@ export function WasteLogForm({ onSuccess }: WasteLogFormProps) {
               disabled={mutation.isPending}
             >
               <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select zone" />
+                <SelectValue placeholder="Select zone">
+                  {(value: string) => {
+                    if (!value) return 'Select zone';
+                    return zones?.find(z => z.id === value)?.name ?? 'Select zone';
+                  }}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {zones?.map((zone) => (

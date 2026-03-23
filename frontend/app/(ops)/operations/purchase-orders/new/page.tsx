@@ -171,7 +171,12 @@ export default function NewPurchaseOrderPage() {
                 onValueChange={(v) => setVendorId(v ?? '')}
               >
                 <SelectTrigger className="w-full h-9 text-sm">
-                  <SelectValue placeholder="Choose a vendor" />
+                  <SelectValue placeholder="Choose a vendor">
+                    {(value: string) => {
+                      if (!value) return 'Choose a vendor';
+                      return vendors.find(v => v.id === value)?.name ?? 'Choose a vendor';
+                    }}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {activeVendors.map((v) => (
@@ -190,7 +195,12 @@ export default function NewPurchaseOrderPage() {
                 onValueChange={(v) => setZoneId(v ?? '')}
               >
                 <SelectTrigger className="w-full h-9 text-sm">
-                  <SelectValue placeholder="Choose a zone" />
+                  <SelectValue placeholder="Choose a zone">
+                    {(value: string) => {
+                      if (!value) return 'Choose a zone';
+                      return zones.find(z => z.id === value)?.name ?? 'Choose a zone';
+                    }}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {zones.map((z) => (

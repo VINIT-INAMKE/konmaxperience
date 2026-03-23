@@ -141,7 +141,12 @@ export function DecisionForm({ open, onOpenChange, onCreated }: DecisionFormProp
               disabled={isSubmitting}
             >
               <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select mission (optional)" />
+                <SelectValue placeholder="Select mission (optional)">
+                  {(value: string) => {
+                    if (!value) return 'Select mission (optional)';
+                    return missions.find(m => m.id === value)?.title ?? 'Select mission (optional)';
+                  }}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {missions.map((mission) => (

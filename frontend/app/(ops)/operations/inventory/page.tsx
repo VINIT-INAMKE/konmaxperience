@@ -112,7 +112,12 @@ export default function InventoryPage() {
             onValueChange={(v) => setZoneFilter(v ?? 'all')}
           >
             <SelectTrigger className="w-40">
-              <SelectValue placeholder="Zone" />
+              <SelectValue placeholder="Zone">
+                {(value: string) => {
+                  if (!value || value === 'all') return 'All Zones';
+                  return zones?.find(z => z.id === value)?.name ?? 'All Zones';
+                }}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Zones</SelectItem>

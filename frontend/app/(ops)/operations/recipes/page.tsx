@@ -134,7 +134,12 @@ export default function RecipesPage() {
         <div className="flex items-center gap-3 flex-wrap">
           <Select value={brandFilter} onValueChange={(v) => setBrandFilter(v ?? 'all')}>
             <SelectTrigger className="w-44">
-              <SelectValue placeholder="All brands" />
+              <SelectValue placeholder="All brands">
+                {(value: string) => {
+                  if (!value || value === 'all') return 'All Brands';
+                  return brands.find(b => b.id === value)?.name ?? 'All Brands';
+                }}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Brands</SelectItem>

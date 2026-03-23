@@ -82,7 +82,12 @@ export default function QuestBoardPage() {
               onValueChange={(v) => setMissionFilter(v ?? 'all')}
             >
               <SelectTrigger className="w-[200px]">
-                <SelectValue placeholder="All missions" />
+                <SelectValue placeholder="All missions">
+                  {(value: string) => {
+                    if (!value || value === 'all') return 'All missions';
+                    return missions?.find(m => m.id === value)?.title ?? 'All missions';
+                  }}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All missions</SelectItem>
@@ -99,7 +104,12 @@ export default function QuestBoardPage() {
               onValueChange={(v) => setAssigneeFilter(v ?? 'all')}
             >
               <SelectTrigger className="w-[200px]">
-                <SelectValue placeholder="All assignees" />
+                <SelectValue placeholder="All assignees">
+                  {(value: string) => {
+                    if (!value || value === 'all') return 'All assignees';
+                    return users?.find(u => u.id === value)?.name ?? 'All assignees';
+                  }}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All assignees</SelectItem>

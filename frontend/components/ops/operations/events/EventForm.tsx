@@ -113,13 +113,13 @@ export function EventForm({ event, open, onOpenChange, onSaved }: EventFormProps
     }
   }, [event, open, reset]);
 
-  const { data: zones } = useQuery({
+  const { data: zones = [] } = useQuery({
     queryKey: ['zones'],
     queryFn: () => apiClient.get<Zone[]>('/zones'),
     enabled: open,
   });
 
-  const { data: brands } = useQuery({
+  const { data: brands = [] } = useQuery({
     queryKey: ['brands'],
     queryFn: () => apiClient.get<Brand[]>('/brands'),
     enabled: open,
@@ -254,7 +254,12 @@ export function EventForm({ event, open, onOpenChange, onSaved }: EventFormProps
               disabled={isSubmitting}
             >
               <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select zone" />
+                <SelectValue placeholder="Select zone">
+                  {(value: string) => {
+                    if (!value) return 'Select zone';
+                    return zones.find(z => z.id === value)?.name ?? 'Select zone';
+                  }}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="">None</SelectItem>
@@ -276,7 +281,12 @@ export function EventForm({ event, open, onOpenChange, onSaved }: EventFormProps
               disabled={isSubmitting}
             >
               <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select brand" />
+                <SelectValue placeholder="Select brand">
+                  {(value: string) => {
+                    if (!value) return 'Select brand';
+                    return brands.find(b => b.id === value)?.name ?? 'Select brand';
+                  }}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="">None</SelectItem>

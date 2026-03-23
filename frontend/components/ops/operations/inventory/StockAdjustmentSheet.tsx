@@ -104,7 +104,13 @@ export function StockAdjustmentSheet({ open, onOpenChange }: StockAdjustmentShee
               disabled={mutation.isPending}
             >
               <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select ingredient" />
+                <SelectValue placeholder="Select ingredient">
+                  {(value: string) => {
+                    if (!value) return 'Select ingredient';
+                    const ing = ingredients?.find(i => i.id === value);
+                    return ing ? `${ing.name} (${ing.base_unit})` : 'Select ingredient';
+                  }}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {ingredients?.map((ingredient) => (
@@ -125,7 +131,12 @@ export function StockAdjustmentSheet({ open, onOpenChange }: StockAdjustmentShee
               disabled={mutation.isPending}
             >
               <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select zone" />
+                <SelectValue placeholder="Select zone">
+                  {(value: string) => {
+                    if (!value) return 'Select zone';
+                    return zones?.find(z => z.id === value)?.name ?? 'Select zone';
+                  }}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {zones?.map((zone) => (

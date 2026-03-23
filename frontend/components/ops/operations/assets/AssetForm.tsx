@@ -205,7 +205,12 @@ export function AssetForm({ open, onOpenChange, asset, onSuccess }: AssetFormPro
               disabled={isSubmitting}
             >
               <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select brand" />
+                <SelectValue placeholder="Select brand">
+                  {(value: string) => {
+                    if (!value) return 'Select brand';
+                    return brands.find(b => b.id === value)?.name ?? 'Select brand';
+                  }}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {brands.map((brand) => (

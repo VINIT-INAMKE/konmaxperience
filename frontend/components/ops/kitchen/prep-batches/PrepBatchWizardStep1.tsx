@@ -65,7 +65,12 @@ export function PrepBatchWizardStep1({
           onValueChange={(v) => setRecipeId(v ?? '')}
         >
           <SelectTrigger className="w-full">
-            <SelectValue placeholder="Select recipe" />
+            <SelectValue placeholder="Select recipe">
+              {(value: string) => {
+                if (!value) return 'Select recipe';
+                return recipes?.find(r => r.id === value)?.name ?? 'Select recipe';
+              }}
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
             {recipes?.map((recipe) => (
@@ -100,7 +105,12 @@ export function PrepBatchWizardStep1({
           onValueChange={(v) => setZoneId(v ?? '')}
         >
           <SelectTrigger className="w-full">
-            <SelectValue placeholder="Select zone" />
+            <SelectValue placeholder="Select zone">
+              {(value: string) => {
+                if (!value) return 'Select zone';
+                return zones?.find(z => z.id === value)?.name ?? 'Select zone';
+              }}
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
             {zones?.map((zone) => (

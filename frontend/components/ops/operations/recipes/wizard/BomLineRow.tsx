@@ -107,6 +107,7 @@ export function BomLineRow({ line, index, ingredients, recipes, onChange, onRemo
         items={comboboxItems.map((i) => i.id)}
         value={line.item_id || null}
         onValueChange={(v) => handleItemSelect(v ?? '')}
+        itemToStringLabel={(id) => comboboxItems.find((i) => i.id === id)?.name ?? ''}
       >
         <ComboboxInput
           placeholder={

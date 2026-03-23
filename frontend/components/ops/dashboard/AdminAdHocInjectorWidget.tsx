@@ -103,7 +103,12 @@ export function AdminAdHocInjectorWidget() {
               onValueChange={(val: unknown) => setAssignedTo(val as string)}
             >
               <SelectTrigger className="h-8 text-sm">
-                <SelectValue placeholder="Select user" />
+                <SelectValue placeholder="Select user">
+                  {(value: string) => {
+                    if (!value) return 'Select user';
+                    return users.find(u => u.id === value)?.name ?? 'Select user';
+                  }}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {users.map((u) => (
@@ -124,7 +129,12 @@ export function AdminAdHocInjectorWidget() {
               onValueChange={(val: unknown) => setQuestId(val as string)}
             >
               <SelectTrigger className="h-8 text-sm">
-                <SelectValue placeholder="Select quest" />
+                <SelectValue placeholder="Select quest">
+                  {(value: string) => {
+                    if (!value) return 'Select quest';
+                    return quests.find(q => q.id === value)?.title ?? 'Select quest';
+                  }}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {quests.map((q) => (

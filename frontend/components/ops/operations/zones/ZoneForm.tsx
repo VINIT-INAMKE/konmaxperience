@@ -210,7 +210,12 @@ export function ZoneForm({
                 disabled={isSubmitting}
               >
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Assign owner" />
+                  <SelectValue placeholder="Assign owner">
+                    {(value: string) => {
+                      if (!value) return 'Assign owner';
+                      return users.find(u => u.id === value)?.name ?? 'Assign owner';
+                    }}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {users.map((user) => (

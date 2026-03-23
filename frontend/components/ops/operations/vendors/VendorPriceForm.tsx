@@ -108,7 +108,12 @@ export function VendorPriceForm({
               disabled={isSubmitting}
             >
               <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select ingredient" />
+                <SelectValue placeholder="Select ingredient">
+                  {(value: string) => {
+                    if (!value) return 'Select ingredient';
+                    return ingredients.find(i => i.id === value)?.name ?? 'Select ingredient';
+                  }}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {ingredients.map((ingredient) => (

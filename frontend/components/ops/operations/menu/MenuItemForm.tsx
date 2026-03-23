@@ -153,7 +153,12 @@ export function MenuItemForm({
               disabled={isSubmitting}
             >
               <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select approved recipe" />
+                <SelectValue placeholder="Select approved recipe">
+                  {(value: string) => {
+                    if (!value) return 'Select approved recipe';
+                    return recipes.find(r => r.id === value)?.name ?? 'Select approved recipe';
+                  }}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {recipes.map((r) => (
@@ -179,7 +184,12 @@ export function MenuItemForm({
               disabled={isSubmitting}
             >
               <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select category" />
+                <SelectValue placeholder="Select category">
+                  {(value: string) => {
+                    if (!value) return 'Select category';
+                    return categories.find(c => c.id === value)?.name ?? 'Select category';
+                  }}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {categories.map((c) => (

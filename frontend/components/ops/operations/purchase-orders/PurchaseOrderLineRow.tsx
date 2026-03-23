@@ -48,7 +48,12 @@ export function PurchaseOrderLineRow({
         onValueChange={(v) => onUpdate(index, 'ingredient_id', v ?? '')}
       >
         <SelectTrigger className="w-full h-9 text-xs">
-          <SelectValue placeholder="Select ingredient" />
+          <SelectValue placeholder="Select ingredient">
+            {(value: string) => {
+              if (!value) return 'Select ingredient';
+              return ingredients.find(i => i.id === value)?.name ?? 'Select ingredient';
+            }}
+          </SelectValue>
         </SelectTrigger>
         <SelectContent>
           {ingredients.map((ing) => (

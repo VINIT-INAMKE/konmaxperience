@@ -109,7 +109,12 @@ export function DelegationForm({ open, onOpenChange, onCreated }: DelegationForm
               disabled={isSubmitting}
             >
               <SelectTrigger id="from-user" className="w-full">
-                <SelectValue placeholder="Select user" />
+                <SelectValue placeholder="Select user">
+                  {(value: string) => {
+                    if (!value) return 'Select user';
+                    return users.find(u => u.id === value)?.name ?? 'Select user';
+                  }}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {users.map((user) => (
@@ -130,7 +135,12 @@ export function DelegationForm({ open, onOpenChange, onCreated }: DelegationForm
               disabled={isSubmitting || !fromUserId}
             >
               <SelectTrigger id="to-user" className="w-full">
-                <SelectValue placeholder={fromUserId ? 'Select user' : 'Select delegating-from user first'} />
+                <SelectValue placeholder={fromUserId ? 'Select user' : 'Select delegating-from user first'}>
+                  {(value: string) => {
+                    if (!value) return fromUserId ? 'Select user' : 'Select delegating-from user first';
+                    return users.find(u => u.id === value)?.name ?? 'Select user';
+                  }}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {toUserOptions.map((user) => (

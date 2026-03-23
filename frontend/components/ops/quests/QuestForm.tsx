@@ -144,7 +144,12 @@ export function QuestForm({
               className="w-full"
               aria-invalid={!!errors.owner_user_id}
             >
-              <SelectValue placeholder="Select owner" />
+              <SelectValue placeholder="Select owner">
+                {(value: string) => {
+                  if (!value) return 'Select owner';
+                  return users?.find(u => u.id === value)?.name ?? 'Select owner';
+                }}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               {users?.map((user) => (

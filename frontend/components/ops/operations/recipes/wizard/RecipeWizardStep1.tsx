@@ -187,7 +187,12 @@ export function RecipeWizardStep1({
           onValueChange={(v) => update('brand_id', v ?? '')}
         >
           <SelectTrigger className="w-full">
-            <SelectValue placeholder="Select brand (optional)" />
+            <SelectValue placeholder="Select brand (optional)">
+              {(value: string) => {
+                if (!value || value === 'none') return 'Select brand (optional)';
+                return brands.find(b => b.id === value)?.name ?? 'Select brand (optional)';
+              }}
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="none">None</SelectItem>
@@ -208,7 +213,12 @@ export function RecipeWizardStep1({
           onValueChange={(v) => update('zone_id', v ?? '')}
         >
           <SelectTrigger className="w-full">
-            <SelectValue placeholder="Select zone (optional)" />
+            <SelectValue placeholder="Select zone (optional)">
+              {(value: string) => {
+                if (!value || value === 'none') return 'Select zone (optional)';
+                return zones.find(z => z.id === value)?.name ?? 'Select zone (optional)';
+              }}
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="none">None</SelectItem>

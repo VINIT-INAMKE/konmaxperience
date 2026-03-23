@@ -168,7 +168,14 @@ export function CreateUserDialog({
                 disabled={isSubmitting}
               >
                 <SelectTrigger className="w-full" aria-invalid={!!errors.roleId}>
-                  <SelectValue placeholder="Select a role" />
+                  <SelectValue placeholder="Select a role">
+                    {(value: string) => {
+                      if (!value) return 'Select a role';
+                      const role = roles?.find(r => r.id === value);
+                      if (!role) return 'Select a role';
+                      return ROLE_DISPLAY_NAMES[role.code as keyof typeof ROLE_DISPLAY_NAMES] || role.name;
+                    }}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {roles?.map((role) => (
