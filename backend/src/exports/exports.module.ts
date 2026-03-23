@@ -9,6 +9,7 @@ import { KpisModule } from '../kpis/kpis.module';
 import { MenuModule } from '../menu/menu.module';
 import { FeedbackModule } from '../feedback/feedback.module';
 import { KitchenModule } from '../kitchen/kitchen.module';
+import { PurchaseOrdersModule } from '../purchase-orders/purchase-orders.module';
 import { OrdersExportBuilder } from './builders/orders.builder';
 import {
   InventoryLevelsExportBuilder,
@@ -26,6 +27,10 @@ import {
   WasteLogExportBuilder,
   PrepBatchesExportBuilder,
 } from './builders/kitchen.builder';
+import {
+  PurchaseOrdersExportBuilder,
+  VendorPricingExportBuilder,
+} from './builders/purchase-orders.builder';
 
 @Module({
   imports: [
@@ -37,6 +42,7 @@ import {
     MenuModule,
     FeedbackModule,
     KitchenModule,
+    PurchaseOrdersModule,
   ],
   controllers: [ExportsController],
   providers: [

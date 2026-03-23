@@ -59,6 +59,25 @@ export class PrepBatchesService {
     });
   }
 
+  async findAllForExport(dateFrom?: string, dateTo?: string) {
+    const where: Record<string, unknown> = {};
+    if (dateFrom || dateTo) {
+      where.created_at = {};
+      if (dateFrom) (where.created_at as any).gte = new Date(dateFrom);
+      if (dateTo)
+        (where.created_at as any).lte = new Date(dateTo + 'T23:59:59.999Z');
+    }
+    return this.prisma.prepBatch.findMany({
+      where,
+      orderBy: { created_at: 'desc' },
+      include: {
+        recipe: { select: { name: true } },
+        zone: { select: { name: true } },
+        creator: { select: { name: true } },
+      },
+    });
+  }
+
   /**
    * Read-only availability check for the prep wizard (Step 2).
    * Returns one DeductionPreviewLine per BOM input showing available vs required.

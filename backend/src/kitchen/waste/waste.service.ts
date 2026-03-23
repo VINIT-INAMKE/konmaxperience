@@ -38,6 +38,30 @@ export class WasteService {
     });
   }
 
+  async findAllForExport(dateFrom?: string, dateTo?: string) {
+    const where: Record<string, unknown> = {};
+    if (dateFrom || dateTo) {
+      where.created_at = {};
+      if (dateFrom) (where.created_at as any).gte = new Date(dateFrom);
+      if (dateTo)
+        (where.created_at as any).lte = new Date(dateTo + 'T23:59:59.999Z');
+    }
+    return this.prisma.wasteLog.findMany({
+      where,
+      orderBy: { created_at: 'desc' },
+      include: {
+        ingredient: { select: { name: true } },
+        prep_batch: {
+          select: {
+            recipe: { select: { name: true } },
+          },
+        },
+        zone: { select: { name: true } },
+        creator: { select: { name: true } },
+      },
+    });
+  }
+
   async createWasteLog(dto: CreateWasteLogDto, userId: string) {
     let cost_impact = 0;
 

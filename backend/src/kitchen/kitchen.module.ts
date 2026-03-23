@@ -25,6 +25,6 @@ import { OrdersModule } from '../orders/orders.module';
     KitchenMetricsService,
     KitchenExpiryCron,
   ],
-  exports: [PrepBatchesService],
+  exports: [PrepBatchesService, WasteService],
 })
 export class KitchenModule {}
