@@ -27,7 +27,7 @@
 - [x] **Phase 16: Admin CMS** - Tiptap rich text editor with image upload and content management UI (completed 2026-03-22)
 - [x] **Phase 17: Search, Preview, and Content Seeding** - Full-text search, admin preview-as-role, and real guide content generated from codebase (completed 2026-03-23)
 - [x] **Phase 18: Data Export** - CSV/XLSX export for 22 report types across all modules (completed 2026-03-23)
-- [ ] **Phase 19: Master Data Import** - Bulk import for ingredients, vendors, and vendor pricing
+- [ ] **Phase 19: Master Data Import + Export Gaps + Timezone** - Bulk import, missing exports (missions/quests), IST timezone
 - [ ] **Phase 20: Operations Import** - Bulk import for stock, recipes, menu, events, tasks, quests, KPIs
 
 ## Phase Details
@@ -131,8 +131,8 @@ Plans:
 - [x] 18-06-PLAN.md -- Operations/intelligence export builders: Tasks, KPIs, Decision Log, Leaderboard
 - [x] 18-07-PLAN.md -- Frontend: ExportButton + ExportDialog on 13 pages, admin exports history page, sidebar nav
 
-### Phase 19: Master Data Import
-**Goal**: Bulk CSV/XLSX import for foundation data — ingredients, vendors, and vendor pricing with validation, error reporting, and preview before commit
+### Phase 19: Master Data Import + Export Gaps + Timezone
+**Goal**: Bulk CSV/XLSX import for foundation data (ingredients, vendors, vendor pricing), missing export builders (missions, quests) with ExportButton on missions/readiness/tasks pages, and IST timezone configuration for all date/time outputs
 **Depends on**: Phase 18 -- shared CSV/XLSX library infrastructure
 **Requirements**: TBD (to be defined during planning)
 **Success Criteria** (what must be TRUE):
@@ -141,6 +141,8 @@ Plans:
   3. Admin can upload vendor price lists with ingredient name resolution
   4. Invalid rows are reported with clear error messages, valid rows can be committed separately
   5. Import respects existing data — duplicate detection by name
+  6. Missions and quests have export builders with ExportButton on missions, readiness, and tasks list pages
+  7. All date/time outputs (task completion, exports, cron jobs, timestamps) use IST (Asia/Kolkata) regardless of server timezone
 **Plans**: TBD
 
 Plans:
