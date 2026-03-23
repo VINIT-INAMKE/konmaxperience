@@ -4,11 +4,11 @@ milestone: v1.1
 milestone_name: User Guide & Data Management
 status: unknown
 stopped_at: Phase 20 UI-SPEC approved
-last_updated: "2026-03-23T18:52:35.687Z"
+last_updated: "2026-03-23T19:58:30.217Z"
 progress:
   total_phases: 8
   completed_phases: 7
-  total_plans: 23
+  total_plans: 28
   completed_plans: 23
 ---
 
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-22)
 
 **Core value:** Every piece of work must be evidence-backed, approved, and validated before it counts -- turning real execution into measurable readiness and progress.
-**Current focus:** Phase 19 — master-data-import
+**Current focus:** Phase 20 — operations-import
 
 ## Current Position
 
-Phase: 20
-Plan: Not started
+Phase: 20 (operations-import) — EXECUTING
+Plan: 1 of 5
 
 ## Performance Metrics
 
