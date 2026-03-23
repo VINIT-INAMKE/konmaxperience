@@ -3,10 +3,10 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: User Guide & Data Management
 status: unknown
-stopped_at: Completed 18-07-PLAN.md
-last_updated: "2026-03-23T09:34:11.259Z"
+stopped_at: Phase 21 context gathered
+last_updated: "2026-03-23T12:53:56.175Z"
 progress:
-  total_phases: 7
+  total_phases: 8
   completed_phases: 5
   total_plans: 16
   completed_plans: 16
@@ -132,6 +132,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-23T09:15:12.004Z
-Stopped at: Completed 18-07-PLAN.md
-Resume file: None
+Last session: 2026-03-23T12:53:56.166Z
+Stopped at: Phase 21 context gathered
+Resume file: .planning/phases/21-in-app-chat/21-CONTEXT.md
