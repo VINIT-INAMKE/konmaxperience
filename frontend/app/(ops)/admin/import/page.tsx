@@ -17,8 +17,7 @@ import {
   UtensilsCrossed,
   AlertTriangle,
 } from 'lucide-react';
-import { Card, CardHeader, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
   IMPORT_TYPE_CONFIG,
@@ -29,18 +28,18 @@ import {
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
 const ICON_MAP: Record<ImportType, React.ReactNode> = {
-  ingredients: <Package className="size-8 text-muted-foreground" />,
-  vendors: <Store className="size-8 text-muted-foreground" />,
-  vendor_pricing: <DollarSign className="size-8 text-muted-foreground" />,
-  opening_stock: <Warehouse className="size-8 text-muted-foreground" />,
-  missions: <Target className="size-8 text-muted-foreground" />,
-  quests: <Flag className="size-8 text-muted-foreground" />,
-  tasks: <CheckSquare className="size-8 text-muted-foreground" />,
-  kpis: <TrendingUp className="size-8 text-muted-foreground" />,
-  events: <Calendar className="size-8 text-muted-foreground" />,
-  recipes: <ChefHat className="size-8 text-muted-foreground" />,
-  menu_categories: <LayoutGrid className="size-8 text-muted-foreground" />,
-  menu_items: <UtensilsCrossed className="size-8 text-muted-foreground" />,
+  ingredients: <Package className="size-5" />,
+  vendors: <Store className="size-5" />,
+  vendor_pricing: <DollarSign className="size-5" />,
+  opening_stock: <Warehouse className="size-5" />,
+  missions: <Target className="size-5" />,
+  quests: <Flag className="size-5" />,
+  tasks: <CheckSquare className="size-5" />,
+  kpis: <TrendingUp className="size-5" />,
+  events: <Calendar className="size-5" />,
+  recipes: <ChefHat className="size-5" />,
+  menu_categories: <LayoutGrid className="size-5" />,
+  menu_items: <UtensilsCrossed className="size-5" />,
 };
 
 const TIERS: Array<{
@@ -102,9 +101,9 @@ export default function AdminImportPage() {
   }, []);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold">Import</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Import</h1>
         <p className="text-sm text-muted-foreground mt-1">
           Bulk import operational data from CSV or XLSX files
         </p>
@@ -140,46 +139,43 @@ export default function AdminImportPage() {
         });
         return (
           <div key={tier.label}>
-            <div className="flex items-center gap-3 mb-4">
-              <p className={`text-xs font-bold uppercase tracking-wider ${tierColor}`}>
+            <div className="flex items-center gap-2 mb-3">
+              <p className={`text-[11px] font-bold uppercase tracking-widest ${tierColor}`}>
                 {tier.label}
               </p>
               {prereqs && tierComplete && (
-                <span className="text-xs text-green-600 font-medium">Ready</span>
+                <span className="inline-block size-1.5 rounded-full bg-green-500" />
               )}
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
               {tier.types.map((type) => {
                 const config = IMPORT_TYPE_CONFIG[type];
                 const prereqConfig = tier.prerequisites?.[type];
                 const prereqMissing = prereqConfig && prereqs ? !prereqConfig.check(prereqs) : false;
                 return (
-                  <Card key={type} className={`border-l-4 ${tier.accentColor}`}>
-                    <CardHeader>
-                      <div className="flex flex-col gap-3">
-                        {ICON_MAP[type]}
-                        <div>
-                          <h2 className="font-bold text-lg">{config.label}</h2>
-                          <p className="text-sm text-muted-foreground mt-1">
-                            {config.description}
-                          </p>
+                  <Link key={type} href={`/admin/import/${type}`}>
+                    <Card className={`border-l-4 ${tier.accentColor} hover:bg-[var(--muted)] transition-colors cursor-pointer h-full`}>
+                      <CardContent className="p-4">
+                        <div className="flex items-start gap-3">
+                          <div className="shrink-0 mt-0.5 text-muted-foreground">
+                            {ICON_MAP[type]}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="font-semibold text-sm leading-tight">{config.label}</p>
+                            <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                              {config.description}
+                            </p>
+                            {prereqMissing && prereqConfig && (
+                              <Badge variant="outline" className="text-amber-600 border-amber-300 mt-2 text-[10px] px-1.5 py-0">
+                                <AlertTriangle className="size-2.5 mr-1" />
+                                {prereqConfig.label}
+                              </Badge>
+                            )}
+                          </div>
                         </div>
-                        {prereqMissing && prereqConfig && (
-                          <Badge variant="outline" className="text-amber-600 border-amber-300 w-fit">
-                            <AlertTriangle className="size-3 mr-1" />
-                            {prereqConfig.label}
-                          </Badge>
-                        )}
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <Link href={`/admin/import/${type}`}>
-                        <Button variant="outline" className="w-full">
-                          Import {config.label}
-                        </Button>
-                      </Link>
-                    </CardContent>
-                  </Card>
+                      </CardContent>
+                    </Card>
+                  </Link>
                 );
               })}
             </div>
