@@ -75,4 +75,24 @@ export class StorageService {
   getPublicUrl(key: string): string {
     return `${this.publicUrl}/${key}`;
   }
+
+  /**
+   * Upload a buffer directly to R2 (server-initiated uploads only).
+   * Bypasses validatePresignRequest — no MIME whitelist or size check.
+   */
+  async putObjectDirect(
+    key: string,
+    body: Buffer,
+    contentType: string,
+  ): Promise<void> {
+    await this.s3.send(
+      new PutObjectCommand({
+        Bucket: this.bucketName,
+        Key: key,
+        Body: body,
+        ContentType: contentType,
+        ContentLength: body.length,
+      }),
+    );
+  }
 }

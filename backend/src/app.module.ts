@@ -43,6 +43,7 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { FeedbackModule } from './feedback/feedback.module';
 import { EventsModule } from './events/events.module';
 import { GuidesModule } from './guides/guides.module';
+import { ExportsModule } from './exports/exports.module';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { PermissionsGuard } from './auth/permissions.guard';
 
@@ -127,6 +128,7 @@ import { PermissionsGuard } from './auth/permissions.guard';
     FeedbackModule,
     EventsModule,
     GuidesModule,
+    ExportsModule,
   ],
   controllers: [AppController],
   providers: [
