@@ -43,3 +43,13 @@ export interface GuidePage {
     status: string;
   };
 }
+
+/** Search result from GET /guide/search?q= */
+export interface GuideSearchResult {
+  pageId: string;
+  pageTitle: string;
+  pageSlug: string;
+  sectionTitle: string;
+  sectionSlug: string;
+  snippet: string;
+}
