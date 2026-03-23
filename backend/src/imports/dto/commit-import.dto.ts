@@ -13,4 +13,8 @@ export class CommitImportDto {
   @IsBoolean()
   @IsOptional()
   updateExisting?: boolean; // per D-17: toggle for upsert vs skip
+
+  @IsArray()
+  @IsOptional()
+  bomRows?: ImportRow[]; // Recipe BOM lines for two-pass commit (D-03)
 }

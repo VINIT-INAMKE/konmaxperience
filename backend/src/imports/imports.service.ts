@@ -92,14 +92,19 @@ export class ImportsService {
 
     // D-09, D-22, D-32: Stock re-import detection via SHA-256
     let warning: string | undefined;
+    let fileHash: string | undefined;
     if (importType === 'opening_stock') {
-      const fileHash = createHash('sha256').update(buffer).digest('hex');
+      fileHash = createHash('sha256').update(buffer).digest('hex');
       const existingImport = await this.prisma.stockMovement.findFirst({
         where: { reference_type: 'import', reference_id: fileHash },
         select: { created_at: true },
       });
       if (existingImport) {
         warning = `This file was already imported on ${existingImport.created_at.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })}. Re-importing will create duplicate stock movements.`;
+      }
+      // Pass fileHash through first row for commitStockImport (D-22)
+      if (validatedRows.length > 0) {
+        validatedRows[0].validated.fileHash = fileHash;
       }
     }
 
@@ -276,7 +281,19 @@ export class ImportsService {
     rows: ImportRow[],
     updateExisting: boolean,
     userId: string,
+    bomRows?: ImportRow[],
   ): Promise<CommitResult> {
+    // Stock has its own commit path — no outer transaction (D-08)
+    if (importType === 'opening_stock') {
+      const fileHash = (rows[0]?.validated?.fileHash as string) || '';
+      return this.commitStockImport(rows, userId, fileHash);
+    }
+
+    // Recipe has its own two-pass commit path (D-03, D-07)
+    if (importType === 'recipes') {
+      return this.commitRecipeImport(rows, bomRows || [], updateExisting, userId);
+    }
+
     let imported = 0;
     let updated = 0;
     let skipped = 0;
@@ -378,6 +395,300 @@ export class ImportsService {
     };
   }
 
+  /**
+   * Stock import commit path — NO outer transaction (D-08).
+   * Each inventoryService.adjust() is independently atomic.
+   * Tags StockMovement with reference_type='import' for re-import detection (D-22).
+   */
+  private async commitStockImport(
+    rows: ImportRow[],
+    userId: string,
+    fileHash: string,
+  ): Promise<CommitResult> {
+    const committable = rows.filter((r) => r.status === 'valid');
+    let imported = 0;
+    const errorDetails: Array<{ rowIndex: number; message: string }> = [];
+
+    for (const row of committable) {
+      try {
+        await this.inventoryService.adjust(
+          {
+            ingredient_id: row.validated.ingredient_id as string,
+            zone_id: row.validated.zone_id as string,
+            quantity: row.validated.quantity as number,
+            unit: row.validated.unit as string,
+            reason: (row.validated.reason as string) || 'Opening stock',
+          },
+          userId,
+        );
+        // Tag the StockMovement with import reference for re-import detection (D-22)
+        const recentMovement = await this.prisma.stockMovement.findFirst({
+          where: {
+            ingredient_id: row.validated.ingredient_id as string,
+            zone_id: row.validated.zone_id as string,
+            created_by: userId,
+          },
+          orderBy: { created_at: 'desc' },
+          select: { id: true },
+        });
+        if (recentMovement) {
+          await this.prisma.stockMovement.update({
+            where: { id: recentMovement.id },
+            data: { reference_type: 'import', reference_id: fileHash },
+          });
+        }
+        imported++;
+      } catch (err) {
+        errorDetails.push({
+          rowIndex: row.rowIndex,
+          message: err instanceof Error ? err.message : 'Unknown error',
+        });
+      }
+    }
+
+    return {
+      imported,
+      updated: 0,
+      skipped: 0,
+      errors: errorDetails.length,
+      errorDetails,
+    };
+  }
+
+  /**
+   * Recipe two-pass commit (D-03, D-07, D-15, D-17).
+   * Pass 1: Create/update recipe headers, build recipeIdMap.
+   * Pass 2: Delete old BOM + create new BOM lines.
+   * Cost calculation runs OUTSIDE transaction (non-critical).
+   */
+  private async commitRecipeImport(
+    headerRows: ImportRow[],
+    bomRows: ImportRow[],
+    updateExisting: boolean,
+    userId: string,
+  ): Promise<CommitResult> {
+    const committableHeaders = headerRows.filter((r) => {
+      if (r.status === 'valid') return true;
+      if (r.status === 'duplicate' && updateExisting) return true;
+      return false;
+    });
+
+    let imported = 0;
+    let updated = 0;
+    const skipped = headerRows.length - committableHeaders.length;
+    const transactionErrors: Array<{ rowIndex: number; message: string }> = [];
+
+    // Group BOM rows by recipe_name (lowercase)
+    const bomByRecipe = new Map<string, ImportRow[]>();
+    for (const bom of (bomRows || []).filter(
+      (r) => r.status === 'valid' || r.status === 'duplicate',
+    )) {
+      const name = ((bom.raw.recipe_name || '') as string).trim().toLowerCase();
+      if (!bomByRecipe.has(name)) bomByRecipe.set(name, []);
+      bomByRecipe.get(name)!.push(bom);
+    }
+
+    const recipeIdsForCostCalc: string[] = [];
+
+    try {
+      await this.prisma.$transaction(async (tx) => {
+        const recipeIdMap = new Map<string, string>(); // lowercase name -> recipe ID
+
+        // PASS 1: Create/update recipe headers
+        for (const row of committableHeaders) {
+          try {
+            const v = row.validated;
+            const recipeName = ((v.name as string) || '').toLowerCase();
+
+            if (
+              row.status === 'duplicate' &&
+              updateExisting &&
+              row.existingId
+            ) {
+              // D-03: Update all header fields for draft recipes (validator already blocked approved)
+              await tx.recipe.update({
+                where: { id: row.existingId },
+                data: {
+                  name: v.name as string,
+                  description: v.description as string,
+                  prep_steps: v.prep_steps as string,
+                  cooking_method: v.cooking_method as string,
+                  yield_qty: v.yield_qty as number,
+                  yield_unit: v.yield_unit as string,
+                  portion_size: v.portion_size as string,
+                  shelf_life_hours: v.shelf_life_hours
+                    ? (v.shelf_life_hours as number)
+                    : undefined,
+                  brand_id: v.brand_id ? (v.brand_id as string) : undefined,
+                  zone_id: v.zone_id ? (v.zone_id as string) : undefined,
+                  // NEVER: computed_cost, status
+                },
+              });
+              recipeIdMap.set(recipeName, row.existingId);
+              recipeIdsForCostCalc.push(row.existingId);
+              updated++;
+            } else {
+              const recipe = await tx.recipe.create({
+                data: {
+                  name: v.name as string,
+                  description: v.description as string,
+                  prep_steps: v.prep_steps as string,
+                  cooking_method: v.cooking_method as string,
+                  yield_qty: v.yield_qty as number,
+                  yield_unit: v.yield_unit as string,
+                  portion_size: v.portion_size as string,
+                  shelf_life_hours: v.shelf_life_hours
+                    ? (v.shelf_life_hours as number)
+                    : undefined,
+                  brand_id: v.brand_id ? (v.brand_id as string) : undefined,
+                  zone_id: v.zone_id ? (v.zone_id as string) : undefined,
+                  status: 'draft',
+                  created_by: userId,
+                },
+              });
+              recipeIdMap.set(recipeName, recipe.id);
+              recipeIdsForCostCalc.push(recipe.id);
+              imported++;
+            }
+          } catch (err) {
+            transactionErrors.push({
+              rowIndex: row.rowIndex,
+              message: err instanceof Error ? err.message : 'Unknown error',
+            });
+          }
+        }
+
+        // PASS 2: Delete old BOM lines (for updates) + create new BOM lines
+        for (const [recipeName, bomLines] of bomByRecipe) {
+          const recipeId = recipeIdMap.get(recipeName);
+          if (!recipeId) continue; // Recipe not committed (was invalid/skipped)
+
+          try {
+            // D-03: Delete existing BOM lines for updated recipes
+            await tx.recipeLine.deleteMany({
+              where: { recipe_id: recipeId },
+            });
+
+            // Create new BOM lines with sort_order
+            for (let i = 0; i < bomLines.length; i++) {
+              const bv = bomLines[i].validated;
+              const inputType = bv.input_type as string;
+
+              // D-19: Cycle detection for sub-recipe references
+              if (inputType === 'recipe' && bv.source_recipe_id) {
+                const sourceId = bv.source_recipe_id as string;
+                // Check if source_recipe_id points back to this recipe
+                if (sourceId === recipeId) {
+                  throw new Error(
+                    `BOM line ${i + 1}: Circular reference — recipe cannot use itself`,
+                  );
+                }
+                // For deeper cycle detection, check if source recipe's BOM contains this recipe
+                const sourceLines = await tx.recipeLine.findMany({
+                  where: {
+                    recipe_id: sourceId,
+                    input_type: 'recipe',
+                  },
+                  select: { source_recipe_id: true },
+                });
+                for (const sl of sourceLines) {
+                  if (sl.source_recipe_id === recipeId) {
+                    throw new Error(
+                      `BOM line ${i + 1}: Circular reference detected — ${bv.ingredient_name} uses this recipe`,
+                    );
+                  }
+                }
+              }
+
+              // Resolve source_recipe_id for sub-recipes referencing recipes in the same file
+              let finalSourceRecipeId = bv.source_recipe_id as
+                | string
+                | undefined;
+              if (inputType === 'recipe' && !finalSourceRecipeId) {
+                // Sub-recipe name might map to a recipe in the same import
+                const subRecipeName = (
+                  (bv.ingredient_name as string) || ''
+                ).toLowerCase();
+                finalSourceRecipeId = recipeIdMap.get(subRecipeName);
+                if (!finalSourceRecipeId) {
+                  throw new Error(
+                    `BOM line ${i + 1}: Sub-recipe '${bv.ingredient_name}' not found`,
+                  );
+                }
+              }
+
+              await tx.recipeLine.create({
+                data: {
+                  recipe_id: recipeId,
+                  input_type: inputType,
+                  ingredient_id:
+                    inputType === 'ingredient'
+                      ? (bv.ingredient_id as string)
+                      : undefined,
+                  source_recipe_id:
+                    inputType === 'recipe'
+                      ? finalSourceRecipeId ||
+                        (bv.source_recipe_id as string)
+                      : undefined,
+                  quantity: bv.quantity as number,
+                  unit: bv.unit as string,
+                  prep_notes: bv.prep_notes
+                    ? (bv.prep_notes as string)
+                    : undefined,
+                  sort_order: i,
+                },
+              });
+            }
+          } catch (err) {
+            transactionErrors.push({
+              rowIndex: bomLines[0]?.rowIndex || 0,
+              message: err instanceof Error ? err.message : 'Unknown error',
+            });
+          }
+        }
+
+        // D-26: Re-throw for full rollback if any errors
+        if (transactionErrors.length > 0) {
+          throw new Error(
+            `${transactionErrors.length} error(s): ${transactionErrors.map((e) => `Row ${e.rowIndex}: ${e.message}`).join('; ')}`,
+          );
+        }
+      });
+    } catch (err) {
+      return {
+        imported: 0,
+        updated: 0,
+        skipped,
+        errors: transactionErrors.length || 1,
+        errorDetails:
+          transactionErrors.length > 0
+            ? transactionErrors
+            : [
+                {
+                  rowIndex: 0,
+                  message:
+                    err instanceof Error ? err.message : 'Unknown error',
+                },
+              ],
+      };
+    }
+
+    // D-07: Cost calculation runs OUTSIDE transaction (non-critical, retryable)
+    for (const recipeId of recipeIdsForCostCalc) {
+      try {
+        await this.costCalculatorService.recalculateAndSave(recipeId);
+      } catch (err) {
+        this.logger.warn(
+          `Cost recalculation failed for recipe ${recipeId}`,
+          err,
+        );
+        // Non-fatal — recipe is still saved
+      }
+    }
+
+    return { imported, updated, skipped, errors: 0, errorDetails: [] };
+  }
+
   private async createRow(
     tx: any,
     importType: ImportType,
@@ -419,7 +730,97 @@ export class ImportsService {
           },
         });
         break;
-      // New import types will have createRow cases added in Plan 04
+      case 'missions':
+        await tx.mission.create({
+          data: {
+            title: v.title as string,
+            description: v.description as string,
+            phase: v.phase as string,
+            scope: v.scope as string,
+            start_date: v.start_date ? (v.start_date as Date) : undefined,
+            end_date: v.end_date ? (v.end_date as Date) : undefined,
+            created_by: userId,
+          },
+        });
+        break;
+      case 'quests':
+        await tx.quest.create({
+          data: {
+            title: v.title as string,
+            description: v.description as string,
+            mission_id: v.mission_id as string,
+            week_number: v.week_number as number,
+            owner_user_id: v.owner_user_id as string,
+            start_date: v.start_date ? (v.start_date as Date) : undefined,
+            end_date: v.end_date ? (v.end_date as Date) : undefined,
+          },
+        });
+        break;
+      case 'tasks':
+        await tx.task.create({
+          data: {
+            title: v.title as string,
+            description: v.description as string,
+            mission_id: v.mission_id as string,
+            quest_id: v.quest_id ? (v.quest_id as string) : undefined,
+            task_type: v.task_type as string,
+            domain: v.domain as string,
+            owner_user_id: v.owner_user_id as string,
+            created_by: userId,
+            priority: v.priority as string,
+            xp: (v.xp as number) ?? 25,
+            due_date: v.due_date ? (v.due_date as Date) : undefined,
+          },
+        });
+        break;
+      case 'kpis':
+        await tx.kpi.create({
+          data: {
+            name: v.name as string,
+            description: v.description as string,
+            unit: v.unit as string,
+            target_value: v.target_value as number,
+            domain: v.domain as string,
+            current_value: (v.current_value as number) ?? 0,
+            status: (v.status as string) ?? 'on_track',
+          },
+        });
+        break;
+      case 'events':
+        await tx.event.create({
+          data: {
+            title: v.title as string,
+            event_type: v.event_type as string,
+            date: v.date as Date,
+            capacity: v.capacity as number,
+            price: v.price as number,
+            zone_id: v.zone_id ? (v.zone_id as string) : undefined,
+            brand_id: v.brand_id ? (v.brand_id as string) : undefined,
+            description: v.description ? (v.description as string) : undefined,
+          },
+        });
+        break;
+      case 'menu_categories':
+        await tx.menuCategory.create({
+          data: {
+            name: v.name as string,
+            brand_id: v.brand_id as string,
+            sort_order: (v.sort_order as number) ?? 0,
+          },
+        });
+        break;
+      case 'menu_items':
+        await tx.menuItem.create({
+          data: {
+            name: v.name as string,
+            recipe_id: v.recipe_id as string,
+            category_id: v.category_id as string,
+            base_price: v.base_price as number,
+            available: (v.available as boolean) ?? true,
+          },
+        });
+        break;
+      // opening_stock and recipes use their own commit paths — not handled here
     }
   }
 
@@ -438,7 +839,7 @@ export class ImportsService {
           data: {
             name: v.name as string,
             category: v.category as string,
-            base_unit: v.base_unit as string,
+            // base_unit intentionally NOT updated — D-28 defense-in-depth
             min_stock_level: v.min_stock_level as number,
           },
         });
@@ -468,7 +869,98 @@ export class ImportsService {
           },
         });
         break;
-      // New import types will have updateRow cases added in Plan 04
+      case 'missions':
+        await tx.mission.update({
+          where: { id },
+          data: {
+            description: v.description as string,
+            phase: v.phase as string,
+            scope: v.scope as string,
+            start_date: v.start_date ? (v.start_date as Date) : undefined,
+            end_date: v.end_date ? (v.end_date as Date) : undefined,
+            // NEVER: progress_percent, status
+          },
+        });
+        break;
+      case 'quests':
+        // D-02: Quest validator already blocks non-planned quests (status='blocked')
+        // Only SAFE fields: description, week_number, start_date, end_date
+        await tx.quest.update({
+          where: { id },
+          data: {
+            description: v.description as string,
+            week_number: v.week_number as number,
+            start_date: v.start_date ? (v.start_date as Date) : undefined,
+            end_date: v.end_date ? (v.end_date as Date) : undefined,
+            // NEVER: baseline_task_count, *_progress_percent, status
+          },
+        });
+        break;
+      case 'tasks':
+        // D-02: Task validator already blocks completed tasks (status='blocked')
+        // Only SAFE fields: description, priority, xp, due_date, domain
+        await tx.task.update({
+          where: { id },
+          data: {
+            description: v.description as string,
+            priority: v.priority as string,
+            xp: (v.xp as number) ?? 25,
+            due_date: v.due_date ? (v.due_date as Date) : undefined,
+            domain: v.domain as string,
+            // NEVER: status, valid, verified, valid_xp, blocked, completed_at, readiness_value
+          },
+        });
+        break;
+      case 'kpis':
+        // D-02: KPI validator blocks current_value change if existing>0 (status='blocked')
+        await tx.kpi.update({
+          where: { id },
+          data: {
+            description: v.description as string,
+            unit: v.unit as string,
+            target_value: v.target_value as number,
+            domain: v.domain as string,
+          },
+        });
+        break;
+      case 'events':
+        // D-02: Event validator blocks capacity reduction below bookings and date change with bookings (status='blocked')
+        await tx.event.update({
+          where: { id },
+          data: {
+            description: v.description ? (v.description as string) : undefined,
+            price: v.price as number,
+            event_type: v.event_type as string,
+            zone_id: v.zone_id ? (v.zone_id as string) : undefined,
+            brand_id: v.brand_id ? (v.brand_id as string) : undefined,
+            capacity: v.capacity as number,
+            date: v.date as Date,
+          },
+        });
+        break;
+      case 'menu_categories':
+        // D-02: Validator blocks brand_id change (status='blocked')
+        await tx.menuCategory.update({
+          where: { id },
+          data: {
+            name: v.name as string,
+            sort_order: (v.sort_order as number) ?? 0,
+            // NEVER: status. BLOCKED: brand_id (caught by validator)
+          },
+        });
+        break;
+      case 'menu_items':
+        await tx.menuItem.update({
+          where: { id },
+          data: {
+            name: v.name as string,
+            base_price: v.base_price as number,
+            available: (v.available as boolean) ?? true,
+            // NEVER: status
+          },
+        });
+        break;
+      // opening_stock and recipes use their own commit paths — not handled here
     }
   }
 }

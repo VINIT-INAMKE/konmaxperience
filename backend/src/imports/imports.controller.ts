@@ -86,6 +86,7 @@ export class ImportsController {
       dto.rows,
       dto.updateExisting ?? false,
       req.user.id,
+      dto.bomRows,
     );
   }
 
