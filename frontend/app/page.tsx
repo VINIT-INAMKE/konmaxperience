@@ -10,7 +10,9 @@ import { ScrollVideoStory } from '@/components/public/ScrollVideoStory';
 const spring = { type: 'spring' as const, stiffness: 300, damping: 24 };
 function getScrollHeightVH() {
   if (typeof window === 'undefined') return 450;
-  return window.innerWidth < 640 ? 300 : 450;
+  if (window.innerWidth < 480) return 200;
+  if (window.innerWidth < 640) return 250;
+  return 450;
 }
 
 function ScrollReveal({
@@ -70,10 +72,10 @@ export default function LandingPage() {
               Konma Xperience
             </span>
           </Link>
-          <div className="flex items-center gap-3 sm:gap-6">
+          <div className="flex items-center gap-1 sm:gap-6">
             <Link
               href="/menu"
-              className={`text-sm transition-colors duration-500 ${
+              className={`text-sm px-2 py-1.5 rounded-md transition-colors duration-500 ${
                 pastVideo ? 'text-[var(--public-muted)] hover:text-[var(--public-fg)]' : 'text-white/70 hover:text-white drop-shadow-sm'
               }`}
             >
@@ -81,7 +83,7 @@ export default function LandingPage() {
             </Link>
             <Link
               href="/events"
-              className={`text-sm transition-colors duration-500 ${
+              className={`text-sm px-2 py-1.5 rounded-md transition-colors duration-500 ${
                 pastVideo ? 'text-[var(--public-muted)] hover:text-[var(--public-fg)]' : 'text-white/70 hover:text-white drop-shadow-sm'
               }`}
             >
@@ -206,14 +208,14 @@ export default function LandingPage() {
               </Link>
             </ScrollReveal>
 
-            <div className="md:col-span-7 grid grid-cols-2 gap-x-6 gap-y-8 sm:gap-x-10 sm:gap-y-10">
+            <div className="md:col-span-7 grid grid-cols-2 gap-x-5 gap-y-6 sm:gap-x-10 sm:gap-y-10">
               <ScrollReveal delay={0} direction="right">
                 <div className="space-y-3">
                   <div className="size-9 rounded-lg bg-amber-500/10 flex items-center justify-center">
                     <Rocket className="size-4 text-amber-500" />
                   </div>
                   <p className="text-sm font-bold tracking-wide">Missions & Quests</p>
-                  <p className="text-[13px] text-white/60 leading-relaxed">
+                  <p className="text-xs sm:text-[13px] text-white/60 leading-relaxed">
                     Long-term goals break into weekly quests, quests into tasks.
                     Every completed task is evidence-backed and earns XP.
                   </p>
@@ -225,7 +227,7 @@ export default function LandingPage() {
                     <ChefHat className="size-4 text-orange-400" />
                   </div>
                   <p className="text-sm font-bold tracking-wide">Real-time Kitchen</p>
-                  <p className="text-[13px] text-white/60 leading-relaxed">
+                  <p className="text-xs sm:text-[13px] text-white/60 leading-relaxed">
                     Kitchen display, prep batch tracking, waste logging, and
                     inventory that updates as you cook.
                   </p>
@@ -237,7 +239,7 @@ export default function LandingPage() {
                     <Gauge className="size-4 text-emerald-400" />
                   </div>
                   <p className="text-sm font-bold tracking-wide">Readiness Intelligence</p>
-                  <p className="text-[13px] text-white/60 leading-relaxed">
+                  <p className="text-xs sm:text-[13px] text-white/60 leading-relaxed">
                     Gauge how ready each area is. Surface what needs attention
                     before it becomes a problem.
                   </p>
@@ -249,7 +251,7 @@ export default function LandingPage() {
                     <Trophy className="size-4 text-purple-400" />
                   </div>
                   <p className="text-sm font-bold tracking-wide">Gamified Growth</p>
-                  <p className="text-[13px] text-white/60 leading-relaxed">
+                  <p className="text-xs sm:text-[13px] text-white/60 leading-relaxed">
                     XP, levels, leaderboards, and celebrations. Real work turns
                     into visible progress.
                   </p>

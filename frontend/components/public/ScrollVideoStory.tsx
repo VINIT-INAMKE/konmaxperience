@@ -9,7 +9,9 @@ const FRAME_PATH = '/scroll-frames/f';
 
 function getScrollHeight() {
   if (typeof window === 'undefined') return 450;
-  return window.innerWidth < 640 ? 300 : 450;
+  if (window.innerWidth < 480) return 200; // small phones — shorter scroll
+  if (window.innerWidth < 640) return 250; // large phones
+  return 450;
 }
 
 // ── Beat definitions ──
@@ -428,11 +430,11 @@ export function ScrollVideoStory() {
         {/* ── Story Beats ── */}
         <div className="absolute inset-0 z-10 pointer-events-none">
 
-          {/* Beat 1: CENTER — brand statement, large with italic contrast */}
+          {/* Beat 1: CENTER — brand statement */}
           <div ref={(el) => { beatRefs.current[0] = el; }} style={{ ...beatBase, alignItems: 'center', justifyContent: 'center' }}>
-            <div className="text-center px-6 max-w-3xl">
+            <div className="text-center px-5 sm:px-6 max-w-3xl">
               {renderWords(0, BEAT_WORDS[0],
-                'text-[clamp(2.75rem,7vw,5.5rem)] font-extrabold text-white leading-[1.0] tracking-[-0.03em] block',
+                'text-[clamp(2rem,6vw,5.5rem)] font-extrabold text-white leading-[1.05] tracking-[-0.03em] block',
                 { textShadow: shadow, fontStyle: 'normal' }
               )}
             </div>
@@ -440,13 +442,13 @@ export function ScrollVideoStory() {
 
           {/* Beat 2: BOTTOM LEFT — editorial with overline + thin rule */}
           <div ref={(el) => { beatRefs.current[1] = el; }} style={{ ...beatBase, alignItems: 'flex-end', justifyContent: 'flex-start' }}>
-            <div className="px-8 sm:px-16 pb-24 sm:pb-32 max-w-lg">
-              <div className="w-10 h-px bg-white/30 mb-5" />
-              <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-white/40 mb-3" style={{ textShadow: shadowLight }}>
+            <div className="px-5 sm:px-16 pb-16 sm:pb-32 max-w-lg">
+              <div className="w-10 h-px bg-white/30 mb-4 sm:mb-5" />
+              <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-white/40 mb-2 sm:mb-3" style={{ textShadow: shadowLight }}>
                 From kitchen to table
               </p>
               {renderWords(1, BEAT_WORDS[1],
-                'text-[clamp(1.75rem,4.5vw,3.25rem)] font-bold text-white leading-[1.1] tracking-[-0.02em] text-left block',
+                'text-[clamp(1.5rem,4vw,3.25rem)] font-bold text-white leading-[1.15] tracking-[-0.02em] text-left block',
                 { textShadow: shadow }
               )}
             </div>
@@ -454,24 +456,24 @@ export function ScrollVideoStory() {
 
           {/* Beat 3: RIGHT — stacked with weight variation */}
           <div ref={(el) => { beatRefs.current[2] = el; }} style={{ ...beatBase, alignItems: 'center', justifyContent: 'flex-end' }}>
-            <div className="pr-8 sm:pr-16 lg:pr-24 text-right max-w-lg">
+            <div className="pr-5 sm:pr-16 lg:pr-24 text-right max-w-lg">
               {renderWords(2, BEAT_WORDS[2],
-                'text-[clamp(2rem,5vw,3.75rem)] text-white leading-[1.25] tracking-[-0.02em] block',
+                'text-[clamp(1.5rem,4.5vw,3.75rem)] text-white leading-[1.3] tracking-[-0.02em] block',
                 { textShadow: shadow }
               )}
-              <div className="w-10 h-px bg-white/25 mt-6 ml-auto" />
+              <div className="w-10 h-px bg-white/25 mt-4 sm:mt-6 ml-auto" />
             </div>
           </div>
 
-          {/* Beat 4: CENTER — confident closer, tighter tracking */}
+          {/* Beat 4: CENTER — confident closer */}
           <div ref={(el) => { beatRefs.current[3] = el; }} style={{ ...beatBase, alignItems: 'center', justifyContent: 'center' }}>
-            <div className="text-center px-6 max-w-xl space-y-5">
+            <div className="text-center px-5 sm:px-6 max-w-xl space-y-4 sm:space-y-5">
               {renderWords(3, BEAT_WORDS[3],
-                'text-[clamp(2.25rem,5.5vw,4.5rem)] font-extrabold text-white tracking-[-0.03em] block',
+                'text-[clamp(1.75rem,5vw,4.5rem)] font-extrabold text-white tracking-[-0.03em] block',
                 { textShadow: shadow }
               )}
               <div className="mx-auto w-8 h-px bg-white/25" />
-              <p className="text-sm sm:text-base text-white/45 font-light tracking-[0.05em]" style={{ textShadow: shadowLight }}>
+              <p className="text-xs sm:text-base text-white/45 font-light tracking-[0.05em]" style={{ textShadow: shadowLight }}>
                 Welcome to the experience
               </p>
             </div>
