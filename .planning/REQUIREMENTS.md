@@ -77,8 +77,8 @@ Requirements for milestone v1.1 — User Guide System & Data Management. Each ma
 - [x] **OPSIMPORT-06**: Recipe 3-sheet XLSX import with multi-pass commit (D-07), BOM line validation, cycle detection (D-19), cost recalculation, draft-only import (D-16)
 - [x] **OPSIMPORT-07**: Menu category (brand FK with ambiguity check, brand_id change blocked) and menu item (approved recipe guard, brand-scoped category lookup) validators
 - [ ] **OPSIMPORT-08**: Commit logic for all 10 types with createRow/updateRow, per-entity SAFE/BLOCKED/NEVER update policies (D-02), all-or-nothing transactions (D-06)
-- [ ] **OPSIMPORT-09**: Tiered import index page with 4 dependency levels, live prerequisite check via GET /imports/prerequisites, amber warning badges
-- [ ] **OPSIMPORT-10**: Frontend stock-specific UI (amber additive warning, re-import warning, no toggle) and recipe-specific UI (XLSX-only badge, grouped BOM preview, draft notice)
+- [x] **OPSIMPORT-09**: Tiered import index page with 4 dependency levels, live prerequisite check via GET /imports/prerequisites, amber warning badges
+- [x] **OPSIMPORT-10**: Frontend stock-specific UI (amber additive warning, re-import warning, no toggle) and recipe-specific UI (XLSX-only badge, grouped BOM preview, draft notice)
 
 ### In-App Chat
 

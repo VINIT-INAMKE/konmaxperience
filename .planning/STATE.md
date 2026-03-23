@@ -4,7 +4,7 @@ milestone: v1.1
 milestone_name: User Guide & Data Management
 status: unknown
 stopped_at: Completed 20-05-PLAN.md
-last_updated: "2026-03-23T20:15:40.981Z"
+last_updated: "2026-03-23T20:15:49.108Z"
 progress:
   total_phases: 8
   completed_phases: 7
@@ -152,6 +152,8 @@ Recent decisions affecting current work:
 - [Phase 20]: Recipe XLSX generates BOM Lines sheet between data sheet and instructions sheet per D-13
 - [Phase 20]: Recipe BOM validator accepts optional recipeNameMap for cross-sheet FK resolution without DB lookup
 - [Phase 20]: Menu item validator resolves brand BEFORE category for scoped category-within-brand lookup
+- [Phase 20]: PrerequisiteData interface mirrors backend response for type-safe prerequisite checks on import index page
+- [Phase 20]: Recipe grouped preview uses expandedRecipes Set state with collapsible BOM lines under parent recipe rows
 
 ### Roadmap Evolution
 
