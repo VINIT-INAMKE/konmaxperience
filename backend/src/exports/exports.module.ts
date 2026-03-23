@@ -10,7 +10,17 @@ import { MenuModule } from '../menu/menu.module';
 import { FeedbackModule } from '../feedback/feedback.module';
 import { KitchenModule } from '../kitchen/kitchen.module';
 import { PurchaseOrdersModule } from '../purchase-orders/purchase-orders.module';
+import { AnalyticsModule } from '../analytics/analytics.module';
+import { DecisionsModule } from '../decisions/decisions.module';
+import { LeaderboardModule } from '../leaderboard/leaderboard.module';
+import { EventsModule } from '../events/events.module';
 import { OrdersExportBuilder } from './builders/orders.builder';
+import {
+  RevenueExportBuilder,
+  TopItemsExportBuilder,
+  ChannelBreakdownExportBuilder,
+  RecipeCostsExportBuilder,
+} from './builders/analytics.builder';
 import {
   InventoryLevelsExportBuilder,
   StockMovementsExportBuilder,
@@ -18,6 +28,8 @@ import {
 import {
   TasksExportBuilder,
   KpisExportBuilder,
+  DecisionLogExportBuilder,
+  LeaderboardExportBuilder,
 } from './builders/operations.builder';
 import {
   MenuItemsExportBuilder,
@@ -35,7 +47,6 @@ import {
   EventsExportBuilder,
   EventGuestListsExportBuilder,
 } from './builders/events.builder';
-import { EventsModule } from '../events/events.module';
 
 @Module({
   imports: [
@@ -48,12 +59,19 @@ import { EventsModule } from '../events/events.module';
     FeedbackModule,
     KitchenModule,
     PurchaseOrdersModule,
+    AnalyticsModule,
+    DecisionsModule,
+    LeaderboardModule,
     EventsModule,
   ],
   controllers: [ExportsController],
   providers: [
     ExportsService,
     OrdersExportBuilder,
+    RevenueExportBuilder,
+    TopItemsExportBuilder,
+    ChannelBreakdownExportBuilder,
+    RecipeCostsExportBuilder,
     InventoryLevelsExportBuilder,
     StockMovementsExportBuilder,
     TasksExportBuilder,
@@ -66,6 +84,8 @@ import { EventsModule } from '../events/events.module';
     VendorPricingExportBuilder,
     EventsExportBuilder,
     EventGuestListsExportBuilder,
+    DecisionLogExportBuilder,
+    LeaderboardExportBuilder,
   ],
   exports: [ExportsService],
 })
@@ -73,6 +93,10 @@ export class ExportsModule implements OnModuleInit {
   constructor(
     private readonly exportsService: ExportsService,
     private readonly ordersExportBuilder: OrdersExportBuilder,
+    private readonly revenueExportBuilder: RevenueExportBuilder,
+    private readonly topItemsExportBuilder: TopItemsExportBuilder,
+    private readonly channelBreakdownExportBuilder: ChannelBreakdownExportBuilder,
+    private readonly recipeCostsExportBuilder: RecipeCostsExportBuilder,
     private readonly inventoryLevelsExportBuilder: InventoryLevelsExportBuilder,
     private readonly stockMovementsExportBuilder: StockMovementsExportBuilder,
     private readonly tasksExportBuilder: TasksExportBuilder,
@@ -85,10 +109,28 @@ export class ExportsModule implements OnModuleInit {
     private readonly vendorPricingExportBuilder: VendorPricingExportBuilder,
     private readonly eventsExportBuilder: EventsExportBuilder,
     private readonly eventGuestListsExportBuilder: EventGuestListsExportBuilder,
+    private readonly decisionLogExportBuilder: DecisionLogExportBuilder,
+    private readonly leaderboardExportBuilder: LeaderboardExportBuilder,
   ) {}
 
   onModuleInit() {
     this.exportsService.registerBuilder('orders', this.ordersExportBuilder);
+    this.exportsService.registerBuilder(
+      'revenue_summary',
+      this.revenueExportBuilder,
+    );
+    this.exportsService.registerBuilder(
+      'top_items',
+      this.topItemsExportBuilder,
+    );
+    this.exportsService.registerBuilder(
+      'channel_breakdown',
+      this.channelBreakdownExportBuilder,
+    );
+    this.exportsService.registerBuilder(
+      'recipe_costs',
+      this.recipeCostsExportBuilder,
+    );
     this.exportsService.registerBuilder(
       'inventory_levels',
       this.inventoryLevelsExportBuilder,

@@ -65,6 +65,16 @@ export class EventsService {
     return this.enrichWithGuestCounts(events);
   }
 
+  async findAllForExport() {
+    return this.prisma.event.findMany({
+      orderBy: { date: 'desc' },
+      include: {
+        zone: { select: { name: true } },
+        brand: { select: { name: true } },
+      },
+    });
+  }
+
   async findOne(id: string) {
     const event = await this.prisma.event.findUnique({
       where: { id },
