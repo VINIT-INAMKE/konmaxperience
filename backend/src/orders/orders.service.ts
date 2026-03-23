@@ -176,6 +176,48 @@ export class OrdersService {
   }
 
   // ---------------------------------------------------------------
+  // Find All Orders for Export (no pagination cap)
+  // ---------------------------------------------------------------
+  async findAllForExport(filters: {
+    dateFrom?: string;
+    dateTo?: string;
+    channel?: string;
+    status?: string;
+  }) {
+    const where: Record<string, unknown> = {};
+
+    if (filters.channel) {
+      where.channel = filters.channel;
+    }
+
+    if (filters.status) {
+      where.status = filters.status;
+    }
+
+    if (filters.dateFrom || filters.dateTo) {
+      const createdAt: Record<string, unknown> = {};
+      if (filters.dateFrom) {
+        createdAt.gte = new Date(filters.dateFrom);
+      }
+      if (filters.dateTo) {
+        const endDate = new Date(filters.dateTo);
+        endDate.setHours(23, 59, 59, 999);
+        createdAt.lte = endDate;
+      }
+      where.created_at = createdAt;
+    }
+
+    return this.prisma.order.findMany({
+      where,
+      orderBy: { created_at: 'desc' },
+      include: {
+        creator: { select: { name: true } },
+        payment: { select: { method: true } },
+      },
+    });
+  }
+
+  // ---------------------------------------------------------------
   // Get Single Order
   // ---------------------------------------------------------------
   async getOrderById(orderId: string) {
