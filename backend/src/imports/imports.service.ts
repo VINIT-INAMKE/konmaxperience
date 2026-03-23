@@ -361,6 +361,23 @@ export class ImportsService {
       };
     }
 
+    // After successful vendor_pricing import, trigger cost recalculation for affected recipes
+    if (importType === 'vendor_pricing' && (imported > 0 || updated > 0)) {
+      const ingredientIds = new Set<string>();
+      for (const row of committable) {
+        const ingId = row.validated.ingredient_id as string;
+        if (ingId) ingredientIds.add(ingId);
+      }
+      // Fire-and-forget — cost recalculation is non-blocking
+      for (const ingId of ingredientIds) {
+        this.costCalculatorService
+          .recalculateForIngredient(ingId)
+          .catch((err) =>
+            this.logger.warn(`Cost recalc failed for ingredient ${ingId}`, err),
+          );
+      }
+    }
+
     return {
       imported,
       updated,

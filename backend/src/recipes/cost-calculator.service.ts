@@ -9,7 +9,7 @@ export class CostCalculatorService {
   async calculateRecipeCost(
     recipeId: string,
     visitedSet: Set<string> = new Set(),
-  ): Promise<number | null> {
+  ): Promise<{ cost: number; complete: boolean } | null> {
     if (visitedSet.has(recipeId)) return null; // cycle guard
     visitedSet.add(recipeId);
 
@@ -28,9 +28,10 @@ export class CostCalculatorService {
             source_recipe_id: true,
             ingredient: {
               select: {
+                name: true,
                 VendorPrices: {
                   where: { effective_date: { lte: new Date() } },
-                  orderBy: { effective_date: 'desc' },
+                  orderBy: { price: 'asc' },
                   take: 1,
                   select: { price: true, unit: true },
                 },
@@ -47,42 +48,62 @@ export class CostCalculatorService {
     if (!recipe || recipe.RecipeLines.length === 0) return null;
 
     let totalCost = 0;
+    let allComplete = true;
+
     for (const line of recipe.RecipeLines) {
       if (line.input_type === 'ingredient') {
         const price = line.ingredient?.VendorPrices?.[0];
-        if (!price) return null; // missing vendor price — cannot calculate
+        if (!price) {
+          allComplete = false;
+          continue; // skip this line — partial cost
+        }
         const convertedQty = await convertUnit(
           Number(line.quantity),
           line.unit,
           price.unit,
           this.prisma,
         );
-        if (convertedQty === null) return null;
+        if (convertedQty === null) {
+          allComplete = false;
+          continue; // unit conversion failed — skip this line
+        }
         totalCost += convertedQty * Number(price.price);
       } else if (line.input_type === 'recipe' && line.source_recipe_id) {
-        const srcCost = await this.calculateRecipeCost(
+        const srcResult = await this.calculateRecipeCost(
           line.source_recipe_id,
           visitedSet,
         );
-        if (srcCost === null) return null;
+        if (srcResult === null) {
+          allComplete = false;
+          continue;
+        }
+        if (!srcResult.complete) allComplete = false;
         const srcYieldQty = Number(line.source_recipe!.yield_qty);
-        if (srcYieldQty === 0) return null;
-        const costPerUnit = srcCost / srcYieldQty;
+        if (srcYieldQty === 0) {
+          allComplete = false;
+          continue;
+        }
+        const costPerUnit = srcResult.cost / srcYieldQty;
         const convertedQty = await convertUnit(
           Number(line.quantity),
           line.unit,
           line.source_recipe!.yield_unit,
           this.prisma,
         );
-        if (convertedQty === null) return null;
+        if (convertedQty === null) {
+          allComplete = false;
+          continue;
+        }
         totalCost += costPerUnit * convertedQty;
       }
     }
-    return totalCost;
+
+    return { cost: totalCost, complete: allComplete };
   }
 
   async recalculateAndSave(recipeId: string): Promise<number | null> {
-    const cost = await this.calculateRecipeCost(recipeId);
+    const result = await this.calculateRecipeCost(recipeId);
+    const cost = result?.cost ?? null;
     await this.prisma.recipe.update({
       where: { id: recipeId },
       data: { computed_cost: cost },

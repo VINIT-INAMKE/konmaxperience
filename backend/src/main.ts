@@ -103,6 +103,12 @@ async function bootstrap() {
     next();
   });
 
+  // Global interceptor: convert Prisma Decimal objects to plain numbers in JSON responses
+  const { DecimalSerializationInterceptor } = await import(
+    './common/interceptors/decimal-serialization.interceptor'
+  );
+  app.useGlobalInterceptors(new DecimalSerializationInterceptor());
+
   // Global validation pipe
   app.useGlobalPipes(
     new ValidationPipe({
