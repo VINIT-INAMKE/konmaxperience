@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: User Guide & Data Management
 status: unknown
-stopped_at: Phase 18 UI-SPEC approved
-last_updated: "2026-03-23T06:43:43.805Z"
+stopped_at: Completed 18-01-PLAN.md
+last_updated: "2026-03-23T08:18:38.199Z"
 progress:
   total_phases: 7
   completed_phases: 4
-  total_plans: 9
-  completed_plans: 9
+  total_plans: 16
+  completed_plans: 10
 ---
 
 # Project State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-22)
 
 **Core value:** Every piece of work must be evidence-backed, approved, and validated before it counts -- turning real execution into measurable readiness and progress.
-**Current focus:** Phase 17 — search-preview-and-content-seeding
+**Current focus:** Phase 18 — data-export
 
 ## Current Position
 
-Phase: 18
-Plan: Not started
+Phase: 18 (data-export) — EXECUTING
+Plan: 2 of 7
 
 ## Performance Metrics
 
@@ -55,6 +55,7 @@ Plan: Not started
 | Phase 17 P01 | 9min | 2 tasks | 10 files |
 | Phase 17-03 P03 | 10min | 2 tasks | 1 files |
 | Phase 17 P02 | 5min | 2 tasks | 7 files |
+| Phase 18 P01 | 7min | 2 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -89,6 +90,9 @@ Recent decisions affecting current work:
 - [Phase 17-02]: Admin detection via roleCode check (FOUNDER_ADMIN or TECH_LEAD) matching existing RBAC pattern
 - [Phase 17-02]: Client-side section filtering for preview-as-role (no backend role-spoofing needed)
 - [Phase 17-02]: Search trigger dispatches synthetic Cmd+K keydown event to reuse overlay keyboard listener
+- [Phase 18]: Builder registry pattern: ExportsService holds Map<ReportType, ExportBuilder> for pluggable export builders
+- [Phase 18]: Service-level permission check on /exports/generate because required permission varies by report type
+- [Phase 18]: putObjectDirect on StorageService bypasses MIME whitelist for server-initiated R2 uploads
 
 ### Roadmap Evolution
 
@@ -106,6 +110,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-23T06:43:43.790Z
-Stopped at: Phase 18 UI-SPEC approved
-Resume file: .planning/phases/18-data-export/18-UI-SPEC.md
+Last session: 2026-03-23T08:18:38.186Z
+Stopped at: Completed 18-01-PLAN.md
+Resume file: None
