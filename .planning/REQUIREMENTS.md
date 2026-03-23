@@ -67,6 +67,19 @@ Requirements for milestone v1.1 — User Guide System & Data Management. Each ma
 
 - [x] **TZ-01**: IST (Asia/Kolkata) timezone verified for all date/time outputs including export file timestamps
 
+### Operations Import
+
+- [ ] **OPSIMPORT-01**: 10 new import types registered in ImportType enum, IMPORT_TYPE_CONFIG, SAMPLE_DATA, INSTRUCTIONS (opening stock, missions, quests, tasks, KPIs, events, recipes, menu categories, menu items)
+- [ ] **OPSIMPORT-02**: Infrastructure fixes — transaction rollback (D-26), userId audit trail (D-27), base_unit protection (D-28), enum enforcement (D-29), 500-row limit (D-30), number sanitization (D-31)
+- [ ] **OPSIMPORT-03**: Opening stock import with inventoryService.adjust(), unit conversion validation, additive behavior (no update toggle), SHA-256 re-import detection
+- [ ] **OPSIMPORT-04**: Mission, KPI, event validators with enum enforcement (D-11), FK resolution (D-04), duplicate detection, and blocked field checks (D-02)
+- [ ] **OPSIMPORT-05**: Quest and task validators with dependency guards — quest requires mission, task blocks import into non-planned quests (D-24), created_by from JWT (D-25)
+- [ ] **OPSIMPORT-06**: Recipe 3-sheet XLSX import with multi-pass commit (D-07), BOM line validation, cycle detection (D-19), cost recalculation, draft-only import (D-16)
+- [ ] **OPSIMPORT-07**: Menu category (brand FK with ambiguity check, brand_id change blocked) and menu item (approved recipe guard, brand-scoped category lookup) validators
+- [ ] **OPSIMPORT-08**: Commit logic for all 10 types with createRow/updateRow, per-entity SAFE/BLOCKED/NEVER update policies (D-02), all-or-nothing transactions (D-06)
+- [ ] **OPSIMPORT-09**: Tiered import index page with 4 dependency levels, live prerequisite check via GET /imports/prerequisites, amber warning badges
+- [ ] **OPSIMPORT-10**: Frontend stock-specific UI (amber additive warning, re-import warning, no toggle) and recipe-specific UI (XLSX-only badge, grouped BOM preview, draft notice)
+
 ### In-App Chat
 
 - [x] **CHAT-01**: Prisma schema with Conversation, Message, ConversationParticipant models and migration applied
@@ -148,16 +161,26 @@ Which phases cover which requirements. Updated during roadmap creation.
 | EXPORT-09 | Phase 18 | Complete |
 | EXPORT-10 | Phase 18 | Complete |
 | EXPORT-11 | Phase 18 | Complete |
-| EXPORT-12 | Phase 19 | Planned |
-| EXPORT-13 | Phase 19 | Planned |
-| IMPORT-01 | Phase 19 | Planned |
-| IMPORT-02 | Phase 19 | Planned |
-| IMPORT-03 | Phase 19 | Planned |
-| IMPORT-04 | Phase 19 | Planned |
-| IMPORT-05 | Phase 19 | Planned |
-| IMPORT-06 | Phase 19 | Planned |
-| IMPORT-07 | Phase 19 | Planned |
-| TZ-01 | Phase 19 | Planned |
+| EXPORT-12 | Phase 19 | Complete |
+| EXPORT-13 | Phase 19 | Complete |
+| IMPORT-01 | Phase 19 | Complete |
+| IMPORT-02 | Phase 19 | Complete |
+| IMPORT-03 | Phase 19 | Complete |
+| IMPORT-04 | Phase 19 | Complete |
+| IMPORT-05 | Phase 19 | Complete |
+| IMPORT-06 | Phase 19 | Complete |
+| IMPORT-07 | Phase 19 | Complete |
+| TZ-01 | Phase 19 | Complete |
+| OPSIMPORT-01 | Phase 20 | Planned |
+| OPSIMPORT-02 | Phase 20 | Planned |
+| OPSIMPORT-03 | Phase 20 | Planned |
+| OPSIMPORT-04 | Phase 20 | Planned |
+| OPSIMPORT-05 | Phase 20 | Planned |
+| OPSIMPORT-06 | Phase 20 | Planned |
+| OPSIMPORT-07 | Phase 20 | Planned |
+| OPSIMPORT-08 | Phase 20 | Planned |
+| OPSIMPORT-09 | Phase 20 | Planned |
+| OPSIMPORT-10 | Phase 20 | Planned |
 | CHAT-01 | Phase 21 | Complete |
 | CHAT-02 | Phase 21 | Complete |
 | CHAT-03 | Phase 21 | Complete |
@@ -170,10 +193,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CHAT-10 | Phase 21 | Complete |
 
 **Coverage:**
-- v1.1 requirements: 49 total
-- Mapped to phases: 49
+- v1.1 requirements: 59 total
+- Mapped to phases: 59
 - Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-22*
-*Last updated: 2026-03-23 after Phase 19 planning*
+*Last updated: 2026-03-24 after Phase 20 planning*

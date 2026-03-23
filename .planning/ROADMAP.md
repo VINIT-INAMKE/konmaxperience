@@ -108,7 +108,7 @@ Phases execute in numeric order: 14 -> 14.x -> 15 -> 15.x -> 16 -> 16.x -> 17 ->
 | 17. Search, Preview, and Content Seeding | v1.1 | 3/3 | Complete    | 2026-03-23 |
 | 18. Data Export | v1.1 | 7/7 | Complete    | 2026-03-23 |
 | 19. Master Data Import | v1.1 | 3/3 | Complete    | 2026-03-23 |
-| 20. Operations Import | v1.1 | 0/? | Not started | - |
+| 20. Operations Import | v1.1 | 0/5 | Not started | - |
 | 21. In-App Chat | v1.1 | 4/4 | Complete    | 2026-03-23 |
 
 ### Phase 18: Data Export
@@ -153,21 +153,25 @@ Plans:
 - [x] 19-03-PLAN.md -- Import frontend: types, import index page, sidebar nav, import type pages with drag-drop upload, preview table, inline editing, commit flow, result summary
 
 ### Phase 20: Operations Import
-**Goal**: Bulk CSV/XLSX import for operational data — opening stock, recipes, menu items, events, tasks, quests, KPIs with dependency ordering and entity resolution
+**Goal**: Bulk CSV/XLSX import for operational data — opening stock, recipes, menu items, events, tasks, quests, KPIs with dependency ordering, entity resolution, and per-entity update policies
 **Depends on**: Phase 19 -- shared import infrastructure, master data must exist
-**Requirements**: TBD (to be defined during planning)
+**Requirements**: OPSIMPORT-01, OPSIMPORT-02, OPSIMPORT-03, OPSIMPORT-04, OPSIMPORT-05, OPSIMPORT-06, OPSIMPORT-07, OPSIMPORT-08, OPSIMPORT-09, OPSIMPORT-10
 **Success Criteria** (what must be TRUE):
-  1. Admin can upload opening stock levels with ingredient + zone name resolution
-  2. Admin can upload recipes with BOM lines (two-sheet format: recipes + lines)
-  3. Admin can upload menu items with recipe and category name resolution
-  4. Admin can bulk-create events, tasks, quests, and KPIs from spreadsheets
-  5. Dependency ordering enforced — import rejects if required master data is missing
-**Plans**: TBD
+  1. Admin can upload opening stock levels with ingredient + zone name resolution and unit conversion validation
+  2. Admin can upload recipes with BOM lines (3-sheet XLSX: headers + BOM + instructions) with cycle detection
+  3. Admin can upload menu items with approved recipe guard and brand-scoped category resolution
+  4. Admin can bulk-create events, tasks, quests, missions, and KPIs with enum enforcement and FK resolution
+  5. Dependency ordering visible on import index page with live prerequisite checks and amber warnings
+  6. Per-entity update policies enforce SAFE/BLOCKED/NEVER field categories per D-02
+  7. Infrastructure fixes: transaction rollback, userId audit, base_unit protection, enum enforcement, row limit, number sanitization
+**Plans**: 5 plans
 
 Plans:
-- [ ] 20-01: TBD
-- [ ] 20-02: TBD
-- [ ] 20-03: TBD
+- [ ] 20-01-PLAN.md -- Backend infrastructure: extend types/config (10 new import types), fix service/controller (D-26-D-31), recipe XLSX parser, prerequisites endpoint, module wiring
+- [ ] 20-02-PLAN.md -- Level 1 validators (opening stock, mission, KPI, event) + fix ingredient validator (D-28, D-29) + templates for all 10 new types
+- [ ] 20-03-PLAN.md -- Level 2-4 validators (quest, task, recipe, menu category, menu item) + wire all validators into service
+- [ ] 20-04-PLAN.md -- Commit logic: createRow/updateRow for all types, stock special path (inventoryService.adjust), recipe two-pass commit with BOM and cost calc
+- [ ] 20-05-PLAN.md -- Frontend: tiered import index with prerequisites, stock/recipe specific UI (amber warnings, grouped preview, XLSX-only)
 
 ### Phase 21: In-App Chat
 **Goal**: Real-time 1-1 and group messaging using Pusher.js — users can start 1-1 chats, admin creates group chats, admin/tech can view all conversations, normal users see only their own chats
