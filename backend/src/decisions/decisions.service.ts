@@ -35,6 +35,15 @@ export class DecisionsService {
     });
   }
 
+  async findAllForExport(): Promise<any[]> {
+    return this.prisma.decision.findMany({
+      include: {
+        proposer: { select: { name: true } },
+      },
+      orderBy: { created_at: 'desc' },
+    });
+  }
+
   async findOne(id: string) {
     const decision = await this.prisma.decision.findUnique({
       where: { id },

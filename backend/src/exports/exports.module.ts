@@ -14,6 +14,9 @@ import { AnalyticsModule } from '../analytics/analytics.module';
 import { DecisionsModule } from '../decisions/decisions.module';
 import { LeaderboardModule } from '../leaderboard/leaderboard.module';
 import { EventsModule } from '../events/events.module';
+import { IngredientsModule } from '../ingredients/ingredients.module';
+import { VendorsModule } from '../vendors/vendors.module';
+import { RecipesModule } from '../recipes/recipes.module';
 import { OrdersExportBuilder } from './builders/orders.builder';
 import {
   RevenueExportBuilder,
@@ -47,6 +50,11 @@ import {
   EventsExportBuilder,
   EventGuestListsExportBuilder,
 } from './builders/events.builder';
+import {
+  IngredientsExportBuilder,
+  VendorsExportBuilder,
+  RecipesExportBuilder,
+} from './builders/master-data.builder';
 
 @Module({
   imports: [
@@ -63,6 +71,9 @@ import {
     DecisionsModule,
     LeaderboardModule,
     EventsModule,
+    IngredientsModule,
+    VendorsModule,
+    RecipesModule,
   ],
   controllers: [ExportsController],
   providers: [
@@ -86,6 +97,9 @@ import {
     EventGuestListsExportBuilder,
     DecisionLogExportBuilder,
     LeaderboardExportBuilder,
+    IngredientsExportBuilder,
+    VendorsExportBuilder,
+    RecipesExportBuilder,
   ],
   exports: [ExportsService],
 })
@@ -111,6 +125,9 @@ export class ExportsModule implements OnModuleInit {
     private readonly eventGuestListsExportBuilder: EventGuestListsExportBuilder,
     private readonly decisionLogExportBuilder: DecisionLogExportBuilder,
     private readonly leaderboardExportBuilder: LeaderboardExportBuilder,
+    private readonly ingredientsExportBuilder: IngredientsExportBuilder,
+    private readonly vendorsExportBuilder: VendorsExportBuilder,
+    private readonly recipesExportBuilder: RecipesExportBuilder,
   ) {}
 
   onModuleInit() {

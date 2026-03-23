@@ -3,6 +3,8 @@ import ExcelJS from 'exceljs';
 import { writeToBuffer } from '@fast-csv/format';
 import { TasksService } from '../../tasks/tasks.service';
 import { KpisService } from '../../kpis/kpis.service';
+import { DecisionsService } from '../../decisions/decisions.service';
+import { PrismaService } from '../../prisma/prisma.service';
 import { ExportBuilder } from '../exports.service';
 
 @Injectable()
@@ -143,6 +145,126 @@ export class KpisExportBuilder implements ExportBuilder {
       'Current Value': Number(k.current_value),
       Status: k.status,
       Domain: k.domain,
+    }));
+    return writeToBuffer(rows, { headers: true });
+  }
+}
+
+@Injectable()
+export class DecisionLogExportBuilder implements ExportBuilder {
+  constructor(private readonly decisionsService: DecisionsService) {}
+
+  async fetchData(
+    _dateFrom?: string,
+    _dateTo?: string,
+    _filters?: string,
+  ): Promise<unknown[]> {
+    return this.decisionsService.findAllForExport();
+  }
+
+  async buildXlsx(data: unknown[]): Promise<Buffer> {
+    const decisions = data as any[];
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet('Decision Log');
+
+    sheet.columns = [
+      { header: 'Title', key: 'title', width: 30 },
+      { header: 'Decision Type', key: 'decision_type', width: 16 },
+      { header: 'Context', key: 'context', width: 40 },
+      { header: 'Proposed By', key: 'proposed_by', width: 20 },
+      { header: 'Impact Scope', key: 'impact_scope', width: 16 },
+      { header: 'Final Decision', key: 'final_decision', width: 40 },
+      { header: 'Status', key: 'status', width: 12 },
+      {
+        header: 'Created At',
+        key: 'created_at',
+        width: 22,
+        style: { numFmt: 'YYYY-MM-DD HH:MM:SS' },
+      },
+    ];
+
+    for (const d of decisions) {
+      sheet.addRow({
+        title: d.title,
+        decision_type: d.decision_type,
+        context: d.context,
+        proposed_by: d.proposer?.name || '',
+        impact_scope: d.impact_scope,
+        final_decision: d.final_decision || '',
+        status: d.status,
+        created_at: d.created_at,
+      });
+    }
+
+    return (await workbook.xlsx.writeBuffer()) as unknown as Buffer;
+  }
+
+  async buildCsv(data: unknown[]): Promise<Buffer> {
+    const decisions = data as any[];
+    const rows = decisions.map((d) => ({
+      Title: d.title,
+      'Decision Type': d.decision_type,
+      Context: d.context,
+      'Proposed By': d.proposer?.name || '',
+      'Impact Scope': d.impact_scope,
+      'Final Decision': d.final_decision || '',
+      Status: d.status,
+      'Created At': d.created_at?.toISOString() || '',
+    }));
+    return writeToBuffer(rows, { headers: true });
+  }
+}
+
+@Injectable()
+export class LeaderboardExportBuilder implements ExportBuilder {
+  constructor(private readonly prisma: PrismaService) {}
+
+  async fetchData(
+    _dateFrom?: string,
+    _dateTo?: string,
+    _filters?: string,
+  ): Promise<unknown[]> {
+    return this.prisma.user.findMany({
+      where: { status: 'active' },
+      orderBy: { xp_total: 'desc' },
+      include: { role: { select: { name: true } } },
+    });
+  }
+
+  async buildXlsx(data: unknown[]): Promise<Buffer> {
+    const users = data as any[];
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet('Leaderboard');
+
+    sheet.columns = [
+      { header: 'Name', key: 'name', width: 20 },
+      { header: 'Role', key: 'role', width: 20 },
+      { header: 'XP Total', key: 'xp_total', width: 10 },
+      { header: 'Level', key: 'level', width: 8 },
+      { header: 'Streak Days', key: 'streak_days', width: 12 },
+    ];
+
+    for (const u of users) {
+      sheet.addRow({
+        name: u.name,
+        role: u.role?.name || '',
+        xp_total: u.xp_total,
+        level: u.level,
+        streak_days: u.streak_days,
+      });
+    }
+
+    return (await workbook.xlsx.writeBuffer()) as unknown as Buffer;
+  }
+
+  async buildCsv(data: unknown[]): Promise<Buffer> {
+    const users = data as any[];
+    const rows = users.map((u) => ({
+      Name: u.name,
+      Role: u.role?.name || '',
+      'XP Total': u.xp_total,
+      Level: u.level,
+      'Streak Days': u.streak_days,
     }));
     return writeToBuffer(rows, { headers: true });
   }
