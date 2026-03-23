@@ -47,9 +47,9 @@ Requirements for milestone v1.1 — User Guide System & Data Management. Each ma
 - [x] **EXPORT-06**: Kitchen/F&B exports — Waste Log, Prep Batches, Ingredients, Vendors, Recipes (multi-sheet with BOM) (5 types)
 - [x] **EXPORT-07**: Menu/events/feedback exports — Menu Items, Feedback, Events, Event Guest Lists (4 types)
 - [x] **EXPORT-08**: Operations/intelligence exports — Tasks, KPIs, Decision Log, Leaderboard (4 types)
-- [ ] **EXPORT-09**: Admin exports page at /admin/exports showing export history with re-download, filter by report type, format/status badges
-- [ ] **EXPORT-10**: Export button on all 13 data pages with dialog for format selection (CSV/XLSX) and date range filtering
-- [ ] **EXPORT-11**: Sidebar nav entry for Exports under Admin section (MANAGE_SYSTEM gated)
+- [x] **EXPORT-09**: Admin exports page at /admin/exports showing export history with re-download, filter by report type, format/status badges
+- [x] **EXPORT-10**: Export button on all 13 data pages with dialog for format selection (CSV/XLSX) and date range filtering
+- [x] **EXPORT-11**: Sidebar nav entry for Exports under Admin section (MANAGE_SYSTEM gated)
 
 ## Future Requirements
 

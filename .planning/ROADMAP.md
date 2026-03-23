@@ -26,7 +26,7 @@
 - [x] **Phase 15: Reader View** - Staff-facing guide experience with role-gated content (completed 2026-03-22)
 - [x] **Phase 16: Admin CMS** - Tiptap rich text editor with image upload and content management UI (completed 2026-03-22)
 - [x] **Phase 17: Search, Preview, and Content Seeding** - Full-text search, admin preview-as-role, and real guide content generated from codebase (completed 2026-03-23)
-- [ ] **Phase 18: Data Export** - CSV/XLSX export for 22 report types across all modules
+- [x] **Phase 18: Data Export** - CSV/XLSX export for 22 report types across all modules (completed 2026-03-23)
 - [ ] **Phase 19: Master Data Import** - Bulk import for ingredients, vendors, and vendor pricing
 - [ ] **Phase 20: Operations Import** - Bulk import for stock, recipes, menu, events, tasks, quests, KPIs
 
@@ -105,7 +105,7 @@ Phases execute in numeric order: 14 -> 14.x -> 15 -> 15.x -> 16 -> 16.x -> 17 ->
 | 15. Reader View | v1.1 | 2/2 | Complete    | 2026-03-22 |
 | 16. Admin CMS | v1.1 | 2/2 | Complete    | 2026-03-22 |
 | 17. Search, Preview, and Content Seeding | v1.1 | 3/3 | Complete    | 2026-03-23 |
-| 18. Data Export | v1.1 | 6/7 | In Progress|  |
+| 18. Data Export | v1.1 | 7/7 | Complete   | 2026-03-23 |
 | 19. Master Data Import | v1.1 | 0/? | Not started | - |
 | 20. Operations Import | v1.1 | 0/? | Not started | - |
 
@@ -129,7 +129,7 @@ Plans:
 - [x] 18-04-PLAN.md -- Kitchen/F&B export builders: Waste Log, Prep Batches, Ingredients, Vendors, Recipes (multi-sheet)
 - [x] 18-05-PLAN.md -- Menu/events/feedback export builders: Menu Items, Feedback, Events, Event Guest Lists
 - [x] 18-06-PLAN.md -- Operations/intelligence export builders: Tasks, KPIs, Decision Log, Leaderboard
-- [ ] 18-07-PLAN.md -- Frontend: ExportButton + ExportDialog on 13 pages, admin exports history page, sidebar nav
+- [x] 18-07-PLAN.md -- Frontend: ExportButton + ExportDialog on 13 pages, admin exports history page, sidebar nav
 
 ### Phase 19: Master Data Import
 **Goal**: Bulk CSV/XLSX import for foundation data — ingredients, vendors, and vendor pricing with validation, error reporting, and preview before commit

@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: User Guide & Data Management
 status: unknown
-stopped_at: Completed 18-04-PLAN.md
-last_updated: "2026-03-23T08:47:27.348Z"
+stopped_at: Completed 18-07-PLAN.md
+last_updated: "2026-03-23T09:15:12.015Z"
 progress:
   total_phases: 7
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 16
-  completed_plans: 15
+  completed_plans: 16
 ---
 
 # Project State
@@ -60,6 +60,7 @@ Plan: 7 of 7
 | Phase 18 P05 | 6min | 2 tasks | 6 files |
 | Phase 18 P02 | 6min | 2 tasks | 5 files |
 | Phase 18 P04 | 9min | 2 tasks | 10 files |
+| Phase 18 P07 | 23min | 3 tasks | 22 files |
 
 ## Accumulated Context
 
@@ -109,6 +110,9 @@ Recent decisions affecting current work:
 - [Phase 18]: DecisionsService.findAllForExport added because findAll is paginated with take/skip
 - [Phase 18]: RecipesExportBuilder multi-sheet: Recipes + BOM Lines per D-02 user constraint
 - [Phase 18]: WasteService and RecipesService exported from their modules for ExportsModule DI access
+- [Phase 18]: TooltipProvider delay prop (not Tooltip delay) for base-ui tooltip component API compatibility
+- [Phase 18]: KDS export button placed in fullscreen top bar (no filter bar available)
+- [Phase 18]: MANAGE_SYSTEM permission guard for Exports sidebar nav item
 
 ### Roadmap Evolution
 
@@ -126,6 +130,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-23T08:47:27.337Z
-Stopped at: Completed 18-04-PLAN.md
+Last session: 2026-03-23T09:15:12.004Z
+Stopped at: Completed 18-07-PLAN.md
 Resume file: None
