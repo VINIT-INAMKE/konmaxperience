@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: User Guide & Data Management
 status: unknown
-stopped_at: Completed 18-03-PLAN.md
-last_updated: "2026-03-23T08:41:45.550Z"
+stopped_at: Completed 18-06-PLAN.md
+last_updated: "2026-03-23T08:43:47.934Z"
 progress:
   total_phases: 7
   completed_phases: 4
   total_plans: 16
-  completed_plans: 11
+  completed_plans: 14
 ---
 
 # Project State
@@ -24,7 +24,7 @@ See: .planning/PROJECT.md (updated 2026-03-22)
 ## Current Position
 
 Phase: 18 (data-export) — EXECUTING
-Plan: 3 of 7
+Plan: 6 of 7
 
 ## Performance Metrics
 
@@ -57,6 +57,8 @@ Plan: 3 of 7
 | Phase 17 P02 | 5min | 2 tasks | 7 files |
 | Phase 18 P01 | 7min | 2 tasks | 11 files |
 | Phase 18 P03 | 4min | 2 tasks | 5 files |
+| Phase 18 P05 | 6min | 2 tasks | 6 files |
+| Phase 18 P02 | 6min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -97,6 +99,13 @@ Recent decisions affecting current work:
 - [Phase 18]: VendorPricingExportBuilder uses direct PrismaService injection since VendorPrice has no dedicated service
 - [Phase 18]: PO CSV export flattens parent fields onto every line item row for single flat file output
 - [Phase 18]: Multi-sheet XLSX pattern: workbook.addWorksheet called per sheet, each with own columns
+- [Phase 18]: Channel modifiers exported as global values (not per-item) since ChannelModifier model is global per channel_type
+- [Phase 18]: EventGuestListsExportBuilder uses direct PrismaService injection for cross-entity EventBooking query
+- [Phase 18]: LeaderboardExportBuilder injects PrismaService directly since LeaderboardService lacks export-suitable method
+- [Phase 18]: findAllForExport reuses getOrders filter pattern but removes take/skip for full dataset export
+- [Phase 18]: 4 separate analytics builder classes for single-responsibility; default 30-day date range fallback
+- [Phase 18]: Buffer.from(arrayBuffer) pattern for ExcelJS writeBuffer to satisfy Node.js Buffer type requirements
+- [Phase 18]: DecisionsService.findAllForExport added because findAll is paginated with take/skip
 
 ### Roadmap Evolution
 
@@ -114,6 +123,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-23T08:41:45.540Z
-Stopped at: Completed 18-03-PLAN.md
+Last session: 2026-03-23T08:43:47.923Z
+Stopped at: Completed 18-06-PLAN.md
 Resume file: None

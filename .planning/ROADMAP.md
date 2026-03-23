@@ -105,7 +105,7 @@ Phases execute in numeric order: 14 -> 14.x -> 15 -> 15.x -> 16 -> 16.x -> 17 ->
 | 15. Reader View | v1.1 | 2/2 | Complete    | 2026-03-22 |
 | 16. Admin CMS | v1.1 | 2/2 | Complete    | 2026-03-22 |
 | 17. Search, Preview, and Content Seeding | v1.1 | 3/3 | Complete    | 2026-03-23 |
-| 18. Data Export | v1.1 | 2/7 | In Progress|  |
+| 18. Data Export | v1.1 | 5/7 | In Progress|  |
 | 19. Master Data Import | v1.1 | 0/? | Not started | - |
 | 20. Operations Import | v1.1 | 0/? | Not started | - |
 
@@ -124,11 +124,11 @@ Phases execute in numeric order: 14 -> 14.x -> 15 -> 15.x -> 16 -> 16.x -> 17 ->
 
 Plans:
 - [x] 18-01-PLAN.md -- Foundation: ExportRecord Prisma model, ExportsModule skeleton, StorageService putObjectDirect, export type config
-- [ ] 18-02-PLAN.md -- Financial/analytics export builders: Orders, Revenue Summary, Top Items, Channel Breakdown, Recipe Costs
+- [x] 18-02-PLAN.md -- Financial/analytics export builders: Orders, Revenue Summary, Top Items, Channel Breakdown, Recipe Costs
 - [x] 18-03-PLAN.md -- Inventory/procurement export builders: Inventory Levels, Stock Movements, Purchase Orders (multi-sheet), Vendor Pricing
 - [ ] 18-04-PLAN.md -- Kitchen/F&B export builders: Waste Log, Prep Batches, Ingredients, Vendors, Recipes (multi-sheet)
-- [ ] 18-05-PLAN.md -- Menu/events/feedback export builders: Menu Items, Feedback, Events, Event Guest Lists
-- [ ] 18-06-PLAN.md -- Operations/intelligence export builders: Tasks, KPIs, Decision Log, Leaderboard
+- [x] 18-05-PLAN.md -- Menu/events/feedback export builders: Menu Items, Feedback, Events, Event Guest Lists
+- [x] 18-06-PLAN.md -- Operations/intelligence export builders: Tasks, KPIs, Decision Log, Leaderboard
 - [ ] 18-07-PLAN.md -- Frontend: ExportButton + ExportDialog on 13 pages, admin exports history page, sidebar nav
 
 ### Phase 19: Master Data Import
