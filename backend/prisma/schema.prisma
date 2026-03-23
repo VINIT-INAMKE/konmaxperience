@@ -57,6 +57,8 @@ model User {
   orders                  Order[]              @relation("OrderCreator")
   notifications           Notification[]
   export_records          ExportRecord[]
+  chat_participations     ConversationParticipant[]
+  sent_messages           Message[]
 
   // Optimizes: leaderboard query (active users sorted by xp_total desc)
   @@index([status, xp_total(sort: Desc)])
@@ -814,4 +816,50 @@ model ExportRecord {
   @@index([report_type, created_at(sort: Desc)])
   @@index([generated_by, created_at(sort: Desc)])
   @@index([status, created_at(sort: Desc)])
+}
+
+model Conversation {
+  id           String                    @id @default(uuid())
+  type         String                    // "direct" | "group"
+  name         String?                   // null for 1-1 chats, required for groups
+  avatar_key   String?                   // R2 key for group avatar (optional)
+  created_by   String                    // user_id of creator
+  created_at   DateTime                  @default(now())
+  updated_at   DateTime                  @updatedAt
+  participants ConversationParticipant[]
+  messages     Message[]
+
+  @@index([created_by])
+  @@index([updated_at(sort: Desc)])
+}
+
+model ConversationParticipant {
+  id              String       @id @default(uuid())
+  conversation_id String
+  conversation    Conversation @relation(fields: [conversation_id], references: [id])
+  user_id         String
+  user            User         @relation(fields: [user_id], references: [id])
+  last_read_at    DateTime?
+  joined_at       DateTime     @default(now())
+
+  @@unique([conversation_id, user_id])
+  @@index([user_id])
+  @@index([conversation_id])
+}
+
+model Message {
+  id              String       @id @default(uuid())
+  conversation_id String
+  conversation    Conversation @relation(fields: [conversation_id], references: [id])
+  sender_id       String
+  sender          User         @relation(fields: [sender_id], references: [id])
+  content         String?      @db.Text
+  attachment_key  String?
+  attachment_url  String?
+  attachment_name String?
+  attachment_type String?      // "image" | "file"
+  created_at      DateTime     @default(now())
+
+  @@index([conversation_id, created_at(sort: Desc)])
+  @@index([sender_id])
 }
