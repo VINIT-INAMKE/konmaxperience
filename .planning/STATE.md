@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: User Guide & Data Management
 status: unknown
-stopped_at: Completed 21-01-PLAN.md
-last_updated: "2026-03-23T13:34:10.135Z"
+stopped_at: Completed 21-02-PLAN.md
+last_updated: "2026-03-23T13:41:18.522Z"
 progress:
   total_phases: 8
   completed_phases: 5
   total_plans: 20
-  completed_plans: 17
+  completed_plans: 18
 ---
 
 # Project State
@@ -24,7 +24,7 @@ See: .planning/PROJECT.md (updated 2026-03-22)
 ## Current Position
 
 Phase: 21 (in-app-chat) — EXECUTING
-Plan: 2 of 4
+Plan: 3 of 4
 
 ## Performance Metrics
 
@@ -62,6 +62,7 @@ Plan: 2 of 4
 | Phase 18 P04 | 9min | 2 tasks | 10 files |
 | Phase 18 P07 | 23min | 3 tasks | 22 files |
 | Phase 21 P01 | 6min | 2 tasks | 14 files |
+| Phase 21 P02 | 5min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -116,6 +117,9 @@ Recent decisions affecting current work:
 - [Phase 18]: MANAGE_SYSTEM permission guard for Exports sidebar nav item
 - [Phase 21]: PusherService uses graceful fallback (null pusher) when env vars missing, allowing app to start without Pusher for dev
 - [Phase 21]: Admin/tech bypass checks role BEFORE participant membership in chat auth endpoint (per D-15, D-16)
+- [Phase 21]: Duplicate direct conversation check uses Prisma AND filter with nested participants.some for both user IDs
+- [Phase 21]: Message sending restricted to participants only - no admin bypass (D-18) - enforced in controller
+- [Phase 21]: Cursor pagination fetches desc then reverses for chronological frontend display
 
 ### Roadmap Evolution
 
@@ -135,6 +139,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-23T13:34:10.126Z
-Stopped at: Completed 21-01-PLAN.md
+Last session: 2026-03-23T13:41:18.513Z
+Stopped at: Completed 21-02-PLAN.md
 Resume file: None

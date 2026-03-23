@@ -109,7 +109,7 @@ Phases execute in numeric order: 14 -> 14.x -> 15 -> 15.x -> 16 -> 16.x -> 17 ->
 | 18. Data Export | v1.1 | 7/7 | Complete    | 2026-03-23 |
 | 19. Master Data Import | v1.1 | 0/? | Not started | - |
 | 20. Operations Import | v1.1 | 0/? | Not started | - |
-| 21. In-App Chat | v1.1 | 1/4 | In Progress|  |
+| 21. In-App Chat | v1.1 | 2/4 | In Progress|  |
 
 ### Phase 18: Data Export
 **Goal**: CSV/XLSX export for all 22 report types with server-side file generation, R2 storage, export history, and export buttons on 13 data pages
@@ -183,6 +183,6 @@ Plans:
 
 Plans:
 - [x] 21-01-PLAN.md -- Foundation: Prisma schema (Conversation, Message, ConversationParticipant), ChatModule scaffold, PusherService singleton, Pusher auth endpoint
-- [ ] 21-02-PLAN.md -- Backend API: Conversation CRUD, message CRUD with cursor pagination, read receipts, Pusher triggers, admin oversight endpoints, unit tests
+- [x] 21-02-PLAN.md -- Backend API: Conversation CRUD, message CRUD with cursor pagination, read receipts, Pusher triggers, admin oversight endpoints, unit tests
 - [ ] 21-03-PLAN.md -- Frontend chat page: split-panel layout, ConversationList with admin tabs, ConversationItem, NewChatDialog, NewGroupDialog, Sidebar nav, Pusher client, types
 - [ ] 21-04-PLAN.md -- Frontend messages + real-time: MessageThread, MessageBubble, ComposeArea, file upload, typing indicators, read receipts, GroupMembersSheet, Pusher integration
