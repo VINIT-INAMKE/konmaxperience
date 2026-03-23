@@ -13,6 +13,7 @@ import {
   ChefHat,
   Bell,
   Truck,
+  Megaphone,
   Check,
 } from 'lucide-react';
 
@@ -24,6 +25,7 @@ const TYPE_ICONS: Record<NotificationType, { icon: typeof Clock; className: stri
   new_order: { icon: ChefHat, className: 'text-blue-400' },
   order_ready: { icon: Bell, className: 'text-green-400' },
   delivery_update: { icon: Truck, className: 'text-blue-400' },
+  admin_notice: { icon: Megaphone, className: 'text-purple-400' },
 };
 
 function formatRelativeTime(dateStr: string): string {

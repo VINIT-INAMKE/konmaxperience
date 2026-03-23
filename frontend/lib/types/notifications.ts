@@ -5,7 +5,8 @@ export type NotificationType =
   | 'low_stock'
   | 'new_order'
   | 'order_ready'
-  | 'delivery_update';
+  | 'delivery_update'
+  | 'admin_notice';
 
 export interface Notification {
   id: string;

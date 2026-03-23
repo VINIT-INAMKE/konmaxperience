@@ -19,6 +19,30 @@ export class NotificationsService {
     return this.prisma.notification.create({ data });
   }
 
+  async broadcast(data: {
+    title: string;
+    body: string;
+    link_url?: string;
+    sent_by: string;
+  }) {
+    const activeUsers = await this.prisma.user.findMany({
+      where: { status: 'active' },
+      select: { id: true },
+    });
+
+    const notifications = activeUsers.map((user) => ({
+      user_id: user.id,
+      type: 'admin_notice',
+      title: data.title,
+      body: data.body,
+      link_url: data.link_url || null,
+      reference_id: data.sent_by,
+      reference_type: 'admin_broadcast',
+    }));
+
+    return this.prisma.notification.createMany({ data: notifications });
+  }
+
   async findForUser(userId: string, query: NotificationQueryDto) {
     const where: any = { user_id: userId };
     if (query.type) {
