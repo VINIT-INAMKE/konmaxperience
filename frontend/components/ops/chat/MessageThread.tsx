@@ -277,13 +277,11 @@ export function MessageThread({
         {/* Admin actions for groups */}
         {isAdmin && conversation.type === 'group' && (
           <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button
-                className="flex items-center justify-center size-9 rounded-md hover:bg-muted transition-colors"
-                aria-label="Group options"
-              >
-                <MoreVertical className="size-5 text-muted-foreground" />
-              </button>
+            <DropdownMenuTrigger
+              className="flex items-center justify-center size-9 rounded-md hover:bg-muted transition-colors"
+              aria-label="Group options"
+            >
+              <MoreVertical className="size-5 text-muted-foreground" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => setMembersSheetOpen(true)}>
