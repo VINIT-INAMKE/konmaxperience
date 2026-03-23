@@ -650,7 +650,7 @@ export default function ImportTypePage() {
 
       {/* Row count summary */}
       {parseResult && (
-        <div className="flex items-center gap-4 text-sm">
+        <div className="grid grid-cols-2 sm:flex sm:items-center gap-3 sm:gap-4 text-sm">
           <span>
             <strong>{rows.length}</strong> rows parsed
           </span>
@@ -685,8 +685,8 @@ export default function ImportTypePage() {
               <Table>
                 <TableHeader className="sticky top-0 z-10 bg-[var(--background)]">
                   <TableRow>
-                    <TableHead className="w-8"></TableHead>
-                    <TableHead className="text-xs font-bold uppercase tracking-wider">Status</TableHead>
+                    <TableHead className="w-8 sticky left-0 z-20 bg-[var(--background)]"></TableHead>
+                    <TableHead className="text-xs font-bold uppercase tracking-wider sticky left-8 z-20 bg-[var(--background)]">Status</TableHead>
                     {recipeParseResult.columns.map(col => (
                       <TableHead key={col} className="text-xs font-bold uppercase tracking-wider">{col}</TableHead>
                     ))}
@@ -704,7 +704,7 @@ export default function ImportTypePage() {
                       <Fragment key={idx}>
                         {/* Recipe header row */}
                         <TableRow className="bg-[var(--muted)] font-bold">
-                          <TableCell>
+                          <TableCell className="sticky left-0 z-10 bg-[var(--muted)]">
                             <button
                               onClick={() => {
                                 const next = new Set(expandedRecipes);
@@ -716,7 +716,7 @@ export default function ImportTypePage() {
                               {isExpanded ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
                             </button>
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="sticky left-8 z-10 bg-[var(--muted)]">
                             <div className="flex items-center gap-1">
                               {renderStatusBadge(headerRow)}
                               {bomLines.length > 0 && (
@@ -777,8 +777,8 @@ export default function ImportTypePage() {
                               key={`bom-${idx}-${bomIdx}`}
                               className={isParentInvalid ? 'opacity-50 pointer-events-none' : ''}
                             >
-                              <TableCell></TableCell>
-                              <TableCell className="pl-6">
+                              <TableCell className="sticky left-0 z-10 bg-[var(--background)]"></TableCell>
+                              <TableCell className="pl-6 sticky left-8 z-10 bg-[var(--background)]">
                                 {renderStatusBadge(bomRow)}
                               </TableCell>
                               {bomCols.map((col) => {
@@ -824,11 +824,65 @@ export default function ImportTypePage() {
         /* Standard Preview Table */
         parseResult && rows.length > 0 && (
           <TooltipProvider delay={200}>
-            <div className="overflow-x-auto rounded-lg border">
+            {/* Mobile card view (<640px) */}
+            <div className="sm:hidden space-y-3">
+              {rows.map((row, idx) => (
+                <div key={row.rowIndex} className="rounded-lg border p-3 space-y-2">
+                  <div className="flex items-center gap-2">
+                    {renderStatusBadge(row)}
+                  </div>
+                  {parseResult.columns.map((col) => {
+                    const cellError = getCellError(row, col);
+                    const isEditing =
+                      editingCell?.rowIdx === idx &&
+                      editingCell?.field === col;
+                    return (
+                      <div
+                        key={col}
+                        className={`flex items-start gap-2 text-sm cursor-pointer ${
+                          cellError ? 'text-destructive' : ''
+                        }`}
+                        onClick={() => {
+                          if (!isEditing) startEditing(idx, col);
+                        }}
+                      >
+                        <span className="text-xs font-medium text-muted-foreground uppercase shrink-0 w-24 pt-0.5">
+                          {col}
+                        </span>
+                        {isEditing ? (
+                          <Input
+                            value={editValue}
+                            onChange={(e) => setEditValue(e.target.value)}
+                            onBlur={commitEdit}
+                            onKeyDown={handleEditKeyDown}
+                            className="h-7 text-sm flex-1"
+                            autoFocus
+                          />
+                        ) : cellError ? (
+                          <Tooltip>
+                            <TooltipTrigger className="text-left">
+                              <span className="text-destructive">
+                                {row.raw[col] || '(empty)'}
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent>{cellError}</TooltipContent>
+                          </Tooltip>
+                        ) : (
+                          <span className="break-all">{row.raw[col] || ''}</span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop/tablet table view (>=640px) */}
+            <div className="hidden sm:block overflow-x-auto rounded-lg border">
               <Table>
                 <TableHeader className="sticky top-0 z-10 bg-[var(--background)]">
                   <TableRow>
-                    <TableHead className="text-xs font-bold uppercase tracking-wider w-[80px]">
+                    <TableHead className="text-xs font-bold uppercase tracking-wider w-[80px] sticky left-0 z-20 bg-[var(--background)]">
                       Status
                     </TableHead>
                     {parseResult.columns.map((col) => (
@@ -844,7 +898,7 @@ export default function ImportTypePage() {
                 <TableBody>
                   {rows.map((row, idx) => (
                     <TableRow key={row.rowIndex}>
-                      <TableCell>
+                      <TableCell className="sticky left-0 z-10 bg-[var(--background)]">
                         <div className="flex items-center gap-2">
                           {renderStatusBadge(row)}
                         </div>
@@ -902,21 +956,24 @@ export default function ImportTypePage() {
         )
       )}
 
-      {/* Import N Records button */}
+      {/* Import N Records button — sticky on mobile when scrolling through preview */}
       {parseResult && !commitResult && (
-        <Button
-          onClick={handleCommit}
-          disabled={importableCount === 0 || isParsing || isCommitting}
-        >
-          {isCommitting ? (
-            <>
-              <Loader2 className="size-4 animate-spin mr-1.5" />
-              Importing...
-            </>
-          ) : (
-            <>Import {importableCount} Records</>
-          )}
-        </Button>
+        <div className="sticky bottom-0 z-30 sm:static bg-[var(--background)] py-3 sm:py-0 border-t sm:border-t-0 -mx-4 px-4 sm:mx-0 sm:px-0">
+          <Button
+            onClick={handleCommit}
+            disabled={importableCount === 0 || isParsing || isCommitting}
+            className="w-full sm:w-auto"
+          >
+            {isCommitting ? (
+              <>
+                <Loader2 className="size-4 animate-spin mr-1.5" />
+                Importing...
+              </>
+            ) : (
+              <>Import {importableCount} Records</>
+            )}
+          </Button>
+        </div>
       )}
 
       {/* Import Result Summary */}
