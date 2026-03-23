@@ -1,5 +1,5 @@
 import { PrismaService } from '../../prisma/prisma.service';
-import { sanitizeNumber } from '../import-types';
+import { sanitizeNumber, parseDateUTC } from '../import-types';
 import type { CellError, ImportRow } from '../import-types';
 
 const VALID_EVENT_TYPES = ['dining', 'workshop', 'pop_up', 'tasting', 'other'];
@@ -39,8 +39,8 @@ export async function validateEventRow(
   if (!dateRaw) {
     errors.push({ field: 'date', message: 'Required' });
   } else {
-    const parsed = new Date(dateRaw);
-    if (isNaN(parsed.getTime())) {
+    const parsed = parseDateUTC(dateRaw);
+    if (!parsed) {
       errors.push({
         field: 'date',
         message: 'Invalid date (expected YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS)',
@@ -133,7 +133,7 @@ export async function validateEventRow(
     }
   }
 
-  // Duplicate detection: title + date
+  // Duplicate detection: search by title only, then compare date
   let existingId: string | undefined;
   let status: ImportRow['status'] = errors.length > 0 ? 'invalid' : 'valid';
 
@@ -141,7 +141,6 @@ export async function validateEventRow(
     const existing = await prisma.event.findFirst({
       where: {
         title: { equals: title, mode: 'insensitive' },
-        date: validatedDate,
       },
       select: {
         id: true,
@@ -151,32 +150,39 @@ export async function validateEventRow(
       },
     });
     if (existing) {
-      existingId = existing.id;
-      status = 'duplicate';
-
-      // D-02 blocked checks for update
       const bookingCount = existing._count.bookings;
+
+      // Title matches but dates differ — this is a new record, not a duplicate
+      if (validatedDate.getTime() !== existing.date.getTime()) {
+        // Cannot change event date if bookings exist (updating same-title event)
+        if (bookingCount > 0) {
+          existingId = existing.id;
+          errors.push({
+            field: 'date',
+            message: `Cannot change event date — ${bookingCount} bookings exist`,
+          });
+          status = 'blocked';
+        }
+        // If no bookings, treat as duplicate that will update the date
+        else {
+          existingId = existing.id;
+          status = 'duplicate';
+        }
+      } else {
+        // Title AND date match — true duplicate
+        existingId = existing.id;
+        status = 'duplicate';
+      }
 
       // Cannot reduce capacity below existing bookings
       if (
+        existingId &&
         validatedCapacity !== null &&
         validatedCapacity < bookingCount
       ) {
         errors.push({
           field: 'capacity',
           message: `Cannot reduce capacity below ${bookingCount} existing bookings`,
-        });
-        status = 'blocked';
-      }
-
-      // Cannot change event date if bookings exist
-      if (
-        validatedDate.getTime() !== existing.date.getTime() &&
-        bookingCount > 0
-      ) {
-        errors.push({
-          field: 'date',
-          message: `Cannot change event date — ${bookingCount} bookings exist`,
         });
         status = 'blocked';
       }

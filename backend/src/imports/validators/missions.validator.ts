@@ -1,4 +1,5 @@
 import { PrismaService } from '../../prisma/prisma.service';
+import { parseDateUTC } from '../import-types';
 import type { CellError, ImportRow } from '../import-types';
 
 const VALID_PHASES = ['setup', 'foundation', 'activation', 'scale'];
@@ -57,8 +58,8 @@ export async function validateMissionRow(
   // start_date — optional
   const startDateRaw = (raw.start_date ?? '').trim();
   if (startDateRaw) {
-    const parsed = new Date(startDateRaw);
-    if (isNaN(parsed.getTime())) {
+    const parsed = parseDateUTC(startDateRaw);
+    if (!parsed) {
       errors.push({
         field: 'start_date',
         message: 'Invalid date (expected YYYY-MM-DD)',
@@ -71,8 +72,8 @@ export async function validateMissionRow(
   // end_date — optional
   const endDateRaw = (raw.end_date ?? '').trim();
   if (endDateRaw) {
-    const parsed = new Date(endDateRaw);
-    if (isNaN(parsed.getTime())) {
+    const parsed = parseDateUTC(endDateRaw);
+    if (!parsed) {
       errors.push({
         field: 'end_date',
         message: 'Invalid date (expected YYYY-MM-DD)',

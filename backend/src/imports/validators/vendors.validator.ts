@@ -24,7 +24,7 @@ export async function validateVendorRow(
 
   // email — optional string, basic format check
   const email = (raw.email ?? '').trim();
-  if (email && !email.includes('@')) {
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     errors.push({ field: 'email', message: 'Invalid email address' });
   } else {
     validated.email = email || undefined;

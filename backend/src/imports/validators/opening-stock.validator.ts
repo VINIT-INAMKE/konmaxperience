@@ -85,11 +85,19 @@ export async function validateOpeningStockRow(
     // Check unit conversion path if ingredient was resolved
     if (ingredientBaseUnit) {
       if (unit.toLowerCase() !== ingredientBaseUnit.toLowerCase()) {
+        const unitLower = unit.toLowerCase();
+        const baseLower = ingredientBaseUnit.toLowerCase();
         const conversion = await prisma.unitConversion.findFirst({
           where: {
             OR: [
-              { from_unit: unit, to_unit: ingredientBaseUnit },
-              { from_unit: ingredientBaseUnit, to_unit: unit },
+              {
+                from_unit: { equals: unitLower, mode: 'insensitive' },
+                to_unit: { equals: baseLower, mode: 'insensitive' },
+              },
+              {
+                from_unit: { equals: baseLower, mode: 'insensitive' },
+                to_unit: { equals: unitLower, mode: 'insensitive' },
+              },
             ],
           },
         });

@@ -55,6 +55,11 @@ export async function validateIngredientRow(
     const mslVal = sanitizeNumber(mslRaw);
     if (mslVal === null) {
       errors.push({ field: 'min_stock_level', message: 'Must be a number' });
+    } else if (mslVal < 0) {
+      errors.push({
+        field: 'min_stock_level',
+        message: 'min_stock_level must be 0 or greater',
+      });
     } else {
       validated.min_stock_level = mslVal;
     }

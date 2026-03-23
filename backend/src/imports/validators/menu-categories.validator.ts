@@ -58,7 +58,7 @@ export async function validateMenuCategoryRow(
     validated.sort_order = 0;
   }
 
-  // Duplicate detection: name + brand_id
+  // Duplicate detection: search by name only, then compare brand
   let existingId: string | undefined;
   let status: ImportRow['status'] = errors.length > 0 ? 'invalid' : 'valid';
 
@@ -66,7 +66,6 @@ export async function validateMenuCategoryRow(
     const existing = await prisma.menuCategory.findFirst({
       where: {
         name: { equals: validated.name as string, mode: 'insensitive' },
-        brand_id: validated.brand_id as string,
       },
       select: { id: true, brand_id: true },
     });

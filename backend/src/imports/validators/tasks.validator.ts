@@ -1,6 +1,6 @@
 import { PrismaService } from '../../prisma/prisma.service';
 import type { CellError, ImportRow } from '../import-types';
-import { sanitizeNumber } from '../import-types';
+import { sanitizeNumber, parseDateUTC } from '../import-types';
 
 const VALID_TASK_TYPES = ['core', 'adhoc', 'improvement'];
 const VALID_DOMAINS = [
@@ -165,8 +165,8 @@ export async function validateTaskRow(
   // due_date — optional
   const dueDateRaw = (raw.due_date ?? '').trim();
   if (dueDateRaw) {
-    const parsed = new Date(dueDateRaw);
-    if (isNaN(parsed.getTime())) {
+    const parsed = parseDateUTC(dueDateRaw);
+    if (!parsed) {
       errors.push({
         field: 'due_date',
         message: 'Invalid date (expected YYYY-MM-DD)',

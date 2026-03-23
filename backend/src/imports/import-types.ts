@@ -73,6 +73,20 @@ export function sanitizeNumber(raw: string): number | null {
   return isNaN(num) ? null : num;
 }
 
+/**
+ * Parses a date string to a UTC Date, avoiding timezone-shift bugs.
+ * Bare YYYY-MM-DD → midnight UTC. Other formats passed through.
+ * Returns null if the string is empty or not a valid date.
+ */
+export function parseDateUTC(raw: string): Date | null {
+  if (!raw) return null;
+  const trimmed = raw.trim();
+  const iso =
+    /^\d{4}-\d{2}-\d{2}$/.test(trimmed) ? trimmed + 'T00:00:00.000Z' : trimmed;
+  const d = new Date(iso);
+  return isNaN(d.getTime()) ? null : d;
+}
+
 export const IMPORT_TYPE_CONFIG: Record<ImportType, ImportTypeConfig> = {
   ingredients: {
     label: 'Ingredients',

@@ -1,4 +1,5 @@
 import { PrismaService } from '../../prisma/prisma.service';
+import { sanitizeNumber, parseDateUTC } from '../import-types';
 import type { CellError, ImportRow } from '../import-types';
 
 export async function validateVendorPricingRow(
@@ -48,10 +49,15 @@ export async function validateVendorPricingRow(
   const priceRaw = (raw.price ?? '').trim();
   if (!priceRaw) {
     errors.push({ field: 'price', message: 'Required' });
-  } else if (isNaN(parseFloat(priceRaw))) {
-    errors.push({ field: 'price', message: 'Must be a number' });
   } else {
-    validated.price = parseFloat(priceRaw);
+    const p = sanitizeNumber(priceRaw);
+    if (p === null) {
+      errors.push({ field: 'price', message: 'Must be a number' });
+    } else if (p < 0.01) {
+      errors.push({ field: 'price', message: 'Price must be at least 0.01' });
+    } else {
+      validated.price = p;
+    }
   }
 
   // unit — required string
@@ -67,8 +73,8 @@ export async function validateVendorPricingRow(
   if (!dateRaw) {
     errors.push({ field: 'effective_date', message: 'Required' });
   } else {
-    const parsed = new Date(dateRaw);
-    if (isNaN(parsed.getTime())) {
+    const parsed = parseDateUTC(dateRaw);
+    if (!parsed) {
       errors.push({
         field: 'effective_date',
         message: 'Invalid date (expected YYYY-MM-DD)',

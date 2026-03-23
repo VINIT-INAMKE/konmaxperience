@@ -1,6 +1,6 @@
 import { PrismaService } from '../../prisma/prisma.service';
 import type { CellError, ImportRow } from '../import-types';
-import { sanitizeNumber } from '../import-types';
+import { sanitizeNumber, parseDateUTC } from '../import-types';
 
 export async function validateQuestRow(
   raw: Record<string, string>,
@@ -83,8 +83,8 @@ export async function validateQuestRow(
   // start_date — optional
   const startDateRaw = (raw.start_date ?? '').trim();
   if (startDateRaw) {
-    const parsed = new Date(startDateRaw);
-    if (isNaN(parsed.getTime())) {
+    const parsed = parseDateUTC(startDateRaw);
+    if (!parsed) {
       errors.push({
         field: 'start_date',
         message: 'Invalid date (expected YYYY-MM-DD)',
@@ -97,8 +97,8 @@ export async function validateQuestRow(
   // end_date — optional
   const endDateRaw = (raw.end_date ?? '').trim();
   if (endDateRaw) {
-    const parsed = new Date(endDateRaw);
-    if (isNaN(parsed.getTime())) {
+    const parsed = parseDateUTC(endDateRaw);
+    if (!parsed) {
       errors.push({
         field: 'end_date',
         message: 'Invalid date (expected YYYY-MM-DD)',
