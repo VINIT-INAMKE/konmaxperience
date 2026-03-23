@@ -6,7 +6,7 @@ import { IMPORT_TYPE_CONFIG, type ImportType } from './import-types';
 const SAMPLE_DATA: Record<ImportType, Record<string, string>> = {
   ingredients: {
     name: 'Tomatoes',
-    category: 'Produce',
+    category: 'vegetable',
     base_unit: 'kg',
     min_stock_level: '5',
   },
@@ -126,13 +126,13 @@ const INSTRUCTIONS: Record<ImportType, string[][]> = {
       'category',
       'Yes',
       'Text',
-      'Category (e.g., Produce, Dairy, Spices, Meat)',
+      'Category — valid values: dairy, vegetable, spice, grain, meat, oil',
     ],
     [
       'base_unit',
       'Yes',
       'Text',
-      'Base measurement unit (e.g., kg, g, L, ml, pcs)',
+      'Base measurement unit — valid values: g, ml, pieces, kg, L',
     ],
     [
       'min_stock_level',
