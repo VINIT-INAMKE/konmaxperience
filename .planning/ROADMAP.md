@@ -107,7 +107,7 @@ Phases execute in numeric order: 14 -> 14.x -> 15 -> 15.x -> 16 -> 16.x -> 17 ->
 | 16. Admin CMS | v1.1 | 2/2 | Complete    | 2026-03-22 |
 | 17. Search, Preview, and Content Seeding | v1.1 | 3/3 | Complete    | 2026-03-23 |
 | 18. Data Export | v1.1 | 7/7 | Complete    | 2026-03-23 |
-| 19. Master Data Import | v1.1 | 0/? | Not started | - |
+| 19. Master Data Import | v1.1 | 0/3 | Not started | - |
 | 20. Operations Import | v1.1 | 0/? | Not started | - |
 | 21. In-App Chat | v1.1 | 4/4 | Complete    | 2026-03-23 |
 
@@ -134,22 +134,23 @@ Plans:
 - [x] 18-07-PLAN.md -- Frontend: ExportButton + ExportDialog on 13 pages, admin exports history page, sidebar nav
 
 ### Phase 19: Master Data Import + Export Gaps + Timezone
-**Goal**: Bulk CSV/XLSX import for foundation data (ingredients, vendors, vendor pricing), missing export builders (missions, quests) with ExportButton on missions/readiness/tasks pages, and IST timezone configuration for all date/time outputs
+**Goal**: Bulk CSV/XLSX import for foundation data (ingredients, vendors, vendor pricing) with drag-drop upload, preview table, inline editing, and schema-strict validation; plus missing export builders (missions, quests), ExportButton on all remaining pages, and IST timezone verification
 **Depends on**: Phase 18 -- shared CSV/XLSX library infrastructure
-**Requirements**: TBD (to be defined during planning)
+**Requirements**: IMPORT-01, IMPORT-02, IMPORT-03, IMPORT-04, IMPORT-05, IMPORT-06, IMPORT-07, EXPORT-12, EXPORT-13, TZ-01
 **Success Criteria** (what must be TRUE):
   1. Admin can upload a CSV/XLSX of ingredients and see a preview table with validation errors highlighted
   2. Admin can upload a vendor roster with contact details in bulk
   3. Admin can upload vendor price lists with ingredient name resolution
   4. Invalid rows are reported with clear error messages, valid rows can be committed separately
   5. Import respects existing data — duplicate detection by name
-  6. Missions and quests have export builders with ExportButton on missions, readiness, and tasks list pages
-  7. All date/time outputs (task completion, exports, cron jobs, timestamps) use IST (Asia/Kolkata) regardless of server timezone
-**Plans**: TBD
+  6. Missions and quests have export builders with ExportButton on missions, boards/missions, boards/quests, and decisions pages
+  7. All date/time outputs (exports, timestamps) use IST (Asia/Kolkata) regardless of server timezone
+**Plans**: 3 plans
 
 Plans:
-- [ ] 19-01: TBD
-- [ ] 19-02: TBD
+- [ ] 19-01-PLAN.md -- Export gaps: Missions/Quests export builders, findAllForExport methods, ExportButton on 4 missing pages, frontend type updates, IST verification
+- [ ] 19-02-PLAN.md -- Import backend: ImportsModule with CSV/XLSX parsers, schema-strict validators, template generation, parse/commit/template endpoints
+- [ ] 19-03-PLAN.md -- Import frontend: types, import index page, sidebar nav, import type pages with drag-drop upload, preview table, inline editing, commit flow, result summary
 
 ### Phase 20: Operations Import
 **Goal**: Bulk CSV/XLSX import for operational data — opening stock, recipes, menu items, events, tasks, quests, KPIs with dependency ordering and entity resolution

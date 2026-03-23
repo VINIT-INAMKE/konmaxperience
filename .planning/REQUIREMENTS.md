@@ -50,6 +50,22 @@ Requirements for milestone v1.1 — User Guide System & Data Management. Each ma
 - [x] **EXPORT-09**: Admin exports page at /admin/exports showing export history with re-download, filter by report type, format/status badges
 - [x] **EXPORT-10**: Export button on all 13 data pages with dialog for format selection (CSV/XLSX) and date range filtering
 - [x] **EXPORT-11**: Sidebar nav entry for Exports under Admin section (MANAGE_SYSTEM gated)
+- [ ] **EXPORT-12**: Missions and quests export builders with findAllForExport methods, registered in ExportsModule
+- [ ] **EXPORT-13**: ExportButton on missions list, boards/missions, boards/quests, and decisions pages
+
+### Master Data Import
+
+- [ ] **IMPORT-01**: ImportsModule backend with CSV/XLSX file parsing (Multer upload, @fast-csv/parse, ExcelJS), validation, and commit endpoints
+- [ ] **IMPORT-02**: Schema-strict validation for ingredients, vendors, and vendor pricing with per-cell errors, foreign key name resolution, and duplicate detection
+- [ ] **IMPORT-03**: Downloadable XLSX/CSV templates per import type with exact column headers, sample row, and Instructions sheet
+- [ ] **IMPORT-04**: Frontend import index page at /admin/import with 3 import type cards, and type-specific pages at /admin/import/[type] with drag-drop upload
+- [ ] **IMPORT-05**: Preview table after parse showing row status (valid/invalid/duplicate), per-cell error tooltips, and inline cell editing
+- [ ] **IMPORT-06**: Import commit with "Update existing records" toggle, result summary (imported/updated/skipped/errors), Prisma transaction
+- [ ] **IMPORT-07**: Sidebar nav entry for Import under Admin section (MANAGE_SYSTEM gated)
+
+### Timezone
+
+- [ ] **TZ-01**: IST (Asia/Kolkata) timezone verified for all date/time outputs including export file timestamps
 
 ### In-App Chat
 
@@ -121,33 +137,43 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SEED-02 | Phase 17 | Complete |
 | SEED-03 | Phase 17 | Complete |
 | SEED-04 | Phase 17 | Complete |
-| EXPORT-01 | Phase 18 | Planned |
-| EXPORT-02 | Phase 18 | Planned |
-| EXPORT-03 | Phase 18 | Planned |
-| EXPORT-04 | Phase 18 | Planned |
-| EXPORT-05 | Phase 18 | Planned |
-| EXPORT-06 | Phase 18 | Planned |
-| EXPORT-07 | Phase 18 | Planned |
-| EXPORT-08 | Phase 18 | Planned |
-| EXPORT-09 | Phase 18 | Planned |
-| EXPORT-10 | Phase 18 | Planned |
-| EXPORT-11 | Phase 18 | Planned |
-| CHAT-01 | Phase 21 | Planned |
-| CHAT-02 | Phase 21 | Planned |
-| CHAT-03 | Phase 21 | Planned |
-| CHAT-04 | Phase 21 | Planned |
-| CHAT-05 | Phase 21 | Planned |
-| CHAT-06 | Phase 21 | Planned |
-| CHAT-07 | Phase 21 | Planned |
-| CHAT-08 | Phase 21 | Planned |
-| CHAT-09 | Phase 21 | Planned |
-| CHAT-10 | Phase 21 | Planned |
+| EXPORT-01 | Phase 18 | Complete |
+| EXPORT-02 | Phase 18 | Complete |
+| EXPORT-03 | Phase 18 | Complete |
+| EXPORT-04 | Phase 18 | Complete |
+| EXPORT-05 | Phase 18 | Complete |
+| EXPORT-06 | Phase 18 | Complete |
+| EXPORT-07 | Phase 18 | Complete |
+| EXPORT-08 | Phase 18 | Complete |
+| EXPORT-09 | Phase 18 | Complete |
+| EXPORT-10 | Phase 18 | Complete |
+| EXPORT-11 | Phase 18 | Complete |
+| EXPORT-12 | Phase 19 | Planned |
+| EXPORT-13 | Phase 19 | Planned |
+| IMPORT-01 | Phase 19 | Planned |
+| IMPORT-02 | Phase 19 | Planned |
+| IMPORT-03 | Phase 19 | Planned |
+| IMPORT-04 | Phase 19 | Planned |
+| IMPORT-05 | Phase 19 | Planned |
+| IMPORT-06 | Phase 19 | Planned |
+| IMPORT-07 | Phase 19 | Planned |
+| TZ-01 | Phase 19 | Planned |
+| CHAT-01 | Phase 21 | Complete |
+| CHAT-02 | Phase 21 | Complete |
+| CHAT-03 | Phase 21 | Complete |
+| CHAT-04 | Phase 21 | Complete |
+| CHAT-05 | Phase 21 | Complete |
+| CHAT-06 | Phase 21 | Complete |
+| CHAT-07 | Phase 21 | Complete |
+| CHAT-08 | Phase 21 | Complete |
+| CHAT-09 | Phase 21 | Complete |
+| CHAT-10 | Phase 21 | Complete |
 
 **Coverage:**
-- v1.1 requirements: 39 total
-- Mapped to phases: 39
+- v1.1 requirements: 49 total
+- Mapped to phases: 49
 - Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-22*
-*Last updated: 2026-03-23 after Phase 21 planning*
+*Last updated: 2026-03-23 after Phase 19 planning*
