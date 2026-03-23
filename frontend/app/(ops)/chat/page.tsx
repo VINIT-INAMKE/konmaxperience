@@ -48,7 +48,7 @@ export default function ChatPage() {
     !activeConversation.participants.some((p) => p.user_id === user.id);
 
   return (
-    <div className="flex h-full w-full">
+    <div className="flex h-full w-full overflow-hidden">
       {/* Left panel: Conversation List */}
       <div
         className={`${

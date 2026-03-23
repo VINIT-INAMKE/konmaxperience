@@ -161,22 +161,22 @@ export function ConversationList({
 
   return (
     <>
-      <div className="w-[320px] shrink-0 border-r flex flex-col bg-[var(--card)] max-lg:w-full">
+      <div className="w-[320px] shrink-0 border-r flex flex-col bg-card max-lg:w-full">
         {/* Panel header */}
-        <div className="flex items-center justify-between px-4 h-14 border-b shrink-0">
-          <h2 className="text-[16px] font-semibold">Chat</h2>
+        <div className="flex items-center justify-between px-4 h-12 border-b shrink-0">
+          <h2 className="text-sm font-semibold">Chat</h2>
           {newChatButton}
         </div>
 
         {/* Content */}
         {isAdmin ? (
           <Tabs defaultValue="my-chats" className="flex-1 flex flex-col min-h-0" onValueChange={(value) => onActiveTabChange?.(value)}>
-            <TabsList className="w-full rounded-none border-b h-9 shrink-0">
-              <TabsTrigger value="my-chats" className="flex-1 text-[12px]">
+            <TabsList className="w-full rounded-none border-b h-8 shrink-0 bg-transparent p-0">
+              <TabsTrigger value="my-chats" className="flex-1 text-xs rounded-none h-8 data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary">
                 My Chats
               </TabsTrigger>
-              <TabsTrigger value="all" className="flex-1 text-[12px]">
-                All Conversations
+              <TabsTrigger value="all" className="flex-1 text-xs rounded-none h-8 data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary">
+                All Chats
               </TabsTrigger>
             </TabsList>
             <TabsContent value="my-chats" className="flex-1 min-h-0">
