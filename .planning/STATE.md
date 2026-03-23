@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: User Guide & Data Management
 status: unknown
-stopped_at: Completed 20-05-PLAN.md
-last_updated: "2026-03-23T20:15:49.108Z"
+stopped_at: Completed 20-04-PLAN.md
+last_updated: "2026-03-23T20:28:32.693Z"
 progress:
   total_phases: 8
-  completed_phases: 7
+  completed_phases: 8
   total_plans: 28
-  completed_plans: 27
+  completed_plans: 28
 ---
 
 # Project State
@@ -72,6 +72,7 @@ Plan: 5 of 5
 | Phase 20 P02 | 4min | 2 tasks | 5 files |
 | Phase 20 P03 | 5min | 2 tasks | 6 files |
 | Phase 20 P05 | 6min | 2 tasks | 3 files |
+| Phase 20 P04 | 8min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -154,6 +155,8 @@ Recent decisions affecting current work:
 - [Phase 20]: Menu item validator resolves brand BEFORE category for scoped category-within-brand lookup
 - [Phase 20]: PrerequisiteData interface mirrors backend response for type-safe prerequisite checks on import index page
 - [Phase 20]: Recipe grouped preview uses expandedRecipes Set state with collapsible BOM lines under parent recipe rows
+- [Phase 20]: Stock import: no outer transaction, each inventoryService.adjust() independent with import reference tagging
+- [Phase 20]: Recipe import: two-pass commit (headers then BOM) with two-level cycle detection and cost calc outside tx
 
 ### Roadmap Evolution
 
@@ -173,6 +176,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-23T20:15:40.974Z
-Stopped at: Completed 20-05-PLAN.md
+Last session: 2026-03-23T20:28:32.687Z
+Stopped at: Completed 20-04-PLAN.md
 Resume file: None

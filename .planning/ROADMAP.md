@@ -28,7 +28,7 @@
 - [x] **Phase 17: Search, Preview, and Content Seeding** - Full-text search, admin preview-as-role, and real guide content generated from codebase (completed 2026-03-23)
 - [x] **Phase 18: Data Export** - CSV/XLSX export for 22 report types across all modules (completed 2026-03-23)
 - [x] **Phase 19: Master Data Import + Export Gaps + Timezone** - Bulk import, missing exports (missions/quests), IST timezone (completed 2026-03-23)
-- [ ] **Phase 20: Operations Import** - Bulk import for stock, recipes, menu, events, tasks, quests, KPIs
+- [x] **Phase 20: Operations Import** - Bulk import for stock, recipes, menu, events, tasks, quests, KPIs (completed 2026-03-23)
 - [x] **Phase 21: In-App Chat** - Real-time 1-1 and group messaging with Pusher.js, role-scoped visibility (completed 2026-03-23)
 
 ## Phase Details
@@ -108,7 +108,7 @@ Phases execute in numeric order: 14 -> 14.x -> 15 -> 15.x -> 16 -> 16.x -> 17 ->
 | 17. Search, Preview, and Content Seeding | v1.1 | 3/3 | Complete    | 2026-03-23 |
 | 18. Data Export | v1.1 | 7/7 | Complete    | 2026-03-23 |
 | 19. Master Data Import | v1.1 | 3/3 | Complete    | 2026-03-23 |
-| 20. Operations Import | v1.1 | 4/5 | In Progress|  |
+| 20. Operations Import | v1.1 | 5/5 | Complete   | 2026-03-23 |
 | 21. In-App Chat | v1.1 | 4/4 | Complete    | 2026-03-23 |
 
 ### Phase 18: Data Export
@@ -170,7 +170,7 @@ Plans:
 - [x] 20-01-PLAN.md -- Backend infrastructure: extend types/config (10 new import types), fix service/controller (D-26-D-31), recipe XLSX parser, prerequisites endpoint, module wiring
 - [x] 20-02-PLAN.md -- Level 1 validators (opening stock, mission, KPI, event) + fix ingredient validator (D-28, D-29) + templates for all 10 new types
 - [x] 20-03-PLAN.md -- Level 2-4 validators (quest, task, recipe, menu category, menu item) + wire all validators into service
-- [ ] 20-04-PLAN.md -- Commit logic: createRow/updateRow for all types, stock special path (inventoryService.adjust), recipe two-pass commit with BOM and cost calc
+- [x] 20-04-PLAN.md -- Commit logic: createRow/updateRow for all types, stock special path (inventoryService.adjust), recipe two-pass commit with BOM and cost calc
 - [x] 20-05-PLAN.md -- Frontend: tiered import index with prerequisites, stock/recipe specific UI (amber warnings, grouped preview, XLSX-only)
 
 ### Phase 21: In-App Chat
