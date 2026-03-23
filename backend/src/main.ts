@@ -7,6 +7,7 @@ import { json, urlencoded } from 'express';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
+import { DecimalSerializationInterceptor } from './common/interceptors/decimal-serialization.interceptor';
 import type { Request, Response, NextFunction } from 'express';
 
 async function bootstrap() {
@@ -104,9 +105,6 @@ async function bootstrap() {
   });
 
   // Global interceptor: convert Prisma Decimal objects to plain numbers in JSON responses
-  const { DecimalSerializationInterceptor } = await import(
-    './common/interceptors/decimal-serialization.interceptor'
-  );
   app.useGlobalInterceptors(new DecimalSerializationInterceptor());
 
   // Global validation pipe
