@@ -1,6 +1,6 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
+import { useMemo } from 'react';
 import { Trash2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import {
@@ -18,7 +18,6 @@ import {
   ComboboxList,
   ComboboxItem,
 } from '@/components/ui/combobox';
-import { apiClient } from '@/lib/api-client';
 import { YIELD_UNITS } from '@/lib/types/recipe';
 import type { Ingredient } from '@/lib/types/ingredient';
 import type { Recipe } from '@/lib/types/recipe';
@@ -33,44 +32,34 @@ export interface BomLineState {
   prep_notes: string;
 }
 
-interface CompatibleUnitsResponse {
-  units: string[];
-}
-
 interface BomLineRowProps {
   line: BomLineState;
   index: number;
+  ingredients: Ingredient[];
+  recipes: Recipe[];
   onChange: (index: number, updated: BomLineState) => void;
   onRemove: (index: number) => void;
 }
 
-export function BomLineRow({ line, index, onChange, onRemove }: BomLineRowProps) {
-  const { data: ingredients = [] } = useQuery({
-    queryKey: ['ingredients'],
-    queryFn: () => apiClient.get<Ingredient[]>('/ingredients'),
-    enabled: line.input_type === 'ingredient',
-    staleTime: 5 * 60 * 1000, // 5 min — shared across all BOM rows, prevents parallel fetches
-  });
-
-  const { data: recipes = [] } = useQuery({
-    queryKey: ['recipes'],
-    queryFn: () => apiClient.get<Recipe[]>('/recipes'),
-    enabled: line.input_type === 'recipe',
-    staleTime: 5 * 60 * 1000,
-  });
-
-  const { data: compatibleUnits } = useQuery({
-    queryKey: ['compatible-units', line.item_id],
-    queryFn: () =>
-      apiClient.get<CompatibleUnitsResponse>(`/ingredients/${line.item_id}/compatible-units`),
-    enabled: line.input_type === 'ingredient' && !!line.item_id,
-    staleTime: 5 * 60 * 1000, // unit conversions don't change often
-  });
-
-  const unitOptions =
-    line.input_type === 'ingredient' && compatibleUnits?.units
-      ? compatibleUnits.units
-      : [...YIELD_UNITS];
+export function BomLineRow({ line, index, ingredients, recipes, onChange, onRemove }: BomLineRowProps) {
+  // Derive compatible units from the selected ingredient's base_unit
+  // All ingredients with the same base_unit share the same conversion set
+  const unitOptions = useMemo(() => {
+    if (line.input_type !== 'ingredient' || !line.item_id) return [...YIELD_UNITS];
+    const ingredient = ingredients.find((i) => i.id === line.item_id);
+    if (!ingredient) return [...YIELD_UNITS];
+    // base_unit is always compatible + common conversions
+    const baseUnit = ingredient.base_unit;
+    const KNOWN_CONVERSIONS: Record<string, string[]> = {
+      g: ['g', 'kg'],
+      kg: ['kg', 'g'],
+      ml: ['ml', 'L'],
+      L: ['L', 'ml'],
+      pieces: ['pieces', 'dozen'],
+      dozen: ['dozen', 'pieces'],
+    };
+    return KNOWN_CONVERSIONS[baseUnit] || [baseUnit];
+  }, [line.input_type, line.item_id, ingredients]);
 
   const comboboxItems =
     line.input_type === 'ingredient'

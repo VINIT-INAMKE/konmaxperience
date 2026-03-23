@@ -1,9 +1,13 @@
 'use client';
 
+import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { ShimmerButton } from '@/components/ui/shimmer-button';
 import { BomLineRow } from './BomLineRow';
 import type { BomLineState } from './BomLineRow';
+import { apiClient } from '@/lib/api-client';
+import type { Ingredient } from '@/lib/types/ingredient';
+import type { Recipe } from '@/lib/types/recipe';
 
 interface RecipeWizardStep2Props {
   bomLines: BomLineState[];
@@ -22,6 +26,20 @@ export function RecipeWizardStep2({
   onNext,
   onBack,
 }: RecipeWizardStep2Props) {
+  // Single query for all ingredients — shared across all BOM rows
+  const { data: ingredients = [] } = useQuery({
+    queryKey: ['ingredients'],
+    queryFn: () => apiClient.get<Ingredient[]>('/ingredients'),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Single query for all recipes (sub-recipe selection)
+  const { data: recipes = [] } = useQuery({
+    queryKey: ['recipes'],
+    queryFn: () => apiClient.get<Recipe[]>('/recipes'),
+    staleTime: 5 * 60 * 1000,
+  });
+
   const handleAddLine = () => {
     setBomLines([
       ...bomLines,
@@ -69,6 +87,8 @@ export function RecipeWizardStep2({
               key={line.id}
               line={line}
               index={idx}
+              ingredients={ingredients}
+              recipes={recipes}
               onChange={handleChange}
               onRemove={handleRemove}
             />
