@@ -164,6 +164,42 @@ export class InventoryService {
     return stock;
   }
 
+  async findAllForExport() {
+    return this.prisma.ingredientStock.findMany({
+      orderBy: [{ ingredient: { name: 'asc' } }],
+      include: {
+        ingredient: {
+          select: {
+            name: true,
+            category: true,
+            base_unit: true,
+            min_stock_level: true,
+          },
+        },
+        zone: { select: { name: true } },
+      },
+    });
+  }
+
+  async findMovementsForExport(dateFrom?: string, dateTo?: string) {
+    const where: Record<string, unknown> = {};
+    if (dateFrom || dateTo) {
+      where.created_at = {};
+      if (dateFrom) (where.created_at as any).gte = new Date(dateFrom);
+      if (dateTo)
+        (where.created_at as any).lte = new Date(dateTo + 'T23:59:59.999Z');
+    }
+    return this.prisma.stockMovement.findMany({
+      where,
+      orderBy: { created_at: 'desc' },
+      include: {
+        ingredient: { select: { name: true } },
+        zone: { select: { name: true } },
+        creator: { select: { name: true } },
+      },
+    });
+  }
+
   async getLowStock() {
     // Prisma doesn't support cross-field comparisons in WHERE clauses,
     // so we use $queryRaw to filter at DB level for efficiency
