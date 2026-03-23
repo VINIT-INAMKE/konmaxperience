@@ -21,7 +21,7 @@ export default function AuthLayout({
   }, []);
 
   return (
-    <div className="min-h-screen flex" style={{ colorScheme: 'light' }}>
+    <div className="min-h-screen flex auth-light" style={{ colorScheme: 'light' }}>
       {/* Left brand panel */}
       <div
         ref={panelRef}
