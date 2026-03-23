@@ -4,7 +4,7 @@ buildCommand = "npx prisma migrate deploy && npx prisma generate && npm run buil
 watchPatterns = ["backend/**"]
 
 [deploy]
-startCommand = "npm run start:prod"
+startCommand = "node dist/src/main.js"
 healthcheckPath = "/"
 healthcheckTimeout = 300
 restartPolicyType = "on_failure"
