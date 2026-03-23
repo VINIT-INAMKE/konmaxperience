@@ -1,4 +1,5 @@
 import { Injectable, BadRequestException, Logger } from '@nestjs/common';
+import { createHash } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { InventoryService } from '../inventory/inventory.service';
 import { CostCalculatorService } from '../recipes/cost-calculator.service';
@@ -8,6 +9,18 @@ import { parseRecipeXLSX } from './parsers/recipe-xlsx.parser';
 import { validateIngredientRow } from './validators/ingredients.validator';
 import { validateVendorRow } from './validators/vendors.validator';
 import { validateVendorPricingRow } from './validators/vendor-pricing.validator';
+import { validateOpeningStockRow } from './validators/opening-stock.validator';
+import { validateMissionRow } from './validators/missions.validator';
+import { validateQuestRow } from './validators/quests.validator';
+import { validateTaskRow } from './validators/tasks.validator';
+import { validateKpiRow } from './validators/kpis.validator';
+import { validateEventRow } from './validators/events.validator';
+import {
+  validateRecipeHeaderRow,
+  validateRecipeBomRow,
+} from './validators/recipes.validator';
+import { validateMenuCategoryRow } from './validators/menu-categories.validator';
+import { validateMenuItemRow } from './validators/menu-items.validator';
 import {
   IMPORT_TYPE_CONFIG,
   type ImportType,
@@ -77,6 +90,19 @@ export class ImportsService {
 
     const config = IMPORT_TYPE_CONFIG[importType];
 
+    // D-09, D-22, D-32: Stock re-import detection via SHA-256
+    let warning: string | undefined;
+    if (importType === 'opening_stock') {
+      const fileHash = createHash('sha256').update(buffer).digest('hex');
+      const existingImport = await this.prisma.stockMovement.findFirst({
+        where: { reference_type: 'import', reference_id: fileHash },
+        select: { created_at: true },
+      });
+      if (existingImport) {
+        warning = `This file was already imported on ${existingImport.created_at.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })}. Re-importing will create duplicate stock movements.`;
+      }
+    }
+
     return {
       importType,
       rows: validatedRows,
@@ -87,6 +113,7 @@ export class ImportsService {
         .length,
       blockedCount: validatedRows.filter((r) => r.status === 'blocked').length,
       columns: config.columns,
+      warning,
     };
   }
 
@@ -120,23 +147,57 @@ export class ImportsService {
     const normalizedHeaders = rawHeaders.map(normalizeRow);
     const normalizedBomLines = rawBomLines.map(normalizeRow);
 
+    // Build recipe name map for BOM validation (names from Sheet 1)
+    const recipeNameMap = new Map<string, string>();
+    for (const row of normalizedHeaders) {
+      const name = (row.name ?? '').trim().toLowerCase();
+      if (name) recipeNameMap.set(name, 'pending');
+    }
+
     // Validate recipe header rows
     const validatedHeaders: ImportRow[] = [];
     for (let i = 0; i < normalizedHeaders.length; i++) {
       const row = normalizedHeaders[i];
-      const validated = await this.validateRow(row, i + 2, importType);
+      const validated = await validateRecipeHeaderRow(
+        row,
+        i + 2,
+        this.prisma,
+      );
       validatedHeaders.push(validated);
     }
 
-    // BOM lines are validated later (Plan 03 adds BOM validator)
-    // For now, create basic ImportRow entries for BOM lines
-    const bomRows: ImportRow[] = normalizedBomLines.map((raw, i) => ({
-      rowIndex: i + 2,
-      raw,
-      validated: { ...raw },
-      errors: [],
-      status: 'valid' as const,
-    }));
+    // Validate BOM lines with recipe name map for cross-sheet references
+    const validatedBom: ImportRow[] = [];
+    for (let i = 0; i < normalizedBomLines.length; i++) {
+      const validated = await validateRecipeBomRow(
+        normalizedBomLines[i],
+        i + 2,
+        this.prisma,
+        recipeNameMap,
+      );
+      validatedBom.push(validated);
+    }
+
+    // D-15: If recipe header is invalid/blocked, mark all its BOM lines too
+    const invalidRecipeNames = new Set<string>();
+    for (const row of validatedHeaders) {
+      if (row.status === 'invalid' || row.status === 'blocked') {
+        const name = ((row.raw.name ?? '') as string).trim().toLowerCase();
+        if (name) invalidRecipeNames.add(name);
+      }
+    }
+    for (const bomRow of validatedBom) {
+      const recipeName = ((bomRow.raw.recipe_name ?? '') as string)
+        .trim()
+        .toLowerCase();
+      if (invalidRecipeNames.has(recipeName) && bomRow.status !== 'invalid') {
+        bomRow.status = 'invalid';
+        bomRow.errors.push({
+          field: 'recipe_name',
+          message: 'Parent recipe is invalid or blocked',
+        });
+      }
+    }
 
     const config = IMPORT_TYPE_CONFIG[importType];
     const bomColumns = [
@@ -160,10 +221,11 @@ export class ImportsService {
       blockedCount: validatedHeaders.filter((r) => r.status === 'blocked')
         .length,
       columns: config.columns,
-      bomRows,
+      bomRows: validatedBom,
       bomColumns,
-      bomValidCount: bomRows.filter((r) => r.status === 'valid').length,
-      bomInvalidCount: bomRows.filter((r) => r.status === 'invalid').length,
+      bomValidCount: validatedBom.filter((r) => r.status === 'valid').length,
+      bomInvalidCount: validatedBom.filter((r) => r.status === 'invalid')
+        .length,
     };
   }
 
@@ -179,9 +241,26 @@ export class ImportsService {
         return validateVendorRow(raw, rowIndex, this.prisma);
       case 'vendor_pricing':
         return validateVendorPricingRow(raw, rowIndex, this.prisma);
+      case 'opening_stock':
+        return validateOpeningStockRow(raw, rowIndex, this.prisma);
+      case 'missions':
+        return validateMissionRow(raw, rowIndex, this.prisma);
+      case 'quests':
+        return validateQuestRow(raw, rowIndex, this.prisma);
+      case 'tasks':
+        return validateTaskRow(raw, rowIndex, this.prisma);
+      case 'kpis':
+        return validateKpiRow(raw, rowIndex, this.prisma);
+      case 'events':
+        return validateEventRow(raw, rowIndex, this.prisma);
+      case 'recipes':
+        // Recipe headers are validated via parseRecipeFile, not here
+        return validateRecipeHeaderRow(raw, rowIndex, this.prisma);
+      case 'menu_categories':
+        return validateMenuCategoryRow(raw, rowIndex, this.prisma);
+      case 'menu_items':
+        return validateMenuItemRow(raw, rowIndex, this.prisma);
       default:
-        // New types will have validators added in Plan 03
-        // For now, return a basic valid row with raw data as validated
         return {
           rowIndex,
           raw,
