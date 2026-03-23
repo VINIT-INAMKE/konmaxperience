@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Search } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import {
   Dialog,
@@ -11,17 +11,9 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
-import {
-  Command,
-  CommandInput,
-  CommandList,
-  CommandEmpty,
-  CommandGroup,
-  CommandItem,
-} from '@/components/ui/command';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { apiClient } from '@/lib/api-client';
 import { useAuthStore } from '@/lib/stores/auth-store';
 import type { Conversation } from '@/lib/types/chat';
@@ -32,7 +24,6 @@ interface User {
   email: string;
   roleCode: string;
   roleName: string;
-  status: string;
 }
 
 interface NewChatDialogProps {
@@ -58,6 +49,7 @@ export function NewChatDialog({
   const currentUser = useAuthStore((s) => s.user);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [creating, setCreating] = useState(false);
+  const [search, setSearch] = useState('');
 
   const { data: users = [] } = useQuery({
     queryKey: ['chat-team-members'],
@@ -65,9 +57,14 @@ export function NewChatDialog({
     enabled: open,
   });
 
-  const availableUsers = users.filter(
-    (u) => u.id !== currentUser?.id && u.status === 'active',
-  );
+  const availableUsers = users
+    .filter((u) => u.id !== currentUser?.id)
+    .filter((u) =>
+      search
+        ? u.name.toLowerCase().includes(search.toLowerCase()) ||
+          u.roleName.toLowerCase().includes(search.toLowerCase())
+        : true,
+    );
 
   async function handleStartChat() {
     if (!selectedUser) return;
@@ -80,6 +77,7 @@ export function NewChatDialog({
       onConversationCreated(conv);
       onOpenChange(false);
       setSelectedUser(null);
+      setSearch('');
     } catch {
       // Error handled by apiClient
     } finally {
@@ -90,6 +88,7 @@ export function NewChatDialog({
   function handleOpenChange(nextOpen: boolean) {
     if (!nextOpen) {
       setSelectedUser(null);
+      setSearch('');
     }
     onOpenChange(nextOpen);
   }
@@ -104,40 +103,54 @@ export function NewChatDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <Command className="rounded-lg border">
-          <CommandInput placeholder="Search team members..." />
-          <CommandList>
-            <CommandEmpty>No team members found.</CommandEmpty>
-            <CommandGroup>
-              {availableUsers.map((user) => (
-                <CommandItem
-                  key={user.id}
-                  value={user.name}
-                  onSelect={() => setSelectedUser(user)}
-                  className={
-                    selectedUser?.id === user.id
-                      ? 'bg-[var(--primary)]/10'
-                      : ''
-                  }
-                >
-                  <Avatar size="sm">
-                    <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
-                  </Avatar>
-                  <span className="text-[14px]">{user.name}</span>
-                  <Badge variant="secondary" className="text-[12px] ml-auto">
-                    {user.roleName}
-                  </Badge>
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          </CommandList>
-        </Command>
+        <div className="space-y-3">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+            <Input
+              placeholder="Search team members..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+
+          <ScrollArea className="h-[280px] rounded-lg border">
+            <div className="p-1">
+              {availableUsers.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-8">
+                  No team members found.
+                </p>
+              ) : (
+                availableUsers.map((user) => (
+                  <button
+                    key={user.id}
+                    type="button"
+                    onClick={() => setSelectedUser(user)}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors ${
+                      selectedUser?.id === user.id
+                        ? 'bg-primary/10 ring-1 ring-primary/20'
+                        : 'hover:bg-muted'
+                    }`}
+                  >
+                    <div className="size-8 rounded-full bg-muted flex items-center justify-center text-xs font-medium shrink-0">
+                      {getInitials(user.name)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{user.name}</p>
+                      <p className="text-xs text-muted-foreground truncate">{user.roleName}</p>
+                    </div>
+                    {selectedUser?.id === user.id && (
+                      <div className="size-2 rounded-full bg-primary shrink-0" />
+                    )}
+                  </button>
+                ))
+              )}
+            </div>
+          </ScrollArea>
+        </div>
 
         <DialogFooter>
-          <Button
-            variant="outline"
-            onClick={() => handleOpenChange(false)}
-          >
+          <Button variant="outline" onClick={() => handleOpenChange(false)}>
             Cancel
           </Button>
           <Button
