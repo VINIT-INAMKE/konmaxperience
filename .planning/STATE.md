@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: User Guide & Data Management
 status: unknown
-stopped_at: Completed 21-02-PLAN.md
-last_updated: "2026-03-23T13:41:18.522Z"
+stopped_at: Completed 21-04-PLAN.md
+last_updated: "2026-03-23T13:56:45.362Z"
 progress:
   total_phases: 8
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 20
-  completed_plans: 18
+  completed_plans: 20
 ---
 
 # Project State
@@ -24,7 +24,7 @@ See: .planning/PROJECT.md (updated 2026-03-22)
 ## Current Position
 
 Phase: 21 (in-app-chat) — EXECUTING
-Plan: 3 of 4
+Plan: 4 of 4
 
 ## Performance Metrics
 
@@ -63,6 +63,8 @@ Plan: 3 of 4
 | Phase 18 P07 | 23min | 3 tasks | 22 files |
 | Phase 21 P01 | 6min | 2 tasks | 14 files |
 | Phase 21 P02 | 5min | 2 tasks | 3 files |
+| Phase 21 P03 | 11min | 2 tasks | 12 files |
+| Phase 21 P04 | 15min | 2 tasks | 13 files |
 
 ## Accumulated Context
 
@@ -120,6 +122,13 @@ Recent decisions affecting current work:
 - [Phase 21]: Duplicate direct conversation check uses Prisma AND filter with nested participants.some for both user IDs
 - [Phase 21]: Message sending restricted to participants only - no admin bypass (D-18) - enforced in controller
 - [Phase 21]: Cursor pagination fetches desc then reverses for chronological frontend display
+- [Phase 21]: Pusher events update React Query cache directly via setQueryData for instant message UX
+- [Phase 21]: Admin read-only determined by active tab state plus participant membership check
+- [Phase 21]: Typing indicator uses 2s sender throttle and 3s receiver display timeout per Pusher best practices
+- [Phase 21]: Pusher client uses customHandler (not default ajax transport) to forward cookies via credentials: 'include'
+- [Phase 21]: Chat layout uses negative margins to break out of ops layout padding for full-height split panel
+- [Phase 21]: DropdownMenuTrigger uses className directly (not asChild) since base-ui does not support asChild
+- [Phase 21]: ConversationItem unread badge uses dot indicator instead of numeric count for simplicity
 
 ### Roadmap Evolution
 
@@ -139,6 +148,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-23T13:41:18.513Z
-Stopped at: Completed 21-02-PLAN.md
+Last session: 2026-03-23T13:56:45.352Z
+Stopped at: Completed 21-04-PLAN.md
 Resume file: None
