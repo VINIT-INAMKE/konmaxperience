@@ -352,6 +352,16 @@ export class TasksService {
     });
   }
 
+  async findAllForExport(): Promise<any[]> {
+    return this.prisma.task.findMany({
+      orderBy: { created_at: 'desc' },
+      include: {
+        owner: { select: { name: true } },
+        quest: { select: { title: true } },
+      },
+    });
+  }
+
   async recalculateQuestProgress(
     questId: string | null,
     tx: any,

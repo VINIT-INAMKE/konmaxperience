@@ -41,6 +41,12 @@ export class KpisService {
     });
   }
 
+  async findAllForExport(): Promise<any[]> {
+    return this.prisma.kpi.findMany({
+      orderBy: { name: 'asc' },
+    });
+  }
+
   async findOne(id: string) {
     const kpi = await this.prisma.kpi.findUnique({
       where: { id },

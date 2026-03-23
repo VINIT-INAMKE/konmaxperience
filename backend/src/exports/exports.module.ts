@@ -56,6 +56,8 @@ import {
     FeedbackExportBuilder,
     WasteLogExportBuilder,
     PrepBatchesExportBuilder,
+    PurchaseOrdersExportBuilder,
+    VendorPricingExportBuilder,
   ],
   exports: [ExportsService],
 })
@@ -71,6 +73,8 @@ export class ExportsModule implements OnModuleInit {
     private readonly feedbackExportBuilder: FeedbackExportBuilder,
     private readonly wasteLogExportBuilder: WasteLogExportBuilder,
     private readonly prepBatchesExportBuilder: PrepBatchesExportBuilder,
+    private readonly purchaseOrdersExportBuilder: PurchaseOrdersExportBuilder,
+    private readonly vendorPricingExportBuilder: VendorPricingExportBuilder,
   ) {}
 
   onModuleInit() {
@@ -100,6 +104,14 @@ export class ExportsModule implements OnModuleInit {
     this.exportsService.registerBuilder(
       'prep_batches',
       this.prepBatchesExportBuilder,
+    );
+    this.exportsService.registerBuilder(
+      'purchase_orders',
+      this.purchaseOrdersExportBuilder,
+    );
+    this.exportsService.registerBuilder(
+      'vendor_pricing',
+      this.vendorPricingExportBuilder,
     );
   }
 }
