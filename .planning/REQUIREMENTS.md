@@ -32,10 +32,10 @@ Requirements for milestone v1.1 — User Guide System. Each maps to roadmap phas
 
 ### Content Seeding
 
-- [ ] **SEED-01**: System ships with pre-written guide sections for all major feature areas (Kitchen, POS, Inventory, Recipes, Missions, Evidence, etc.)
-- [ ] **SEED-02**: Each section contains step-by-step workflow walkthroughs generated from actual codebase
-- [ ] **SEED-03**: Sections are pre-mapped to the correct roles based on existing RBAC permissions
-- [ ] **SEED-04**: All seeded content is editable by admin post-deployment
+- [x] **SEED-01**: System ships with pre-written guide sections for all major feature areas (Kitchen, POS, Inventory, Recipes, Missions, Evidence, etc.)
+- [x] **SEED-02**: Each section contains step-by-step workflow walkthroughs generated from actual codebase
+- [x] **SEED-03**: Sections are pre-mapped to the correct roles based on existing RBAC permissions
+- [x] **SEED-04**: All seeded content is editable by admin post-deployment
 
 ## Future Requirements
 
@@ -75,10 +75,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | READ-03 | Phase 17 | Complete |
 | READ-04 | Phase 17 | Pending |
 | READ-05 | Phase 15 | Complete |
-| SEED-01 | Phase 17 | Pending |
-| SEED-02 | Phase 17 | Pending |
-| SEED-03 | Phase 17 | Pending |
-| SEED-04 | Phase 17 | Pending |
+| SEED-01 | Phase 17 | Complete |
+| SEED-02 | Phase 17 | Complete |
+| SEED-03 | Phase 17 | Complete |
+| SEED-04 | Phase 17 | Complete |
 
 **Coverage:**
 - v1.1 requirements: 18 total
