@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: User Guide & Data Management
 status: unknown
-stopped_at: Completed 19-02-PLAN.md
-last_updated: "2026-03-23T16:43:27.377Z"
+stopped_at: Completed 19-03-PLAN.md
+last_updated: "2026-03-23T17:20:57.881Z"
 progress:
   total_phases: 8
-  completed_phases: 6
+  completed_phases: 7
   total_plans: 23
-  completed_plans: 22
+  completed_plans: 23
 ---
 
 # Project State
@@ -67,6 +67,7 @@ Plan: 3 of 3
 | Phase 21 P04 | 15min | 2 tasks | 13 files |
 | Phase 19 P01 | 5min | 2 tasks | 11 files |
 | Phase 19 P02 | 11min | 3 tasks | 16 files |
+| Phase 19 P03 | 8min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -137,6 +138,9 @@ Recent decisions affecting current work:
 - [Phase 19]: @fast-csv/parse v5 uses parseString (not parse) for string input; ignoreEmpty replaces skipEmptyLines
 - [Phase 19]: ImportsService uses PrismaService directly for create/update in transaction (not IngredientsService/VendorsService) to keep tx boundary clean
 - [Phase 19]: Import validator pattern: pure async function taking (raw, rowIndex, prisma) returning ImportRow
+- [Phase 19]: Multipart parse uses raw fetch with credentials:include (apiClient forces JSON Content-Type)
+- [Phase 19]: Inline cell edit updates both raw and validated fields to keep commitImport data contract correct
+- [Phase 19]: Local error clearing on inline edit (no re-parse API call) - server re-validates at commit time
 
 ### Roadmap Evolution
 
@@ -156,6 +160,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-23T16:43:27.363Z
-Stopped at: Completed 19-02-PLAN.md
+Last session: 2026-03-23T17:20:57.866Z
+Stopped at: Completed 19-03-PLAN.md
 Resume file: None
