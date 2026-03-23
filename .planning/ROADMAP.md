@@ -107,7 +107,7 @@ Phases execute in numeric order: 14 -> 14.x -> 15 -> 15.x -> 16 -> 16.x -> 17 ->
 | 16. Admin CMS | v1.1 | 2/2 | Complete    | 2026-03-22 |
 | 17. Search, Preview, and Content Seeding | v1.1 | 3/3 | Complete    | 2026-03-23 |
 | 18. Data Export | v1.1 | 7/7 | Complete    | 2026-03-23 |
-| 19. Master Data Import | v1.1 | 0/3 | Not started | - |
+| 19. Master Data Import | v1.1 | 1/3 | In Progress|  |
 | 20. Operations Import | v1.1 | 0/? | Not started | - |
 | 21. In-App Chat | v1.1 | 4/4 | Complete    | 2026-03-23 |
 
@@ -148,7 +148,7 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 19-01-PLAN.md -- Export gaps: Missions/Quests export builders, findAllForExport methods, ExportButton on 4 missing pages, frontend type updates, IST verification
+- [x] 19-01-PLAN.md -- Export gaps: Missions/Quests export builders, findAllForExport methods, ExportButton on 4 missing pages, frontend type updates, IST verification
 - [ ] 19-02-PLAN.md -- Import backend: ImportsModule with CSV/XLSX parsers, schema-strict validators, template generation, parse/commit/template endpoints
 - [ ] 19-03-PLAN.md -- Import frontend: types, import index page, sidebar nav, import type pages with drag-drop upload, preview table, inline editing, commit flow, result summary
 

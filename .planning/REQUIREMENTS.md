@@ -50,8 +50,8 @@ Requirements for milestone v1.1 — User Guide System & Data Management. Each ma
 - [x] **EXPORT-09**: Admin exports page at /admin/exports showing export history with re-download, filter by report type, format/status badges
 - [x] **EXPORT-10**: Export button on all 13 data pages with dialog for format selection (CSV/XLSX) and date range filtering
 - [x] **EXPORT-11**: Sidebar nav entry for Exports under Admin section (MANAGE_SYSTEM gated)
-- [ ] **EXPORT-12**: Missions and quests export builders with findAllForExport methods, registered in ExportsModule
-- [ ] **EXPORT-13**: ExportButton on missions list, boards/missions, boards/quests, and decisions pages
+- [x] **EXPORT-12**: Missions and quests export builders with findAllForExport methods, registered in ExportsModule
+- [x] **EXPORT-13**: ExportButton on missions list, boards/missions, boards/quests, and decisions pages
 
 ### Master Data Import
 
@@ -65,7 +65,7 @@ Requirements for milestone v1.1 — User Guide System & Data Management. Each ma
 
 ### Timezone
 
-- [ ] **TZ-01**: IST (Asia/Kolkata) timezone verified for all date/time outputs including export file timestamps
+- [x] **TZ-01**: IST (Asia/Kolkata) timezone verified for all date/time outputs including export file timestamps
 
 ### In-App Chat
 
