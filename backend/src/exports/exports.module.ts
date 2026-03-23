@@ -31,6 +31,11 @@ import {
   PurchaseOrdersExportBuilder,
   VendorPricingExportBuilder,
 } from './builders/purchase-orders.builder';
+import {
+  EventsExportBuilder,
+  EventGuestListsExportBuilder,
+} from './builders/events.builder';
+import { EventsModule } from '../events/events.module';
 
 @Module({
   imports: [
@@ -43,6 +48,7 @@ import {
     FeedbackModule,
     KitchenModule,
     PurchaseOrdersModule,
+    EventsModule,
   ],
   controllers: [ExportsController],
   providers: [
@@ -58,6 +64,8 @@ import {
     PrepBatchesExportBuilder,
     PurchaseOrdersExportBuilder,
     VendorPricingExportBuilder,
+    EventsExportBuilder,
+    EventGuestListsExportBuilder,
   ],
   exports: [ExportsService],
 })
@@ -75,6 +83,8 @@ export class ExportsModule implements OnModuleInit {
     private readonly prepBatchesExportBuilder: PrepBatchesExportBuilder,
     private readonly purchaseOrdersExportBuilder: PurchaseOrdersExportBuilder,
     private readonly vendorPricingExportBuilder: VendorPricingExportBuilder,
+    private readonly eventsExportBuilder: EventsExportBuilder,
+    private readonly eventGuestListsExportBuilder: EventGuestListsExportBuilder,
   ) {}
 
   onModuleInit() {
@@ -112,6 +122,14 @@ export class ExportsModule implements OnModuleInit {
     this.exportsService.registerBuilder(
       'vendor_pricing',
       this.vendorPricingExportBuilder,
+    );
+    this.exportsService.registerBuilder(
+      'events',
+      this.eventsExportBuilder,
+    );
+    this.exportsService.registerBuilder(
+      'event_guest_lists',
+      this.eventGuestListsExportBuilder,
     );
   }
 }

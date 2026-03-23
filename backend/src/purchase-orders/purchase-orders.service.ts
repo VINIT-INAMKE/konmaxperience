@@ -226,6 +226,28 @@ export class PurchaseOrdersService {
     });
   }
 
+  async findAllForExport(dateFrom?: string, dateTo?: string) {
+    const where: Record<string, unknown> = {};
+    if (dateFrom || dateTo) {
+      where.created_at = {};
+      if (dateFrom) (where.created_at as any).gte = new Date(dateFrom);
+      if (dateTo)
+        (where.created_at as any).lte = new Date(dateTo + 'T23:59:59.999Z');
+    }
+    return this.prisma.purchaseOrder.findMany({
+      where,
+      orderBy: { created_at: 'desc' },
+      include: {
+        vendor: { select: { name: true } },
+        zone: { select: { name: true } },
+        ordered_by_user: { select: { name: true } },
+        lines: {
+          include: { ingredient: { select: { name: true, base_unit: true } } },
+        },
+      },
+    });
+  }
+
   async cancel(id: string) {
     const po = await this.findOne(id);
     if (po.status !== 'draft' && po.status !== 'ordered') {
