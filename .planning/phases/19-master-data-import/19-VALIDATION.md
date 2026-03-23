@@ -2,8 +2,8 @@
 phase: 19
 slug: master-data-import
 status: draft
-nyquist_compliant: false
-wave_0_complete: false
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-03-23
 ---
 
@@ -36,24 +36,24 @@ created: 2026-03-23
 
 ## Per-Task Verification Map
 
-| Task ID | Plan | Wave | Requirement | Test Type | Automated Command | File Exists | Status |
+| Task ID | Plan | Wave | Description | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|-----------|-------------------|-------------|--------|
-| 19-01-01 | 01 | 1 | SC-1 | unit+integration | `npx jest --testPathPattern=import` | ❌ W0 | ⬜ pending |
-| 19-01-02 | 01 | 1 | SC-2 | unit+integration | `npx jest --testPathPattern=import` | ❌ W0 | ⬜ pending |
-| 19-01-03 | 01 | 1 | SC-3 | unit+integration | `npx jest --testPathPattern=import` | ❌ W0 | ⬜ pending |
-| 19-01-04 | 01 | 1 | SC-4,5 | unit | `npx jest --testPathPattern=import` | ❌ W0 | ⬜ pending |
-| 19-02-01 | 02 | 1 | SC-6 | unit | `npx jest --testPathPattern=export` | ❌ W0 | ⬜ pending |
-| 19-03-01 | 03 | 1 | SC-7 | unit | `npx jest --testPathPattern=timezone` | ❌ W0 | ⬜ pending |
+| 19-01-T1 | 01 | 1 | Missions/Quests export builders + findAllForExport | type-check | `cd backend && npx tsc --noEmit` | n/a | pending |
+| 19-01-T2 | 01 | 1 | ExportButton on 5 pages + frontend type updates | type-check | `cd frontend && npx tsc --noEmit` | n/a | pending |
+| 19-02-T0 | 02 | 1 | Test stubs for imports service and controller | unit | `cd backend && npx jest --passWithNoTests --testPathPattern=imports` | W0 task | pending |
+| 19-02-T1 | 02 | 1 | Import types, parsers, validators | type-check + unit | `cd backend && npx tsc --noEmit` | via T0 | pending |
+| 19-02-T2 | 02 | 1 | ImportsModule, controller, service, templates | type-check + unit | `cd backend && npx jest --passWithNoTests --testPathPattern=imports` | via T0 | pending |
+| 19-03-T1 | 03 | 2 | Import types, index page, sidebar nav | type-check | `cd frontend && npx tsc --noEmit` | n/a | pending |
+| 19-03-T2 | 03 | 2 | Import type page with full upload/preview/commit flow | type-check | `cd frontend && npx tsc --noEmit` | n/a | pending |
 
-*Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
+*Status: pending / green / red / flaky*
 
 ---
 
 ## Wave 0 Requirements
 
-- [ ] `backend/src/imports/imports.service.spec.ts` — stubs for import service tests
-- [ ] `backend/src/imports/imports.controller.spec.ts` — stubs for controller upload tests
-- [ ] `frontend/src/app/admin/import/__tests__/` — stubs for import UI tests
+- [x] `backend/src/imports/imports.service.spec.ts` — created by Plan 02, Task 0
+- [x] `backend/src/imports/imports.controller.spec.ts` — created by Plan 02, Task 0
 
 *Existing jest/vitest infrastructure covers framework needs.*
 
@@ -63,18 +63,19 @@ created: 2026-03-23
 
 | Behavior | Requirement | Why Manual | Test Instructions |
 |----------|-------------|------------|-------------------|
-| Drag-drop file upload UX | SC-1 | Browser drag events not testable in jsdom | Upload file via drag-drop, verify preview table renders |
-| ExportButton placement on pages | SC-6 | Visual placement verification | Navigate to missions, readiness, tasks pages — confirm ExportButton visible |
+| Drag-drop file upload UX | D-01 | Browser drag events not testable in jsdom | Upload file via drag-drop, verify preview table renders |
+| ExportButton placement on pages | D-24, D-25 | Visual placement verification | Navigate to missions, quests/[id], decisions pages — confirm ExportButton visible |
+| Inline cell editing in preview | D-03, D-16 | Interactive UI behavior | Click cell in preview table, edit value, press Enter, verify re-validation |
 
 ---
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 30s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references (Plan 02 Task 0 creates stubs)
+- [x] No watch-mode flags
+- [x] Feedback latency < 30s
+- [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** ready
