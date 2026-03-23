@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: User Guide & Data Management
 status: unknown
-stopped_at: Completed 19-03-PLAN.md
-last_updated: "2026-03-23T17:43:02.624Z"
+stopped_at: Phase 20 UI-SPEC approved
+last_updated: "2026-03-23T18:52:35.687Z"
 progress:
   total_phases: 8
   completed_phases: 7
@@ -160,6 +160,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-23T17:20:57.866Z
-Stopped at: Completed 19-03-PLAN.md
-Resume file: None
+Last session: 2026-03-23T18:52:35.680Z
+Stopped at: Phase 20 UI-SPEC approved
+Resume file: .planning/phases/20-operations-import/20-UI-SPEC.md
