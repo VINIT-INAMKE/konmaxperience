@@ -73,7 +73,7 @@ const TIERS: Array<{
     types: ['recipes', 'menu_categories', 'menu_items'],
     prerequisites: {
       menu_categories: { check: (p) => p.brands > 0, label: 'Needs: Brands' },
-      menu_items: { check: (p) => p.approved_recipes > 0 && p.menu_categories > 0, label: 'Needs: Approved Recipes + Menu Categories' },
+      menu_items: { check: (p) => p.approved_recipes > 0 && p.menu_categories > 0, label: 'Needs: Recipes + Categories' },
     } as Record<ImportType, { check: (p: PrerequisiteData) => boolean; label: string }>,
   },
 ];
@@ -166,9 +166,9 @@ export default function AdminImportPage() {
                               {config.description}
                             </p>
                             {prereqMissing && prereqConfig && (
-                              <Badge variant="outline" className="text-amber-600 border-amber-300 mt-2 text-[10px] px-1.5 py-0">
-                                <AlertTriangle className="size-2.5 mr-1" />
-                                {prereqConfig.label}
+                              <Badge variant="outline" className="text-amber-600 border-amber-300 mt-2 text-[10px] px-1.5 py-0 max-w-full truncate">
+                                <AlertTriangle className="size-2.5 mr-1 shrink-0" />
+                                <span className="truncate">{prereqConfig.label}</span>
                               </Badge>
                             )}
                           </div>
