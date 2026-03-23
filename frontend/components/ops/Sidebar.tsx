@@ -1,12 +1,11 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard,
-  LayoutGrid,
   Rocket,
   CheckCircle,
   Users,
@@ -40,6 +39,8 @@ import {
   MessageSquare,
   CalendarDays,
   BookOpen,
+  ChevronDown,
+  Download,
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
@@ -79,6 +80,18 @@ interface SidebarProps {
   onNavigate?: () => void;
 }
 
+const DEFAULT_COLLAPSED = ['Operations', 'Kitchen', 'POS', 'Admin'];
+
+// Map section names to route prefixes for auto-expand
+const SECTION_ROUTES: Record<string, string[]> = {
+  Boards: ['/boards/'],
+  Intelligence: ['/readiness', '/leaderboard', '/kpis', '/intelligence/'],
+  Operations: ['/operations/zones', '/operations/brands', '/operations/channels', '/operations/assets', '/operations/recipes', '/operations/ingredients', '/operations/vendors', '/operations/menu', '/operations/inventory', '/operations/purchase-orders', '/operations/procurement', '/operations/feedback', '/operations/events'],
+  Kitchen: ['/operations/kitchen/'],
+  POS: ['/pos'],
+  Admin: ['/admin/'],
+};
+
 export function Sidebar({ onNavigate }: SidebarProps = {}) {
   const pathname = usePathname();
   const user = useAuthStore((s) => s.user);
@@ -90,6 +103,43 @@ export function Sidebar({ onNavigate }: SidebarProps = {}) {
   const [showLevelGlow, setShowLevelGlow] = useState(false);
   const [levelUpLevel, setLevelUpLevel] = useState<number | null>(null);
   const prevLevelRef = useRef<number>(user?.level ?? 1);
+
+  // Collapsible sidebar sections — persist to localStorage
+  const [collapsed, setCollapsed] = useState<string[]>(() => {
+    if (typeof window === 'undefined') return DEFAULT_COLLAPSED;
+    try {
+      const stored = localStorage.getItem('konma-sidebar-collapsed');
+      return stored ? JSON.parse(stored) : DEFAULT_COLLAPSED;
+    } catch {
+      return DEFAULT_COLLAPSED;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('konma-sidebar-collapsed', JSON.stringify(collapsed));
+    } catch { /* ignore */ }
+  }, [collapsed]);
+
+  const toggleSection = useCallback((name: string) => {
+    setCollapsed((prev) =>
+      prev.includes(name) ? prev.filter((s) => s !== name) : [...prev, name],
+    );
+  }, []);
+
+  const isSectionCollapsed = (name: string) => collapsed.includes(name);
+
+  // Auto-expand section containing the active route
+  useEffect(() => {
+    for (const [section, prefixes] of Object.entries(SECTION_ROUTES)) {
+      if (prefixes.some((p) => pathname === p || pathname.startsWith(p))) {
+        setCollapsed((prev) =>
+          prev.includes(section) ? prev.filter((s) => s !== section) : prev,
+        );
+        break;
+      }
+    }
+  }, [pathname]);
 
   // Detect level-up via auth store levelUpEvent
   useEffect(() => {
@@ -317,6 +367,11 @@ export function Sidebar({ onNavigate }: SidebarProps = {}) {
           { label: 'Guide Management', href: '/admin/guide', icon: <BookOpen className="size-4" /> },
         ]
       : []),
+    ...(can('MANAGE_SYSTEM')
+      ? [
+          { label: 'Exports', href: '/admin/exports', icon: <Download className="size-4" /> },
+        ]
+      : []),
   ];
 
   function getInitials(name: string): string {
@@ -366,74 +421,48 @@ export function Sidebar({ onNavigate }: SidebarProps = {}) {
           <NavLink key={item.label} item={item} active={isActive(item.href)} onNavigate={onNavigate} />
         ))}
 
-        <div className="pt-3 pb-1 px-2">
-          <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/60">
-            Boards
-          </span>
-        </div>
-        {boardsNav.map((item) => (
-          <NavLink key={item.label} item={item} active={isActive(item.href)} onNavigate={onNavigate} />
-        ))}
+        <CollapsibleSection name="Boards" collapsed={isSectionCollapsed('Boards')} onToggle={toggleSection}>
+          {boardsNav.map((item) => (
+            <NavLink key={item.label} item={item} active={isActive(item.href)} onNavigate={onNavigate} />
+          ))}
+        </CollapsibleSection>
 
-        <div className="pt-3 pb-1 px-2">
-          <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/60">
-            Intelligence
-          </span>
-        </div>
-        {intelligenceNav.map((item) => (
-          <NavLink key={item.label} item={item} active={isActive(item.href)} onNavigate={onNavigate} />
-        ))}
+        <CollapsibleSection name="Intelligence" collapsed={isSectionCollapsed('Intelligence')} onToggle={toggleSection}>
+          {intelligenceNav.map((item) => (
+            <NavLink key={item.label} item={item} active={isActive(item.href)} onNavigate={onNavigate} />
+          ))}
+        </CollapsibleSection>
 
         {operationsNav.length > 0 && (
-          <>
-            <div className="pt-3 pb-1 px-2">
-              <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/60">
-                Operations
-              </span>
-            </div>
+          <CollapsibleSection name="Operations" collapsed={isSectionCollapsed('Operations')} onToggle={toggleSection}>
             {operationsNav.map((item) => (
               <NavLink key={item.label} item={item} active={isActive(item.href)} onNavigate={onNavigate} />
             ))}
-          </>
+          </CollapsibleSection>
         )}
 
         {kitchenNav.length > 0 && (
-          <>
-            <div className="pt-3 pb-1 px-2">
-              <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/60">
-                Kitchen
-              </span>
-            </div>
+          <CollapsibleSection name="Kitchen" collapsed={isSectionCollapsed('Kitchen')} onToggle={toggleSection}>
             {kitchenNav.map((item) => (
               <NavLink key={item.label} item={item} active={isActive(item.href)} onNavigate={onNavigate} />
             ))}
-          </>
+          </CollapsibleSection>
         )}
 
         {posNav.length > 0 && (
-          <>
-            <div className="pt-3 pb-1 px-2">
-              <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/60">
-                POS
-              </span>
-            </div>
+          <CollapsibleSection name="POS" collapsed={isSectionCollapsed('POS')} onToggle={toggleSection}>
             {posNav.map((item) => (
               <NavLink key={item.label} item={item} active={isActive(item.href)} onNavigate={onNavigate} />
             ))}
-          </>
+          </CollapsibleSection>
         )}
 
         {adminNav.length > 0 && (
-          <>
-            <div className="pt-3 pb-1 px-2">
-              <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/60">
-                Admin
-              </span>
-            </div>
+          <CollapsibleSection name="Admin" collapsed={isSectionCollapsed('Admin')} onToggle={toggleSection}>
             {adminNav.map((item) => (
               <NavLink key={item.label} item={item} active={isActive(item.href)} onNavigate={onNavigate} />
             ))}
-          </>
+          </CollapsibleSection>
         )}
       </nav>
 
@@ -525,6 +554,46 @@ export function Sidebar({ onNavigate }: SidebarProps = {}) {
       {/* Ad-hoc task sheet */}
       <AdHocTaskSheet open={adHocOpen} onOpenChange={setAdHocOpen} />
     </aside>
+  );
+}
+
+function CollapsibleSection({
+  name,
+  collapsed,
+  onToggle,
+  children,
+}: {
+  name: string;
+  collapsed: boolean;
+  onToggle: (name: string) => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <>
+      <button
+        onClick={() => onToggle(name)}
+        className="w-full pt-3 pb-1 px-2 flex items-center justify-between group"
+        aria-expanded={!collapsed}
+      >
+        <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/60">
+          {name}
+        </span>
+        <ChevronDown
+          className={`size-3 text-muted-foreground/40 group-hover:text-muted-foreground transition-transform duration-200 ${
+            collapsed ? '-rotate-90' : ''
+          }`}
+        />
+      </button>
+      <div
+        className={`grid transition-[grid-template-rows] duration-200 ease-out ${
+          collapsed ? 'grid-rows-[0fr]' : 'grid-rows-[1fr]'
+        }`}
+      >
+        <div className="overflow-hidden min-h-0">
+          {children}
+        </div>
+      </div>
+    </>
   );
 }
 
