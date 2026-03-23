@@ -4,6 +4,7 @@ import {
   Get,
   Param,
   Body,
+  Req,
   Res,
   UploadedFile,
   UseInterceptors,
@@ -58,6 +59,18 @@ export class ImportsController {
         `Invalid import type: ${importType}. Valid types: ${IMPORT_TYPES.join(', ')}`,
       );
     }
+
+    // D-13: Recipes require XLSX format
+    if (
+      importType === 'recipes' &&
+      (file.mimetype === 'text/csv' ||
+        file.mimetype === 'application/vnd.ms-excel')
+    ) {
+      throw new BadRequestException(
+        'Recipes require XLSX format — CSV is not supported',
+      );
+    }
+
     return this.importsService.parseFile(
       file.buffer,
       file.mimetype,
@@ -67,12 +80,19 @@ export class ImportsController {
 
   @Post('commit')
   @RequiresPermission('MANAGE_SYSTEM')
-  async commitImport(@Body() dto: CommitImportDto) {
+  async commitImport(@Body() dto: CommitImportDto, @Req() req: any) {
     return this.importsService.commitImport(
       dto.importType,
       dto.rows,
       dto.updateExisting ?? false,
+      req.user.id,
     );
+  }
+
+  @Get('prerequisites')
+  @RequiresPermission('MANAGE_SYSTEM')
+  async getPrerequisites() {
+    return this.importsService.getPrerequisites();
   }
 
   @Get('template/:type')
