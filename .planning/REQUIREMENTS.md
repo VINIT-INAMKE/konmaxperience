@@ -73,9 +73,9 @@ Requirements for milestone v1.1 — User Guide System & Data Management. Each ma
 - [x] **OPSIMPORT-02**: Infrastructure fixes — transaction rollback (D-26), userId audit trail (D-27), base_unit protection (D-28), enum enforcement (D-29), 500-row limit (D-30), number sanitization (D-31)
 - [x] **OPSIMPORT-03**: Opening stock import with inventoryService.adjust(), unit conversion validation, additive behavior (no update toggle), SHA-256 re-import detection
 - [x] **OPSIMPORT-04**: Mission, KPI, event validators with enum enforcement (D-11), FK resolution (D-04), duplicate detection, and blocked field checks (D-02)
-- [ ] **OPSIMPORT-05**: Quest and task validators with dependency guards — quest requires mission, task blocks import into non-planned quests (D-24), created_by from JWT (D-25)
-- [ ] **OPSIMPORT-06**: Recipe 3-sheet XLSX import with multi-pass commit (D-07), BOM line validation, cycle detection (D-19), cost recalculation, draft-only import (D-16)
-- [ ] **OPSIMPORT-07**: Menu category (brand FK with ambiguity check, brand_id change blocked) and menu item (approved recipe guard, brand-scoped category lookup) validators
+- [x] **OPSIMPORT-05**: Quest and task validators with dependency guards — quest requires mission, task blocks import into non-planned quests (D-24), created_by from JWT (D-25)
+- [x] **OPSIMPORT-06**: Recipe 3-sheet XLSX import with multi-pass commit (D-07), BOM line validation, cycle detection (D-19), cost recalculation, draft-only import (D-16)
+- [x] **OPSIMPORT-07**: Menu category (brand FK with ambiguity check, brand_id change blocked) and menu item (approved recipe guard, brand-scoped category lookup) validators
 - [ ] **OPSIMPORT-08**: Commit logic for all 10 types with createRow/updateRow, per-entity SAFE/BLOCKED/NEVER update policies (D-02), all-or-nothing transactions (D-06)
 - [ ] **OPSIMPORT-09**: Tiered import index page with 4 dependency levels, live prerequisite check via GET /imports/prerequisites, amber warning badges
 - [ ] **OPSIMPORT-10**: Frontend stock-specific UI (amber additive warning, re-import warning, no toggle) and recipe-specific UI (XLSX-only badge, grouped BOM preview, draft notice)

@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: User Guide & Data Management
 status: unknown
-stopped_at: Completed 20-02-PLAN.md
-last_updated: "2026-03-23T20:12:53.015Z"
+stopped_at: Completed 20-05-PLAN.md
+last_updated: "2026-03-23T20:15:40.981Z"
 progress:
   total_phases: 8
   completed_phases: 7
   total_plans: 28
-  completed_plans: 25
+  completed_plans: 27
 ---
 
 # Project State
@@ -24,7 +24,7 @@ See: .planning/PROJECT.md (updated 2026-03-22)
 ## Current Position
 
 Phase: 20 (operations-import) — EXECUTING
-Plan: 3 of 5
+Plan: 5 of 5
 
 ## Performance Metrics
 
@@ -70,6 +70,8 @@ Plan: 3 of 5
 | Phase 19 P03 | 8min | 2 tasks | 5 files |
 | Phase 20 P01 | 5min | 2 tasks | 7 files |
 | Phase 20 P02 | 4min | 2 tasks | 5 files |
+| Phase 20 P03 | 5min | 2 tasks | 6 files |
+| Phase 20 P05 | 6min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -148,6 +150,8 @@ Recent decisions affecting current work:
 - [Phase 20]: KPI blocked check triggers when existing current_value > 0 and new value differs per D-02
 - [Phase 20]: Event duplicate detection uses title + date composite key; capacity/date blocked checks query booking count
 - [Phase 20]: Recipe XLSX generates BOM Lines sheet between data sheet and instructions sheet per D-13
+- [Phase 20]: Recipe BOM validator accepts optional recipeNameMap for cross-sheet FK resolution without DB lookup
+- [Phase 20]: Menu item validator resolves brand BEFORE category for scoped category-within-brand lookup
 
 ### Roadmap Evolution
 
@@ -167,6 +171,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-23T20:12:53.009Z
-Stopped at: Completed 20-02-PLAN.md
+Last session: 2026-03-23T20:15:40.974Z
+Stopped at: Completed 20-05-PLAN.md
 Resume file: None

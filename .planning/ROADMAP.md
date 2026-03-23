@@ -108,7 +108,7 @@ Phases execute in numeric order: 14 -> 14.x -> 15 -> 15.x -> 16 -> 16.x -> 17 ->
 | 17. Search, Preview, and Content Seeding | v1.1 | 3/3 | Complete    | 2026-03-23 |
 | 18. Data Export | v1.1 | 7/7 | Complete    | 2026-03-23 |
 | 19. Master Data Import | v1.1 | 3/3 | Complete    | 2026-03-23 |
-| 20. Operations Import | v1.1 | 2/5 | In Progress|  |
+| 20. Operations Import | v1.1 | 4/5 | In Progress|  |
 | 21. In-App Chat | v1.1 | 4/4 | Complete    | 2026-03-23 |
 
 ### Phase 18: Data Export
@@ -169,9 +169,9 @@ Plans:
 Plans:
 - [x] 20-01-PLAN.md -- Backend infrastructure: extend types/config (10 new import types), fix service/controller (D-26-D-31), recipe XLSX parser, prerequisites endpoint, module wiring
 - [x] 20-02-PLAN.md -- Level 1 validators (opening stock, mission, KPI, event) + fix ingredient validator (D-28, D-29) + templates for all 10 new types
-- [ ] 20-03-PLAN.md -- Level 2-4 validators (quest, task, recipe, menu category, menu item) + wire all validators into service
+- [x] 20-03-PLAN.md -- Level 2-4 validators (quest, task, recipe, menu category, menu item) + wire all validators into service
 - [ ] 20-04-PLAN.md -- Commit logic: createRow/updateRow for all types, stock special path (inventoryService.adjust), recipe two-pass commit with BOM and cost calc
-- [ ] 20-05-PLAN.md -- Frontend: tiered import index with prerequisites, stock/recipe specific UI (amber warnings, grouped preview, XLSX-only)
+- [x] 20-05-PLAN.md -- Frontend: tiered import index with prerequisites, stock/recipe specific UI (amber warnings, grouped preview, XLSX-only)
 
 ### Phase 21: In-App Chat
 **Goal**: Real-time 1-1 and group messaging using Pusher.js — users can start 1-1 chats, admin creates group chats, admin/tech can view all conversations, normal users see only their own chats
