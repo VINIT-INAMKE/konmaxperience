@@ -15,6 +15,7 @@ import {
 import { apiClient } from '@/lib/api-client';
 import type { Mission, MissionStatus } from '@/lib/types/missions';
 import { BoardMissionCard } from '@/components/ops/boards/MissionCard';
+import { ExportButton } from '@/components/ops/exports/ExportButton';
 
 const STATUS_OPTIONS: { value: string; label: string }[] = [
   { value: 'all', label: 'All statuses' },
@@ -50,7 +51,9 @@ export default function MissionBoardPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold">Mission Board</h1>
-          <Select
+          <div className="flex items-center gap-2">
+            <ExportButton reportType="missions" reportName="Missions" isTimeSeries={false} />
+            <Select
             value={statusFilter}
             onValueChange={(v) => setStatusFilter(v ?? 'all')}
           >
@@ -65,6 +68,7 @@ export default function MissionBoardPage() {
               ))}
             </SelectContent>
           </Select>
+          </div>
         </div>
 
         {/* Loading state */}

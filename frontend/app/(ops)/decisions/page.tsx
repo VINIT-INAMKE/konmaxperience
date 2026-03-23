@@ -10,6 +10,7 @@ import { DecisionList } from '@/components/ops/decisions/DecisionList';
 import { DecisionForm } from '@/components/ops/decisions/DecisionForm';
 import { apiClient } from '@/lib/api-client';
 import type { Decision, DecisionStatus } from '@/lib/types/decisions';
+import { ExportButton } from '@/components/ops/exports/ExportButton';
 
 type StatusFilter = 'all' | DecisionStatus;
 
@@ -57,7 +58,10 @@ export default function DecisionsPage() {
         {/* Page header */}
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <h1 className="text-2xl font-bold">Decisions</h1>
-          <Button onClick={() => setFormOpen(true)}>Log Decision</Button>
+          <div className="flex items-center gap-2">
+            <ExportButton reportType="decision_log" reportName="Decision Log" isTimeSeries={false} />
+            <Button onClick={() => setFormOpen(true)}>Log Decision</Button>
+          </div>
         </div>
 
         {/* Filter bar: tabs + search */}

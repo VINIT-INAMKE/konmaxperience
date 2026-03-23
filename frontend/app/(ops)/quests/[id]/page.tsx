@@ -27,6 +27,7 @@ import type { Quest } from '@/lib/types/quests';
 import type { Task, TaskStatus } from '@/lib/types/tasks';
 import { TASK_TYPE_XP_WEIGHT } from '@/lib/types/tasks';
 import { NumberTicker } from '@/components/ui/number-ticker';
+import { ExportButton } from '@/components/ops/exports/ExportButton';
 
 function getStatusBadgeClass(status: string) {
   switch (status) {
@@ -214,6 +215,7 @@ export default function QuestDetailPage(props: {
           </div>
 
           <div className="flex items-center gap-2">
+            <ExportButton reportType="tasks" reportName="Tasks" isTimeSeries={false} />
             <TaskViewToggle view={view} onViewChange={setView} />
             <Button
               nativeButton={false}

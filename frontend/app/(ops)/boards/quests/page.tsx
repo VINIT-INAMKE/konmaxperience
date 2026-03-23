@@ -16,6 +16,7 @@ import type { Quest } from '@/lib/types/quests';
 import type { Mission } from '@/lib/types/missions';
 import type { UserProfile } from '@/lib/types/users';
 import { QuestKanbanColumn } from '@/components/ops/boards/QuestKanbanColumn';
+import { ExportButton } from '@/components/ops/exports/ExportButton';
 
 export default function QuestBoardPage() {
   const [missionFilter, setMissionFilter] = useState<string>('all');
@@ -74,7 +75,8 @@ export default function QuestBoardPage() {
         {/* Header */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <h1 className="text-2xl font-bold">Quest Board</h1>
-          <div className="flex gap-4">
+          <div className="flex items-center gap-4">
+            <ExportButton reportType="quests" reportName="Quests" isTimeSeries={false} />
             <Select
               value={missionFilter}
               onValueChange={(v) => setMissionFilter(v ?? 'all')}

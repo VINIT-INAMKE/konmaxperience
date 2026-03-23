@@ -47,7 +47,9 @@ export type ReportType =
   | 'tasks'
   | 'kpis'
   | 'decision_log'
-  | 'leaderboard';
+  | 'leaderboard'
+  | 'missions'
+  | 'quests';
 
 export const EXPORT_TYPE_CONFIG: Record<
   ReportType,
@@ -75,4 +77,6 @@ export const EXPORT_TYPE_CONFIG: Record<
   kpis: { label: 'KPIs', isTimeSeries: false, description: 'KPI definitions and values' },
   decision_log: { label: 'Decision Log', isTimeSeries: false, description: 'team decisions' },
   leaderboard: { label: 'Leaderboard', isTimeSeries: false, description: 'XP rankings' },
+  missions: { label: 'Missions', isTimeSeries: false, description: 'missions with progress' },
+  quests: { label: 'Quests', isTimeSeries: false, description: 'quests with tasks and progress' },
 };

@@ -15,6 +15,7 @@ import {
   type Mission,
 } from '@/lib/types/missions';
 import { MissionCard } from '@/components/ops/missions/MissionCard';
+import { ExportButton } from '@/components/ops/exports/ExportButton';
 
 export default function MissionsPage() {
   const user = useAuthStore((s) => s.user);
@@ -36,12 +37,15 @@ export default function MissionsPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold">Missions</h1>
-          {isAdmin && (
-            <Button nativeButton={false} render={<Link href="/missions/new" />}>
-              <Plus className="size-4" />
-              New mission
-            </Button>
-          )}
+          <div className="flex items-center gap-2">
+            <ExportButton reportType="missions" reportName="Missions" isTimeSeries={false} />
+            {isAdmin && (
+              <Button nativeButton={false} render={<Link href="/missions/new" />}>
+                <Plus className="size-4" />
+                New mission
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* Loading state */}
