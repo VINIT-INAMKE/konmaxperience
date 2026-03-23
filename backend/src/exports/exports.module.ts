@@ -17,6 +17,8 @@ import { EventsModule } from '../events/events.module';
 import { IngredientsModule } from '../ingredients/ingredients.module';
 import { VendorsModule } from '../vendors/vendors.module';
 import { RecipesModule } from '../recipes/recipes.module';
+import { MissionsModule } from '../missions/missions.module';
+import { QuestsModule } from '../quests/quests.module';
 import { OrdersExportBuilder } from './builders/orders.builder';
 import {
   RevenueExportBuilder,
@@ -55,6 +57,10 @@ import {
   VendorsExportBuilder,
   RecipesExportBuilder,
 } from './builders/master-data.builder';
+import {
+  MissionsExportBuilder,
+  QuestsExportBuilder,
+} from './builders/missions-quests.builder';
 
 @Module({
   imports: [
@@ -74,6 +80,8 @@ import {
     IngredientsModule,
     VendorsModule,
     RecipesModule,
+    MissionsModule,
+    QuestsModule,
   ],
   controllers: [ExportsController],
   providers: [
@@ -100,6 +108,8 @@ import {
     IngredientsExportBuilder,
     VendorsExportBuilder,
     RecipesExportBuilder,
+    MissionsExportBuilder,
+    QuestsExportBuilder,
   ],
   exports: [ExportsService],
 })
@@ -128,6 +138,8 @@ export class ExportsModule implements OnModuleInit {
     private readonly ingredientsExportBuilder: IngredientsExportBuilder,
     private readonly vendorsExportBuilder: VendorsExportBuilder,
     private readonly recipesExportBuilder: RecipesExportBuilder,
+    private readonly missionsExportBuilder: MissionsExportBuilder,
+    private readonly questsExportBuilder: QuestsExportBuilder,
   ) {}
 
   onModuleInit() {
@@ -210,5 +222,10 @@ export class ExportsModule implements OnModuleInit {
       'recipes',
       this.recipesExportBuilder,
     );
+    this.exportsService.registerBuilder(
+      'missions',
+      this.missionsExportBuilder,
+    );
+    this.exportsService.registerBuilder('quests', this.questsExportBuilder);
   }
 }

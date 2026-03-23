@@ -30,6 +30,8 @@ export const REPORT_TYPES = [
   'kpis',
   'decision_log',
   'leaderboard',
+  'missions',
+  'quests',
 ] as const;
 
 export type ReportType = (typeof REPORT_TYPES)[number];
@@ -166,5 +168,17 @@ export const EXPORT_TYPE_CONFIG: Record<ReportType, ExportTypeConfig> = {
     permission: Permission.MANAGE_KPIS,
     isTimeSeries: false,
     description: 'XP rankings',
+  },
+  missions: {
+    label: 'Missions',
+    permission: Permission.MANAGE_KPIS,
+    isTimeSeries: false,
+    description: 'missions with progress',
+  },
+  quests: {
+    label: 'Quests',
+    permission: Permission.MANAGE_KPIS,
+    isTimeSeries: false,
+    description: 'quests with tasks and progress',
   },
 };

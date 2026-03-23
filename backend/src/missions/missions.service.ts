@@ -21,6 +21,15 @@ export class MissionsService {
     });
   }
 
+  async findAllForExport(): Promise<any[]> {
+    return this.prisma.mission.findMany({
+      include: {
+        _count: { select: { quests: true } },
+      },
+      orderBy: { created_at: 'desc' },
+    });
+  }
+
   async findOne(id: string) {
     const mission = await this.prisma.mission.findUnique({
       where: { id },

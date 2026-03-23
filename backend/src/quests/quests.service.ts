@@ -30,6 +30,17 @@ export class QuestsService {
     });
   }
 
+  async findAllForExport(): Promise<any[]> {
+    return this.prisma.quest.findMany({
+      include: {
+        owner: { select: { id: true, name: true } },
+        mission: { select: { id: true, title: true } },
+        _count: { select: { tasks: true } },
+      },
+      orderBy: [{ week_number: 'asc' }, { created_at: 'desc' }],
+    });
+  }
+
   async findOne(id: string) {
     const quest = await this.prisma.quest.findUnique({
       where: { id },
