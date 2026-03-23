@@ -51,8 +51,15 @@ export class ImportsService {
     }
 
     // Parse raw rows from file
+    // M7: Reject legacy .xls format — only allow CSV and XLSX
+    if (mimetype === 'application/vnd.ms-excel') {
+      throw new BadRequestException(
+        'Legacy .xls format is not supported. Please save as .xlsx or .csv',
+      );
+    }
+
     const rawRows =
-      mimetype === 'text/csv' || mimetype === 'application/vnd.ms-excel'
+      mimetype === 'text/csv'
         ? await parseCSV(buffer)
         : await parseXLSX(buffer);
 
@@ -406,11 +413,14 @@ export class ImportsService {
     fileHash: string,
   ): Promise<CommitResult> {
     const committable = rows.filter((r) => r.status === 'valid');
+    // H3: Calculate skipped as total minus committable
+    const skipped = rows.length - committable.length;
     let imported = 0;
     const errorDetails: Array<{ rowIndex: number; message: string }> = [];
 
     for (const row of committable) {
       try {
+        // H4: Pass referenceType/referenceId directly to adjust() — eliminates race condition
         await this.inventoryService.adjust(
           {
             ingredient_id: row.validated.ingredient_id as string,
@@ -420,23 +430,9 @@ export class ImportsService {
             reason: (row.validated.reason as string) || 'Opening stock',
           },
           userId,
+          'import',
+          fileHash,
         );
-        // Tag the StockMovement with import reference for re-import detection (D-22)
-        const recentMovement = await this.prisma.stockMovement.findFirst({
-          where: {
-            ingredient_id: row.validated.ingredient_id as string,
-            zone_id: row.validated.zone_id as string,
-            created_by: userId,
-          },
-          orderBy: { created_at: 'desc' },
-          select: { id: true },
-        });
-        if (recentMovement) {
-          await this.prisma.stockMovement.update({
-            where: { id: recentMovement.id },
-            data: { reference_type: 'import', reference_id: fileHash },
-          });
-        }
         imported++;
       } catch (err) {
         errorDetails.push({
@@ -449,7 +445,7 @@ export class ImportsService {
     return {
       imported,
       updated: 0,
-      skipped: 0,
+      skipped,
       errors: errorDetails.length,
       errorDetails,
     };
@@ -574,7 +570,7 @@ export class ImportsService {
               const bv = bomLines[i].validated;
               const inputType = bv.input_type as string;
 
-              // D-19: Cycle detection for sub-recipe references
+              // D-19: Cycle detection for sub-recipe references — recursive BFS (M1 fix)
               if (inputType === 'recipe' && bv.source_recipe_id) {
                 const sourceId = bv.source_recipe_id as string;
                 // Check if source_recipe_id points back to this recipe
@@ -583,36 +579,52 @@ export class ImportsService {
                     `BOM line ${i + 1}: Circular reference — recipe cannot use itself`,
                   );
                 }
-                // For deeper cycle detection, check if source recipe's BOM contains this recipe
-                const sourceLines = await tx.recipeLine.findMany({
-                  where: {
-                    recipe_id: sourceId,
-                    input_type: 'recipe',
-                  },
-                  select: { source_recipe_id: true },
-                });
-                for (const sl of sourceLines) {
-                  if (sl.source_recipe_id === recipeId) {
-                    throw new Error(
-                      `BOM line ${i + 1}: Circular reference detected — ${bv.ingredient_name} uses this recipe`,
-                    );
+                // Walk full BOM tree to detect deeper cycles (max depth 10)
+                const visited = new Set<string>();
+                const queue: string[] = [sourceId];
+                let depth = 0;
+                while (queue.length > 0 && depth < 10) {
+                  const batch = [...queue];
+                  queue.length = 0;
+                  for (const checkId of batch) {
+                    if (visited.has(checkId)) continue;
+                    visited.add(checkId);
+                    if (checkId === recipeId) {
+                      throw new Error(
+                        `BOM line ${i + 1}: Circular reference detected — sub-recipe chain leads back to this recipe`,
+                      );
+                    }
+                    const childLines = await tx.recipeLine.findMany({
+                      where: {
+                        recipe_id: checkId,
+                        input_type: 'recipe',
+                      },
+                      select: { source_recipe_id: true },
+                    });
+                    for (const cl of childLines) {
+                      if (cl.source_recipe_id && !visited.has(cl.source_recipe_id)) {
+                        queue.push(cl.source_recipe_id);
+                      }
+                    }
                   }
+                  depth++;
                 }
               }
 
-              // Resolve source_recipe_id for sub-recipes referencing recipes in the same file
+              // C1 fix: Resolve source_recipe_id for sub-recipes referencing recipes in the same file
+              // The validator stores the sub-recipe name in bv.source_recipe_name (not bv.ingredient_name)
               let finalSourceRecipeId = bv.source_recipe_id as
                 | string
                 | undefined;
               if (inputType === 'recipe' && !finalSourceRecipeId) {
                 // Sub-recipe name might map to a recipe in the same import
                 const subRecipeName = (
-                  (bv.ingredient_name as string) || ''
+                  (bv.source_recipe_name as string) || ''
                 ).toLowerCase();
                 finalSourceRecipeId = recipeIdMap.get(subRecipeName);
                 if (!finalSourceRecipeId) {
                   throw new Error(
-                    `BOM line ${i + 1}: Sub-recipe '${bv.ingredient_name}' not found`,
+                    `BOM line ${i + 1}: Sub-recipe '${bv.source_recipe_name}' not found`,
                   );
                 }
               }
@@ -873,6 +885,7 @@ export class ImportsService {
         await tx.mission.update({
           where: { id },
           data: {
+            title: v.title as string,
             description: v.description as string,
             phase: v.phase as string,
             scope: v.scope as string,
@@ -888,6 +901,7 @@ export class ImportsService {
         await tx.quest.update({
           where: { id },
           data: {
+            title: v.title as string,
             description: v.description as string,
             week_number: v.week_number as number,
             start_date: v.start_date ? (v.start_date as Date) : undefined,
@@ -902,6 +916,7 @@ export class ImportsService {
         await tx.task.update({
           where: { id },
           data: {
+            title: v.title as string,
             description: v.description as string,
             priority: v.priority as string,
             xp: (v.xp as number) ?? 25,
@@ -954,6 +969,8 @@ export class ImportsService {
           where: { id },
           data: {
             name: v.name as string,
+            recipe_id: v.recipe_id as string,
+            category_id: v.category_id as string,
             base_price: v.base_price as number,
             available: (v.available as boolean) ?? true,
             // NEVER: status

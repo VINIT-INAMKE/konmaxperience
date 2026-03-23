@@ -55,7 +55,7 @@ export class InventoryService {
     });
   }
 
-  async adjust(dto: CreateStockAdjustmentDto, userId: string) {
+  async adjust(dto: CreateStockAdjustmentDto, userId: string, referenceType?: string, referenceId?: string) {
     const stock = await this.prisma.$transaction(async (tx) => {
       const ingredient = await tx.ingredient.findUniqueOrThrow({
         where: { id: dto.ingredient_id },
@@ -108,7 +108,7 @@ export class InventoryService {
         update: { current_quantity: { increment: convertedQty } },
       });
 
-      // Create StockMovement record
+      // Create StockMovement record (H4: include reference atomically if provided)
       await tx.stockMovement.create({
         data: {
           ingredient_id: dto.ingredient_id,
@@ -119,6 +119,8 @@ export class InventoryService {
           unit: dto.unit,
           reason: dto.reason,
           created_by: userId,
+          ...(referenceType ? { reference_type: referenceType } : {}),
+          ...(referenceId ? { reference_id: referenceId } : {}),
         },
       });
 
