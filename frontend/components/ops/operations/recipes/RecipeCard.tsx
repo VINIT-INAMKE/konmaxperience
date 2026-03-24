@@ -1,11 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import { Archive } from 'lucide-react';
 import Link from 'next/link';
 import { MagicCard } from '@/components/ui/magic-card';
-import { ShineBorder } from '@/components/ui/shine-border';
-import { Button } from '@/components/ui/button';
 import { NumberTicker } from '@/components/ui/number-ticker';
 import { Badge } from '@/components/ui/badge';
 import { RecipeStatusBadge } from './RecipeStatusBadge';
@@ -14,38 +11,17 @@ import { GRADIENT_OVERLAY } from '@/lib/brand-colors';
 
 interface RecipeCardProps {
   recipe: Recipe;
-  isNew?: boolean;
-  onEdit: (recipe: Recipe) => void;
   onArchive: (recipe: Recipe) => void;
   isAdmin: boolean;
 }
 
 export function RecipeCard({
   recipe,
-  isNew = false,
-  onEdit,
   onArchive,
   isAdmin,
 }: RecipeCardProps) {
-  const [showShine, setShowShine] = useState(isNew);
-
-  useEffect(() => {
-    if (isNew) {
-      setShowShine(true);
-      const timer = setTimeout(() => setShowShine(false), 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [isNew]);
-
   return (
     <div className="relative rounded-lg">
-      {showShine && (
-        <ShineBorder
-          shineColor={['#4ade80', '#22d3ee', '#a78bfa']}
-          duration={3}
-          borderWidth={2}
-        />
-      )}
       <Link href={`/operations/recipes/${recipe.id}`} className="block">
         <MagicCard
           gradientColor={GRADIENT_OVERLAY}
@@ -86,23 +62,11 @@ export function RecipeCard({
             </div>
           )}
 
-          {/* Row 4: edit + archive */}
-          <div className="flex items-center gap-2 flex-wrap pt-1">
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-7 text-xs px-3"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                onEdit(recipe);
-              }}
-            >
-              Edit
-            </Button>
-            {isAdmin && (
+          {/* Row 4: archive action */}
+          {isAdmin && (
+            <div className="flex items-center justify-end pt-1">
               <button
-                className="ml-auto p-1 rounded text-muted-foreground hover:text-destructive transition-colors"
+                className="p-1 rounded text-muted-foreground hover:text-destructive transition-colors"
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
@@ -112,8 +76,8 @@ export function RecipeCard({
               >
                 <Archive className="size-3.5" />
               </button>
-            )}
-          </div>
+            </div>
+          )}
         </MagicCard>
       </Link>
     </div>

@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
+import Link from 'next/link';
 import { Search, ChefHat } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -22,7 +23,6 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { RecipeCard } from '@/components/ops/operations/recipes/RecipeCard';
-import { RecipeWizard } from '@/components/ops/operations/recipes/wizard/RecipeWizard';
 import { apiClient } from '@/lib/api-client';
 import { useAuthStore } from '@/lib/stores/auth-store';
 import { RoleCode } from '@/lib/types/roles';
@@ -41,9 +41,6 @@ export default function RecipesPage() {
   const [brandFilter, setBrandFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [wizardOpen, setWizardOpen] = useState(false);
-  const [editingRecipe, setEditingRecipe] = useState<Recipe | null>(null);
-  const [newRecipeId, setNewRecipeId] = useState<string | null>(null);
   const [archivingRecipe, setArchivingRecipe] = useState<Recipe | null>(null);
   const [isArchiving, setIsArchiving] = useState(false);
 
@@ -77,34 +74,6 @@ export default function RecipesPage() {
     return result;
   }, [recipes, brandFilter, statusFilter, searchQuery]);
 
-  // Clear newRecipeId after 3.5 seconds
-  useEffect(() => {
-    if (newRecipeId) {
-      const timer = setTimeout(() => setNewRecipeId(null), 3500);
-      return () => clearTimeout(timer);
-    }
-  }, [newRecipeId]);
-
-  const handleRecipeSuccess = (id: string) => {
-    setNewRecipeId(id);
-    void queryClient.invalidateQueries({ queryKey: ['recipes'] });
-  };
-
-  const handleEditClick = (recipe: Recipe) => {
-    setEditingRecipe(recipe);
-    setWizardOpen(true);
-  };
-
-  const handleCreateClick = () => {
-    setEditingRecipe(null);
-    setWizardOpen(true);
-  };
-
-  const handleWizardOpenChange = (open: boolean) => {
-    setWizardOpen(open);
-    if (!open) setEditingRecipe(null);
-  };
-
   const handleArchiveConfirm = async () => {
     if (!archivingRecipe) return;
     setIsArchiving(true);
@@ -127,7 +96,9 @@ export default function RecipesPage() {
         {/* Page header */}
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <h1 className="text-2xl font-bold">Recipes</h1>
-          <Button onClick={handleCreateClick}>Create Recipe</Button>
+          <Link href="/operations/recipes/new">
+            <Button size="sm">Create Recipe</Button>
+          </Link>
         </div>
 
         {/* Filter bar */}
@@ -158,6 +129,7 @@ export default function RecipesPage() {
             <SelectContent>
               <SelectItem value="all">All Statuses</SelectItem>
               <SelectItem value="draft">{RECIPE_STATUS_LABELS.draft}</SelectItem>
+              <SelectItem value="pending">{RECIPE_STATUS_LABELS.pending}</SelectItem>
               <SelectItem value="approved">{RECIPE_STATUS_LABELS.approved}</SelectItem>
               <SelectItem value="archived">{RECIPE_STATUS_LABELS.archived}</SelectItem>
             </SelectContent>
@@ -214,22 +186,12 @@ export default function RecipesPage() {
               <RecipeCard
                 key={recipe.id}
                 recipe={recipe}
-                isNew={recipe.id === newRecipeId}
-                onEdit={handleEditClick}
                 onArchive={(r) => setArchivingRecipe(r)}
                 isAdmin={isAdmin}
               />
             ))}
           </div>
         )}
-
-        {/* Recipe create/edit wizard */}
-        <RecipeWizard
-          open={wizardOpen}
-          onOpenChange={handleWizardOpenChange}
-          recipe={editingRecipe ?? undefined}
-          onSuccess={handleRecipeSuccess}
-        />
 
         {/* Archive confirmation Dialog */}
         <Dialog
