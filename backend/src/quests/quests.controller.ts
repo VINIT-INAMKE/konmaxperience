@@ -6,8 +6,10 @@ import {
   Param,
   Body,
   Query,
+  Req,
   ParseUUIDPipe,
 } from '@nestjs/common';
+import express from 'express';
 import { QuestsService } from './quests.service';
 import { RequiresPermission } from '../common/decorators/permissions.decorator';
 import { Permission } from '../types/permissions';
@@ -20,11 +22,16 @@ export class QuestsController {
 
   @Get()
   async findAll(
+    @Req() request: express.Request,
     @Query('mission_id') missionId?: string,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
   ) {
-    return this.questsService.findAll({ missionId, page: Number(page), limit: Number(limit) });
+    const user = (request as any).user;
+    return this.questsService.findAll(
+      { id: user.id, roleCode: user.roleCode },
+      { missionId, page: Number(page), limit: Number(limit) },
+    );
   }
 
   @Get(':id')

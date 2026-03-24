@@ -2,16 +2,36 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateMissionDto } from './dto/create-mission.dto';
 import { UpdateMissionDto } from './dto/update-mission.dto';
+import { getPermissionsForRole } from '../permissions/permissions.cache';
+import { Permission } from '../types/permissions';
 
 @Injectable()
 export class MissionsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll(page?: number, limit?: number) {
+  async findAll(
+    requestingUser: { id: string; roleCode: string },
+    page?: number,
+    limit?: number,
+  ) {
+    const perms = await getPermissionsForRole(requestingUser.roleCode, this.prisma);
+    const isAdmin = perms.includes(Permission.VIEW_ALL);
+
     const take = Math.min(Number(limit) || 50, 100);
     const skip = ((Number(page) || 1) - 1) * take;
 
+    const where: Record<string, unknown> = {};
+    if (!isAdmin) {
+      // Non-admin sees only missions where they own a quest or a task
+      where.OR = [
+        { created_by: requestingUser.id },
+        { quests: { some: { owner_user_id: requestingUser.id } } },
+        { tasks: { some: { owner_user_id: requestingUser.id } } },
+      ];
+    }
+
     return this.prisma.mission.findMany({
+      where,
       include: {
         _count: { select: { quests: true } },
       },

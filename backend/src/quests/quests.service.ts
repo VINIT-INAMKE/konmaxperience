@@ -2,6 +2,8 @@ import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateQuestDto } from './dto/create-quest.dto';
 import { UpdateQuestDto } from './dto/update-quest.dto';
+import { getPermissionsForRole } from '../permissions/permissions.cache';
+import { Permission } from '../types/permissions';
 
 @Injectable()
 export class QuestsService {
@@ -9,10 +11,23 @@ export class QuestsService {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll(filters: { missionId?: string; page?: number; limit?: number }) {
+  async findAll(
+    requestingUser: { id: string; roleCode: string },
+    filters: { missionId?: string; page?: number; limit?: number },
+  ) {
+    const perms = await getPermissionsForRole(requestingUser.roleCode, this.prisma);
+    const isAdmin = perms.includes(Permission.VIEW_ALL);
+
     const where: Record<string, unknown> = {};
     if (filters.missionId) {
       where.mission_id = filters.missionId;
+    }
+
+    if (!isAdmin) {
+      where.OR = [
+        { owner_user_id: requestingUser.id },
+        { tasks: { some: { owner_user_id: requestingUser.id } } },
+      ];
     }
 
     const take = Math.min(Number(filters.limit) || 50, 100);

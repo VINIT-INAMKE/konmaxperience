@@ -22,10 +22,16 @@ export class MissionsController {
 
   @Get()
   async findAll(
+    @Req() request: express.Request,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
   ) {
-    return this.missionsService.findAll(Number(page), Number(limit));
+    const user = (request as any).user;
+    return this.missionsService.findAll(
+      { id: user.id, roleCode: user.roleCode },
+      Number(page),
+      Number(limit),
+    );
   }
 
   @Get(':id')
