@@ -99,14 +99,14 @@ Requirements for milestone v1.1 — User Guide System & Data Management. Each ma
 - [x] **RECIPE-02**: `POST /recipes/:id/version` endpoint archives approved recipe and creates draft clone with all BOM lines in a Prisma $transaction
 - [x] **RECIPE-03**: `POST /recipes/:id/cost-preview` endpoint accepts BOM lines and returns `{ cost, complete, missingPrices }` without saving to DB
 - [x] **RECIPE-04**: `GET /recipes/cost-data` bulk endpoint returns vendor prices (lowest per ingredient) and unit conversion table for client-side cost calculation
-- [ ] **RECIPE-05**: Full-page recipe builder at `/recipes/new` and `/recipes/[id]` with two-column layout (main content scrolling left, sticky cost panel right)
-- [ ] **RECIPE-06**: Inline-editable header with document-editing feel — recipe name as large editable text, metadata as compact inline fields in grid
+- [x] **RECIPE-05**: Full-page recipe builder at `/recipes/new` and `/recipes/[id]` with two-column layout (main content scrolling left, sticky cost panel right)
+- [x] **RECIPE-06**: Inline-editable header with document-editing feel — recipe name as large editable text, metadata as compact inline fields in grid
 - [ ] **RECIPE-07**: BOM table with dnd-kit drag-handle reorder, per-line cost column, persistent empty ghost row, "+ Add Line" button, sub-recipe inline expansion
 - [ ] **RECIPE-08**: Hybrid live cost preview — client-side instant estimate + 3-second debounced server confirmation with estimated/confirmed badges
 - [ ] **RECIPE-09**: Sticky cost panel showing batch cost, per-portion cost, and food cost % (if linked to menu item) with animated number transitions
 - [ ] **RECIPE-10**: Status banner with contextual action buttons — Submit for Approval, Approve/Reject (approver only), Create New Version/Archive
 - [ ] **RECIPE-11**: Approved recipes are fully locked (read-only); "Create New Version" archives current and creates editable draft clone
-- [ ] **RECIPE-12**: Browser `beforeunload` dialog on unsaved changes, amber dot + "Unsaved changes" indicator in page header
+- [x] **RECIPE-12**: Browser `beforeunload` dialog on unsaved changes, amber dot + "Unsaved changes" indicator in page header
 - [ ] **RECIPE-13**: Recipe list page updated — Create button as `<Link>` to `/recipes/new`, Edit as `<Link>` to `/recipes/[id]`; sidebar wizard and 3 step components removed
 
 ## Future Requirements
