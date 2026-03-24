@@ -86,9 +86,8 @@ export function OrderHistoryTable({ orders, isLoading, onSelectOrder }: OrderHis
                 {formatTime(order.created_at)}
               </TableCell>
               <TableCell>
-                <OrderStatusBadge status={order.channel as never} />
                 <span className="text-sm">
-                  {ORDER_CHANNEL_LABELS[order.channel]}
+                  {ORDER_CHANNEL_LABELS[order.channel] ?? order.channel}
                 </span>
               </TableCell>
               <TableCell className="text-sm">
