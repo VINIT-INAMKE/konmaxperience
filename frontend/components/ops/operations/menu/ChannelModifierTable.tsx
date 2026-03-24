@@ -69,7 +69,7 @@ export function ChannelModifierTable({ modifiers }: ChannelModifierTableProps) {
     }
     setIsSaving(true);
     try {
-      await apiClient.post('/menu/channel-modifiers', {
+      await apiClient.patch('/menu/channel-modifiers', {
         channel_type: editState.channelType,
         modifier_type: editState.modifierType,
         modifier_value: value,

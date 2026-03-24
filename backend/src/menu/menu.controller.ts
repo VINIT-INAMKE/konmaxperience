@@ -120,7 +120,7 @@ export class MenuController {
     return this.menuService.findModifiers();
   }
 
-  @Put('channel-modifiers')
+  @Patch('channel-modifiers')
   @RequiresPermission(Permission.MANAGE_OPS)
   async upsertModifier(@Body() dto: UpsertChannelModifierDto) {
     return this.menuService.upsertModifier(dto);
