@@ -20,11 +20,16 @@ export class EmailService {
       'http://localhost:3000';
   }
 
+  private get emailDisabled(): boolean {
+    return this.configService.get<string>('EMAIL_DISABLED') === 'true';
+  }
+
   async sendPasswordSetup(
     email: string,
     token: string,
     userName: string,
   ): Promise<void> {
+    if (this.emailDisabled) { this.logger.log(`[EMAIL DISABLED] Skipping password setup email to ${email}`); return; }
     try {
       const sentFrom = new Sender(this.fromEmail, 'Konma Xperience');
       const recipients = [new Recipient(email, userName)];
@@ -67,6 +72,7 @@ export class EmailService {
     html: string,
     text: string,
   ): Promise<void> {
+    if (this.emailDisabled) { this.logger.log(`[EMAIL DISABLED] Skipping email to ${to.email}: ${subject}`); return; }
     try {
       const sentFrom = new Sender(this.fromEmail, 'Konma Xperience');
       const recipients = [new Recipient(to.email, to.name)];
@@ -98,6 +104,7 @@ export class EmailService {
     token: string,
     userName: string,
   ): Promise<void> {
+    if (this.emailDisabled) { this.logger.log(`[EMAIL DISABLED] Skipping password reset email to ${email}`); return; }
     try {
       const sentFrom = new Sender(this.fromEmail, 'Konma Xperience');
       const recipients = [new Recipient(email, userName)];
