@@ -15,6 +15,7 @@ export interface KdsOrderItem {
 
 export interface KdsOrder {
   id: string;
+  order_number: number;
   customer_name: string | null;
   created_at: string;
   status: OrderStatus;

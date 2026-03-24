@@ -199,7 +199,7 @@ export function DeliveryQueueTable({
         {orders.map((order) => {
           const nextStatus = getNextDeliveryStatus(order.delivery_status);
           const nextLabel = getNextStatusLabel(order.delivery_status);
-          const shortId = `#${order.id.slice(-4).toUpperCase()}`;
+          const shortId = `#${order.order_number}`;
           const customer =
             order.customer_name || order.customer_phone || '\u2014';
           const address = order.delivery_address || '\u2014';

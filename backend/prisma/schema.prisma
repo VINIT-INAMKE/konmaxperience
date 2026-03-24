@@ -635,6 +635,7 @@ model WasteLog {
 
 model Order {
   id                      String      @id @default(uuid())
+  order_number            Int         @default(autoincrement()) @unique
   channel                 String      // "dine_in" | "takeaway" | "delivery"
   status                  String      @default("placed") // placed | preparing | ready | served | dispatched | cancelled
   table_number            String?

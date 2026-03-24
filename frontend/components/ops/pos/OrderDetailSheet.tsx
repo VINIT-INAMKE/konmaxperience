@@ -167,7 +167,7 @@ export function OrderDetailSheet({
 
   if (!order) return null;
 
-  const orderShortId = order.id.slice(-4).toUpperCase();
+  const orderShortId = String(order.order_number);
   const canCancel = !TERMINAL_STATUSES.includes(order.status);
 
   // Compute next order status

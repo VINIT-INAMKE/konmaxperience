@@ -19,6 +19,7 @@ export interface KdsOrderItem {
 
 export interface KdsOrder {
   id: string;
+  order_number: number;
   customer_name: string | null;
   created_at: string;
   status: string;
@@ -71,6 +72,7 @@ export class KdsService {
 
       const kdsOrder: KdsOrder = {
         id: order.id,
+        order_number: order.order_number,
         customer_name: order.customer_name,
         created_at: order.created_at.toISOString(),
         status: order.status,

@@ -79,7 +79,7 @@ export function OrderHistoryTable({ orders, isLoading, onSelectOrder }: OrderHis
             >
               <TableCell>
                 <span className="font-mono text-sm font-bold">
-                  #{order.id.slice(-4).toUpperCase()}
+                  #{order.order_number}
                 </span>
               </TableCell>
               <TableCell className="text-sm">

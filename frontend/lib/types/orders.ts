@@ -34,6 +34,7 @@ export interface Payment {
 
 export interface Order {
   id: string;
+  order_number: number;
   channel: OrderChannel;
   status: OrderStatus;
   table_number: string | null;

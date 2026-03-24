@@ -48,7 +48,7 @@ export function KdsOrderCard({ order, isNew, isComplete, onStatusAdvance }: KdsO
       <div className="flex items-start justify-between gap-2">
         <div>
           <h3 className="text-[28px] font-bold leading-[1.1] text-white">
-            #{order.id.slice(-4).toUpperCase()}
+            #{order.order_number}
           </h3>
           {order.customer_name && (
             <p className="text-sm text-white/60">{order.customer_name}</p>

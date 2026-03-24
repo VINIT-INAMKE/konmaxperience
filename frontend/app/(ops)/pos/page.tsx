@@ -93,8 +93,7 @@ export default function PosPage() {
     mutationFn: (payload: CreateOrderPayload) =>
       apiClient.post<Order>('/orders', payload),
     onSuccess: (order) => {
-      const shortId = order.id.slice(-4).toUpperCase();
-      toast.success(`Order #${shortId} placed`);
+      toast.success(`Order #${order.order_number} placed`);
       setCartItems([]);
       setTableNumber('');
       setCustomerName('');
