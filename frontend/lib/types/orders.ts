@@ -51,7 +51,8 @@ export interface Order {
   zone_id: string;
   created_at: string;
   updated_at: string;
-  items: OrderItem[];
+  items?: OrderItem[];
+  _count?: { items: number };
   payment: Payment | null;
 }
 
