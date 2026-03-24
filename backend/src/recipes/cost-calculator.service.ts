@@ -30,7 +30,6 @@ export class CostCalculatorService {
               select: {
                 name: true,
                 VendorPrices: {
-                  where: { effective_date: { lte: new Date() } },
                   orderBy: { price: 'asc' },
                   take: 1,
                   select: { price: true, unit: true },
