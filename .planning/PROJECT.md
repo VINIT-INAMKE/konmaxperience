@@ -27,6 +27,7 @@ Every piece of work must be evidence-backed, approved, and validated before it c
 - [x] Admin CMS — Tiptap rich text editor with dual toolbar, image upload (3 paths), callout blocks, 5s debounced autosave, publish/unpublish workflow, unsaved changes warning (Phase 16)
 - [x] Search, Preview & Seeding — Cmd+K search overlay with tsvector full-text search, admin preview-as-role dropdown, 12 sections with 39 pages of real walkthrough content from codebase (Phase 17)
 - [x] Data Export — CSV/XLSX export for 22 report types with R2 storage, export history, admin exports page, ExportButton on 13 data pages (Phase 18)
+- [x] Recipe Page Redesign — full-page recipe builder with dnd-kit BOM table, live cost preview (hybrid client+server), inline approval workflow (draft→pending→approved→archived), approved recipe versioning (Phase 22)
 
 ### Active
 
@@ -145,6 +146,9 @@ Complete data model for Phases 7-13 (22 new entities) defined in `docs/superpowe
 | Delivery: name string only | 1-2 riders, no rider management entity | Confirmed |
 | Single payment + notes | No gateway, just recording method + amount + split notes | Confirmed |
 | Channel modifier (not per-item pricing) | One modifier per channel, base_price + modifier = final | Confirmed |
+| Recipe approval flow with pending status | Recipes need explicit approval before kitchen use; draft→pending→approved→archived | Confirmed |
+| Hybrid cost calculation (client+server) | Instant client estimate + 3s debounced server confirm for accurate live preview | Confirmed |
+| Approved recipe edit lock + versioning | Approved recipes are read-only; editing requires Create New Version (archive + clone) | Confirmed |
 
 ## Evolution
 
@@ -164,4 +168,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-03-24 after Phase 20 (Operations Import) completion*
+*Last updated: 2026-03-24 after Phase 22 (Recipe Page Redesign) completion*
