@@ -35,7 +35,6 @@ const ROLE_SEEDS: RoleSeed[] = [
     description: 'Customer flow, service, beverage, space interaction, channels.',
     permissions: [
       Permission.VIEW_ROLE_SCOPED,
-      Permission.CREATE_TASK,
       Permission.UPDATE_OWN_TASK,
       Permission.UPLOAD_EVIDENCE,
       Permission.APPROVE_EVIDENCE,
@@ -53,7 +52,6 @@ const ROLE_SEEDS: RoleSeed[] = [
     description: 'Food, production, R&D, standardization, quality.',
     permissions: [
       Permission.VIEW_ROLE_SCOPED,
-      Permission.CREATE_TASK,
       Permission.UPDATE_OWN_TASK,
       Permission.UPLOAD_EVIDENCE,
       Permission.APPROVE_EVIDENCE,
@@ -71,7 +69,6 @@ const ROLE_SEEDS: RoleSeed[] = [
     description: 'Costing, pricing, KPIs, performance analytics.',
     permissions: [
       Permission.VIEW_ROLE_SCOPED,
-      Permission.CREATE_TASK,
       Permission.UPDATE_OWN_TASK,
       Permission.UPLOAD_EVIDENCE,
       Permission.CREATE_DECISION,
@@ -88,7 +85,6 @@ const ROLE_SEEDS: RoleSeed[] = [
     description: 'Vendors, sourcing, inventory management.',
     permissions: [
       Permission.VIEW_ROLE_SCOPED,
-      Permission.CREATE_TASK,
       Permission.UPDATE_OWN_TASK,
       Permission.UPLOAD_EVIDENCE,
       Permission.APPROVE_EVIDENCE,
@@ -108,7 +104,6 @@ const ROLE_SEEDS: RoleSeed[] = [
     description: 'Onboarding, training, hiring, team readiness.',
     permissions: [
       Permission.VIEW_ROLE_SCOPED,
-      Permission.CREATE_TASK,
       Permission.UPDATE_OWN_TASK,
       Permission.UPLOAD_EVIDENCE,
     ],
@@ -133,7 +128,6 @@ const ROLE_SEEDS: RoleSeed[] = [
     description: 'Design language, storytelling, experience design, partnerships.',
     permissions: [
       Permission.VIEW_ROLE_SCOPED,
-      Permission.CREATE_TASK,
       Permission.UPDATE_OWN_TASK,
       Permission.UPLOAD_EVIDENCE,
       Permission.CREATE_DECISION,
