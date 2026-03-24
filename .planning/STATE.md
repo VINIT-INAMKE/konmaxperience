@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: User Guide & Data Management
 status: unknown
-stopped_at: Completed 22-03-PLAN.md
-last_updated: "2026-03-24T12:20:41.532Z"
+stopped_at: Completed 22-04-PLAN.md
+last_updated: "2026-03-24T12:29:27.083Z"
 progress:
   total_phases: 12
-  completed_phases: 8
+  completed_phases: 9
   total_plans: 32
-  completed_plans: 31
+  completed_plans: 32
 ---
 
 # Project State
@@ -76,6 +76,7 @@ Plan: 4 of 4
 | Phase 22 P01 | 6min | 2 tasks | 4 files |
 | Phase 22 P02 | 9min | 2 tasks | 6 files |
 | Phase 22 P03 | 8min | 2 tasks | 6 files |
+| Phase 22 P04 | 5min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -168,6 +169,9 @@ Recent decisions affecting current work:
 - [Phase 22]: calcLineCost exported from RecipeBomTable for reuse in RecipeBuilderPage client-side cost aggregation
 - [Phase 22]: BomTableRow receives ingredientOptions/recipeOptions as props (not fetching internally) for single data source
 - [Phase 22]: subRecipeLineMap added to RecipeBomTable props for sub-recipe expansion without extra API calls
+- [Phase 22]: Approver gate uses roleCode === FOUNDER_ADMIN (no APPROVE_FOOD permission exists)
+- [Phase 22]: RecipeCard Edit button removed -- entire card is Link to builder page
+- [Phase 22]: Wizard components left as dead code in wizard/ directory for future cleanup
 
 ### Roadmap Evolution
 
@@ -190,6 +194,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-24T12:20:41.526Z
-Stopped at: Completed 22-03-PLAN.md
+Last session: 2026-03-24T12:29:27.077Z
+Stopped at: Completed 22-04-PLAN.md
 Resume file: None

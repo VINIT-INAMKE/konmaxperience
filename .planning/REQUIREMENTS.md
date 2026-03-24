@@ -104,10 +104,10 @@ Requirements for milestone v1.1 — User Guide System & Data Management. Each ma
 - [x] **RECIPE-07**: BOM table with dnd-kit drag-handle reorder, per-line cost column, persistent empty ghost row, "+ Add Line" button, sub-recipe inline expansion
 - [x] **RECIPE-08**: Hybrid live cost preview — client-side instant estimate + 3-second debounced server confirmation with estimated/confirmed badges
 - [x] **RECIPE-09**: Sticky cost panel showing batch cost, per-portion cost, and food cost % (if linked to menu item) with animated number transitions
-- [ ] **RECIPE-10**: Status banner with contextual action buttons — Submit for Approval, Approve/Reject (approver only), Create New Version/Archive
-- [ ] **RECIPE-11**: Approved recipes are fully locked (read-only); "Create New Version" archives current and creates editable draft clone
+- [x] **RECIPE-10**: Status banner with contextual action buttons — Submit for Approval, Approve/Reject (approver only), Create New Version/Archive
+- [x] **RECIPE-11**: Approved recipes are fully locked (read-only); "Create New Version" archives current and creates editable draft clone
 - [x] **RECIPE-12**: Browser `beforeunload` dialog on unsaved changes, amber dot + "Unsaved changes" indicator in page header
-- [ ] **RECIPE-13**: Recipe list page updated — Create button as `<Link>` to `/recipes/new`, Edit as `<Link>` to `/recipes/[id]`; sidebar wizard and 3 step components removed
+- [x] **RECIPE-13**: Recipe list page updated — Create button as `<Link>` to `/recipes/new`, Edit as `<Link>` to `/recipes/[id]`; sidebar wizard and 3 step components removed
 
 ## Future Requirements
 
