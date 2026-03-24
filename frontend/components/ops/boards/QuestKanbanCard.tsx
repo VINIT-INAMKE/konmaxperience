@@ -25,7 +25,7 @@ export function QuestKanbanCard({ quest }: QuestKanbanCardProps) {
   return (
     <Link
       href={`/missions/${quest.mission_id}`}
-      className="block rounded-lg border bg-card"
+      className="block rounded-lg border bg-card overflow-hidden"
     >
       <div className="p-4 space-y-2">
         {/* Quest title */}

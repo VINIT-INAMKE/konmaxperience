@@ -38,8 +38,8 @@ export function QuestCard({ quest }: QuestCardProps) {
   return (
     <Link href={`/quests/${quest.id}`} className="block">
       <Card className="p-4 hover:bg-muted/30 transition-colors cursor-pointer">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex-1 space-y-3">
+        <div className="flex items-start justify-between gap-4 overflow-hidden">
+          <div className="flex-1 min-w-0 space-y-3">
             {/* Header row */}
             <div className="flex items-center gap-2 flex-wrap">
               <h3 className="text-sm font-semibold">{quest.title}</h3>
