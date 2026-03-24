@@ -401,7 +401,7 @@ export function RecipeBuilderPage({ recipeId }: RecipeBuilderPageProps) {
   // --- Loading state ---
   if (recipeId && isLoading) {
     return (
-      <div className="max-w-7xl mx-auto px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
         <div className="flex items-center justify-between gap-4 mb-2">
           <Skeleton className="h-4 w-20" />
           <div className="flex items-center gap-3">
@@ -440,7 +440,7 @@ export function RecipeBuilderPage({ recipeId }: RecipeBuilderPageProps) {
   // --- Error state ---
   if (recipeId && isError) {
     return (
-      <div className="max-w-7xl mx-auto px-8 py-8 space-y-3">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8 space-y-3">
         <div className="text-sm text-destructive">
           Could not load recipe. It may have been deleted or you don&apos;t have
           access.
@@ -458,20 +458,20 @@ export function RecipeBuilderPage({ recipeId }: RecipeBuilderPageProps) {
 
   return (
     <TooltipProvider delay={300}>
-    <div className="max-w-7xl mx-auto px-8 py-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
       {/* Page header: back link + unsaved indicator + status badge + save button */}
-      <div className="flex items-center justify-between gap-4 mb-2">
+      <div className="flex items-center justify-between gap-2 sm:gap-4 mb-2 flex-wrap">
         <Link
           href="/operations/recipes"
           className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
         >
           <ArrowLeft className="size-3.5" /> Recipes
         </Link>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           {isDirty && (
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <span className="size-2 rounded-full bg-amber-500" />
-              Unsaved changes
+              <span className="hidden sm:inline">Unsaved changes</span>
             </div>
           )}
           <RecipeStatusBadge status={status} />
@@ -485,10 +485,10 @@ export function RecipeBuilderPage({ recipeId }: RecipeBuilderPageProps) {
         </div>
       </div>
 
-      {/* Recipe name -- large editable field (Display 28px/600) */}
+      {/* Recipe name -- large editable field */}
       <input
         className={cn(
-          'text-[28px] font-semibold leading-[1.15] bg-transparent border-0 outline-none w-full mb-2',
+          'text-xl sm:text-2xl lg:text-[28px] font-semibold leading-[1.15] bg-transparent border-0 outline-none w-full mb-2',
           'border-b border-transparent hover:border-border focus:border-[var(--primary)]',
           'transition-colors placeholder:text-muted-foreground/40',
           isLocked && 'pointer-events-none opacity-70'
@@ -514,6 +514,29 @@ export function RecipeBuilderPage({ recipeId }: RecipeBuilderPageProps) {
       )}
 
       <Separator className="my-6" />
+
+      {/* Cost panel — mobile: shown above BOM, collapsible */}
+      <div className="lg:hidden mb-6">
+        <details className="group">
+          <summary className="flex items-center justify-between cursor-pointer text-sm font-medium py-2">
+            <span>Cost Preview</span>
+            <span className="text-xs text-muted-foreground group-open:hidden">
+              {displayedCost.total !== null
+                ? `₹ ${displayedCost.total.toFixed(2)}${!displayedCost.complete ? ' (partial)' : ''}`
+                : 'No cost data'}
+            </span>
+          </summary>
+          <RecipeCostPanel
+            batchCost={displayedCost.total}
+            isEstimate={costIsEstimate}
+            isComplete={displayedCost.complete}
+            missingPrices={displayedCost.missingPrices}
+            yieldQty={parseFloat(yieldQty) || 0}
+            portionSize={portionSize}
+            menuItemPrice={null}
+          />
+        </details>
+      </div>
 
       {/* Two-column grid */}
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-8">

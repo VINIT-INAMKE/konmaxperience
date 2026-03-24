@@ -175,8 +175,8 @@ export function RecipeBomTable({
 
   return (
     <div>
-      {/* Table header */}
-      <div className="grid grid-cols-[32px_110px_1fr_80px_90px_160px_80px_32px] gap-2 px-1 py-1 border-b border-border mb-1">
+      {/* Table header — hidden on mobile (card layout has inline labels) */}
+      <div className="hidden md:grid grid-cols-[32px_110px_1fr_80px_90px_160px_80px_32px] gap-2 px-1 py-1 border-b border-border mb-1">
         <span />
         <span className="text-xs text-muted-foreground uppercase tracking-wide">
           Type

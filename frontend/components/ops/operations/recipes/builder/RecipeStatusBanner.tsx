@@ -44,7 +44,7 @@ export function RecipeStatusBanner({
     <>
       <div
         className={cn(
-          'flex items-center justify-between rounded-lg px-4 h-12',
+          'flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4 rounded-lg px-3 sm:px-4 py-2 sm:py-0 sm:h-12',
           bannerClasses[status]
         )}
       >
@@ -57,7 +57,7 @@ export function RecipeStatusBanner({
           {status === 'pending' && RECIPE_STATUS_LABELS[status]}
         </span>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {status === 'draft' && (
             <Button
               size="sm"

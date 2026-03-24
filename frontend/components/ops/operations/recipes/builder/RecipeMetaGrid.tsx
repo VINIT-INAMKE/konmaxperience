@@ -50,8 +50,13 @@ export function RecipeMetaGrid({
             onValueChange={(v) => onChange('brandId', v ?? '')}
             disabled={isLocked}
           >
-            <SelectTrigger className="h-8 text-sm bg-transparent border-transparent hover:border-border focus:border-[var(--primary)] transition-colors">
-              <SelectValue placeholder="Select brand" />
+            <SelectTrigger className="h-8 text-sm bg-transparent border-transparent hover:border-border focus:border-[var(--primary)] transition-colors truncate">
+              <SelectValue placeholder="Select brand">
+                {(value: string) => {
+                  if (!value) return 'Select brand';
+                  return brands.find((b) => b.id === value)?.name ?? 'Select brand';
+                }}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               {brands.map((brand) => (
@@ -73,8 +78,13 @@ export function RecipeMetaGrid({
             onValueChange={(v) => onChange('zoneId', v ?? '')}
             disabled={isLocked}
           >
-            <SelectTrigger className="h-8 text-sm bg-transparent border-transparent hover:border-border focus:border-[var(--primary)] transition-colors">
-              <SelectValue placeholder="Select zone" />
+            <SelectTrigger className="h-8 text-sm bg-transparent border-transparent hover:border-border focus:border-[var(--primary)] transition-colors truncate">
+              <SelectValue placeholder="Select zone">
+                {(value: string) => {
+                  if (!value) return 'Select zone';
+                  return zones.find((z) => z.id === value)?.name ?? 'Select zone';
+                }}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               {zones.map((zone) => (
