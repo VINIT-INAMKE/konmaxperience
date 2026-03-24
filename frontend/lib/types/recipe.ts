@@ -1,4 +1,4 @@
-export type RecipeStatus = 'draft' | 'approved' | 'archived';
+export type RecipeStatus = 'draft' | 'pending' | 'approved' | 'archived';
 
 export interface RecipeLine {
   id: string;
@@ -48,10 +48,33 @@ export interface BomLineInput {
 
 export const RECIPE_STATUS_LABELS: Record<RecipeStatus, string> = {
   draft: 'Draft',
+  pending: 'Pending Approval',
   approved: 'Approved',
   archived: 'Archived',
 };
 
-export const RECIPE_STATUSES: RecipeStatus[] = ['draft', 'approved', 'archived'];
+export const RECIPE_STATUSES: RecipeStatus[] = ['draft', 'pending', 'approved', 'archived'];
 
 export const YIELD_UNITS = ['g', 'ml', 'pieces', 'portions'] as const;
+
+export interface BomLineState {
+  id: string;
+  input_type: 'ingredient' | 'recipe';
+  item_id: string;
+  item_name: string;
+  quantity: string;
+  unit: string;
+  prep_notes: string;
+  sort_order: number;
+}
+
+export interface CostData {
+  vendorPrices: Array<{ ingredient_id: string; price: number; unit: string }>;
+  unitConversions: Array<{ from_unit: string; to_unit: string; factor: number }>;
+}
+
+export interface CostPreviewResponse {
+  cost: number | null;
+  complete: boolean;
+  missingPrices: string[];
+}

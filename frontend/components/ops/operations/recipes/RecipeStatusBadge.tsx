@@ -12,6 +12,7 @@ interface RecipeStatusBadgeProps {
 export function RecipeStatusBadge({ status, className }: RecipeStatusBadgeProps) {
   const statusClasses: Record<RecipeStatus, string> = {
     draft: 'bg-muted text-muted-foreground',
+    pending: 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
     approved: 'bg-green-500/15 text-green-400',
     archived: 'bg-muted/50 text-muted-foreground line-through',
   };
