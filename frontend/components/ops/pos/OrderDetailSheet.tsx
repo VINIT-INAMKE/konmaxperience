@@ -136,6 +136,21 @@ export function OrderDetailSheet({
     },
   });
 
+  const advanceStatusMutation = useMutation({
+    mutationFn: (nextStatus: string) =>
+      apiClient.patch('/orders/' + order!.id + '/status', {
+        status: nextStatus,
+      }),
+    onSuccess: (_data, nextStatus) => {
+      toast.success(`Order marked ${nextStatus}`);
+      void queryClient.invalidateQueries({ queryKey: ['orders'] });
+      onOrderUpdated();
+    },
+    onError: () => {
+      toast.error('Could not update order status. Refresh and try again.');
+    },
+  });
+
   const deliveryMutation = useMutation({
     mutationFn: (nextStatus: string) =>
       apiClient.patch('/orders/' + order!.id + '/delivery', {
@@ -154,6 +169,20 @@ export function OrderDetailSheet({
 
   const orderShortId = order.id.slice(-4).toUpperCase();
   const canCancel = !TERMINAL_STATUSES.includes(order.status);
+
+  // Compute next order status
+  const STATUS_FLOW: Record<string, string> = {
+    placed: 'preparing',
+    preparing: 'ready',
+    ready: order.channel === 'delivery' ? 'dispatched' : 'served',
+  };
+  const nextOrderStatus = STATUS_FLOW[order.status] ?? null;
+  const NEXT_STATUS_LABELS: Record<string, string> = {
+    preparing: 'Start Preparing',
+    ready: 'Mark Ready',
+    served: 'Mark Served',
+    dispatched: 'Mark Dispatched',
+  };
 
   // Compute next delivery status
   const currentDeliveryIdx = order.delivery_status
@@ -284,6 +313,19 @@ export function OrderDetailSheet({
               <h3 className="text-xs font-bold text-muted-foreground mb-2">Status</h3>
               <StatusProgression order={order} />
             </div>
+
+            {/* Advance order status */}
+            {nextOrderStatus && (
+              <Button
+                className="w-full"
+                onClick={() => advanceStatusMutation.mutate(nextOrderStatus)}
+                disabled={advanceStatusMutation.isPending}
+              >
+                {advanceStatusMutation.isPending
+                  ? 'Updating...'
+                  : NEXT_STATUS_LABELS[nextOrderStatus] ?? `Move to ${nextOrderStatus}`}
+              </Button>
+            )}
 
             {/* Payment section */}
             <div>
