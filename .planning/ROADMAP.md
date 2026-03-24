@@ -98,7 +98,7 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 14 -> 14.x -> 15 -> 15.x -> 16 -> 16.x -> 17 -> 17.x -> 18 -> 18.x -> 19 -> 19.x -> 20 -> 20.x -> 21
+Phases execute in numeric order: 14 -> 14.x -> 15 -> 15.x -> 16 -> 16.x -> 17 -> 17.x -> 18 -> 18.x -> 19 -> 19.x -> 20 -> 20.x -> 21 -> 22
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -110,6 +110,7 @@ Phases execute in numeric order: 14 -> 14.x -> 15 -> 15.x -> 16 -> 16.x -> 17 ->
 | 19. Master Data Import | v1.1 | 3/3 | Complete    | 2026-03-23 |
 | 20. Operations Import | v1.1 | 5/5 | Complete    | 2026-03-23 |
 | 21. In-App Chat | v1.1 | 4/4 | Complete    | 2026-03-23 |
+| 22. Recipe Page Redesign | v1.1 | 0/4 | Planned    | - |
 
 ### Phase 18: Data Export
 **Goal**: CSV/XLSX export for all 22 report types with server-side file generation, R2 storage, export history, and export buttons on 13 data pages
@@ -193,14 +194,24 @@ Plans:
 - [x] 21-04-PLAN.md -- Frontend messages + real-time: MessageThread, MessageBubble, ComposeArea, file upload, typing indicators, read receipts, GroupMembersSheet, Pusher integration
 
 ### Phase 22: Recipe Page Redesign
-
-**Goal:** Replace the sidebar recipe wizard with a dedicated full-page recipe builder — proper BOM table editing, live cost preview, inline approval workflow, and better UX for complex multi-ingredient recipes
-**Requirements**: TBD
-**Depends on:** Phase 20 -- recipes and BOM infrastructure
-**Plans:** 0 plans
+**Goal**: Replace the sidebar recipe wizard with a dedicated full-page recipe builder — proper BOM table editing, live cost preview, inline approval workflow, and better UX for complex multi-ingredient recipes
+**Depends on**: Phase 20 -- recipes and BOM infrastructure
+**Requirements**: RECIPE-01, RECIPE-02, RECIPE-03, RECIPE-04, RECIPE-05, RECIPE-06, RECIPE-07, RECIPE-08, RECIPE-09, RECIPE-10, RECIPE-11, RECIPE-12, RECIPE-13
+**Success Criteria** (what must be TRUE):
+  1. User can create a new recipe at /recipes/new with a full-page builder layout
+  2. User can edit an existing recipe at /recipes/[id] with all data pre-loaded
+  3. BOM table supports drag-and-drop reordering, inline editing, and sub-recipe expansion
+  4. Cost panel shows live batch cost, per-portion cost, and food cost % with animated transitions
+  5. Status banner shows contextual approval actions (Submit, Approve/Reject, Create New Version/Archive)
+  6. Approved recipes are locked — editing requires "Create New Version" which archives and clones
+  7. Sidebar wizard is completely removed from the codebase
+**Plans**: 4 plans
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 22 to break down)
+- [ ] 22-01-PLAN.md -- Backend: pending status + transitions, createNewVersion endpoint, cost-preview endpoint, bulk cost-data endpoint
+- [ ] 22-02-PLAN.md -- Frontend types + builder scaffold: RecipeStatus with pending, RecipeBuilderPage, RecipeMetaGrid, route pages, beforeunload
+- [ ] 22-03-PLAN.md -- BOM table + cost panel: RecipeBomTable with dnd-kit, BomTableRow, RecipeCostPanel with animated numbers, CostEstimateBadge, client + server cost calc
+- [ ] 22-04-PLAN.md -- Status banner + wiring + cleanup: RecipeStatusBanner with approval workflow, list page Link navigation, wizard removal
 
 ### Phase 23: Razorpay Payments + Customer Auth
 

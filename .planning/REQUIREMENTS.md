@@ -93,6 +93,22 @@ Requirements for milestone v1.1 — User Guide System & Data Management. Each ma
 - [x] **CHAT-09**: Real-time message delivery via Pusher.js private channels — messages appear instantly without page refresh
 - [x] **CHAT-10**: Typing indicators via Pusher client events (no server round-trip) and read receipts via last_read_at with Pusher broadcast
 
+### Recipe Page Redesign
+
+- [ ] **RECIPE-01**: `pending` status added to recipe workflow with enforced transitions: draft->pending, pending->approved, pending->draft (reject), approved->archived; approved->draft and approved->pending blocked
+- [ ] **RECIPE-02**: `POST /recipes/:id/version` endpoint archives approved recipe and creates draft clone with all BOM lines in a Prisma $transaction
+- [ ] **RECIPE-03**: `POST /recipes/:id/cost-preview` endpoint accepts BOM lines and returns `{ cost, complete, missingPrices }` without saving to DB
+- [ ] **RECIPE-04**: `GET /recipes/cost-data` bulk endpoint returns vendor prices (lowest per ingredient) and unit conversion table for client-side cost calculation
+- [ ] **RECIPE-05**: Full-page recipe builder at `/recipes/new` and `/recipes/[id]` with two-column layout (main content scrolling left, sticky cost panel right)
+- [ ] **RECIPE-06**: Inline-editable header with document-editing feel — recipe name as large editable text, metadata as compact inline fields in grid
+- [ ] **RECIPE-07**: BOM table with dnd-kit drag-handle reorder, per-line cost column, persistent empty ghost row, "+ Add Line" button, sub-recipe inline expansion
+- [ ] **RECIPE-08**: Hybrid live cost preview — client-side instant estimate + 3-second debounced server confirmation with estimated/confirmed badges
+- [ ] **RECIPE-09**: Sticky cost panel showing batch cost, per-portion cost, and food cost % (if linked to menu item) with animated number transitions
+- [ ] **RECIPE-10**: Status banner with contextual action buttons — Submit for Approval, Approve/Reject (approver only), Create New Version/Archive
+- [ ] **RECIPE-11**: Approved recipes are fully locked (read-only); "Create New Version" archives current and creates editable draft clone
+- [ ] **RECIPE-12**: Browser `beforeunload` dialog on unsaved changes, amber dot + "Unsaved changes" indicator in page header
+- [ ] **RECIPE-13**: Recipe list page updated — Create button as `<Link>` to `/recipes/new`, Edit as `<Link>` to `/recipes/[id]`; sidebar wizard and 3 step components removed
+
 ## Future Requirements
 
 ### Guide Enhancements
@@ -125,6 +141,11 @@ Requirements for milestone v1.1 — User Guide System & Data Management. Each ma
 | Voice/video calls in chat | Out of scope for v1.1 — text messaging sufficient for team coordination |
 | Chat export/download | Future enhancement — conversations are retained in-app |
 | Message reactions (emoji) | Future enhancement — not needed for initial chat launch |
+| Recipe version history/changelog | Future enhancement — diffs between versions |
+| Approval rejection reason text | Future enhancement — adds scope to approval flow |
+| Recipe image upload via R2 | Separate concern — currently just URL field |
+| Recipe templates / "create from template" | Future feature |
+| Batch scaling calculator | Future feature |
 
 ## Traceability
 
@@ -191,12 +212,25 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CHAT-08 | Phase 21 | Complete |
 | CHAT-09 | Phase 21 | Complete |
 | CHAT-10 | Phase 21 | Complete |
+| RECIPE-01 | Phase 22 | Planned |
+| RECIPE-02 | Phase 22 | Planned |
+| RECIPE-03 | Phase 22 | Planned |
+| RECIPE-04 | Phase 22 | Planned |
+| RECIPE-05 | Phase 22 | Planned |
+| RECIPE-06 | Phase 22 | Planned |
+| RECIPE-07 | Phase 22 | Planned |
+| RECIPE-08 | Phase 22 | Planned |
+| RECIPE-09 | Phase 22 | Planned |
+| RECIPE-10 | Phase 22 | Planned |
+| RECIPE-11 | Phase 22 | Planned |
+| RECIPE-12 | Phase 22 | Planned |
+| RECIPE-13 | Phase 22 | Planned |
 
 **Coverage:**
-- v1.1 requirements: 59 total
-- Mapped to phases: 59
+- v1.1 requirements: 72 total
+- Mapped to phases: 72
 - Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-22*
-*Last updated: 2026-03-24 after Phase 20 planning*
+*Last updated: 2026-03-24 after Phase 22 planning*
