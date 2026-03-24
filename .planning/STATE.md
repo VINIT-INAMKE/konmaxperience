@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: User Guide & Data Management
 status: unknown
-stopped_at: Completed 22-02-PLAN.md
-last_updated: "2026-03-24T12:08:25.490Z"
+stopped_at: Completed 22-03-PLAN.md
+last_updated: "2026-03-24T12:20:41.532Z"
 progress:
   total_phases: 12
   completed_phases: 8
   total_plans: 32
-  completed_plans: 30
+  completed_plans: 31
 ---
 
 # Project State
@@ -24,7 +24,7 @@ See: .planning/PROJECT.md (updated 2026-03-22)
 ## Current Position
 
 Phase: 22 (recipe-page-redesign) — EXECUTING
-Plan: 3 of 4
+Plan: 4 of 4
 
 ## Performance Metrics
 
@@ -75,6 +75,7 @@ Plan: 3 of 4
 | Phase 20 P04 | 8min | 2 tasks | 3 files |
 | Phase 22 P01 | 6min | 2 tasks | 4 files |
 | Phase 22 P02 | 9min | 2 tasks | 6 files |
+| Phase 22 P03 | 8min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -164,6 +165,9 @@ Recent decisions affecting current work:
 - [Phase 22]: cost-data GET route declared before :id GET route to avoid NestJS route conflict
 - [Phase 22]: base-ui Select onValueChange passes string|null -- coalesced to empty string with ?? operator
 - [Phase 22]: Replaced entire [id]/page.tsx detail view with RecipeBuilderPage, removing RecipeWizard sidebar pattern
+- [Phase 22]: calcLineCost exported from RecipeBomTable for reuse in RecipeBuilderPage client-side cost aggregation
+- [Phase 22]: BomTableRow receives ingredientOptions/recipeOptions as props (not fetching internally) for single data source
+- [Phase 22]: subRecipeLineMap added to RecipeBomTable props for sub-recipe expansion without extra API calls
 
 ### Roadmap Evolution
 
@@ -186,6 +190,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-24T12:08:25.480Z
-Stopped at: Completed 22-02-PLAN.md
+Last session: 2026-03-24T12:20:41.526Z
+Stopped at: Completed 22-03-PLAN.md
 Resume file: None
