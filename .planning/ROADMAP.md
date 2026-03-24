@@ -201,3 +201,30 @@ Plans:
 
 Plans:
 - [ ] TBD (run /gsd:plan-phase 22 to break down)
+
+### Phase 23: Razorpay Payments + Customer Auth
+
+**Goal:** OTP-based customer authentication (phone login), Razorpay payment gateway integration for customer marketplace, POS, and event bookings (events confirmed only after successful payment), with existing manual payment methods (cash/card/UPI) preserved
+**Depends on:** Phase 20 — existing orders, payments, and menu infrastructure
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 23 to break down)
+
+### Phase 24: Customer Marketplace
+
+**Goal:** Full customer-facing marketplace — cart + checkout with Razorpay custom checkout modal, takeaway & delivery ordering, delivery address management, checkpoint-based order tracking (staff fires events, customer sees timeline via Pusher), and customer order history
+**Depends on:** Phase 23 — customer auth and Razorpay payment infrastructure
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 24 to break down)
+
+### Phase 25: Third-Party Delivery Integration
+
+**Goal:** Porter API for local overflow delivery (when own team can't deliver) and Shiprocket API for interstate shipping of non-food items (art, merchandise) — with courier selection, AWB generation, tracking webhooks, and delivery status synced to order tracking
+**Depends on:** Phase 24 — marketplace ordering and order tracking infrastructure
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 25 to break down)

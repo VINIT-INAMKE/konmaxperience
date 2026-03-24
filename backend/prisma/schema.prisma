@@ -761,6 +761,8 @@ model EventBooking {
   customer_phone String
   guests         Int
   created_at     DateTime @default(now())
+
+  @@unique([event_id, customer_phone])
 }
 
 model GuideSection {

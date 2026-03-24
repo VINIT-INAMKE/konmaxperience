@@ -17,7 +17,7 @@ interface KpiCardProps {
 
 export function KpiCard({ kpi, canEdit, onEdit }: KpiCardProps) {
   const domainLabel = KPI_DOMAIN_LABELS[kpi.domain] ?? kpi.domain;
-  const linkedCount = kpi.tasks.length;
+  const linkedCount = kpi._count?.tasks ?? kpi.tasks?.length ?? 0;
 
   return (
     <MagicCard gradientColor={GRADIENT_OVERLAY} className="rounded-xl">

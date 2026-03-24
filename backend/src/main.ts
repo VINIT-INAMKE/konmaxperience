@@ -116,6 +116,9 @@ async function bootstrap() {
     }),
   );
 
+  // Graceful shutdown — close DB connections before process exits
+  app.enableShutdownHooks();
+
   const port = process.env.PORT ?? 4000;
   const server = await app.listen(port, '0.0.0.0');
 

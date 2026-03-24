@@ -165,6 +165,9 @@ Recent decisions affecting current work:
 - Phase 20 added: Operations Import — stock, recipes, menu, events, tasks, quests, KPIs
 - Phase 21 added: In-App Chat — 1-1 and group messaging with Pusher.js, role-scoped visibility
 - Phase 22 added: Recipe Page Redesign — full-page recipe builder replacing sidebar wizard
+- Phase 23 added: Razorpay Payments + Customer Auth — OTP-based customer login, Razorpay integration for marketplace and POS
+- Phase 24 added: Customer Marketplace — cart, checkout, takeaway/delivery ordering, checkpoint-based order tracking via Pusher
+- Phase 25 added: Third-Party Delivery Integration — Porter for local overflow, Shiprocket for interstate shipping
 
 ### Pending Todos
 

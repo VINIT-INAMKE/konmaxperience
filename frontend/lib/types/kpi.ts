@@ -46,7 +46,8 @@ export interface Kpi {
   status: KpiStatus;
   domain: string;
   updated_at: string;
-  tasks: Array<{ id: string; title: string; valid: boolean }>;
+  tasks?: Array<{ id: string; title: string; valid: boolean }>;
+  _count?: { tasks: number };
 }
 
 export interface CreateKpiDto {

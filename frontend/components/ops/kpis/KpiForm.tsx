@@ -135,7 +135,7 @@ export function KpiForm({ kpi, open, onOpenChange }: KpiFormProps) {
         current_value: kpi.current_value,
         status: kpi.status,
       });
-      setSelectedTaskIds(kpi.tasks.map((t) => t.id));
+      setSelectedTaskIds(kpi.tasks?.map((t) => t.id) ?? []);
     } else {
       reset({
         name: '',
@@ -158,8 +158,8 @@ export function KpiForm({ kpi, open, onOpenChange }: KpiFormProps) {
           name: data.name,
           description: data.description,
           unit: data.unit,
-          target_value: data.target_value,
-          current_value: data.current_value ?? 0,
+          target_value: Number(data.target_value),
+          current_value: Number(data.current_value ?? 0),
           status: data.status as KpiStatus,
           linked_task_ids: selectedTaskIds,
         };
@@ -169,8 +169,8 @@ export function KpiForm({ kpi, open, onOpenChange }: KpiFormProps) {
           name: data.name,
           description: data.description,
           unit: data.unit,
-          target_value: data.target_value,
-          current_value: data.current_value ?? 0,
+          target_value: Number(data.target_value),
+          current_value: Number(data.current_value ?? 0),
           status: data.status as KpiStatus,
           domain: data.domain,
           linked_task_ids: selectedTaskIds,

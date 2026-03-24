@@ -251,10 +251,10 @@ export function Sidebar({ onNavigate }: SidebarProps = {}) {
 
   // ── Boards (everyone — shared visibility) ──
   const boardsNav: NavItem[] = [
+    { label: 'Evidence Feed', href: '/boards/evidence', icon: <Eye className="size-4" /> },
     { label: 'Missions', href: '/boards/missions', icon: <Rocket className="size-4" /> },
     { label: 'Quests', href: '/boards/quests', icon: <CheckCircle className="size-4" /> },
     { label: 'Wins', href: '/boards/wins', icon: <Medal className="size-4" /> },
-    { label: 'Evidence Feed', href: '/boards/evidence', icon: <Eye className="size-4" /> },
   ];
 
   // ── Intelligence (permission-filtered) ──
@@ -295,14 +295,20 @@ export function Sidebar({ onNavigate }: SidebarProps = {}) {
   const operationsNav: NavItem[] = [
     ...(can('MANAGE_OPS')
       ? [
-          { label: 'Zones', href: '/operations/zones', icon: <MapPin className="size-4" /> },
+          { label: 'Assets', href: '/operations/assets', icon: <FolderOpen className="size-4" /> },
           { label: 'Brands', href: '/operations/brands', icon: <Tag className="size-4" /> },
           { label: 'Channels', href: '/operations/channels', icon: <Radio className="size-4" /> },
-          { label: 'Assets', href: '/operations/assets', icon: <FolderOpen className="size-4" /> },
-          { label: 'Recipes', href: '/operations/recipes', icon: <ChefHat className="size-4" /> },
+          { label: 'Events', href: '/operations/events', icon: <CalendarDays className="size-4" /> },
           { label: 'Ingredients', href: '/operations/ingredients', icon: <Salad className="size-4" /> },
-          { label: 'Vendors', href: '/operations/vendors', icon: <Truck className="size-4" /> },
           { label: 'Menu', href: '/operations/menu', icon: <UtensilsCrossed className="size-4" /> },
+          { label: 'Recipes', href: '/operations/recipes', icon: <ChefHat className="size-4" /> },
+          { label: 'Vendors', href: '/operations/vendors', icon: <Truck className="size-4" /> },
+          { label: 'Zones', href: '/operations/zones', icon: <MapPin className="size-4" /> },
+        ]
+      : []),
+    ...(can('MANAGE_POS')
+      ? [
+          { label: 'Feedback', href: '/operations/feedback', icon: <MessageSquare className="size-4" /> },
         ]
       : []),
     ...(can('MANAGE_INVENTORY')
@@ -313,18 +319,8 @@ export function Sidebar({ onNavigate }: SidebarProps = {}) {
       : []),
     ...(can('MANAGE_PROCUREMENT')
       ? [
-          { label: 'Purchase Orders', href: '/operations/purchase-orders', icon: <ShoppingCart className="size-4" /> },
           { label: 'Procurement', href: '/operations/procurement', icon: <TrendingUp className="size-4" /> },
-        ]
-      : []),
-    ...(can('MANAGE_POS')
-      ? [
-          { label: 'Feedback', href: '/operations/feedback', icon: <MessageSquare className="size-4" /> },
-        ]
-      : []),
-    ...(can('MANAGE_OPS')
-      ? [
-          { label: 'Events', href: '/operations/events', icon: <CalendarDays className="size-4" /> },
+          { label: 'Purchase Orders', href: '/operations/purchase-orders', icon: <ShoppingCart className="size-4" /> },
         ]
       : []),
   ];
@@ -333,8 +329,8 @@ export function Sidebar({ onNavigate }: SidebarProps = {}) {
   const kitchenNav: NavItem[] = can('MANAGE_KITCHEN')
     ? [
         { label: 'Dashboard', href: '/operations/kitchen/dashboard', icon: <LayoutDashboard className="size-4" /> },
-        { label: 'Prep Batches', href: '/operations/kitchen/prep-batches', icon: <ChefHat className="size-4" /> },
         { label: 'KDS', href: '/operations/kitchen/kds', icon: <Monitor className="size-4" /> },
+        { label: 'Prep Batches', href: '/operations/kitchen/prep-batches', icon: <ChefHat className="size-4" /> },
         { label: 'Waste Log', href: '/operations/kitchen/waste', icon: <Trash2 className="size-4" /> },
       ]
     : [];
@@ -342,20 +338,14 @@ export function Sidebar({ onNavigate }: SidebarProps = {}) {
   // ── POS (requires MANAGE_POS) ──
   const posNav: NavItem[] = can('MANAGE_POS')
     ? [
-        { label: 'Take Order', href: '/pos', icon: <ShoppingCart className="size-4" /> },
-        { label: 'Order History', href: '/pos/orders', icon: <ClipboardList className="size-4" /> },
         { label: 'Delivery Queue', href: '/pos/delivery', icon: <Truck className="size-4" /> },
+        { label: 'Order History', href: '/pos/orders', icon: <ClipboardList className="size-4" /> },
+        { label: 'Take Order', href: '/pos', icon: <ShoppingCart className="size-4" /> },
       ]
     : [];
 
   // ── Admin (requires MANAGE_RBAC or MANAGE_SYSTEM or MANAGE_DELEGATIONS) ──
   const adminNav: NavItem[] = [
-    ...(can('MANAGE_RBAC')
-      ? [
-          { label: 'Team', href: '/admin/users', icon: <Users className="size-4" /> },
-          { label: 'Permissions', href: '/admin/permissions', icon: <Shield className="size-4" /> },
-        ]
-      : []),
     ...(can('VIEW_ALL')
       ? [
           { label: 'Blockers', href: '/admin/blockers', icon: <AlertTriangle className="size-4" /> },
@@ -368,7 +358,7 @@ export function Sidebar({ onNavigate }: SidebarProps = {}) {
       : []),
     ...(can('MANAGE_SYSTEM')
       ? [
-          { label: 'Settings', href: '/admin/settings', icon: <Settings className="size-4" /> },
+          { label: 'Exports', href: '/admin/exports', icon: <Download className="size-4" /> },
         ]
       : []),
     ...(can('MANAGE_GUIDE')
@@ -378,9 +368,23 @@ export function Sidebar({ onNavigate }: SidebarProps = {}) {
       : []),
     ...(can('MANAGE_SYSTEM')
       ? [
-          { label: 'Exports', href: '/admin/exports', icon: <Download className="size-4" /> },
           { label: 'Import', href: '/admin/import', icon: <Upload className="size-4" /> },
           { label: 'Notices', href: '/admin/notices', icon: <Megaphone className="size-4" /> },
+        ]
+      : []),
+    ...(can('MANAGE_RBAC')
+      ? [
+          { label: 'Permissions', href: '/admin/permissions', icon: <Shield className="size-4" /> },
+        ]
+      : []),
+    ...(can('MANAGE_SYSTEM')
+      ? [
+          { label: 'Settings', href: '/admin/settings', icon: <Settings className="size-4" /> },
+        ]
+      : []),
+    ...(can('MANAGE_RBAC')
+      ? [
+          { label: 'Team', href: '/admin/users', icon: <Users className="size-4" /> },
         ]
       : []),
   ];

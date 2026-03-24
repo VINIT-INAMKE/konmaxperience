@@ -186,21 +186,32 @@ export class EventsService {
         );
       }
 
-      // 4. Sum existing bookings
+      // 4. Check duplicate booking by phone
+      const existingBooking = await tx.eventBooking.findUnique({
+        where: { event_id_customer_phone: { event_id: eventId, customer_phone: dto.customer_phone } },
+        select: { id: true },
+      });
+      if (existingBooking) {
+        throw new BadRequestException(
+          'This phone number has already booked this event.',
+        );
+      }
+
+      // 5. Sum existing bookings
       const aggregate = await tx.eventBooking.aggregate({
         where: { event_id: eventId },
         _sum: { guests: true },
       });
       const booked = aggregate._sum.guests ?? 0;
 
-      // 5. Check capacity
+      // 6. Check capacity
       if (booked + dto.guests > event.capacity) {
         throw new BadRequestException(
           `Sorry, this event is full. No spots remain for ${dto.guests} guests.`,
         );
       }
 
-      // 6. Create booking
+      // 7. Create booking
       return tx.eventBooking.create({
         data: {
           event_id: eventId,
