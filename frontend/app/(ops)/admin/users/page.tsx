@@ -182,8 +182,8 @@ export default function AdminUsersPage() {
                 <TableCell>
                   <Badge variant="secondary">
                     {ROLE_DISPLAY_NAMES[
-                      user.roleCode as keyof typeof ROLE_DISPLAY_NAMES
-                    ] || user.roleCode}
+                      (user.role?.code ?? user.roleCode) as keyof typeof ROLE_DISPLAY_NAMES
+                    ] || user.role?.name || user.roleCode || 'Unknown'}
                   </Badge>
                 </TableCell>
                 <TableCell>
@@ -199,7 +199,7 @@ export default function AdminUsersPage() {
                   </Badge>
                 </TableCell>
                 <TableCell className="text-muted-foreground">
-                  {formatRelativeTime(user.createdAt)}
+                  {formatRelativeTime(user.created_at ?? user.createdAt ?? '')}
                 </TableCell>
                 <TableCell>
                   <DropdownMenu>

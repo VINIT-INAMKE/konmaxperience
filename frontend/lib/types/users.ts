@@ -8,10 +8,14 @@ export interface UserProfile {
   id: string;
   name: string;
   email: string;
-  roleCode: string;
-  roleName: string;
+  role?: { code: string; name: string };
+  roleCode?: string;
+  roleName?: string;
   status: 'active' | 'inactive';
-  xpTotal: number;
+  xp_total?: number;
+  xpTotal?: number;
   level: number;
-  createdAt: string;
+  created_at?: string;
+  createdAt?: string;
+  updated_at?: string;
 }
