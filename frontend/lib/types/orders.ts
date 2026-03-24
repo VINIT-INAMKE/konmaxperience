@@ -58,7 +58,6 @@ export interface Order {
 export interface CreateOrderItemPayload {
   menu_item_id: string;
   quantity: number;
-  unit_price: number;
   item_notes?: string;
 }
 
