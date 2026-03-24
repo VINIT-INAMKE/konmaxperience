@@ -16,6 +16,7 @@ import { RequiresPermission } from '../common/decorators/permissions.decorator';
 import { Permission } from '../types/permissions';
 import { CreateRecipeDto } from './dto/create-recipe.dto';
 import { UpdateRecipeDto } from './dto/update-recipe.dto';
+import { CostPreviewDto } from './dto/cost-preview.dto';
 
 @Controller('recipes')
 export class RecipesController {
@@ -28,6 +29,11 @@ export class RecipesController {
     @Query('search') search?: string,
   ) {
     return this.recipesService.findAll({ brand_id, status, search });
+  }
+
+  @Get('cost-data')
+  async getCostData() {
+    return this.recipesService.getCostData();
   }
 
   @Get(':id')
@@ -65,6 +71,17 @@ export class RecipesController {
   ) {
     const user = (req as any).user;
     return this.recipesService.createNewVersion(id, user.id);
+  }
+
+  @Post(':id/cost-preview')
+  @RequiresPermission(Permission.MANAGE_OPS)
+  async costPreview(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: CostPreviewDto,
+  ) {
+    // Verify recipe exists
+    await this.recipesService.findOne(id);
+    return this.recipesService.calculateCostPreview(dto.bom_lines);
   }
 
   @Delete(':id')

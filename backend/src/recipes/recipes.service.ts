@@ -8,6 +8,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateRecipeDto } from './dto/create-recipe.dto';
 import { UpdateRecipeDto } from './dto/update-recipe.dto';
 import { CostCalculatorService } from './cost-calculator.service';
+import { convertUnit } from '../common/utils/unit-conversion';
 
 const RECIPE_INCLUDE = {
   brand: { select: { id: true, name: true } },
@@ -344,6 +345,144 @@ export class RecipesService {
     // Recalculate cost for clone (outside tx for performance)
     await this.costCalculatorService.recalculateAndSave(result.id);
     return this.findOne(result.id);
+  }
+
+  async calculateCostPreview(
+    bom_lines: Array<{
+      input_type: string;
+      item_id: string;
+      quantity: number;
+      unit: string;
+    }>,
+  ): Promise<{
+    cost: number | null;
+    complete: boolean;
+    missingPrices: string[];
+  }> {
+    if (bom_lines.length === 0) {
+      return { cost: null, complete: true, missingPrices: [] };
+    }
+
+    let totalCost = 0;
+    let allComplete = true;
+    const missingPrices: string[] = [];
+
+    for (const line of bom_lines) {
+      if (line.input_type === 'ingredient') {
+        const ingredient = await this.prisma.ingredient.findUnique({
+          where: { id: line.item_id },
+          select: {
+            name: true,
+            VendorPrices: {
+              orderBy: { price: 'asc' as const },
+              take: 1,
+              select: { price: true, unit: true },
+            },
+          },
+        });
+        const price = ingredient?.VendorPrices?.[0];
+        if (!price) {
+          allComplete = false;
+          if (ingredient) missingPrices.push(ingredient.name);
+          continue;
+        }
+        const convertedQty = await convertUnit(
+          Number(line.quantity),
+          line.unit,
+          price.unit,
+          this.prisma,
+        );
+        if (convertedQty === null) {
+          allComplete = false;
+          continue;
+        }
+        totalCost += convertedQty * Number(price.price);
+      } else if (line.input_type === 'recipe') {
+        const result =
+          await this.costCalculatorService.calculateRecipeCost(line.item_id);
+        if (result === null) {
+          allComplete = false;
+          const subRecipe = await this.prisma.recipe.findUnique({
+            where: { id: line.item_id },
+            select: { name: true, yield_qty: true, yield_unit: true },
+          });
+          if (subRecipe) missingPrices.push(`${subRecipe.name} (sub-recipe)`);
+          continue;
+        }
+        if (!result.complete) allComplete = false;
+        const subRecipe = await this.prisma.recipe.findUnique({
+          where: { id: line.item_id },
+          select: { yield_qty: true, yield_unit: true },
+        });
+        if (!subRecipe || Number(subRecipe.yield_qty) === 0) {
+          allComplete = false;
+          continue;
+        }
+        const costPerUnit = result.cost / Number(subRecipe.yield_qty);
+        const convertedQty = await convertUnit(
+          Number(line.quantity),
+          line.unit,
+          subRecipe.yield_unit,
+          this.prisma,
+        );
+        if (convertedQty === null) {
+          allComplete = false;
+          continue;
+        }
+        totalCost += costPerUnit * convertedQty;
+      }
+    }
+
+    return {
+      cost: totalCost > 0 ? totalCost : null,
+      complete: allComplete,
+      missingPrices,
+    };
+  }
+
+  async getCostData(): Promise<{
+    vendorPrices: Array<{
+      ingredient_id: string;
+      price: number;
+      unit: string;
+    }>;
+    unitConversions: Array<{
+      from_unit: string;
+      to_unit: string;
+      factor: number;
+    }>;
+  }> {
+    // Lowest vendor price per ingredient
+    const allPrices = await this.prisma.vendorPrice.findMany({
+      orderBy: { price: 'asc' as const },
+      select: { ingredient_id: true, price: true, unit: true },
+    });
+    // Deduplicate to lowest price per ingredient
+    const priceMap = new Map<
+      string,
+      { ingredient_id: string; price: number; unit: string }
+    >();
+    for (const p of allPrices) {
+      if (!priceMap.has(p.ingredient_id)) {
+        priceMap.set(p.ingredient_id, {
+          ingredient_id: p.ingredient_id,
+          price: Number(p.price),
+          unit: p.unit,
+        });
+      }
+    }
+
+    // Unit conversions
+    const conversions = await this.prisma.unitConversion.findMany();
+
+    return {
+      vendorPrices: Array.from(priceMap.values()),
+      unitConversions: conversions.map((c: any) => ({
+        from_unit: c.from_unit,
+        to_unit: c.to_unit,
+        factor: Number(c.factor),
+      })),
+    };
   }
 
   async checkCycle(recipeId: string, sourceRecipeId: string): Promise<boolean> {
