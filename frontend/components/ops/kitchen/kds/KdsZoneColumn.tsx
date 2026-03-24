@@ -22,7 +22,8 @@ export function KdsZoneColumn({ zone, newOrderIds, onStatusAdvance }: KdsZoneCol
       {/* Scrollable order cards */}
       <div className="flex-1 overflow-y-auto space-y-3 p-2">
         {zone.orders.map((order) => {
-          const isComplete = order.items.length > 0 && order.items.every((i) => i.status === 'ready');
+          const items = order.items ?? [];
+          const isComplete = items.length > 0 && items.every((i) => i.status === 'ready');
           return (
             <KdsOrderCard
               key={order.id}

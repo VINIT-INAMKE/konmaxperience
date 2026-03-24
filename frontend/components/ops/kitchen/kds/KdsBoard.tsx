@@ -78,7 +78,7 @@ export function KdsBoard() {
       if (zones) {
         for (const zone of zones) {
           for (const order of zone.orders) {
-            const found = order.items.find((i) => i.id === itemId);
+            const found = (order.items ?? []).find((i) => i.id === itemId);
             if (found) {
               itemName = found.menu_item_name;
               break;

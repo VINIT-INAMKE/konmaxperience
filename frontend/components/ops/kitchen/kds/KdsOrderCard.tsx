@@ -59,7 +59,7 @@ export function KdsOrderCard({ order, isNew, isComplete, onStatusAdvance }: KdsO
 
       {/* Items */}
       <div className="space-y-1">
-        {order.items.map((item) => (
+        {(order.items ?? []).map((item) => (
           <KdsOrderItem
             key={item.id}
             item={item}

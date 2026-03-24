@@ -170,7 +170,6 @@ export default function PosPage() {
       items: cartItems.map((i) => ({
         menu_item_id: i.menu_item_id,
         quantity: i.quantity,
-        unit_price: i.unit_price,
       })),
       ...(tableNumber ? { table_number: tableNumber } : {}),
       ...(customerName ? { customer_name: customerName } : {}),
