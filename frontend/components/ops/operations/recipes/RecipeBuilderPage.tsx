@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -13,9 +13,10 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { RecipeStatusBadge } from '@/components/ops/operations/recipes/RecipeStatusBadge';
 import { RecipeMetaGrid } from '@/components/ops/operations/recipes/builder/RecipeMetaGrid';
-import { RecipeBomTable } from '@/components/ops/operations/recipes/builder/RecipeBomTable';
+import { RecipeBomTable, calcLineCost } from '@/components/ops/operations/recipes/builder/RecipeBomTable';
+import { RecipeCostPanel } from '@/components/ops/operations/recipes/builder/RecipeCostPanel';
 import { apiClient } from '@/lib/api-client';
-import type { Recipe, RecipeStatus, BomLineState, CostData, RecipeLine } from '@/lib/types/recipe';
+import type { Recipe, RecipeStatus, BomLineState, CostData, CostPreviewResponse, RecipeLine } from '@/lib/types/recipe';
 import type { Brand } from '@/lib/types/brand';
 import type { Zone } from '@/lib/types/zone';
 import type { Ingredient } from '@/lib/types/ingredient';
@@ -135,6 +136,78 @@ export function RecipeBuilderPage({ recipeId }: RecipeBuilderPageProps) {
       .map((r) => ({ id: r.id, name: r.name }));
   }, [allRecipes, recipeId]);
 
+  // --- Client-side cost computation ---
+  const clientCost = useMemo(() => {
+    if (bomLines.length === 0 || !costData) {
+      return { total: null as number | null, complete: true, missingPrices: [] as string[] };
+    }
+    let total = 0;
+    let complete = true;
+    const missing: string[] = [];
+
+    for (const line of bomLines) {
+      if (!line.item_id || !line.quantity) continue;
+      const cost = calcLineCost(line, vendorPriceMap, subRecipeCostMap, conversionMap);
+      if (cost !== null) {
+        total += cost;
+      } else {
+        complete = false;
+        if (line.item_name) missing.push(line.item_name);
+      }
+    }
+
+    return { total: total > 0 ? total : null, complete, missingPrices: missing };
+  }, [bomLines, vendorPriceMap, subRecipeCostMap, conversionMap, costData]);
+
+  // --- Server cost confirmation (3s debounce) ---
+  const [serverCost, setServerCost] = useState<CostPreviewResponse | null>(null);
+  const [costIsEstimate, setCostIsEstimate] = useState(true);
+  const serverConfirmTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function scheduleServerCostConfirm(lines: BomLineState[]) {
+    setCostIsEstimate(true);
+    if (serverConfirmTimer.current) clearTimeout(serverConfirmTimer.current);
+    if (!recipeId) return;
+    const validLines = lines.filter((l) => l.item_id && l.quantity);
+    if (validLines.length === 0) return;
+    serverConfirmTimer.current = setTimeout(async () => {
+      try {
+        const result = await apiClient.post<CostPreviewResponse>(
+          `/recipes/${recipeId}/cost-preview`,
+          {
+            bom_lines: validLines.map((l) => ({
+              input_type: l.input_type,
+              item_id: l.item_id,
+              quantity: parseFloat(l.quantity),
+              unit: l.unit,
+              prep_notes: l.prep_notes || undefined,
+            })),
+          }
+        );
+        setServerCost(result);
+        setCostIsEstimate(false);
+      } catch {
+        // Server cost confirm failed — keep showing estimate
+      }
+    }, 3000);
+  }
+
+  // Clean up timer on unmount
+  useEffect(() => {
+    return () => {
+      if (serverConfirmTimer.current) clearTimeout(serverConfirmTimer.current);
+    };
+  }, []);
+
+  // --- Displayed cost values ---
+  const displayedCost = costIsEstimate
+    ? clientCost
+    : {
+        total: serverCost?.cost ?? clientCost.total,
+        complete: serverCost?.complete ?? clientCost.complete,
+        missingPrices: serverCost?.missingPrices ?? clientCost.missingPrices,
+      };
+
   // --- Populate state from fetched recipe ---
   useEffect(() => {
     if (recipe) {
@@ -247,8 +320,10 @@ export function RecipeBuilderPage({ recipeId }: RecipeBuilderPageProps) {
     (newLines: BomLineState[]) => {
       setBomLines(newLines);
       setIsDirty(true);
+      scheduleServerCostConfirm(newLines);
     },
-    []
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [recipeId]
   );
 
   // --- Metadata change handler ---
@@ -465,15 +540,18 @@ export function RecipeBuilderPage({ recipeId }: RecipeBuilderPageProps) {
           </div>
         </div>
 
-        {/* Right column (sticky cost panel) -- Plan 04 will create RecipeCostPanel here */}
+        {/* Right column (sticky cost panel) */}
         <div className="hidden lg:block">
           <div className="sticky top-[64px] self-start">
-            <div className="rounded-lg border border-border p-4 space-y-3">
-              <h2 className="text-sm font-semibold">Cost Preview</h2>
-              <p className="text-sm text-muted-foreground">
-                Cost panel will be added in Plan 04.
-              </p>
-            </div>
+            <RecipeCostPanel
+              batchCost={displayedCost.total}
+              isEstimate={costIsEstimate}
+              isComplete={displayedCost.complete}
+              missingPrices={displayedCost.missingPrices}
+              yieldQty={parseFloat(yieldQty) || 0}
+              portionSize={portionSize}
+              menuItemPrice={null}
+            />
           </div>
         </div>
       </div>
