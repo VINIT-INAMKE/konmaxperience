@@ -58,15 +58,17 @@ Source: standard 8-point scale; exceptions from D-05, D-12 (CONTEXT.md)
 | Body | 14px | 400 | 1.5 |
 | Label | 12px | 400 | 1.4 |
 | Heading | 20px | 600 | 1.2 |
-| Display (recipe name editable field) | 28px | 700 | 1.15 |
+| Display (recipe name editable field) | 28px | 600 | 1.15 |
 
 Notes:
 - Body (14px / 400) used for BOM table cell text, metadata field values, cost panel line items
 - Label (12px / 400) used for column headers, field labels above metadata inputs, muted helpers
 - Heading (20px / 600) used for section headings ("Bill of Materials", "Instructions", cost panel title)
-- Display (28px / 700) used ONLY for the inline-editable recipe name field at the top of the page — document-editing feel per D-03
+- Display (28px / 600) used ONLY for the inline-editable recipe name field at the top of the page — document-editing feel per D-03. The 28px size provides sufficient visual distinction at semibold weight; a third weight (700) is not needed.
 
-Source: matches existing RecipeCard pattern (text-base/font-semibold = 16/600, text-xs = 12); display size aligns with h1 in current detail page (text-2xl/font-bold); reduced to 28px for editable field aesthetics.
+Maximum declared weights: 2 (400 regular, 600 semibold). No 700 weight used in this phase.
+
+Source: matches existing RecipeCard pattern (text-base/font-semibold = 16/600, text-xs = 12); display size aligns with h1 in current detail page (text-2xl); weight collapsed from 700 to 600 per typography constraint.
 
 ---
 
@@ -79,12 +81,12 @@ All values use CSS variable tokens with `var()` wrapper per project convention.
 | Dominant (60%) | `var(--background)` / `oklch(1 0 0)` | Page background, editable field backgrounds |
 | Secondary (30%) | `var(--card)` / `oklch(1 0 0)` light; `var(--muted)` / `oklch(0.97 0 0)` | BOM table rows (alternating), sticky cost panel card, metadata field group background |
 | Accent (10%) | `var(--primary)` / `oklch(0.205 0 0)` | Reserved elements only (see below) |
-| Destructive | `var(--destructive)` / `oklch(0.577 0.245 27.325)` | Archive button, remove BOM line button hover state |
+| Destructive | `var(--destructive)` / `oklch(0.577 0.245 27.325)` | Archive Recipe button, remove BOM line button hover state |
 
 Accent (`var(--primary)`) reserved for:
 1. Save button (primary filled CTA)
 2. "Submit for Approval" button in the draft status banner
-3. "Approve" button in the pending status banner (approver-only)
+3. "Approve Recipe" button in the pending status banner (approver-only)
 4. Drag handle active/grabbed state
 5. Estimated cost value during client-side calculation (before server confirmation)
 
@@ -116,7 +118,7 @@ Components that EXIST in the codebase and must be reused (no rebuild):
 | `Input` | `components/ui/input.tsx` | Inline metadata fields, BOM quantity/prep-notes cells |
 | `Select` | `components/ui/select.tsx` | BOM unit dropdowns |
 | `Badge` | `components/ui/badge.tsx` | Brand/zone tags in metadata row |
-| `Button` | `components/ui/button.tsx` | All CTA buttons (Save, Submit, Approve, Reject, Archive, Add Line) |
+| `Button` | `components/ui/button.tsx` | All CTA buttons (Save, Submit, Approve Recipe, Reject Recipe, Archive Recipe, Add Line) |
 | `Skeleton` | `components/ui/skeleton.tsx` | Loading state for full page |
 | `Separator` | `components/ui/separator.tsx` | Divider between metadata block and BOM section |
 
@@ -184,6 +186,8 @@ Tab order: type → item → qty → unit → prep notes → (next row type)
 
 - Library: `@dnd-kit/core` + `@dnd-kit/sortable` (new dependency)
 - GripVertical icon (Lucide) in leftmost column of each row
+- Each drag handle element carries `aria-label="Drag to reorder"` for screen readers
+- A `Tooltip` wrapping the drag handle renders "Drag to reorder" on hover for sighted discoverability (Tooltip component from shadcn; `delayDuration={300}`)
 - Cursor: `grab` at rest, `grabbing` while dragging
 - Dragged row: `opacity-50` on original, ghost shows at drop target
 - Reorder updates `sort_order` in local state immediately; persisted on Save
@@ -213,10 +217,19 @@ Tab order: type → item → qty → unit → prep notes → (next row type)
 ### Status banner actions (D-12)
 
 - Draft: `[Submit for Approval]` — primary button; triggers PATCH status → `pending`
-- Pending (approver only): `[Approve]` primary + `[Reject]` outline destructive — both in banner
-- Approved: `[Create New Version]` outline + `[Archive]` ghost destructive
+- Pending (approver only): `[Approve Recipe]` primary + `[Reject Recipe]` outline destructive — both in banner
+- Approved: `[Create New Version]` outline + `[Archive Recipe]` ghost destructive
 - Non-approver viewing pending: banner shows status only, no action buttons
 - All transitions: optimistic UI update with `toast.success` on confirm
+
+### Reject confirmation dialog
+
+Clicking "Reject Recipe" opens a Dialog (shadcn Dialog component):
+- Title: "Send back to draft?"
+- Body: "This recipe will return to draft status and the author will need to re-submit for approval."
+- Confirm button: "Send Back" (variant="destructive")
+- Cancel button: "Cancel" (variant="outline")
+- On confirm: PATCH status → `draft`; show toast "Recipe sent back to draft."
 
 ### Approved recipe lock (D-14)
 
@@ -239,19 +252,24 @@ Tab order: type → item → qty → unit → prep notes → (next row type)
 | Estimated cost label | "Estimated" (amber badge) |
 | Confirmed cost label | "Confirmed" (green badge) |
 | Submit for approval CTA | "Submit for Approval" |
-| Approve CTA | "Approve" |
-| Reject CTA | "Reject" |
+| Approve CTA | "Approve Recipe" |
+| Reject CTA | "Reject Recipe" |
 | Create new version CTA | "Create New Version" |
-| Archive CTA | "Archive" |
+| Archive CTA | "Archive Recipe" |
 | Unsaved indicator | "Unsaved changes" |
+| Drag handle tooltip | "Drag to reorder" |
 | Save success toast | "Recipe saved." |
 | Approval submitted toast | "Submitted for approval." |
 | Approved toast | "Recipe approved." |
 | Rejected toast | "Recipe sent back to draft." |
 | New version created toast | "New draft created. Edit and re-submit when ready." |
+| Reject dialog title | "Send back to draft?" |
+| Reject dialog body | "This recipe will return to draft status and the author will need to re-submit for approval." |
+| Reject dialog confirm button | "Send Back" (destructive) |
+| Reject dialog cancel button | "Cancel" |
 | Archive confirmation | "Archive this recipe? It will be hidden from menus and marked as archived. This cannot be undone." |
-| Archive confirm button | "Archive" (destructive) |
-| Archive cancel button | "Keep" |
+| Archive confirm button | "Archive Recipe" (destructive) |
+| Archive cancel button | "Keep Recipe" |
 | Create new version confirmation | "Create a new version? The current approved recipe will be archived and a draft copy will be created for editing." |
 | Create new version confirm button | "Create Draft" (primary) |
 | Failed save error | "Failed to save. Check your connection and try again." |
