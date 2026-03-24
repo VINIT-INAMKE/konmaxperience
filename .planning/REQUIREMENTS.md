@@ -95,10 +95,10 @@ Requirements for milestone v1.1 — User Guide System & Data Management. Each ma
 
 ### Recipe Page Redesign
 
-- [ ] **RECIPE-01**: `pending` status added to recipe workflow with enforced transitions: draft->pending, pending->approved, pending->draft (reject), approved->archived; approved->draft and approved->pending blocked
-- [ ] **RECIPE-02**: `POST /recipes/:id/version` endpoint archives approved recipe and creates draft clone with all BOM lines in a Prisma $transaction
-- [ ] **RECIPE-03**: `POST /recipes/:id/cost-preview` endpoint accepts BOM lines and returns `{ cost, complete, missingPrices }` without saving to DB
-- [ ] **RECIPE-04**: `GET /recipes/cost-data` bulk endpoint returns vendor prices (lowest per ingredient) and unit conversion table for client-side cost calculation
+- [x] **RECIPE-01**: `pending` status added to recipe workflow with enforced transitions: draft->pending, pending->approved, pending->draft (reject), approved->archived; approved->draft and approved->pending blocked
+- [x] **RECIPE-02**: `POST /recipes/:id/version` endpoint archives approved recipe and creates draft clone with all BOM lines in a Prisma $transaction
+- [x] **RECIPE-03**: `POST /recipes/:id/cost-preview` endpoint accepts BOM lines and returns `{ cost, complete, missingPrices }` without saving to DB
+- [x] **RECIPE-04**: `GET /recipes/cost-data` bulk endpoint returns vendor prices (lowest per ingredient) and unit conversion table for client-side cost calculation
 - [ ] **RECIPE-05**: Full-page recipe builder at `/recipes/new` and `/recipes/[id]` with two-column layout (main content scrolling left, sticky cost panel right)
 - [ ] **RECIPE-06**: Inline-editable header with document-editing feel — recipe name as large editable text, metadata as compact inline fields in grid
 - [ ] **RECIPE-07**: BOM table with dnd-kit drag-handle reorder, per-line cost column, persistent empty ghost row, "+ Add Line" button, sub-recipe inline expansion

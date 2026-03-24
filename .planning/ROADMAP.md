@@ -110,7 +110,7 @@ Phases execute in numeric order: 14 -> 14.x -> 15 -> 15.x -> 16 -> 16.x -> 17 ->
 | 19. Master Data Import | v1.1 | 3/3 | Complete    | 2026-03-23 |
 | 20. Operations Import | v1.1 | 5/5 | Complete    | 2026-03-23 |
 | 21. In-App Chat | v1.1 | 4/4 | Complete    | 2026-03-23 |
-| 22. Recipe Page Redesign | v1.1 | 0/4 | Planned    | - |
+| 22. Recipe Page Redesign | v1.1 | 1/4 | In Progress|  |
 
 ### Phase 18: Data Export
 **Goal**: CSV/XLSX export for all 22 report types with server-side file generation, R2 storage, export history, and export buttons on 13 data pages
@@ -208,7 +208,7 @@ Plans:
 **Plans**: 4 plans
 
 Plans:
-- [ ] 22-01-PLAN.md -- Backend: pending status + transitions, createNewVersion endpoint, cost-preview endpoint, bulk cost-data endpoint
+- [x] 22-01-PLAN.md -- Backend: pending status + transitions, createNewVersion endpoint, cost-preview endpoint, bulk cost-data endpoint
 - [ ] 22-02-PLAN.md -- Frontend types + builder scaffold: RecipeStatus with pending, RecipeBuilderPage, RecipeMetaGrid, route pages, beforeunload
 - [ ] 22-03-PLAN.md -- BOM table + cost panel: RecipeBomTable with dnd-kit, BomTableRow, RecipeCostPanel with animated numbers, CostEstimateBadge, client + server cost calc
 - [ ] 22-04-PLAN.md -- Status banner + wiring + cleanup: RecipeStatusBanner with approval workflow, list page Link navigation, wizard removal
@@ -217,7 +217,7 @@ Plans:
 
 **Goal:** OTP-based customer authentication (phone login), Razorpay payment gateway integration for customer marketplace, POS, and event bookings (events confirmed only after successful payment), with existing manual payment methods (cash/card/UPI) preserved
 **Depends on:** Phase 20 — existing orders, payments, and menu infrastructure
-**Plans:** 0 plans
+**Plans:** 1/4 plans executed
 
 Plans:
 - [ ] TBD (run /gsd:plan-phase 23 to break down)

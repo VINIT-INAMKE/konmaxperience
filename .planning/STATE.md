@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: User Guide & Data Management
 status: unknown
-stopped_at: Completed 20-04-PLAN.md
-last_updated: "2026-03-23T20:59:00.376Z"
+stopped_at: Completed 22-01-PLAN.md
+last_updated: "2026-03-24T12:06:06.987Z"
 progress:
-  total_phases: 8
+  total_phases: 12
   completed_phases: 8
-  total_plans: 28
-  completed_plans: 28
+  total_plans: 32
+  completed_plans: 29
 ---
 
 # Project State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-22)
 
 **Core value:** Every piece of work must be evidence-backed, approved, and validated before it counts -- turning real execution into measurable readiness and progress.
-**Current focus:** Phase 20 — operations-import
+**Current focus:** Phase 22 — recipe-page-redesign
 
 ## Current Position
 
-Phase: 21
-Plan: Not started
+Phase: 22 (recipe-page-redesign) — EXECUTING
+Plan: 2 of 4
 
 ## Performance Metrics
 
@@ -73,6 +73,7 @@ Plan: Not started
 | Phase 20 P03 | 5min | 2 tasks | 6 files |
 | Phase 20 P05 | 6min | 2 tasks | 3 files |
 | Phase 20 P04 | 8min | 2 tasks | 3 files |
+| Phase 22 P01 | 6min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -157,6 +158,9 @@ Recent decisions affecting current work:
 - [Phase 20]: Recipe grouped preview uses expandedRecipes Set state with collapsible BOM lines under parent recipe rows
 - [Phase 20]: Stock import: no outer transaction, each inventoryService.adjust() independent with import reference tagging
 - [Phase 20]: Recipe import: two-pass commit (headers then BOM) with two-level cycle detection and cost calc outside tx
+- [Phase 22]: Status transition via ALLOWED_TRANSITIONS map replacing single if-check
+- [Phase 22]: Approved recipes reject all data edits via Object.keys filter; createNewVersion archives in tx before cloning
+- [Phase 22]: cost-data GET route declared before :id GET route to avoid NestJS route conflict
 
 ### Roadmap Evolution
 
@@ -179,6 +183,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-23T20:28:32.687Z
-Stopped at: Completed 20-04-PLAN.md
+Last session: 2026-03-24T12:06:06.978Z
+Stopped at: Completed 22-01-PLAN.md
 Resume file: None
