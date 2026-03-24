@@ -15,6 +15,9 @@ import { RecipeStatusBadge } from '@/components/ops/operations/recipes/RecipeSta
 import { RecipeMetaGrid } from '@/components/ops/operations/recipes/builder/RecipeMetaGrid';
 import { RecipeBomTable, calcLineCost } from '@/components/ops/operations/recipes/builder/RecipeBomTable';
 import { RecipeCostPanel } from '@/components/ops/operations/recipes/builder/RecipeCostPanel';
+import { RecipeStatusBanner } from './builder/RecipeStatusBanner';
+import { useAuthStore } from '@/lib/stores/auth-store';
+import { RoleCode } from '@/lib/types/roles';
 import { apiClient } from '@/lib/api-client';
 import type { Recipe, RecipeStatus, BomLineState, CostData, CostPreviewResponse, RecipeLine } from '@/lib/types/recipe';
 import type { Brand } from '@/lib/types/brand';
@@ -28,6 +31,8 @@ interface RecipeBuilderPageProps {
 export function RecipeBuilderPage({ recipeId }: RecipeBuilderPageProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const user = useAuthStore((s) => s.user);
+  const isApprover = user?.roleCode === RoleCode.FOUNDER_ADMIN;
 
   // --- State ---
   const [name, setName] = useState('');
@@ -307,6 +312,40 @@ export function RecipeBuilderPage({ recipeId }: RecipeBuilderPageProps) {
     },
   });
 
+  // --- Status change mutation ---
+  const statusMutation = useMutation({
+    mutationFn: (newStatus: RecipeStatus) =>
+      apiClient.patch<Recipe>(`/recipes/${recipeId}`, { status: newStatus }),
+    onSuccess: (_data, newStatus) => {
+      setStatus(newStatus);
+      void queryClient.invalidateQueries({ queryKey: ['recipe', recipeId] });
+      void queryClient.invalidateQueries({ queryKey: ['recipes'] });
+      const messages: Record<string, string> = {
+        pending: 'Submitted for approval.',
+        approved: 'Recipe approved.',
+        draft: 'Recipe sent back to draft.',
+        archived: 'Recipe archived.',
+      };
+      toast.success(messages[newStatus] ?? 'Status updated.');
+    },
+    onError: () => {
+      toast.error('Failed to update status. Try again.');
+    },
+  });
+
+  // --- Create new version mutation ---
+  const versionMutation = useMutation({
+    mutationFn: () => apiClient.post<Recipe>(`/recipes/${recipeId}/version`),
+    onSuccess: (newRecipe) => {
+      void queryClient.invalidateQueries({ queryKey: ['recipes'] });
+      toast.success('New draft created. Edit and re-submit when ready.');
+      router.push(`/operations/recipes/${newRecipe.id}`);
+    },
+    onError: () => {
+      toast.error('Failed to create new version. Try again.');
+    },
+  });
+
   const handleSave = useCallback(() => {
     if (isSaving || isLocked) return;
     setIsSaving(true);
@@ -463,7 +502,16 @@ export function RecipeBuilderPage({ recipeId }: RecipeBuilderPageProps) {
         disabled={isLocked}
       />
 
-      {/* Status banner slot -- Plan 04 will create RecipeStatusBanner here */}
+      {/* Status banner -- contextual approval workflow buttons */}
+      {recipeId && (
+        <RecipeStatusBanner
+          status={status}
+          isApprover={isApprover}
+          isSaving={statusMutation.isPending || versionMutation.isPending}
+          onStatusChange={(newStatus) => statusMutation.mutate(newStatus)}
+          onCreateVersion={() => versionMutation.mutate()}
+        />
+      )}
 
       <Separator className="my-6" />
 
