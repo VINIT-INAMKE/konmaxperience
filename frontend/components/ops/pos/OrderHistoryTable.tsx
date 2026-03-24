@@ -91,7 +91,7 @@ export function OrderHistoryTable({ orders, isLoading, onSelectOrder }: OrderHis
                 </span>
               </TableCell>
               <TableCell className="text-sm">
-                {order.items?.length ?? 0}
+                {order._count?.items ?? order.items?.length ?? 0}
               </TableCell>
               <TableCell>
                 <span className="font-mono text-sm font-bold">
