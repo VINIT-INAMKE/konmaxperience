@@ -57,6 +57,16 @@ export class RecipesController {
     return this.recipesService.update(id, dto, user.id, isAdmin);
   }
 
+  @Post(':id/version')
+  @RequiresPermission(Permission.MANAGE_OPS)
+  async createNewVersion(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Req() req: express.Request,
+  ) {
+    const user = (req as any).user;
+    return this.recipesService.createNewVersion(id, user.id);
+  }
+
   @Delete(':id')
   @RequiresPermission(Permission.MANAGE_OPS)
   async remove(@Param('id', ParseUUIDPipe) id: string) {

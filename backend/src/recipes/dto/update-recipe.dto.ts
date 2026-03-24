@@ -62,7 +62,7 @@ export class UpdateRecipeDto {
   image_url?: string;
 
   @IsOptional()
-  @IsIn(['draft', 'approved', 'archived'])
+  @IsIn(['draft', 'pending', 'approved', 'archived'])
   status?: string;
 
   @IsOptional()

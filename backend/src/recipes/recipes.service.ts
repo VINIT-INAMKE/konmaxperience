@@ -182,11 +182,30 @@ export class RecipesService {
       );
     }
 
-    // Status transition validation: cannot revert from approved to draft
-    if (existing.status === 'approved' && dto.status === 'draft') {
-      throw new BadRequestException(
-        'Cannot revert an approved recipe back to draft. Archive it instead.',
-      );
+    // Approved recipes cannot be edited — only status change to archived is allowed
+    if (existing.status === 'approved') {
+      const dataKeys = Object.keys(dto).filter((k) => k !== 'status');
+      if (dataKeys.length > 0) {
+        throw new BadRequestException(
+          'Cannot edit an approved recipe. Create a new version instead.',
+        );
+      }
+    }
+
+    // Status transition validation
+    if (dto.status !== undefined && dto.status !== existing.status) {
+      const ALLOWED_TRANSITIONS: Record<string, string[]> = {
+        draft: ['pending'],
+        pending: ['approved', 'draft'],
+        approved: ['archived'],
+        archived: [],
+      };
+      const allowed = ALLOWED_TRANSITIONS[existing.status] ?? [];
+      if (!allowed.includes(dto.status)) {
+        throw new BadRequestException(
+          `Cannot transition recipe from '${existing.status}' to '${dto.status}'.`,
+        );
+      }
     }
 
     await this.prisma.$transaction(async (tx) => {
@@ -269,6 +288,62 @@ export class RecipesService {
     }
 
     return this.prisma.recipe.delete({ where: { id } });
+  }
+
+  async createNewVersion(id: string, userId: string): Promise<any> {
+    const result = await this.prisma.$transaction(async (tx) => {
+      const current = await tx.recipe.findUniqueOrThrow({
+        where: { id },
+        include: { RecipeLines: true },
+      });
+      if (current.status !== 'approved') {
+        throw new BadRequestException(
+          'Only approved recipes can create a new version.',
+        );
+      }
+      // Archive the current version
+      await tx.recipe.update({
+        where: { id },
+        data: { status: 'archived' },
+      });
+      // Create draft clone
+      const clone = await tx.recipe.create({
+        data: {
+          name: current.name,
+          description: current.description,
+          prep_steps: current.prep_steps,
+          cooking_method: current.cooking_method,
+          yield_qty: current.yield_qty,
+          yield_unit: current.yield_unit,
+          portion_size: current.portion_size,
+          shelf_life_hours: current.shelf_life_hours,
+          brand_id: current.brand_id,
+          zone_id: current.zone_id,
+          image_url: current.image_url,
+          created_by: userId,
+          status: 'draft',
+        },
+      });
+      // Clone BOM lines
+      if (current.RecipeLines.length > 0) {
+        await tx.recipeLine.createMany({
+          data: current.RecipeLines.map((line) => ({
+            recipe_id: clone.id,
+            input_type: line.input_type,
+            ingredient_id: line.ingredient_id,
+            source_recipe_id: line.source_recipe_id,
+            quantity: line.quantity,
+            unit: line.unit,
+            prep_notes: line.prep_notes,
+            sort_order: line.sort_order,
+          })),
+        });
+      }
+      return clone;
+    });
+    // Recalculate cost for clone (outside tx for performance)
+    await this.costCalculatorService.recalculateAndSave(result.id);
+    return this.findOne(result.id);
   }
 
   async checkCycle(recipeId: string, sourceRecipeId: string): Promise<boolean> {
