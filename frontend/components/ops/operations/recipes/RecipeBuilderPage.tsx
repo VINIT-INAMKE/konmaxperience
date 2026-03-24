@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -10,12 +10,15 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
+import { TooltipProvider } from '@/components/ui/tooltip';
 import { RecipeStatusBadge } from '@/components/ops/operations/recipes/RecipeStatusBadge';
 import { RecipeMetaGrid } from '@/components/ops/operations/recipes/builder/RecipeMetaGrid';
+import { RecipeBomTable } from '@/components/ops/operations/recipes/builder/RecipeBomTable';
 import { apiClient } from '@/lib/api-client';
-import type { Recipe, RecipeStatus, BomLineState } from '@/lib/types/recipe';
+import type { Recipe, RecipeStatus, BomLineState, CostData, RecipeLine } from '@/lib/types/recipe';
 import type { Brand } from '@/lib/types/brand';
 import type { Zone } from '@/lib/types/zone';
+import type { Ingredient } from '@/lib/types/ingredient';
 
 interface RecipeBuilderPageProps {
   recipeId?: string;
@@ -64,6 +67,73 @@ export function RecipeBuilderPage({ recipeId }: RecipeBuilderPageProps) {
     queryKey: ['zones'],
     queryFn: () => apiClient.get<Zone[]>('/zones'),
   });
+
+  const { data: costData } = useQuery({
+    queryKey: ['cost-data'],
+    queryFn: () => apiClient.get<CostData>('/recipes/cost-data'),
+  });
+
+  const { data: ingredients } = useQuery({
+    queryKey: ['ingredients'],
+    queryFn: () => apiClient.get<Ingredient[]>('/ingredients'),
+  });
+
+  const { data: allRecipes } = useQuery({
+    queryKey: ['recipes-list'],
+    queryFn: () => apiClient.get<Recipe[]>('/recipes'),
+  });
+
+  // --- Cost computation maps ---
+  const vendorPriceMap = useMemo(() => {
+    if (!costData?.vendorPrices) return new Map<string, { price: number; unit: string }>();
+    return new Map(
+      costData.vendorPrices.map((p) => [p.ingredient_id, { price: p.price, unit: p.unit }])
+    );
+  }, [costData]);
+
+  const conversionMap = useMemo(() => {
+    if (!costData?.unitConversions) return new Map<string, number>();
+    return new Map(
+      costData.unitConversions.map((c) => [`${c.from_unit}:${c.to_unit}`, c.factor])
+    );
+  }, [costData]);
+
+  const subRecipeCostMap = useMemo(() => {
+    if (!recipe?.RecipeLines) {
+      return new Map<string, { computed_cost: number | null; yield_qty: number; yield_unit: string }>();
+    }
+    return new Map(
+      recipe.RecipeLines
+        .filter((l) => l.input_type === 'recipe' && l.source_recipe)
+        .map((l) => [
+          l.source_recipe_id!,
+          {
+            computed_cost: l.source_recipe!.computed_cost,
+            yield_qty: l.source_recipe!.yield_qty,
+            yield_unit: l.source_recipe!.yield_unit,
+          },
+        ])
+    );
+  }, [recipe]);
+
+  const subRecipeLineMap = useMemo(() => {
+    if (!recipe?.RecipeLines) return new Map<string, RecipeLine[]>();
+    return new Map(
+      recipe.RecipeLines
+        .filter((l) => l.input_type === 'recipe' && l.source_recipe?.RecipeLines)
+        .map((l) => [l.source_recipe_id!, l.source_recipe!.RecipeLines!])
+    );
+  }, [recipe]);
+
+  const ingredientOptions = useMemo(() => {
+    return (ingredients ?? []).map((i) => ({ id: i.id, name: i.name, base_unit: i.base_unit }));
+  }, [ingredients]);
+
+  const recipeOptions = useMemo(() => {
+    return (allRecipes ?? [])
+      .filter((r) => r.id !== recipeId)
+      .map((r) => ({ id: r.id, name: r.name }));
+  }, [allRecipes, recipeId]);
 
   // --- Populate state from fetched recipe ---
   useEffect(() => {
@@ -172,6 +242,15 @@ export function RecipeBuilderPage({ recipeId }: RecipeBuilderPageProps) {
     });
   }, [isSaving, isLocked, saveMutation]);
 
+  // --- BOM change handler ---
+  const handleBomChange = useCallback(
+    (newLines: BomLineState[]) => {
+      setBomLines(newLines);
+      setIsDirty(true);
+    },
+    []
+  );
+
   // --- Metadata change handler ---
   const handleMetaChange = useCallback(
     (field: string, value: string) => {
@@ -264,6 +343,7 @@ export function RecipeBuilderPage({ recipeId }: RecipeBuilderPageProps) {
   }
 
   return (
+    <TooltipProvider delay={300}>
     <div className="max-w-7xl mx-auto px-8 py-8">
       {/* Page header: back link + unsaved indicator + status badge + save button */}
       <div className="flex items-center justify-between gap-4 mb-2">
@@ -332,12 +412,20 @@ export function RecipeBuilderPage({ recipeId }: RecipeBuilderPageProps) {
 
           <Separator />
 
-          {/* BOM table slot -- Plan 03 will create RecipeBomTable here */}
+          {/* BOM table */}
           <div>
             <h2 className="text-xl font-semibold mb-4">Bill of Materials</h2>
-            <p className="text-sm text-muted-foreground">
-              BOM table will be added in Plan 03.
-            </p>
+            <RecipeBomTable
+              lines={bomLines}
+              isLocked={isLocked}
+              vendorPriceMap={vendorPriceMap}
+              subRecipeCostMap={subRecipeCostMap}
+              conversionMap={conversionMap}
+              subRecipeLineMap={subRecipeLineMap}
+              ingredientOptions={ingredientOptions}
+              recipeOptions={recipeOptions}
+              onChange={handleBomChange}
+            />
           </div>
 
           <Separator />
@@ -390,5 +478,6 @@ export function RecipeBuilderPage({ recipeId }: RecipeBuilderPageProps) {
         </div>
       </div>
     </div>
+    </TooltipProvider>
   );
 }
