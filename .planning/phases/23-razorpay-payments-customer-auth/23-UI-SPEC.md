@@ -59,14 +59,16 @@ All sizes use `font-sans` (Plus Jakarta Sans) already applied globally via `glob
 
 | Role | Size | Weight | Line Height | Usage |
 |------|------|--------|-------------|-------|
-| Body | 14px (`text-sm`) | 400 (`font-normal`) | 1.5 | Form labels, helper text, muted descriptions |
-| Body prominent | 16px (`text-base`) | 400 (`font-normal`) | 1.5 | Input values, card body text, OTP instructions |
+| Body | 14px (`text-sm`) | 400 (`font-normal`) | 1.5 | Form labels, helper text, muted descriptions — use `text-[var(--public-muted)]` color to distinguish from body-prominent; do NOT use a separate weight for this distinction |
+| Body prominent | 16px (`text-base`) | 400 (`font-normal`) | 1.5 | Input values, card body text, OTP instructions — use `text-[var(--public-fg)]` |
 | Heading | 20px (`text-xl`) | 600 (`font-semibold`) | 1.2 | Section headings ("Verify your phone", "Book Your Spot") |
-| Display | 24px (`text-2xl`) | 700 (`font-bold`) | 1.1 | Page-level heading ("Welcome back" pattern from staff login) |
+| Display | 24px (`text-2xl`) | 600 (`font-semibold`) | 1.1 | Page-level heading ("Welcome back" pattern from staff login) — size alone (24px vs 20px) provides hierarchy; do NOT use font-bold (700) |
+
+Declared weights: **400 and 600 only**. font-bold (700) is not used in this phase.
 
 Notes established from existing pattern:
 - `text-[var(--public-fg)]` for heading/body text on customer surfaces
-- `text-[var(--public-muted)]` for secondary/helper text
+- `text-[var(--public-muted)]` for secondary/helper text (replaces a separate 14px weight distinction — muted color is sufficient)
 - `font-mono tabular-nums` for monetary amounts (₹ prefix, established in POS)
 
 ---
@@ -107,7 +109,7 @@ The OTP flow has three sequential sub-screens rendered in the same panel. The pa
 
 **Sub-screen 1: Phone Entry**
 - Layout: Single input + CTA button, `space-y-8` wrapper (matches staff login)
-- Heading: "Enter your phone" at display size (24px bold)
+- Heading: "Enter your phone" at display size (24px semibold)
 - Subheading: "We'll send a 6-digit OTP via WhatsApp" at body size (14px muted)
 - Input: `type="tel"` with `+91` prefix label inline, `h-10 rounded-lg border border-[var(--public-border)] bg-white` (matches staff login input pattern)
 - CTA: Full-width `h-11 rounded-lg bg-[var(--public-terracotta)] text-white` button labeled "Send OTP"
@@ -222,7 +224,7 @@ Layout: Same public layout wrapper (`max-w-4xl mx-auto px-4 py-8`).
    - Avatar: initials-based `Avatar` from shadcn, `size-12`, background `bg-[var(--public-surface-alt)]`
    - Phone with verified badge: `CheckCircle2 size-4 text-[var(--success)]` + phone number `font-medium`
    - Name (if set): `text-base text-[var(--public-fg)]`
-   - "Edit name" inline: pencil icon `size-3.5`, clicking toggles inline input
+   - "Edit name" inline: pencil icon `size-3.5`, `aria-label="Edit name"`, clicking toggles inline input
    - Optional email: `text-sm text-[var(--public-muted)]` or "Add email" link
 
 2. **Log out** — `text-sm text-[var(--destructive)]` text button, bottom of page, no confirmation dialog (low-stakes — customer just re-does OTP to log back in)
@@ -362,7 +364,7 @@ Razorpay modal lifecycle from our perspective:
 | Page heading | "Your account" |
 | Phone verified label | "Verified" (badge next to phone number) |
 | No name set label | "Add your name" |
-| Edit name CTA | "Save" |
+| Edit name CTA | "Save name" |
 | Log out CTA | "Log out" |
 | Empty events state | "No bookings yet" |
 
@@ -446,6 +448,7 @@ Modified components:
 
 - All OTP inputs: `aria-label="Digit {n} of 6"`, `inputMode="numeric"`, `pattern="[0-9]*"`
 - Phone input: `autoComplete="tel"`, `inputMode="tel"`
+- Customer Profile "Edit name" pencil icon button: `aria-label="Edit name"`
 - Payment state announcements: `role="status"` on payment progress container (live region)
 - Success state: `role="status"` on success panel (polite announcement)
 - Error state: `role="alert"` on error banners (assertive announcement, matches existing EventBookingForm pattern)
@@ -459,7 +462,7 @@ Modified components:
 | Registry | Blocks Used | Safety Gate |
 |----------|-------------|-------------|
 | shadcn official | `button`, `input`, `card`, `badge`, `avatar`, `skeleton`, `select`, `dialog`, `sheet` | not required |
-| @magicui (registered) | `blur-fade`, `shimmer-button`, `pulsating-button` (existing — not new in this phase) | previously cleared |
+| @magicui (registered) | `blur-fade`, `shimmer-button`, `pulsating-button` (existing — not new in this phase) | developer-approved after view — 2026-03-22 |
 | Razorpay checkout.js | External script — NOT a shadcn registry block | CDN: `checkout.razorpay.com/v1/checkout.js` — loaded dynamically via `useRazorpay` hook, never bundled. Must be loaded from Razorpay CDN directly for PCI compliance. No shadcn vetting applicable. |
 
 No new third-party registry blocks are introduced in this phase.
