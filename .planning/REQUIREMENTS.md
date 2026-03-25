@@ -109,6 +109,33 @@ Requirements for milestone v1.1 — User Guide System & Data Management. Each ma
 - [x] **RECIPE-12**: Browser `beforeunload` dialog on unsaved changes, amber dot + "Unsaved changes" indicator in page header
 - [x] **RECIPE-13**: Recipe list page updated — Create button as `<Link>` to `/recipes/new`, Edit as `<Link>` to `/recipes/[id]`; sidebar wizard and 3 step components removed
 
+### Razorpay Payments + Customer Auth
+
+- [ ] **PAY-01**: Customer Prisma model with phone (unique), name (optional), email (optional), relations to Order/EventBooking/Feedback
+- [ ] **PAY-02**: OTP-based customer auth via WhatsApp Cloud API — 6-digit code, bcrypt-hashed, stored in Redis with 5-min TTL, rate-limited 3/hour
+- [ ] **PAY-03**: JwtPayload extended with `type: 'staff' | 'customer'` discriminator and `customerId` field
+- [ ] **PAY-04**: Customer JWT: 30-day access token in `customer_access_token` httpOnly cookie, no refresh token
+- [ ] **PAY-05**: CustomerGuard (requires type=customer) and StaffGuard (requires type=staff) for route-level enforcement
+- [ ] **PAY-06**: Auto-link on first customer login — backfill customer_id on existing Order/EventBooking/Feedback with matching phone
+- [ ] **PAY-07**: RazorpayService wrapping razorpay SDK — createOrder, verifyPaymentSignature, verifyWebhookSignature, fetchPayment, createRefund
+- [ ] **PAY-08**: HMAC-SHA256 payment signature verification using `validatePaymentVerification` from razorpay SDK (not hand-rolled)
+- [ ] **PAY-09**: Webhook signature verification using `validateWebhookSignature` with raw body (not JSON.stringify)
+- [ ] **PAY-10**: Webhook endpoint POST /webhooks/razorpay — @Public(), raw body, dedup by x-razorpay-event-id via Redis SET NX
+- [ ] **PAY-11**: Webhook routing by order notes.type metadata (event_booking, pos_order, marketplace) to correct handler
+- [ ] **PAY-12**: main.ts updated for raw body preservation (bodyParser:false + verify callback) so webhook signature verification works
+- [ ] **PAY-13**: Event checkout: POST /events/:id/checkout (CustomerGuard, creates Razorpay order with server-side amount, returns razorpay_order_id)
+- [ ] **PAY-14**: Event confirm: POST /events/:id/bookings/confirm (CustomerGuard, verifies signature + re-fetches payment + creates booking in serializable tx)
+- [ ] **PAY-15**: Payment model extended with razorpay_order_id, razorpay_payment_id; 'razorpay' added as 4th payment method
+- [ ] **PAY-16**: Free events (price=0) skip Razorpay modal, create booking directly with payment_status='free'
+- [ ] **PAY-17**: Capacity race condition after payment triggers auto-refund via Razorpay Refund API + refunded status
+- [ ] **PAY-18**: POS Razorpay: POST /orders/:id/razorpay-order (staff, creates Razorpay order from Order.total) + POST /orders/:id/razorpay-confirm (staff, verifies + updates Payment)
+- [ ] **PAY-19**: Frontend useRazorpay hook — dynamic checkout.js loader, state machine (idle/loading/open/confirming/success/failed)
+- [ ] **PAY-20**: Frontend CustomerOtpForm — three-phase OTP flow (phone entry, OTP verification, optional name capture) with public CSS tokens
+- [ ] **PAY-21**: Frontend EventCheckoutForm — replaces EventBookingForm on event detail page, auth-aware (login prompt vs checkout flow)
+- [ ] **PAY-22**: Frontend POS PaymentForm — 'Razorpay' SelectItem added, read-only amount, opens Razorpay modal, confirms via toast
+- [ ] **PAY-23**: Customer profile page at /profile — phone verified badge, editable name, logout
+- [ ] **PAY-24**: Public layout login/profile link in header
+
 ## Future Requirements
 
 ### Guide Enhancements
@@ -146,6 +173,10 @@ Requirements for milestone v1.1 — User Guide System & Data Management. Each ma
 | Recipe image upload via R2 | Separate concern — currently just URL field |
 | Recipe templates / "create from template" | Future feature |
 | Batch scaling calculator | Future feature |
+| Customer marketplace (cart, checkout, delivery) | Phase 24 |
+| Razorpay subscriptions/recurring payments | Future phase |
+| Payment analytics dashboard | Future phase |
+| Multi-currency support | Out of scope |
 
 ## Traceability
 
@@ -225,12 +256,39 @@ Which phases cover which requirements. Updated during roadmap creation.
 | RECIPE-11 | Phase 22 | Planned |
 | RECIPE-12 | Phase 22 | Planned |
 | RECIPE-13 | Phase 22 | Planned |
+| PAY-01 | Phase 23 | Planned |
+| PAY-02 | Phase 23 | Planned |
+| PAY-03 | Phase 23 | Planned |
+| PAY-04 | Phase 23 | Planned |
+| PAY-05 | Phase 23 | Planned |
+| PAY-06 | Phase 23 | Planned |
+| PAY-07 | Phase 23 | Planned |
+| PAY-08 | Phase 23 | Planned |
+| PAY-09 | Phase 23 | Planned |
+| PAY-10 | Phase 23 | Planned |
+| PAY-11 | Phase 23 | Planned |
+| PAY-12 | Phase 23 | Planned |
+| PAY-13 | Phase 23 | Planned |
+| PAY-14 | Phase 23 | Planned |
+| PAY-15 | Phase 23 | Planned |
+| PAY-16 | Phase 23 | Planned |
+| PAY-17 | Phase 23 | Planned |
+| PAY-18 | Phase 23 | Planned |
+| PAY-19 | Phase 23 | Planned |
+| PAY-20 | Phase 23 | Planned |
+| PAY-21 | Phase 23 | Planned |
+| PAY-22 | Phase 23 | Planned |
+| PAY-23 | Phase 23 | Planned |
+| PAY-24 | Phase 23 | Planned |
 
 **Coverage:**
 - v1.1 requirements: 72 total
 - Mapped to phases: 72
 - Unmapped: 0
+- v1.2 requirements (Phase 23+): 24 total
+- Mapped to phases: 24
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-22*
-*Last updated: 2026-03-24 after Phase 22 planning*
+*Last updated: 2026-03-26 after Phase 23 planning*

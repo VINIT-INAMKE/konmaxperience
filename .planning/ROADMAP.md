@@ -98,7 +98,7 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 14 -> 14.x -> 15 -> 15.x -> 16 -> 16.x -> 17 -> 17.x -> 18 -> 18.x -> 19 -> 19.x -> 20 -> 20.x -> 21 -> 22
+Phases execute in numeric order: 14 -> 14.x -> 15 -> 15.x -> 16 -> 16.x -> 17 -> 17.x -> 18 -> 18.x -> 19 -> 19.x -> 20 -> 20.x -> 21 -> 22 -> 23
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -111,6 +111,7 @@ Phases execute in numeric order: 14 -> 14.x -> 15 -> 15.x -> 16 -> 16.x -> 17 ->
 | 20. Operations Import | v1.1 | 5/5 | Complete    | 2026-03-23 |
 | 21. In-App Chat | v1.1 | 4/4 | Complete    | 2026-03-23 |
 | 22. Recipe Page Redesign | v1.1 | 4/4 | Complete    | 2026-03-24 |
+| 23. Razorpay Payments + Customer Auth | v1.2 | 0/4 | Planning    | - |
 
 ### Phase 18: Data Export
 **Goal**: CSV/XLSX export for all 22 report types with server-side file generation, R2 storage, export history, and export buttons on 13 data pages
@@ -215,12 +216,24 @@ Plans:
 
 ### Phase 23: Razorpay Payments + Customer Auth
 
-**Goal:** OTP-based customer authentication (phone login), Razorpay payment gateway integration for customer marketplace, POS, and event bookings (events confirmed only after successful payment), with existing manual payment methods (cash/card/UPI) preserved
+**Goal:** OTP-based customer authentication (phone login via WhatsApp), Razorpay payment gateway integration for event bookings and POS, with existing manual payment methods (cash/card/UPI) preserved. Events confirmed only after successful payment.
 **Depends on:** Phase 20 — existing orders, payments, and menu infrastructure
-**Plans:** 4/4 plans complete
+**Requirements:** PAY-01, PAY-02, PAY-03, PAY-04, PAY-05, PAY-06, PAY-07, PAY-08, PAY-09, PAY-10, PAY-11, PAY-12, PAY-13, PAY-14, PAY-15, PAY-16, PAY-17, PAY-18, PAY-19, PAY-20, PAY-21, PAY-22, PAY-23, PAY-24
+**Success Criteria** (what must be TRUE):
+  1. Customer can log in via phone OTP (WhatsApp delivery or console fallback in dev) and receive 30-day JWT cookie
+  2. Customer can book a paid event through Razorpay checkout modal with server-side signature verification
+  3. Customer can book a free event without payment modal
+  4. Capacity race condition after payment triggers automatic refund (no double-booking)
+  5. POS staff can process Razorpay payments for existing orders
+  6. Webhook endpoint verifies signatures, deduplicates events, and routes to correct handler
+  7. All existing manual payment methods (cash/card/UPI) and anonymous booking flow still work
+**Plans**: 4 plans
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 23 to break down)
+- [ ] 23-01-PLAN.md -- Schema + Customer Auth: Customer model, migration, JWT extension, guards, OTP service with WhatsApp, Redis storage, rate limiting
+- [ ] 23-02-PLAN.md -- Razorpay + Webhooks: RazorpayService SDK wrapper, webhook endpoint with raw body, signature verification, dedup, routing, main.ts update
+- [ ] 23-03-PLAN.md -- Payment flows: Event checkout/confirm endpoints with pay-to-book, free event path, auto-refund; POS Razorpay order/confirm endpoints
+- [ ] 23-04-PLAN.md -- Frontend: Customer OTP components, EventCheckoutForm, POS Razorpay, useRazorpay hook, customer profile page
 
 ### Phase 24: Customer Marketplace
 
