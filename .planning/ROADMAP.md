@@ -111,7 +111,7 @@ Phases execute in numeric order: 14 -> 14.x -> 15 -> 15.x -> 16 -> 16.x -> 17 ->
 | 20. Operations Import | v1.1 | 5/5 | Complete    | 2026-03-23 |
 | 21. In-App Chat | v1.1 | 4/4 | Complete    | 2026-03-23 |
 | 22. Recipe Page Redesign | v1.1 | 4/4 | Complete    | 2026-03-24 |
-| 23. Razorpay Payments + Customer Auth | v1.2 | 0/4 | Planning    | - |
+| 23. Razorpay Payments + Customer Auth | v1.2 | 1/4 | In Progress|  |
 
 ### Phase 18: Data Export
 **Goal**: CSV/XLSX export for all 22 report types with server-side file generation, R2 storage, export history, and export buttons on 13 data pages
@@ -230,7 +230,7 @@ Plans:
 **Plans**: 4 plans
 
 Plans:
-- [ ] 23-01-PLAN.md -- Schema + Customer Auth: Customer model, migration, JWT extension, guards, OTP service with WhatsApp, Redis storage, rate limiting
+- [x] 23-01-PLAN.md -- Schema + Customer Auth: Customer model, migration, JWT extension, guards, OTP service with WhatsApp, Redis storage, rate limiting
 - [ ] 23-02-PLAN.md -- Razorpay + Webhooks: RazorpayService SDK wrapper, webhook endpoint with raw body, signature verification, dedup, routing, main.ts update
 - [ ] 23-03-PLAN.md -- Payment flows: Event checkout/confirm endpoints with pay-to-book, free event path, auto-refund; POS Razorpay order/confirm endpoints
 - [ ] 23-04-PLAN.md -- Frontend: Customer OTP components, EventCheckoutForm, POS Razorpay, useRazorpay hook, customer profile page
@@ -239,7 +239,7 @@ Plans:
 
 **Goal:** Full customer-facing marketplace — cart + checkout with Razorpay custom checkout modal, takeaway & delivery ordering, delivery address management, checkpoint-based order tracking (staff fires events, customer sees timeline via Pusher), and customer order history
 **Depends on:** Phase 23 — customer auth and Razorpay payment infrastructure
-**Plans:** 0 plans
+**Plans:** 1/4 plans executed
 
 Plans:
 - [ ] TBD (run /gsd:plan-phase 24 to break down)

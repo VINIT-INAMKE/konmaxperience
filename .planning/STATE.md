@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: User Guide & Data Management
 status: unknown
-stopped_at: Completed 22-04-PLAN.md
-last_updated: "2026-03-24T12:40:29.907Z"
+stopped_at: Completed 23-01-PLAN.md
+last_updated: "2026-03-25T19:54:02.295Z"
 progress:
   total_phases: 12
   completed_phases: 9
-  total_plans: 32
-  completed_plans: 32
+  total_plans: 36
+  completed_plans: 33
 ---
 
 # Project State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-22)
 
 **Core value:** Every piece of work must be evidence-backed, approved, and validated before it counts -- turning real execution into measurable readiness and progress.
-**Current focus:** Phase 22 — recipe-page-redesign
+**Current focus:** Phase 23 — razorpay-payments-customer-auth
 
 ## Current Position
 
-Phase: 23
-Plan: Not started
+Phase: 23 (razorpay-payments-customer-auth) — EXECUTING
+Plan: 2 of 4
 
 ## Performance Metrics
 
@@ -77,6 +77,7 @@ Plan: Not started
 | Phase 22 P02 | 9min | 2 tasks | 6 files |
 | Phase 22 P03 | 8min | 2 tasks | 6 files |
 | Phase 22 P04 | 5min | 2 tasks | 4 files |
+| Phase 23 P01 | 21min | 2 tasks | 19 files |
 
 ## Accumulated Context
 
@@ -172,6 +173,9 @@ Recent decisions affecting current work:
 - [Phase 22]: Approver gate uses roleCode === FOUNDER_ADMIN (no APPROVE_FOOD permission exists)
 - [Phase 22]: RecipeCard Edit button removed -- entire card is Link to builder page
 - [Phase 22]: Wizard components left as dead code in wizard/ directory for future cleanup
+- [Phase 23]: HttpException with HttpStatus.TOO_MANY_REQUESTS since NestJS lacks TooManyRequestsException
+- [Phase 23]: Dual-token JWT: type discriminator in payload, separate cookie names (access_token vs customer_access_token)
+- [Phase 23]: Manual Prisma migration SQL + migrate deploy for non-interactive CI (consistent with Phase 14/17 approach)
 
 ### Roadmap Evolution
 
@@ -194,6 +198,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-24T12:29:27.077Z
-Stopped at: Completed 22-04-PLAN.md
+Last session: 2026-03-25T19:54:02.284Z
+Stopped at: Completed 23-01-PLAN.md
 Resume file: None

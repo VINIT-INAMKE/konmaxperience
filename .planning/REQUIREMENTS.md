@@ -111,12 +111,12 @@ Requirements for milestone v1.1 — User Guide System & Data Management. Each ma
 
 ### Razorpay Payments + Customer Auth
 
-- [ ] **PAY-01**: Customer Prisma model with phone (unique), name (optional), email (optional), relations to Order/EventBooking/Feedback
-- [ ] **PAY-02**: OTP-based customer auth via WhatsApp Cloud API — 6-digit code, bcrypt-hashed, stored in Redis with 5-min TTL, rate-limited 3/hour
-- [ ] **PAY-03**: JwtPayload extended with `type: 'staff' | 'customer'` discriminator and `customerId` field
-- [ ] **PAY-04**: Customer JWT: 30-day access token in `customer_access_token` httpOnly cookie, no refresh token
-- [ ] **PAY-05**: CustomerGuard (requires type=customer) and StaffGuard (requires type=staff) for route-level enforcement
-- [ ] **PAY-06**: Auto-link on first customer login — backfill customer_id on existing Order/EventBooking/Feedback with matching phone
+- [x] **PAY-01**: Customer Prisma model with phone (unique), name (optional), email (optional), relations to Order/EventBooking/Feedback
+- [x] **PAY-02**: OTP-based customer auth via WhatsApp Cloud API — 6-digit code, bcrypt-hashed, stored in Redis with 5-min TTL, rate-limited 3/hour
+- [x] **PAY-03**: JwtPayload extended with `type: 'staff' | 'customer'` discriminator and `customerId` field
+- [x] **PAY-04**: Customer JWT: 30-day access token in `customer_access_token` httpOnly cookie, no refresh token
+- [x] **PAY-05**: CustomerGuard (requires type=customer) and StaffGuard (requires type=staff) for route-level enforcement
+- [x] **PAY-06**: Auto-link on first customer login — backfill customer_id on existing Order/EventBooking/Feedback with matching phone
 - [ ] **PAY-07**: RazorpayService wrapping razorpay SDK — createOrder, verifyPaymentSignature, verifyWebhookSignature, fetchPayment, createRefund
 - [ ] **PAY-08**: HMAC-SHA256 payment signature verification using `validatePaymentVerification` from razorpay SDK (not hand-rolled)
 - [ ] **PAY-09**: Webhook signature verification using `validateWebhookSignature` with raw body (not JSON.stringify)
