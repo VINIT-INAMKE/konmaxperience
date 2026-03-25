@@ -10,6 +10,7 @@ import {
   Req,
 } from '@nestjs/common';
 import { IsIn } from 'class-validator';
+import { Throttle } from '@nestjs/throttler';
 import { OrdersService } from './orders.service';
 import { RequiresPermission } from '../common/decorators/permissions.decorator';
 import { Permission } from '../types/permissions';
@@ -17,6 +18,7 @@ import { CreateOrderDto } from './dto/create-order.dto';
 import { RecordPaymentDto } from './dto/record-payment.dto';
 import { UpdateDeliveryDto } from './dto/update-delivery.dto';
 import { OrderFiltersDto } from './dto/order-filters.dto';
+import { ConfirmRazorpayPaymentDto } from './dto/create-razorpay-order.dto';
 
 export class UpdateOrderStatusDto {
   @IsIn(['placed', 'preparing', 'ready', 'served', 'dispatched', 'cancelled'])
@@ -76,6 +78,23 @@ export class OrdersController {
     @Body() dto: RecordPaymentDto,
   ) {
     return this.ordersService.recordPayment(id, dto);
+  }
+
+  @Post(':id/razorpay-order')
+  @RequiresPermission(Permission.MANAGE_POS)
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  async createRazorpayOrder(@Param('id', ParseUUIDPipe) id: string) {
+    return this.ordersService.createRazorpayOrder(id);
+  }
+
+  @Post(':id/razorpay-confirm')
+  @RequiresPermission(Permission.MANAGE_POS)
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  async confirmRazorpayPayment(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: ConfirmRazorpayPaymentDto,
+  ) {
+    return this.ordersService.confirmRazorpayPayment(id, dto);
   }
 
   @Patch(':id/delivery')

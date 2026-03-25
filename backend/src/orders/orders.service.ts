@@ -7,10 +7,12 @@ import {
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import * as QRCode from 'qrcode';
 import { PrismaService } from '../prisma/prisma.service';
+import { RazorpayService } from '../razorpay/razorpay.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { RecordPaymentDto } from './dto/record-payment.dto';
 import { UpdateDeliveryDto } from './dto/update-delivery.dto';
 import { OrderFiltersDto } from './dto/order-filters.dto';
+import { ConfirmRazorpayPaymentDto } from './dto/create-razorpay-order.dto';
 import { convertUnit } from '../common/utils/unit-conversion';
 
 /** Valid order status transitions (non-cancellation) */
@@ -31,6 +33,7 @@ export class OrdersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly eventEmitter: EventEmitter2,
+    private readonly razorpayService: RazorpayService,
   ) {}
 
   // ---------------------------------------------------------------
@@ -471,6 +474,92 @@ export class OrdersService {
       color: { dark: '#000000', light: '#ffffff' },
     });
     return { qr_data_url: dataUrl };
+  }
+
+  // ---------------------------------------------------------------
+  // Create Razorpay Order for POS (D-22)
+  // ---------------------------------------------------------------
+  async createRazorpayOrder(orderId: string) {
+    // Fetch order
+    const order = await this.prisma.order.findUnique({ where: { id: orderId } });
+    if (!order) {
+      throw new NotFoundException(`Order with ID ${orderId} not found`);
+    }
+
+    // Check order doesn't already have a paid payment
+    const existingPayment = await this.prisma.payment.findFirst({
+      where: { order_id: orderId, status: 'paid' },
+    });
+    if (existingPayment) {
+      throw new BadRequestException('Order already paid');
+    }
+
+    // Calculate amount in paise (server-side only — never from frontend per D-11)
+    const amountInPaise = Math.round(order.total.toNumber() * 100);
+
+    // Create Razorpay order
+    const rzpOrder = await this.razorpayService.createOrder({
+      amount: amountInPaise,
+      receipt: `ord_${order.order_number}_${Date.now()}`,
+      notes: { type: 'pos_order', entity_id: orderId },
+    });
+
+    // Upsert pending Payment record (Payment.order_id has @unique)
+    await this.prisma.payment.upsert({
+      where: { order_id: orderId },
+      create: {
+        order_id: orderId,
+        method: 'razorpay',
+        amount: order.total,
+        status: 'pending',
+        razorpay_order_id: rzpOrder.id,
+      },
+      update: {
+        method: 'razorpay',
+        razorpay_order_id: rzpOrder.id,
+        status: 'pending',
+      },
+    });
+
+    return { razorpay_order_id: rzpOrder.id };
+  }
+
+  // ---------------------------------------------------------------
+  // Confirm Razorpay Payment for POS (D-09, D-12)
+  // ---------------------------------------------------------------
+  async confirmRazorpayPayment(orderId: string, dto: ConfirmRazorpayPaymentDto) {
+    // Step 1: Verify HMAC signature — BEFORE fetchPayment (D-09)
+    const isValid = this.razorpayService.verifyPaymentSignature(
+      dto.razorpay_order_id, dto.razorpay_payment_id, dto.razorpay_signature,
+    );
+    if (!isValid) {
+      throw new BadRequestException('Invalid payment signature');
+    }
+
+    // Step 2: Re-fetch payment from Razorpay API (D-12 belt-and-suspenders)
+    const payment = await this.razorpayService.fetchPayment(dto.razorpay_payment_id);
+    if (payment.status !== 'captured') {
+      throw new BadRequestException('Payment not captured');
+    }
+
+    // Step 3: Update Payment record
+    const paymentRecord = await this.prisma.payment.findFirst({
+      where: { order_id: orderId, razorpay_order_id: dto.razorpay_order_id },
+    });
+    if (!paymentRecord) {
+      throw new NotFoundException('Payment record not found');
+    }
+    if (paymentRecord.status === 'paid') {
+      return paymentRecord; // idempotent
+    }
+
+    return this.prisma.payment.update({
+      where: { id: paymentRecord.id },
+      data: {
+        status: 'paid',
+        razorpay_payment_id: dto.razorpay_payment_id,
+      },
+    });
   }
 
   // ---------------------------------------------------------------

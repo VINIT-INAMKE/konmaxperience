@@ -4,8 +4,10 @@ import {
   ConflictException,
   NotFoundException,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { OrdersService } from './orders.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { RazorpayService } from '../razorpay/razorpay.service';
 
 // Mock convertUnit — return same value (unit conversion tested separately)
 jest.mock('../common/utils/unit-conversion', () => ({
@@ -48,6 +50,8 @@ describe('OrdersService', () => {
       providers: [
         OrdersService,
         { provide: PrismaService, useValue: mockPrisma },
+        { provide: EventEmitter2, useValue: { emit: jest.fn() } },
+        { provide: RazorpayService, useValue: { createOrder: jest.fn(), verifyPaymentSignature: jest.fn(), fetchPayment: jest.fn() } },
       ],
     }).compile();
 
