@@ -681,6 +681,8 @@ model Order {
   @@index([channel])
   // Optimizes: KDS getActiveOrders grouped by zone, kitchen-metrics zone utilization
   @@index([zone_id, status])
+  // Optimizes: customer order history lookups (Phase 24)
+  @@index([customer_id])
 }
 
 model OrderItem {
@@ -753,6 +755,8 @@ model Feedback {
   @@index([created_at(sort: Desc)])
   // Optimizes: findAll rating filter
   @@index([rating])
+  // Optimizes: customer feedback history lookups
+  @@index([customer_id])
 }
 
 model Event {
