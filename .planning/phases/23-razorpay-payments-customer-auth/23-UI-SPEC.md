@@ -153,7 +153,7 @@ The existing `EventBookingForm` is replaced by `EventCheckoutForm`. When custome
 - Clicking expands OTP sub-screen inline (no page navigation)
 
 **Logged-in state (customer verified):**
-- Display customer identity strip: `bg-[var(--public-surface)] rounded-lg px-4 py-2.5 flex items-center gap-3`
+- Display customer identity strip: `bg-[var(--public-surface)] rounded-lg px-4 py-2 flex items-center gap-3`
   - Phone verified badge: `CheckCircle2` lucide icon, `size-4 text-[var(--success)]`
   - Phone number: `text-sm font-medium text-[var(--public-fg)]`
   - "Not you?" link: `text-xs text-[var(--public-muted)] hover:text-[var(--public-terracotta)]`
