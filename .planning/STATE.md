@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: User Guide & Data Management
 status: unknown
-stopped_at: Completed 23-01-PLAN.md
-last_updated: "2026-03-25T19:54:02.295Z"
+stopped_at: Completed 23-02-PLAN.md
+last_updated: "2026-03-25T20:11:59.389Z"
 progress:
   total_phases: 12
   completed_phases: 9
   total_plans: 36
-  completed_plans: 33
+  completed_plans: 34
 ---
 
 # Project State
@@ -24,7 +24,7 @@ See: .planning/PROJECT.md (updated 2026-03-22)
 ## Current Position
 
 Phase: 23 (razorpay-payments-customer-auth) — EXECUTING
-Plan: 2 of 4
+Plan: 3 of 4
 
 ## Performance Metrics
 
@@ -78,6 +78,7 @@ Plan: 2 of 4
 | Phase 22 P03 | 8min | 2 tasks | 6 files |
 | Phase 22 P04 | 5min | 2 tasks | 4 files |
 | Phase 23 P01 | 21min | 2 tasks | 19 files |
+| Phase 23 P02 | 10min | 2 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -176,6 +177,9 @@ Recent decisions affecting current work:
 - [Phase 23]: HttpException with HttpStatus.TOO_MANY_REQUESTS since NestJS lacks TooManyRequestsException
 - [Phase 23]: Dual-token JWT: type discriminator in payload, separate cookie names (access_token vs customer_access_token)
 - [Phase 23]: Manual Prisma migration SQL + migrate deploy for non-interactive CI (consistent with Phase 14/17 approach)
+- [Phase 23]: Module-level jest.mock for Razorpay constructor to prevent real SDK API calls in tests
+- [Phase 23]: Raw body via verify callback (req.rawBody = buf) instead of bodyParser:false + getBodyParserOptions
+- [Phase 23]: Webhook signature-first pattern: verify HMAC before dedup before routing
 
 ### Roadmap Evolution
 
@@ -198,6 +202,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-25T19:54:02.284Z
-Stopped at: Completed 23-01-PLAN.md
+Last session: 2026-03-25T20:11:59.378Z
+Stopped at: Completed 23-02-PLAN.md
 Resume file: None

@@ -117,15 +117,15 @@ Requirements for milestone v1.1 — User Guide System & Data Management. Each ma
 - [x] **PAY-04**: Customer JWT: 30-day access token in `customer_access_token` httpOnly cookie, no refresh token
 - [x] **PAY-05**: CustomerGuard (requires type=customer) and StaffGuard (requires type=staff) for route-level enforcement
 - [x] **PAY-06**: Auto-link on first customer login — backfill customer_id on existing Order/EventBooking/Feedback with matching phone
-- [ ] **PAY-07**: RazorpayService wrapping razorpay SDK — createOrder, verifyPaymentSignature, verifyWebhookSignature, fetchPayment, createRefund
-- [ ] **PAY-08**: HMAC-SHA256 payment signature verification using `validatePaymentVerification` from razorpay SDK (not hand-rolled)
-- [ ] **PAY-09**: Webhook signature verification using `validateWebhookSignature` with raw body (not JSON.stringify)
-- [ ] **PAY-10**: Webhook endpoint POST /webhooks/razorpay — @Public(), raw body, dedup by x-razorpay-event-id via Redis SET NX
-- [ ] **PAY-11**: Webhook routing by order notes.type metadata (event_booking, pos_order, marketplace) to correct handler
-- [ ] **PAY-12**: main.ts updated for raw body preservation (bodyParser:false + verify callback) so webhook signature verification works
+- [x] **PAY-07**: RazorpayService wrapping razorpay SDK — createOrder, verifyPaymentSignature, verifyWebhookSignature, fetchPayment, createRefund
+- [x] **PAY-08**: HMAC-SHA256 payment signature verification using `validatePaymentVerification` from razorpay SDK (not hand-rolled)
+- [x] **PAY-09**: Webhook signature verification using `validateWebhookSignature` with raw body (not JSON.stringify)
+- [x] **PAY-10**: Webhook endpoint POST /webhooks/razorpay — @Public(), raw body, dedup by x-razorpay-event-id via Redis SET NX
+- [x] **PAY-11**: Webhook routing by order notes.type metadata (event_booking, pos_order, marketplace) to correct handler
+- [x] **PAY-12**: main.ts updated for raw body preservation (bodyParser:false + verify callback) so webhook signature verification works
 - [ ] **PAY-13**: Event checkout: POST /events/:id/checkout (CustomerGuard, creates Razorpay order with server-side amount, returns razorpay_order_id)
 - [ ] **PAY-14**: Event confirm: POST /events/:id/bookings/confirm (CustomerGuard, verifies signature + re-fetches payment + creates booking in serializable tx)
-- [ ] **PAY-15**: Payment model extended with razorpay_order_id, razorpay_payment_id; 'razorpay' added as 4th payment method
+- [x] **PAY-15**: Payment model extended with razorpay_order_id, razorpay_payment_id; 'razorpay' added as 4th payment method
 - [ ] **PAY-16**: Free events (price=0) skip Razorpay modal, create booking directly with payment_status='free'
 - [ ] **PAY-17**: Capacity race condition after payment triggers auto-refund via Razorpay Refund API + refunded status
 - [ ] **PAY-18**: POS Razorpay: POST /orders/:id/razorpay-order (staff, creates Razorpay order from Order.total) + POST /orders/:id/razorpay-confirm (staff, verifies + updates Payment)
