@@ -123,12 +123,12 @@ Requirements for milestone v1.1 — User Guide System & Data Management. Each ma
 - [x] **PAY-10**: Webhook endpoint POST /webhooks/razorpay — @Public(), raw body, dedup by x-razorpay-event-id via Redis SET NX
 - [x] **PAY-11**: Webhook routing by order notes.type metadata (event_booking, pos_order, marketplace) to correct handler
 - [x] **PAY-12**: main.ts updated for raw body preservation (bodyParser:false + verify callback) so webhook signature verification works
-- [ ] **PAY-13**: Event checkout: POST /events/:id/checkout (CustomerGuard, creates Razorpay order with server-side amount, returns razorpay_order_id)
-- [ ] **PAY-14**: Event confirm: POST /events/:id/bookings/confirm (CustomerGuard, verifies signature + re-fetches payment + creates booking in serializable tx)
+- [x] **PAY-13**: Event checkout: POST /events/:id/checkout (CustomerGuard, creates Razorpay order with server-side amount, returns razorpay_order_id)
+- [x] **PAY-14**: Event confirm: POST /events/:id/bookings/confirm (CustomerGuard, verifies signature + re-fetches payment + creates booking in serializable tx)
 - [x] **PAY-15**: Payment model extended with razorpay_order_id, razorpay_payment_id; 'razorpay' added as 4th payment method
-- [ ] **PAY-16**: Free events (price=0) skip Razorpay modal, create booking directly with payment_status='free'
-- [ ] **PAY-17**: Capacity race condition after payment triggers auto-refund via Razorpay Refund API + refunded status
-- [ ] **PAY-18**: POS Razorpay: POST /orders/:id/razorpay-order (staff, creates Razorpay order from Order.total) + POST /orders/:id/razorpay-confirm (staff, verifies + updates Payment)
+- [x] **PAY-16**: Free events (price=0) skip Razorpay modal, create booking directly with payment_status='free'
+- [x] **PAY-17**: Capacity race condition after payment triggers auto-refund via Razorpay Refund API + refunded status
+- [x] **PAY-18**: POS Razorpay: POST /orders/:id/razorpay-order (staff, creates Razorpay order from Order.total) + POST /orders/:id/razorpay-confirm (staff, verifies + updates Payment)
 - [ ] **PAY-19**: Frontend useRazorpay hook — dynamic checkout.js loader, state machine (idle/loading/open/confirming/success/failed)
 - [ ] **PAY-20**: Frontend CustomerOtpForm — three-phase OTP flow (phone entry, OTP verification, optional name capture) with public CSS tokens
 - [ ] **PAY-21**: Frontend EventCheckoutForm — replaces EventBookingForm on event detail page, auth-aware (login prompt vs checkout flow)
