@@ -7,7 +7,7 @@ import { Loader2, CalendarX2 } from 'lucide-react';
 import { BlurFade } from '@/components/ui/blur-fade';
 import { Badge } from '@/components/ui/badge';
 import { CapacityBadge } from '@/components/public/CapacityBadge';
-import { EventBookingForm } from '@/components/public/EventBookingForm';
+import { EventCheckoutForm } from '@/components/public/EventCheckoutForm';
 import { apiClient } from '@/lib/api-client';
 import { EVENT_TYPE_LABELS } from '@/lib/types/events';
 import type { Event } from '@/lib/types/events';
@@ -113,9 +113,11 @@ export default function EventDetailPage() {
 
             <div className="space-y-3">
               <h2 className="text-xl font-semibold">Book Your Spot</h2>
-              <EventBookingForm
+              <EventCheckoutForm
                 eventId={event.id}
                 eventDate={event.date}
+                eventPrice={Number(event.price)}
+                eventTitle={event.title}
                 spotsRemaining={event.spots_remaining ?? 0}
                 onBooked={handleBooked}
               />
