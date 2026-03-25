@@ -1,14 +1,18 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { apiClient } from '@/lib/api-client';
 import type { Customer, VerifyOtpResponse } from '@/lib/types/customer-auth';
 
 export function useCustomerAuth() {
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const fetchedRef = useRef(false);
 
   const fetchProfile = useCallback(async () => {
+    // Only attempt once per mount — avoid 401 spam when no cookie exists
+    if (fetchedRef.current) return customer;
+    fetchedRef.current = true;
     setIsLoading(true);
     try {
       const profile = await apiClient.get<Customer>('/customer-auth/profile');
@@ -20,7 +24,7 @@ export function useCustomerAuth() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [customer]);
 
   const sendOtp = useCallback(async (phone: string) => {
     return apiClient.post<{ message: string }>('/customer-auth/send-otp', {
@@ -34,6 +38,7 @@ export function useCustomerAuth() {
       { phone, otp },
     );
     setCustomer(result.customer);
+    fetchedRef.current = true; // mark as fetched so profile doesn't re-call
     return result;
   }, []);
 
@@ -52,6 +57,7 @@ export function useCustomerAuth() {
   const logout = useCallback(async () => {
     await apiClient.post('/customer-auth/logout', {});
     setCustomer(null);
+    fetchedRef.current = false; // allow one fetch attempt on next visit
   }, []);
 
   return {

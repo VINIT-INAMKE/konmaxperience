@@ -119,8 +119,8 @@ export class CustomerAuthService {
       { expiresIn: '30d' },
     );
 
-    // Set cookie
-    res.cookie('customer_access_token', token, {
+    // Set cookie — same name as staff token, type field distinguishes
+    res.cookie('access_token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
@@ -159,7 +159,7 @@ export class CustomerAuthService {
   }
 
   async logout(res: express.Response) {
-    res.clearCookie('customer_access_token', { path: '/' });
+    res.clearCookie('access_token', { path: '/' });
     return { message: 'Logged out' };
   }
 }

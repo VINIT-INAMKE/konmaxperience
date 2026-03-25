@@ -2,7 +2,7 @@ import { jwtVerify } from 'jose';
 import { NextRequest, NextResponse } from 'next/server';
 
 const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET!);
-const PUBLIC_PATHS = ['/login', '/forgot-password', '/set-password', '/reset-password', '/menu', '/events', '/feedback'];
+const PUBLIC_PATHS = ['/login', '/forgot-password', '/set-password', '/reset-password', '/menu', '/events', '/feedback', '/profile'];
 const AUTH_PAGES = ['/login', '/forgot-password', '/set-password', '/reset-password'];
 
 export async function proxy(request: NextRequest) {
@@ -36,6 +36,12 @@ export async function proxy(request: NextRequest) {
 
   try {
     const { payload } = await jwtVerify(token, JWT_SECRET);
+
+    // Customer tokens should not access ops routes — redirect to public profile
+    if (payload.type === 'customer') {
+      return NextResponse.redirect(new URL('/profile', request.url));
+    }
+
     const response = NextResponse.next();
     response.headers.set('x-user-id', payload.userId as string);
     response.headers.set('x-role-code', payload.roleCode as string);
