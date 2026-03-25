@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, ServiceUnavailableException } from '@nestjs/common';
 import { RazorpayService } from '../razorpay/razorpay.service';
 import { RedisService } from '../customer-auth/redis.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -21,12 +21,14 @@ export class WebhooksService {
     if (!isValid) throw new UnauthorizedException('Invalid webhook signature');
 
     // 3. Dedup by event_id (D-08) — Redis SET NX with 24h TTL
+    // Fail CLOSED: if Redis is down, reject the webhook (Razorpay will retry later)
     const redis = this.redisService.getClient();
-    if (redis) {
-      const dedupKey = `webhook_processed:${eventId}`;
-      const isNew = await redis.set(dedupKey, '1', 'EX', 86400, 'NX');
-      if (!isNew) return { status: 'duplicate' };
+    if (!redis) {
+      throw new ServiceUnavailableException('Webhook dedup unavailable — retry later');
     }
+    const dedupKey = `webhook_processed:${eventId}`;
+    const isNew = await redis.set(dedupKey, '1', 'EX', 86400, 'NX');
+    if (!isNew) return { status: 'duplicate' };
 
     // 4. Parse and route
     const body = JSON.parse(bodyStr);

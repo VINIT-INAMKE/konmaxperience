@@ -24,8 +24,12 @@ async function bootstrap() {
   expressApp.set('trust proxy', 1);
 
   // Request payload size limits (DDoS protection against large payloads)
-  // verify callback preserves raw body buffer for Razorpay webhook signature verification
-  app.use(json({ limit: '1mb', verify: (req: any, _res, buf) => { req.rawBody = buf; } }));
+  // verify callback preserves raw body ONLY for webhook path (avoids doubling memory for all requests)
+  app.use(json({ limit: '1mb', verify: (req: any, _res, buf) => {
+    if (req.originalUrl === '/webhooks/razorpay') {
+      req.rawBody = buf;
+    }
+  } }));
   app.use(urlencoded({ limit: '1mb', extended: true }));
 
   // Security headers (hardened)

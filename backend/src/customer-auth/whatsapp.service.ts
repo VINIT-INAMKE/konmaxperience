@@ -13,6 +13,9 @@ export class WhatsAppService {
   async sendOtp(recipientPhone: string, otp: string): Promise<void> {
     // Dev fallback -- log to console if WhatsApp not configured
     if (!this.token || !this.phoneId) {
+      if (process.env.NODE_ENV === 'production') {
+        throw new Error('WhatsApp not configured in production — set WHATSAPP_TOKEN and WHATSAPP_PHONE_ID');
+      }
       console.log(`[DEV] OTP for ${recipientPhone}: ${otp}`);
       return;
     }

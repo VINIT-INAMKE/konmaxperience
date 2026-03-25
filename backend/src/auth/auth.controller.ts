@@ -73,8 +73,8 @@ export class AuthController {
       ...(this.cookieDomain && { domain: this.cookieDomain }),
     });
 
+    // Token is ONLY in the cookie (httpOnly) — never in response body (prevents XSS token theft)
     return {
-      accessToken: result.accessToken,
       user: result.user,
     };
   }
@@ -113,7 +113,6 @@ export class AuthController {
     });
 
     return {
-      accessToken: result.accessToken,
       user: result.user,
     };
   }

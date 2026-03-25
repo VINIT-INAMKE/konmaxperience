@@ -11,7 +11,6 @@ export interface LoginDto {
 }
 
 export interface LoginResponse {
-  accessToken: string;
   user: {
     id: string;
     name: string;
@@ -25,7 +24,6 @@ export interface LoginResponse {
 }
 
 export interface RefreshResponse {
-  accessToken: string;
   user: {
     id: string;
     name: string;

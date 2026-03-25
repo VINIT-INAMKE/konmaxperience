@@ -67,6 +67,19 @@ export class CustomerAuthService {
       throw new ServiceUnavailableException('OTP service unavailable');
     }
 
+    // Per-phone brute-force guard: max 5 verification attempts per OTP
+    const verifyKey = `otp_verify:${phone}`;
+    const attempts = await redis.incr(verifyKey);
+    if (attempts === 1) await redis.expire(verifyKey, 300); // 5min TTL matches OTP
+    if (attempts > 5) {
+      await redis.del(`otp:${phone}`); // invalidate OTP entirely
+      await redis.del(verifyKey);
+      throw new HttpException(
+        'Too many attempts -- request a new code',
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+    }
+
     // Fetch stored hash
     const storedHash = await redis.get(`otp:${phone}`);
     if (!storedHash) {
@@ -83,8 +96,9 @@ export class CustomerAuthService {
       );
     }
 
-    // Consume OTP (prevent reuse)
+    // Consume OTP + clear attempt counter
     await redis.del(`otp:${phone}`);
+    await redis.del(verifyKey);
 
     // Upsert customer
     const customer = await this.prisma.customer.upsert({
@@ -142,6 +156,7 @@ export class CustomerAuthService {
   async getProfile(customerId: string) {
     const customer = await this.prisma.customer.findUnique({
       where: { id: customerId },
+      select: { id: true, phone: true, name: true, email: true },
     });
 
     if (!customer) {
@@ -154,7 +169,11 @@ export class CustomerAuthService {
   async updateProfile(customerId: string, dto: UpdateCustomerDto) {
     return this.prisma.customer.update({
       where: { id: customerId },
-      data: { ...dto },
+      data: {
+        ...(dto.name !== undefined && { name: dto.name }),
+        ...(dto.email !== undefined && { email: dto.email }),
+      },
+      select: { id: true, phone: true, name: true, email: true },
     });
   }
 
