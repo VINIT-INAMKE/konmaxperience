@@ -197,6 +197,7 @@ Recent decisions affecting current work:
 - Phase 23 added: Razorpay Payments + Customer Auth — OTP-based customer login, Razorpay integration for marketplace and POS
 - Phase 24 added: Customer Marketplace — cart, checkout, takeaway/delivery ordering, checkpoint-based order tracking via Pusher
 - Phase 25 added: Third-Party Delivery Integration — Porter for local overflow, Shiprocket for interstate shipping
+- Phase 26 added: Order Detail Page — /orders/[id] with payment processing (QR + WhatsApp link), receipt download, order timeline
 
 ### Pending Todos
 

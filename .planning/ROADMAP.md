@@ -252,3 +252,13 @@ Plans:
 
 Plans:
 - [ ] TBD (run /gsd:plan-phase 25 to break down)
+
+### Phase 26: Order Detail Page
+
+**Goal:** Dedicated /orders/[id] detail page for staff — order timeline, payment processing (Razorpay UPI QR display + WhatsApp payment link), delivery status tracking, KDS status, receipt generation and download. Replaces the current OrderDetailSheet slide-out with a full page.
+**Requirements**: TBD
+**Depends on:** Phase 23 — Razorpay payment infrastructure
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 26 to break down)
