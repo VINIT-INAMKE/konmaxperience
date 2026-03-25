@@ -69,6 +69,12 @@ async function request<T>(
   let response = await fetch(url, options);
 
   if (response.status === 401) {
+    // Customer auth endpoints handle their own 401 — don't redirect to staff login
+    const isCustomerEndpoint = path.startsWith('/customer-auth');
+    if (isCustomerEndpoint) {
+      throw new ApiError(401, 'Not authenticated');
+    }
+
     const refreshed = await attemptRefresh();
     if (refreshed) {
       response = await fetch(url, options);
