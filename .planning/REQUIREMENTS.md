@@ -129,12 +129,12 @@ Requirements for milestone v1.1 — User Guide System & Data Management. Each ma
 - [x] **PAY-16**: Free events (price=0) skip Razorpay modal, create booking directly with payment_status='free'
 - [x] **PAY-17**: Capacity race condition after payment triggers auto-refund via Razorpay Refund API + refunded status
 - [x] **PAY-18**: POS Razorpay: POST /orders/:id/razorpay-order (staff, creates Razorpay order from Order.total) + POST /orders/:id/razorpay-confirm (staff, verifies + updates Payment)
-- [ ] **PAY-19**: Frontend useRazorpay hook — dynamic checkout.js loader, state machine (idle/loading/open/confirming/success/failed)
-- [ ] **PAY-20**: Frontend CustomerOtpForm — three-phase OTP flow (phone entry, OTP verification, optional name capture) with public CSS tokens
-- [ ] **PAY-21**: Frontend EventCheckoutForm — replaces EventBookingForm on event detail page, auth-aware (login prompt vs checkout flow)
-- [ ] **PAY-22**: Frontend POS PaymentForm — 'Razorpay' SelectItem added, read-only amount, opens Razorpay modal, confirms via toast
-- [ ] **PAY-23**: Customer profile page at /profile — phone verified badge, editable name, logout
-- [ ] **PAY-24**: Public layout login/profile link in header
+- [x] **PAY-19**: Frontend useRazorpay hook — dynamic checkout.js loader, state machine (idle/loading/open/confirming/success/failed)
+- [x] **PAY-20**: Frontend CustomerOtpForm — three-phase OTP flow (phone entry, OTP verification, optional name capture) with public CSS tokens
+- [x] **PAY-21**: Frontend EventCheckoutForm — replaces EventBookingForm on event detail page, auth-aware (login prompt vs checkout flow)
+- [x] **PAY-22**: Frontend POS PaymentForm — 'Razorpay' SelectItem added, read-only amount, opens Razorpay modal, confirms via toast
+- [x] **PAY-23**: Customer profile page at /profile — phone verified badge, editable name, logout
+- [x] **PAY-24**: Public layout login/profile link in header
 
 ## Future Requirements
 

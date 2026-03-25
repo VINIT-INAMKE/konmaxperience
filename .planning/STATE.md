@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: User Guide & Data Management
 status: unknown
-stopped_at: Completed 23-03-PLAN.md
-last_updated: "2026-03-25T20:28:24.804Z"
+stopped_at: Completed 23-04-PLAN.md (Tasks 1-2, awaiting human verification for Task 3)
+last_updated: "2026-03-25T20:38:22.532Z"
 progress:
   total_phases: 12
-  completed_phases: 9
+  completed_phases: 10
   total_plans: 36
-  completed_plans: 35
+  completed_plans: 36
 ---
 
 # Project State
@@ -80,6 +80,7 @@ Plan: 4 of 4
 | Phase 23 P01 | 21min | 2 tasks | 19 files |
 | Phase 23 P02 | 10min | 2 tasks | 11 files |
 | Phase 23 P03 | 13min | 2 tasks | 13 files |
+| Phase 23 P04 | 7min | 2 tasks | 16 files |
 
 ## Accumulated Context
 
@@ -182,6 +183,9 @@ Recent decisions affecting current work:
 - [Phase 23]: Raw body via verify callback (req.rawBody = buf) instead of bodyParser:false + getBodyParserOptions
 - [Phase 23]: Webhook signature-first pattern: verify HMAC before dedup before routing
 - [Phase 23]: Number(payment.amount) cast for Razorpay SDK fetchPayment return type compatibility with createRefund
+- [Phase 23]: optionsRef pattern in useRazorpay to avoid stale closure in Razorpay callbacks
+- [Phase 23]: Auto-verify OTP when 6 digits entered for faster UX (no extra button click needed)
+- [Phase 23]: Cookie-based session detection in public layout for login/profile link (document.cookie check for instant render)
 
 ### Roadmap Evolution
 
@@ -204,6 +208,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-25T20:28:24.793Z
-Stopped at: Completed 23-03-PLAN.md
+Last session: 2026-03-25T20:38:22.519Z
+Stopped at: Completed 23-04-PLAN.md (Tasks 1-2, awaiting human verification for Task 3)
 Resume file: None
