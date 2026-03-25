@@ -17,7 +17,7 @@ export class NotificationsCron {
   async scanTasksDue() {
     try {
       const cutoff = new Date(Date.now() + 48 * 60 * 60 * 1000);
-      const tasks = await this.prisma.task.findMany({
+      const tasks = await this.prisma.withReconnect(() => this.prisma.task.findMany({
         where: {
           due_date: { lte: cutoff, gt: new Date() },
           status: { notIn: ['done', 'cancelled', 'blocked'] },
@@ -29,7 +29,7 @@ export class NotificationsCron {
           due_date: true,
           quest: { select: { title: true } },
         },
-      });
+      }));
 
       this.logger.log(`Scan: found ${tasks.length} tasks due within 48h`);
 
@@ -64,7 +64,7 @@ export class NotificationsCron {
   async scanApprovalsPending() {
     try {
       const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
-      const pendingApprovals = await this.prisma.approval.findMany({
+      const pendingApprovals = await this.prisma.withReconnect(() => this.prisma.approval.findMany({
         where: {
           status: 'pending',
           created_at: { lt: cutoff },
@@ -75,7 +75,7 @@ export class NotificationsCron {
           created_at: true,
           task: { select: { id: true, title: true } },
         },
-      });
+      }));
 
       this.logger.log(
         `Scan: found ${pendingApprovals.length} approvals pending >24h`,

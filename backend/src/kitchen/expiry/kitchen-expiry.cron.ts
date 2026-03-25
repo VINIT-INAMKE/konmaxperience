@@ -10,15 +10,18 @@ export class KitchenExpiryCron {
 
   @Cron('0 * * * *') // Every hour at :00
   async handleExpiredPrepBatches() {
+    try {
     // Find active batches where expires_at has passed
     // IMPORTANT: Only fetch where expires_at IS NOT NULL and < now()
-    const expired = await this.prisma.prepBatch.findMany({
-      where: {
-        status: 'active',
-        expires_at: { not: null, lt: new Date() },
-      },
-      include: { recipe: { select: { computed_cost: true } } },
-    });
+    const expired = await this.prisma.withReconnect(() =>
+      this.prisma.prepBatch.findMany({
+        where: {
+          status: 'active',
+          expires_at: { not: null, lt: new Date() },
+        },
+        include: { recipe: { select: { computed_cost: true } } },
+      })
+    );
 
     this.logger.log(`Found ${expired.length} expired prep batches`);
 
@@ -55,5 +58,11 @@ export class KitchenExpiryCron {
         await tx.wasteLog.createMany({ data: wasteLogs });
       }
     });
+    } catch (error) {
+      this.logger.error(
+        'handleExpiredPrepBatches failed',
+        error instanceof Error ? error.stack : String(error),
+      );
+    }
   }
 }

@@ -14,9 +14,11 @@ export class NotificationsCleanupCron {
       const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
       // Delete all notifications older than 30 days (read and unread)
-      const deleted = await this.prisma.notification.deleteMany({
-        where: { created_at: { lt: cutoff } },
-      });
+      const deleted = await this.prisma.withReconnect(() =>
+        this.prisma.notification.deleteMany({
+          where: { created_at: { lt: cutoff } },
+        })
+      );
 
       this.logger.log(
         `Cleanup: ${deleted.count} old notifications deleted`,
