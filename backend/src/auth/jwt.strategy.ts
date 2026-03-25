@@ -13,6 +13,9 @@ function extractJwtFromHeaderOrCookie(req: Request): string | null {
   if (req?.cookies?.access_token) {
     return req.cookies.access_token;
   }
+  if (req?.cookies?.customer_access_token) {
+    return req.cookies.customer_access_token;
+  }
   return null;
 }
 
@@ -26,8 +29,10 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
   }
 
-  // Only userId and roleCode in token -- permissions resolved from cache per request
   async validate(payload: JwtPayload) {
-    return { id: payload.userId, roleCode: payload.roleCode };
+    if (payload.type === 'customer') {
+      return { customerId: payload.customerId, type: 'customer' };
+    }
+    return { id: payload.userId, roleCode: payload.roleCode, type: 'staff' };
   }
 }

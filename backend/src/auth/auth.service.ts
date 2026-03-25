@@ -37,6 +37,7 @@ export class AuthService {
     const payload: JwtPayload = {
       userId: user.id,
       roleCode: user.role.code,
+      type: 'staff',
     };
 
     const accessToken = this.jwtService.sign(payload, { expiresIn: '15m' });
@@ -110,6 +111,7 @@ export class AuthService {
     const payload: JwtPayload = {
       userId: user.id,
       roleCode: user.role.code,
+      type: 'staff',
     };
 
     const accessToken = this.jwtService.sign(payload, { expiresIn: '15m' });

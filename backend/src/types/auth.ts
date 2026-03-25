@@ -1,6 +1,11 @@
 export interface JwtPayload {
-  userId: string;
-  roleCode: string;
+  // Staff fields (present when type='staff')
+  userId?: string;
+  roleCode?: string;
+  // Customer fields (present when type='customer')
+  customerId?: string;
+  // Discriminator (always present)
+  type: 'staff' | 'customer';
   iat?: number;
   exp?: number;
 }

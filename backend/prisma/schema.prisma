@@ -633,6 +633,21 @@ model WasteLog {
   @@index([zone_id, created_at])
 }
 
+model Customer {
+  id         String   @id @default(uuid())
+  phone      String   @unique
+  name       String?
+  email      String?
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  bookings  EventBooking[]
+  orders    Order[]
+  feedbacks Feedback[]
+
+  @@index([phone])
+}
+
 model Order {
   id                      String      @id @default(uuid())
   order_number            Int         @default(autoincrement()) @unique
@@ -644,6 +659,8 @@ model Order {
   delivery_address        String?
   delivery_assigned_to    String?
   delivery_status         String?
+  customer_id             String?
+  customer                Customer?   @relation(fields: [customer_id], references: [id])
   subtotal                Decimal
   channel_modifier_amount Decimal     @default(0)
   total                   Decimal
@@ -688,14 +705,16 @@ model OrderItem {
 }
 
 model Payment {
-  id         String   @id @default(uuid())
-  order_id   String   @unique
-  method     String   // "cash" | "card" | "upi"
-  amount     Decimal
-  status     String   @default("pending") // pending | paid | refunded
-  notes      String?
-  created_at DateTime @default(now())
-  order      Order    @relation(fields: [order_id], references: [id])
+  id                  String   @id @default(uuid())
+  order_id            String   @unique
+  method              String   // "cash" | "card" | "upi" | "razorpay"
+  amount              Decimal
+  status              String   @default("pending") // pending | paid | refunded
+  notes               String?
+  razorpay_order_id   String?
+  razorpay_payment_id String?
+  created_at          DateTime @default(now())
+  order               Order    @relation(fields: [order_id], references: [id])
 }
 
 model Notification {
@@ -717,14 +736,16 @@ model Notification {
 }
 
 model Feedback {
-  id             String   @id @default(uuid())
+  id             String    @id @default(uuid())
   order_id       String?
-  order          Order?   @relation(fields: [order_id], references: [id])
-  rating         Int      // 1-5
+  order          Order?    @relation(fields: [order_id], references: [id])
+  rating         Int       // 1-5
   comment        String?
   customer_name  String?
   customer_phone String?
-  created_at     DateTime @default(now())
+  customer_id    String?
+  customer       Customer? @relation(fields: [customer_id], references: [id])
+  created_at     DateTime  @default(now())
 
   // Optimizes: findAll by order_id
   @@index([order_id])
@@ -754,15 +775,23 @@ model Event {
 }
 
 model EventBooking {
-  id             String   @id @default(uuid())
-  event_id       String
-  event          Event    @relation(fields: [event_id], references: [id], onDelete: Cascade)
-  customer_name  String
-  customer_phone String
-  guests         Int
-  created_at     DateTime @default(now())
+  id                  String    @id @default(uuid())
+  event_id            String
+  event               Event     @relation(fields: [event_id], references: [id], onDelete: Cascade)
+  customer_name       String
+  customer_phone      String
+  guests              Int
+  customer_id         String?
+  customer            Customer? @relation(fields: [customer_id], references: [id])
+  razorpay_order_id   String?   @unique
+  razorpay_payment_id String?   @unique
+  payment_status      String    @default("pending") // pending | paid | refunded | free
+  payment_amount      Decimal?
+  created_at          DateTime  @default(now())
 
   @@unique([event_id, customer_phone])
+  @@index([customer_id])
+  @@index([razorpay_order_id])
 }
 
 model GuideSection {
