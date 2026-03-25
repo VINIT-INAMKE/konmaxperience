@@ -239,7 +239,7 @@ Plans:
 
 **Goal:** Full customer-facing marketplace — cart + checkout with Razorpay custom checkout modal, takeaway & delivery ordering, delivery address management, checkpoint-based order tracking (staff fires events, customer sees timeline via Pusher), customer order history, booking/order receipt download (PDF/printable), and enriched customer profile (order history, saved addresses, active order tracking)
 **Depends on:** Phase 23 — customer auth and Razorpay payment infrastructure
-**Plans:** 0 plans
+**Plans:** 4/4 plans complete
 
 Plans:
 - [ ] TBD (run /gsd:plan-phase 24 to break down)
