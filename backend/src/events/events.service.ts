@@ -5,13 +5,18 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { RazorpayService } from '../razorpay/razorpay.service';
 import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
 import { CreateBookingDto } from './dto/create-booking.dto';
+import { ConfirmBookingDto } from './dto/confirm-booking.dto';
 
 @Injectable()
 export class EventsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly razorpayService: RazorpayService,
+  ) {}
 
   private async enrichWithGuestCounts<T extends { id: string; capacity: number }>(
     events: T[],
@@ -220,6 +225,172 @@ export class EventsService {
           guests: dto.guests,
         },
       });
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+  }
+
+  // ---------------------------------------------------------------
+  // Checkout Event (Razorpay order or free booking)
+  // ---------------------------------------------------------------
+  async checkoutEvent(eventId: string, guests: number, customerId: string) {
+    // Fetch event
+    const event = await this.prisma.event.findUnique({ where: { id: eventId } });
+    if (!event) {
+      throw new NotFoundException(`Event with ID ${eventId} not found`);
+    }
+
+    // Check event date is in the future
+    if (event.date < new Date()) {
+      throw new BadRequestException('Cannot book a past event');
+    }
+
+    // Check capacity
+    const guestAgg = await this.prisma.eventBooking.aggregate({
+      where: { event_id: eventId },
+      _sum: { guests: true },
+    });
+    const bookedGuests = guestAgg._sum.guests ?? 0;
+    if (event.capacity - bookedGuests < guests) {
+      throw new BadRequestException('This event is now full');
+    }
+
+    // Calculate amount in paise
+    const amountInPaise = Math.round(event.price.toNumber() * guests * 100);
+
+    // Free event path (D-19)
+    if (amountInPaise === 0) {
+      const booking = await this.prisma.$transaction(async (tx) => {
+        // Re-check capacity inside transaction
+        const txAgg = await tx.eventBooking.aggregate({
+          where: { event_id: eventId },
+          _sum: { guests: true },
+        });
+        const txBooked = txAgg._sum.guests ?? 0;
+        if (event.capacity - txBooked < guests) {
+          throw new BadRequestException('This event is now full');
+        }
+
+        // Get customer info
+        const customer = await tx.customer.findUnique({ where: { id: customerId } });
+
+        return tx.eventBooking.create({
+          data: {
+            event_id: eventId,
+            customer_id: customerId,
+            customer_name: customer?.name || '',
+            customer_phone: customer?.phone || '',
+            guests,
+            payment_status: 'free',
+            payment_amount: 0,
+          },
+        });
+      }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+
+      return { type: 'free' as const, booking };
+    }
+
+    // Paid event path
+    const order = await this.razorpayService.createOrder({
+      amount: amountInPaise,
+      receipt: `evt_${eventId}_${Date.now()}`,
+      notes: { type: 'event_booking', entity_id: eventId },
+    });
+
+    // Create pending EventBooking linked to Razorpay order
+    const customer = await this.prisma.customer.findUnique({ where: { id: customerId } });
+    await this.prisma.eventBooking.create({
+      data: {
+        event_id: eventId,
+        customer_id: customerId,
+        customer_name: customer?.name || '',
+        customer_phone: customer?.phone || '',
+        guests,
+        razorpay_order_id: order.id,
+        payment_status: 'pending',
+        payment_amount: amountInPaise / 100,
+      },
+    });
+
+    return { type: 'paid' as const, razorpay_order_id: order.id };
+  }
+
+  // ---------------------------------------------------------------
+  // Confirm Booking (signature verify + API re-fetch + booking update)
+  // ---------------------------------------------------------------
+  async confirmBooking(eventId: string, dto: ConfirmBookingDto, customerId: string) {
+    // Step 1: Verify HMAC signature (D-09) — BEFORE fetchPayment
+    const isValid = this.razorpayService.verifyPaymentSignature(
+      dto.razorpay_order_id, dto.razorpay_payment_id, dto.razorpay_signature,
+    );
+    if (!isValid) {
+      throw new BadRequestException('Invalid payment signature');
+    }
+
+    // Step 2: Re-fetch payment from Razorpay API (D-12 belt-and-suspenders)
+    const payment = await this.razorpayService.fetchPayment(dto.razorpay_payment_id);
+    if (payment.status !== 'captured') {
+      throw new BadRequestException('Payment not captured');
+    }
+    if (payment.order_id !== dto.razorpay_order_id) {
+      throw new BadRequestException('Order ID mismatch');
+    }
+
+    // Step 3: Find pending booking and update in serializable transaction
+    return this.prisma.$transaction(async (tx) => {
+      const booking = await tx.eventBooking.findFirst({
+        where: { razorpay_order_id: dto.razorpay_order_id, customer_id: customerId },
+      });
+      if (!booking) {
+        throw new NotFoundException('Booking not found');
+      }
+      if (booking.payment_status === 'paid') {
+        return booking; // idempotent
+      }
+
+      // Re-check capacity inside transaction (only count paid + free)
+      const guestAgg = await tx.eventBooking.aggregate({
+        where: { event_id: eventId, payment_status: { in: ['paid', 'free'] } },
+        _sum: { guests: true },
+      });
+      const confirmedGuests = guestAgg._sum.guests ?? 0;
+      const event = await tx.event.findUnique({ where: { id: eventId } });
+
+      if (!event || event.capacity - confirmedGuests < dto.guests) {
+        // Capacity exceeded after payment — auto-refund (D-14)
+        await this.razorpayService.createRefund(
+          dto.razorpay_payment_id,
+          Number(payment.amount),
+          'capacity_exceeded',
+        );
+        await tx.eventBooking.update({
+          where: { id: booking.id },
+          data: { payment_status: 'refunded' },
+        });
+        throw new BadRequestException(
+          'This event is now full. Your payment has been refunded — it may take 5-7 business days to reflect.',
+        );
+      }
+
+      // Update booking to paid
+      if (dto.customer_name && !booking.customer_name) {
+        await tx.eventBooking.update({
+          where: { id: booking.id },
+          data: {
+            payment_status: 'paid',
+            razorpay_payment_id: dto.razorpay_payment_id,
+            customer_name: dto.customer_name,
+          },
+        });
+      } else {
+        await tx.eventBooking.update({
+          where: { id: booking.id },
+          data: {
+            payment_status: 'paid',
+            razorpay_payment_id: dto.razorpay_payment_id,
+          },
+        });
+      }
+
+      return tx.eventBooking.findUnique({ where: { id: booking.id } });
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
   }
 

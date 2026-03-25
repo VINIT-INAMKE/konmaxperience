@@ -34,7 +34,7 @@ describe('EventsService', () => {
   let service: EventsService;
 
   beforeEach(() => {
-    service = new EventsService(mockPrisma as any);
+    service = new EventsService(mockPrisma as any, {} as any);
     jest.clearAllMocks();
     // Reset $transaction to pass mockTx
     mockPrisma.$transaction.mockImplementation(

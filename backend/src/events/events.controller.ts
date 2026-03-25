@@ -7,15 +7,20 @@ import {
   Param,
   Body,
   ParseUUIDPipe,
+  UseGuards,
+  Req,
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { EventsService } from './events.service';
 import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
 import { CreateBookingDto } from './dto/create-booking.dto';
+import { CheckoutEventDto } from './dto/checkout-event.dto';
+import { ConfirmBookingDto } from './dto/confirm-booking.dto';
 import { Public } from '../common/decorators/public.decorator';
 import { RequiresPermission } from '../common/decorators/permissions.decorator';
 import { Permission } from '../types/permissions';
+import { CustomerGuard } from '../customer-auth/guards/customer.guard';
 
 @Controller('events')
 export class EventsController {
@@ -62,6 +67,28 @@ export class EventsController {
   @RequiresPermission(Permission.MANAGE_OPS)
   async remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.eventsService.remove(id);
+  }
+
+  @Post(':id/checkout')
+  @UseGuards(CustomerGuard)
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  async checkout(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: CheckoutEventDto,
+    @Req() req: any,
+  ) {
+    return this.eventsService.checkoutEvent(id, dto.guests, req.user.customerId);
+  }
+
+  @Post(':id/bookings/confirm')
+  @UseGuards(CustomerGuard)
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  async confirmBooking(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: ConfirmBookingDto,
+    @Req() req: any,
+  ) {
+    return this.eventsService.confirmBooking(id, dto, req.user.customerId);
   }
 
   @Post(':id/bookings')
