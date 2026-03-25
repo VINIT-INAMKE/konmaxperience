@@ -326,9 +326,10 @@ export class EventsService {
     }
 
     // Step 2: Re-fetch payment from Razorpay API (D-12 belt-and-suspenders)
+    // Accept both 'captured' (auto-capture on) and 'authorized' (auto-capture off / test mode)
     const payment = await this.razorpayService.fetchPayment(dto.razorpay_payment_id);
-    if (payment.status !== 'captured') {
-      throw new BadRequestException('Payment not captured');
+    if (payment.status !== 'captured' && payment.status !== 'authorized') {
+      throw new BadRequestException(`Payment not captured — status: ${payment.status}`);
     }
     if (payment.order_id !== dto.razorpay_order_id) {
       throw new BadRequestException('Order ID mismatch');
