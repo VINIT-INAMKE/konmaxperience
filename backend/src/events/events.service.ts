@@ -291,7 +291,7 @@ export class EventsService {
     // Paid event path
     const order = await this.razorpayService.createOrder({
       amount: amountInPaise,
-      receipt: `evt_${eventId}_${Date.now()}`,
+      receipt: `evt_${eventId.slice(0, 8)}_${Date.now()}`,
       notes: { type: 'event_booking', entity_id: eventId },
     });
 

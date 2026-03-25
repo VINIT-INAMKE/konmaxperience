@@ -500,7 +500,7 @@ export class OrdersService {
     // Create Razorpay order
     const rzpOrder = await this.razorpayService.createOrder({
       amount: amountInPaise,
-      receipt: `ord_${order.order_number}_${Date.now()}`,
+      receipt: `ord_${String(order.order_number).slice(0, 8)}_${Date.now()}`,
       notes: { type: 'pos_order', entity_id: orderId },
     });
 
