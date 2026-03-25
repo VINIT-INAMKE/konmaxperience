@@ -100,16 +100,15 @@ export class CustomerAuthService {
     await redis.del(`otp:${phone}`);
     await redis.del(verifyKey);
 
-    // Upsert customer
+    // Deterministic new-customer detection: check existence before upsert
+    const existing = await this.prisma.customer.findUnique({ where: { phone } });
+    const isNewCustomer = !existing;
+
     const customer = await this.prisma.customer.upsert({
       where: { phone },
       create: { phone },
       update: {},
     });
-
-    // Check if first login (created within last 5 seconds)
-    const isNewCustomer =
-      Date.now() - customer.created_at.getTime() < 5000;
 
     // Auto-link existing records on first login
     if (isNewCustomer) {

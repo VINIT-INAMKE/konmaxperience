@@ -288,9 +288,17 @@ export class EventsService {
       return { type: 'free' as const, booking };
     }
 
-    // Paid event path — serializable transaction to prevent overbooking race condition
-    const result = await this.prisma.$transaction(async (tx) => {
-      // Re-check capacity inside transaction (prevents two users booking the last spot)
+    // Paid event path
+    // Step 1: Create Razorpay order OUTSIDE tx (external API, avoids holding serializable lock)
+    // If capacity is exceeded later, the unused Razorpay order auto-expires (~15min, no harm)
+    const order = await this.razorpayService.createOrder({
+      amount: amountInPaise,
+      receipt: `evt_${eventId.slice(0, 8)}_${Date.now()}`,
+      notes: { type: 'event_booking', entity_id: eventId },
+    });
+
+    // Step 2: Short serializable tx — re-check capacity + insert booking (no external calls)
+    const booking = await this.prisma.$transaction(async (tx) => {
       const txAgg = await tx.eventBooking.aggregate({
         where: { event_id: eventId },
         _sum: { guests: true },
@@ -300,16 +308,8 @@ export class EventsService {
         throw new BadRequestException('This event is now full');
       }
 
-      // Create Razorpay order (external API call — acceptable in short-lived tx)
-      const order = await this.razorpayService.createOrder({
-        amount: amountInPaise,
-        receipt: `evt_${eventId.slice(0, 8)}_${Date.now()}`,
-        notes: { type: 'event_booking', entity_id: eventId },
-      });
-
-      // Create pending EventBooking linked to Razorpay order
       const customer = await tx.customer.findUnique({ where: { id: customerId } });
-      await tx.eventBooking.create({
+      return tx.eventBooking.create({
         data: {
           event_id: eventId,
           customer_id: customerId,
@@ -321,11 +321,9 @@ export class EventsService {
           payment_amount: amountInPaise / 100,
         },
       });
-
-      return { razorpay_order_id: order.id };
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 
-    return { type: 'paid' as const, razorpay_order_id: result.razorpay_order_id };
+    return { type: 'paid' as const, razorpay_order_id: order.id };
   }
 
   // ---------------------------------------------------------------

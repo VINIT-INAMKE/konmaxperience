@@ -73,24 +73,20 @@ export class WebhooksService {
   }
 
   private async handleEventBookingPayment(payment: any, eventId: string) {
-    // Find booking by razorpay_order_id (set during checkout in Plan 03)
-    const booking = await this.prisma.eventBooking.findFirst({
-      where: { razorpay_order_id: payment.order_id },
-    });
-    if (!booking) {
-      console.warn(`[Webhook] No booking found for razorpay_order_id: ${payment.order_id}`);
-      return;
-    }
-    // Idempotency: skip if already paid
-    if (booking.payment_status === 'paid') return;
-
-    await this.prisma.eventBooking.update({
-      where: { id: booking.id },
+    // Atomic idempotent update — WHERE clause prevents double-processing without read-then-write race
+    const result = await this.prisma.eventBooking.updateMany({
+      where: {
+        razorpay_order_id: payment.order_id,
+        payment_status: { not: 'paid' }, // only update if not already paid
+      },
       data: {
         payment_status: 'paid',
         razorpay_payment_id: payment.id,
       },
     });
+    if (result.count === 0) {
+      console.log(`[Webhook] Booking already paid or not found for order: ${payment.order_id}`);
+    }
   }
 
   private async handlePosOrderPayment(payment: any, orderId: string) {

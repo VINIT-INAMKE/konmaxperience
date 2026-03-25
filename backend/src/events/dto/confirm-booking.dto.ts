@@ -1,4 +1,4 @@
-import { IsString, IsInt, IsOptional, Min } from 'class-validator';
+import { IsString, IsOptional } from 'class-validator';
 
 export class ConfirmBookingDto {
   @IsString()
@@ -9,10 +9,6 @@ export class ConfirmBookingDto {
 
   @IsString()
   razorpay_signature: string;
-
-  @IsInt()
-  @Min(1)
-  guests: number;
 
   @IsOptional()
   @IsString()
