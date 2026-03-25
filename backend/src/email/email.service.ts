@@ -24,6 +24,11 @@ export class EmailService {
     return this.configService.get<string>('EMAIL_DISABLED') === 'true';
   }
 
+  // HTML-escape to prevent XSS in email templates
+  private escapeHtml(str: string): string {
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
   async sendPasswordSetup(
     email: string,
     token: string,
@@ -40,7 +45,7 @@ export class EmailService {
         .setTo(recipients)
         .setSubject('Set up your Konma Xperience password')
         .setHtml(
-          `<p>Hi ${userName},</p>` +
+          `<p>Hi ${this.escapeHtml(userName)},</p>` +
             `<p>Your Konma Xperience account has been created. Please set your password by clicking the link below:</p>` +
             `<p><a href="${setupLink}">Set Your Password</a></p>` +
             `<p>This link expires in 15 minutes.</p>` +
@@ -115,7 +120,7 @@ export class EmailService {
         .setTo(recipients)
         .setSubject('Reset your Konma Xperience password')
         .setHtml(
-          `<p>Hi ${userName},</p>` +
+          `<p>Hi ${this.escapeHtml(userName)},</p>` +
             `<p>A password reset was requested for your Konma Xperience account. Click the link below to reset your password:</p>` +
             `<p><a href="${resetLink}">Reset Your Password</a></p>` +
             `<p>This link expires in 15 minutes.</p>` +

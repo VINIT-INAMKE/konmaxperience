@@ -8,6 +8,7 @@ import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 import { DecimalSerializationInterceptor } from './common/interceptors/decimal-serialization.interceptor';
+import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
 import type { Request, Response, NextFunction } from 'express';
 
 async function bootstrap() {
@@ -54,11 +55,13 @@ async function bootstrap() {
   // Cookie parsing (required for refresh token httpOnly cookies)
   app.use(cookieParser());
 
-  // CORS (hardened)
+  // CORS (hardened — localhost only in development)
   const allowedOrigins = [
     process.env.FRONTEND_URL || 'http://localhost:3000',
-    'http://localhost:3000',
   ];
+  if (process.env.NODE_ENV !== 'production') {
+    allowedOrigins.push('http://localhost:3000');
+  }
   // Also allow www subdomain if FRONTEND_URL is set
   if (process.env.FRONTEND_URL) {
     const url = new URL(process.env.FRONTEND_URL);
@@ -108,6 +111,9 @@ async function bootstrap() {
 
     next();
   });
+
+  // Global exception filter: catch unhandled errors, return safe 500 in production
+  app.useGlobalFilters(new GlobalExceptionFilter());
 
   // Global interceptor: convert Prisma Decimal objects to plain numbers in JSON responses
   app.useGlobalInterceptors(new DecimalSerializationInterceptor());

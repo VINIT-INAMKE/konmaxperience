@@ -16,10 +16,16 @@ export class PermissionsGuard implements CanActivate {
       REQUIRED_PERMISSION_KEY,
       [context.getHandler(), context.getClass()],
     );
-    if (!required) return true;
 
     const { user } = context.switchToHttp().getRequest();
     if (!user) return false;
+
+    // Customer tokens can ONLY access endpoints with CustomerGuard — reject everywhere else
+    // This prevents customers from reaching staff endpoints that lack @RequiresPermission
+    if (user.type === 'customer') return false;
+
+    // Staff endpoints without @RequiresPermission are open to all staff
+    if (!required) return true;
 
     const perms = await getPermissionsForRole(user.roleCode, this.prisma);
     return perms.includes(required);

@@ -1,3 +1,4 @@
+import { sanitizeRow } from '../../common/utils/csv-sanitize';
 import { Injectable } from '@nestjs/common';
 import ExcelJS from 'exceljs';
 import { writeToBuffer } from '@fast-csv/format';
@@ -49,7 +50,7 @@ export class IngredientsExportBuilder implements ExportBuilder {
       base_unit: row.base_unit,
       min_stock_level: Number(row.min_stock_level),
     }));
-    return writeToBuffer(rows, { headers: true });
+    return writeToBuffer(rows.map(sanitizeRow), { headers: true });
   }
 }
 
@@ -100,7 +101,7 @@ export class VendorsExportBuilder implements ExportBuilder {
       payment_terms: row.payment_terms || '',
       status: row.status,
     }));
-    return writeToBuffer(rows, { headers: true });
+    return writeToBuffer(rows.map(sanitizeRow), { headers: true });
   }
 }
 
@@ -217,6 +218,6 @@ export class RecipesExportBuilder implements ExportBuilder {
       }
     }
 
-    return writeToBuffer(rows, { headers: true });
+    return writeToBuffer(rows.map(sanitizeRow), { headers: true });
   }
 }

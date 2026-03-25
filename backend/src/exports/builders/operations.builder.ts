@@ -1,3 +1,4 @@
+import { sanitizeRow } from '../../common/utils/csv-sanitize';
 import { Injectable } from '@nestjs/common';
 import ExcelJS from 'exceljs';
 import { writeToBuffer } from '@fast-csv/format';
@@ -79,7 +80,7 @@ export class TasksExportBuilder implements ExportBuilder {
       'Due Date': t.due_date?.toISOString()?.slice(0, 10) || '',
       'Completed At': t.completed_at?.toISOString() || '',
     }));
-    return writeToBuffer(rows, { headers: true });
+    return writeToBuffer(rows.map(sanitizeRow), { headers: true });
   }
 }
 
@@ -146,7 +147,7 @@ export class KpisExportBuilder implements ExportBuilder {
       Status: k.status,
       Domain: k.domain,
     }));
-    return writeToBuffer(rows, { headers: true });
+    return writeToBuffer(rows.map(sanitizeRow), { headers: true });
   }
 }
 
@@ -211,7 +212,7 @@ export class DecisionLogExportBuilder implements ExportBuilder {
       Status: d.status,
       'Created At': d.created_at?.toISOString() || '',
     }));
-    return writeToBuffer(rows, { headers: true });
+    return writeToBuffer(rows.map(sanitizeRow), { headers: true });
   }
 }
 
@@ -266,6 +267,6 @@ export class LeaderboardExportBuilder implements ExportBuilder {
       Level: u.level,
       'Streak Days': u.streak_days,
     }));
-    return writeToBuffer(rows, { headers: true });
+    return writeToBuffer(rows.map(sanitizeRow), { headers: true });
   }
 }

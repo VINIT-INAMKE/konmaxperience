@@ -98,7 +98,9 @@ export class EventsController {
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: CreateBookingDto,
   ) {
-    return this.eventsService.createBooking(id, dto);
+    const booking = await this.eventsService.createBooking(id, dto);
+    // Return minimal response for public endpoint — no internal IDs or payment fields
+    return { id: booking.id, guests: booking.guests, created_at: booking.created_at };
   }
 
   @Get(':id/bookings')

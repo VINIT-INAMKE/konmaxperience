@@ -1,3 +1,4 @@
+import { sanitizeRow } from '../../common/utils/csv-sanitize';
 import { Injectable } from '@nestjs/common';
 import ExcelJS from 'exceljs';
 import { writeToBuffer } from '@fast-csv/format';
@@ -71,7 +72,7 @@ export class InventoryLevelsExportBuilder implements ExportBuilder {
           : 'No',
     }));
 
-    return writeToBuffer(rows, {
+    return writeToBuffer(rows.map(sanitizeRow), {
       headers: [
         'Ingredient',
         'Category',
@@ -149,7 +150,7 @@ export class StockMovementsExportBuilder implements ExportBuilder {
         : '',
     }));
 
-    return writeToBuffer(rows, {
+    return writeToBuffer(rows.map(sanitizeRow), {
       headers: [
         'Ingredient',
         'Zone',

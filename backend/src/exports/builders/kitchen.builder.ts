@@ -1,3 +1,4 @@
+import { sanitizeRow } from '../../common/utils/csv-sanitize';
 import { Injectable } from '@nestjs/common';
 import ExcelJS from 'exceljs';
 import { writeToBuffer } from '@fast-csv/format';
@@ -73,7 +74,7 @@ export class WasteLogExportBuilder implements ExportBuilder {
           : '',
       };
     });
-    return writeToBuffer(rows, { headers: true });
+    return writeToBuffer(rows.map(sanitizeRow), { headers: true });
   }
 }
 
@@ -139,6 +140,6 @@ export class PrepBatchesExportBuilder implements ExportBuilder {
         ? new Date(row.created_at).toISOString()
         : '',
     }));
-    return writeToBuffer(rows, { headers: true });
+    return writeToBuffer(rows.map(sanitizeRow), { headers: true });
   }
 }
