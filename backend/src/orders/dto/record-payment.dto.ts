@@ -1,7 +1,7 @@
 import { IsIn, IsNumber, IsOptional, IsString, Min } from 'class-validator';
 
 export class RecordPaymentDto {
-  @IsIn(['cash', 'card', 'upi'])
+  @IsIn(['cash', 'card', 'upi', 'razorpay'])
   method: string;
 
   @IsNumber()
