@@ -48,6 +48,7 @@ export function useRazorpay(options: UseRazorpayOptions) {
       razorpayOrderId: string;
       description?: string;
       prefill?: { name?: string; contact?: string; email?: string };
+      skipContactInfo?: boolean; // POS mode: skip phone/email prompt, go straight to QR/payment
     }) => {
       try {
         setState('loading-script');
@@ -63,7 +64,9 @@ export function useRazorpay(options: UseRazorpayOptions) {
             typeof window !== 'undefined'
               ? `${window.location.origin}/logo.png`
               : '',
-          prefill: params.prefill,
+          prefill: params.skipContactInfo
+            ? { name: 'Walk-in Customer', contact: '9999999999', email: 'pos@konmaxperience.com' }
+            : params.prefill,
           theme: {
             color: '#c2410c',
             backdrop_color: 'rgba(28, 25, 23, 0.7)',

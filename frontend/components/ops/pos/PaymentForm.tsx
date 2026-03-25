@@ -94,6 +94,7 @@ export function PaymentForm({ orderId, orderTotal, onPaymentRecorded }: PaymentF
       await openCheckout({
         razorpayOrderId: result.razorpay_order_id,
         description: `Order #${orderId.slice(0, 8)}`,
+        skipContactInfo: true, // POS: skip phone prompt, go straight to QR/payment
       });
     } catch {
       toast.error('Could not create Razorpay order — try again');
