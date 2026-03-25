@@ -46,6 +46,7 @@ import { GuidesModule } from './guides/guides.module';
 import { ExportsModule } from './exports/exports.module';
 import { ImportsModule } from './imports/imports.module';
 import { ChatModule } from './chat/chat.module';
+import { CustomerAuthModule } from './customer-auth/customer-auth.module';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { PermissionsGuard } from './auth/permissions.guard';
 
@@ -133,6 +134,7 @@ import { PermissionsGuard } from './auth/permissions.guard';
     ExportsModule,
     ImportsModule,
     ChatModule,
+    CustomerAuthModule,
   ],
   controllers: [AppController],
   providers: [
