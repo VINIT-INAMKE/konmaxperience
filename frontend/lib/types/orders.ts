@@ -108,6 +108,7 @@ export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
   cash: 'Cash',
   card: 'Card',
   upi: 'UPI',
+  razorpay: 'Razorpay',
 };
 
 export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {

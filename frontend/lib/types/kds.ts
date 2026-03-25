@@ -1,7 +1,7 @@
 export type OrderStatus = 'placed' | 'preparing' | 'ready' | 'served' | 'dispatched' | 'cancelled';
 export type OrderItemStatus = 'pending' | 'preparing' | 'ready';
 export type OrderChannel = 'dine_in' | 'takeaway' | 'delivery';
-export type PaymentMethod = 'cash' | 'card' | 'upi';
+export type PaymentMethod = 'cash' | 'card' | 'upi' | 'razorpay';
 export type PaymentStatus = 'pending' | 'paid' | 'refunded';
 
 export interface KdsOrderItem {
