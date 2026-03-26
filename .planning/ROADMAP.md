@@ -295,7 +295,7 @@ Plans:
 **Plans**: 5 plans
 
 Plans:
-- [ ] 27-01-PLAN.md -- Backend foundation: Prisma migration (PO linked_task_id), /missions/mission-control aggregation endpoint, ActivityModule with feed + contribution endpoints
+- [x] 27-01-PLAN.md -- Backend foundation: Prisma migration (PO linked_task_id), /missions/mission-control aggregation endpoint, ActivityModule with feed + contribution endpoints
 - [x] 27-02-PLAN.md -- Backend task includes: extend findAll/findOne with quest.mission + readiness_meter, PO create/update accepts linked_task_id, task detail returns linked resources
 - [ ] 27-03-PLAN.md -- Frontend task UX: Task type updates, kanban badge meter name, list view columns, detail breadcrumb, validation toast, linked resources section
 - [ ] 27-04-PLAN.md -- Frontend dashboard widgets: ActivityFeedWidget, TeamContributionWidget, TodaysFocusSection, wired into admin and non-admin dashboards

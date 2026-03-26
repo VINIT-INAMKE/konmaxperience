@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: User Guide & Data Management
 status: unknown
-stopped_at: Completed 27-02-PLAN.md
-last_updated: "2026-03-26T12:09:36.664Z"
+stopped_at: Completed 27-01-PLAN.md
+last_updated: "2026-03-26T12:12:02.781Z"
 progress:
   total_phases: 14
   completed_phases: 11
   total_plans: 45
-  completed_plans: 41
+  completed_plans: 42
 ---
 
 # Project State
@@ -24,7 +24,7 @@ See: .planning/PROJECT.md (updated 2026-03-22)
 ## Current Position
 
 Phase: 27 (mission-flow-assessment-gap-closure) — EXECUTING
-Plan: 2 of 5
+Plan: 3 of 5
 
 ## Performance Metrics
 
@@ -87,6 +87,7 @@ Plan: 2 of 5
 | Phase 24 P02 | 11min | 2 tasks | 10 files |
 | Phase 24 P04 | 9min | 2 tasks | 5 files |
 | Phase 27 P02 | 5min | 2 tasks | 4 files |
+| Phase 27 P01 | 8min | 2 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -206,6 +207,9 @@ Recent decisions affecting current work:
 - [Phase 24]: Re-order fetches fresh /menu/items each time for up-to-date availability (no stale cache)
 - [Phase 27]: Kept direct mission include alongside quest.mission on findOne for adhoc tasks with no quest
 - [Phase 27]: PO update uses empty-string-to-null coalescion for linked_task_id clearing
+- [Phase 27]: User model uses status field not is_active boolean -- adapted getContributions query accordingly
+- [Phase 27]: date-fns installed for time scope calculations (startOfWeek, startOfMonth, subHours)
+- [Phase 27]: GET /missions/mission-control route placed before GET /missions/:id to prevent NestJS param route conflict
 
 ### Roadmap Evolution
 
@@ -230,6 +234,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-26T12:09:36.653Z
-Stopped at: Completed 27-02-PLAN.md
+Last session: 2026-03-26T12:12:02.771Z
+Stopped at: Completed 27-01-PLAN.md
 Resume file: None
