@@ -44,6 +44,10 @@ export class CreatePurchaseOrderDto {
   @IsOptional()
   status?: string;
 
+  @IsOptional()
+  @IsString()
+  linked_task_id?: string;
+
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => PurchaseOrderLineDto)

@@ -25,6 +25,10 @@ export class UpdatePurchaseOrderDto {
   @IsOptional()
   @IsIn(['ordered'])
   status?: string;
+
+  @IsOptional()
+  @IsString()
+  linked_task_id?: string;
 }
 
 @Controller('purchase-orders')

@@ -17,6 +17,7 @@ const PO_INCLUDE = {
       ingredient: { select: { id: true, name: true, base_unit: true } },
     },
   },
+  linked_task: { select: { id: true, title: true } },
 } as const;
 
 @Injectable()
@@ -33,6 +34,7 @@ export class PurchaseOrdersService {
       include: {
         vendor: { select: { id: true, name: true } },
         zone: { select: { id: true, name: true } },
+        linked_task: { select: { id: true, title: true } },
         _count: { select: { lines: true } },
       },
       orderBy: { created_at: 'desc' },
@@ -66,6 +68,7 @@ export class PurchaseOrdersService {
           status,
           total_amount: totalAmount,
           ordered_by: userId,
+          ...(dto.linked_task_id && { linked_task_id: dto.linked_task_id }),
           ...(status === 'ordered' && { ordered_at: new Date() }),
           lines: {
             create: dto.lines.map((line) => ({
@@ -82,7 +85,7 @@ export class PurchaseOrdersService {
     });
   }
 
-  async update(id: string, data: { notes?: string; status?: string }) {
+  async update(id: string, data: { notes?: string; status?: string; linked_task_id?: string }) {
     const po = await this.findOne(id);
 
     // Only allow transitioning from draft to ordered via PATCH
@@ -101,6 +104,7 @@ export class PurchaseOrdersService {
       where: { id },
       data: {
         ...(data.notes !== undefined && { notes: data.notes }),
+        ...(data.linked_task_id !== undefined && { linked_task_id: data.linked_task_id || null }),
         ...(data.status === 'ordered' && {
           status: 'ordered',
           ordered_at: new Date(),
