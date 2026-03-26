@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { PrismaModule } from '../prisma/prisma.module';
 import { CustomerAuthModule } from '../customer-auth/customer-auth.module';
 import { ChatModule } from '../chat/chat.module';
+import { RazorpayModule } from '../razorpay/razorpay.module';
 import { CustomerOrdersController } from './customer-orders.controller';
 import { CustomerOrdersService } from './customer-orders.service';
 
@@ -9,7 +10,8 @@ import { CustomerOrdersService } from './customer-orders.service';
   imports: [
     PrismaModule,
     CustomerAuthModule, // provides RedisService
-    ChatModule, // provides PusherService (for Plan 02 order tracking)
+    ChatModule, // provides PusherService (for order tracking)
+    RazorpayModule, // provides RazorpayService (for checkout/confirm)
   ],
   controllers: [CustomerOrdersController],
   providers: [CustomerOrdersService],
