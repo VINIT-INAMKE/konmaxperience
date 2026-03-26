@@ -28,7 +28,7 @@ export class ProcurementService {
       this.prisma.ingredientStock.findMany({
         include: {
           ingredient: {
-            select: { id: true, base_unit: true, min_stock_level: true },
+            select: { id: true, name: true, base_unit: true, min_stock_level: true },
           },
         },
       }),
@@ -145,9 +145,15 @@ export class ProcurementService {
           }
         }
 
-        const pricePerBaseUnit = factor
-          ? Number(latestPrice.price) / factor
-          : Number(latestPrice.price);
+        if (!factor) {
+          const ingredientName = allStocks.find((s) => s.ingredient_id === ingId)?.ingredient.name ?? ingId;
+          console.warn(
+            `[Procurement] No unit conversion from ${fromUnit} to ${toUnit} for ${ingredientName} — skipping valuation`,
+          );
+          continue;
+        }
+
+        const pricePerBaseUnit = Number(latestPrice.price) / factor;
 
         total_inventory_value += stockAgg.totalQty * pricePerBaseUnit;
       }

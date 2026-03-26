@@ -219,7 +219,7 @@ export async function validateRecipeBomRow(
   } else if (validated.input_type === 'ingredient') {
     const ingredient = await prisma.ingredient.findFirst({
       where: { name: { equals: ingredientName, mode: 'insensitive' } },
-      select: { id: true },
+      select: { id: true, base_unit: true },
     });
     if (!ingredient) {
       errors.push({
@@ -228,6 +228,7 @@ export async function validateRecipeBomRow(
       });
     } else {
       validated.ingredient_id = ingredient.id;
+      validated._ingredient_base_unit = ingredient.base_unit;
     }
   } else if (validated.input_type === 'recipe') {
     // D-19: Cycle check — self-reference
@@ -285,6 +286,36 @@ export async function validateRecipeBomRow(
   } else {
     validated.unit = unit;
   }
+
+  // Check unit conversion path from BOM line unit to ingredient base_unit
+  if (validated._ingredient_base_unit && validated.unit) {
+    const lineUnit = validated.unit as string;
+    const baseUnit = validated._ingredient_base_unit as string;
+    if (lineUnit !== baseUnit) {
+      const conversion = await prisma.unitConversion.findFirst({
+        where: {
+          OR: [
+            {
+              from_unit: { equals: lineUnit, mode: 'insensitive' },
+              to_unit: { equals: baseUnit, mode: 'insensitive' },
+            },
+            {
+              from_unit: { equals: baseUnit, mode: 'insensitive' },
+              to_unit: { equals: lineUnit, mode: 'insensitive' },
+            },
+          ],
+        },
+      });
+      if (!conversion) {
+        errors.push({
+          field: 'unit',
+          message: `No unit conversion from ${lineUnit} to ${baseUnit}`,
+        });
+      }
+    }
+  }
+  // Clean up internal field before returning
+  delete validated._ingredient_base_unit;
 
   // prep_notes — optional
   const prepNotes = (raw.prep_notes ?? '').trim();

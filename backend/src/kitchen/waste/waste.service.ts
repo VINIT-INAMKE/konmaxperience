@@ -96,7 +96,14 @@ export class WasteService {
           latestPrice.unit,
           this.prisma,
         );
-        convertedQtyForCost = toPrice ?? 0;
+        if (toPrice === null) {
+          console.warn(
+            `[Waste] No unit conversion from ${dto.unit} to ${latestPrice.unit} for ingredient ${dto.ingredient_id} — cost_impact set to 0`,
+          );
+          convertedQtyForCost = 0;
+        } else {
+          convertedQtyForCost = toPrice;
+        }
         cost_impact = convertedQtyForCost * Number(latestPrice.price);
       }
 
@@ -190,16 +197,33 @@ export class WasteService {
         },
       });
 
-      // cost_impact = (dto.quantity / quantity_produced) * computed_cost
+      // Validate unit match or convert to prep batch unit
+      let wasteQtyInBatchUnit = dto.quantity;
+      if (dto.unit !== prepBatch.unit) {
+        const converted = await convertUnit(
+          dto.quantity,
+          dto.unit,
+          prepBatch.unit,
+          this.prisma,
+        );
+        if (converted === null) {
+          throw new BadRequestException(
+            `No unit conversion from ${dto.unit} to ${prepBatch.unit} — prep batch uses ${prepBatch.unit}`,
+          );
+        }
+        wasteQtyInBatchUnit = converted;
+      }
+
+      // cost_impact = (wasteQtyInBatchUnit / quantity_produced) * computed_cost
       const quantityProduced = Number(prepBatch.quantity_produced);
       if (quantityProduced > 0) {
         cost_impact =
-          (dto.quantity / quantityProduced) *
+          (wasteQtyInBatchUnit / quantityProduced) *
           Number(prepBatch.recipe.computed_cost ?? 0);
       }
 
       // Check sufficiency before decrementing
-      if (Number(prepBatch.quantity_remaining) < dto.quantity) {
+      if (Number(prepBatch.quantity_remaining) < wasteQtyInBatchUnit) {
         throw new BadRequestException(
           'Waste quantity exceeds remaining prep batch quantity',
         );
@@ -222,11 +246,11 @@ export class WasteService {
         });
 
         // Decrement PrepBatch quantity_remaining and mark depleted if needed
-        const newRemaining = Number(prepBatch.quantity_remaining) - dto.quantity;
+        const newRemaining = Number(prepBatch.quantity_remaining) - wasteQtyInBatchUnit;
         await tx.prepBatch.update({
           where: { id: dto.prep_batch_id },
           data: {
-            quantity_remaining: { decrement: dto.quantity },
+            quantity_remaining: { decrement: wasteQtyInBatchUnit },
             ...(newRemaining <= 0 ? { status: 'depleted' } : {}),
           },
         });

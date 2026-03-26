@@ -28,12 +28,13 @@ export async function validateVendorPricingRow(
 
   // ingredient — required, resolved by name to ingredient_id
   const ingredientName = (raw.ingredient ?? '').trim();
+  let ingredientBaseUnit: string | null = null;
   if (!ingredientName) {
     errors.push({ field: 'ingredient', message: 'Required' });
   } else {
     const ingredient = await prisma.ingredient.findFirst({
       where: { name: { equals: ingredientName, mode: 'insensitive' } },
-      select: { id: true },
+      select: { id: true, base_unit: true },
     });
     if (!ingredient) {
       errors.push({
@@ -42,6 +43,7 @@ export async function validateVendorPricingRow(
       });
     } else {
       validated.ingredient_id = ingredient.id;
+      ingredientBaseUnit = ingredient.base_unit;
     }
   }
 
@@ -84,6 +86,34 @@ export async function validateVendorPricingRow(
     }
   }
 
+  // Check unit conversion path from price unit to ingredient base_unit
+  const warnings: CellError[] = [];
+  if (ingredientBaseUnit && validated.unit) {
+    const priceUnit = validated.unit as string;
+    if (priceUnit !== ingredientBaseUnit) {
+      const conversion = await prisma.unitConversion.findFirst({
+        where: {
+          OR: [
+            {
+              from_unit: { equals: priceUnit, mode: 'insensitive' },
+              to_unit: { equals: ingredientBaseUnit, mode: 'insensitive' },
+            },
+            {
+              from_unit: { equals: ingredientBaseUnit, mode: 'insensitive' },
+              to_unit: { equals: priceUnit, mode: 'insensitive' },
+            },
+          ],
+        },
+      });
+      if (!conversion) {
+        warnings.push({
+          field: 'unit',
+          message: `No unit conversion from ${priceUnit} to ${ingredientBaseUnit} — cost calculations may be incomplete`,
+        });
+      }
+    }
+  }
+
   // Vendor pricing duplicate detection: same vendor_id + ingredient_id + effective_date
   let existingId: string | undefined;
   let status: ImportRow['status'] = errors.length > 0 ? 'invalid' : 'valid';
@@ -108,5 +138,5 @@ export async function validateVendorPricingRow(
     }
   }
 
-  return { rowIndex, raw, validated, errors, status, existingId };
+  return { rowIndex, raw, validated, errors, warnings, status, existingId };
 }

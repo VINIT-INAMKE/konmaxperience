@@ -25,6 +25,7 @@ export interface ImportRow {
   raw: Record<string, string>; // original parsed values
   validated: Record<string, unknown>; // coerced typed values
   errors: CellError[]; // empty = valid
+  warnings?: CellError[]; // non-blocking issues (e.g. missing unit conversions)
   status: 'valid' | 'invalid' | 'duplicate' | 'blocked';
   existingId?: string; // set when duplicate detected by name
 }

@@ -7,8 +7,7 @@ const VALID_CATEGORIES = [
   'beverage', 'seafood', 'condiment', 'sweetener', 'nut', 'herb', 'other',
 ];
 const VALID_BASE_UNITS = [
-  'g', 'ml', 'pieces', 'kg', 'L', 'dozen', 'tray', 'packet', 'bunch',
-  'can', 'bottle', 'oz', 'lb',
+  'g', 'kg', 'ml', 'L', 'pieces', 'dozen', 'oz', 'lb',
 ];
 
 export async function validateIngredientRow(

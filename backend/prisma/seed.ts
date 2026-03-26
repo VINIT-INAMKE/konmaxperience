@@ -179,12 +179,26 @@ const CHANNELS = [
 ];
 
 const UNIT_CONVERSIONS = [
-  { from_unit: 'kg',     to_unit: 'g',      factor: 1000    },
-  { from_unit: 'g',      to_unit: 'kg',     factor: 0.001   },
-  { from_unit: 'L',      to_unit: 'ml',     factor: 1000    },
-  { from_unit: 'ml',     to_unit: 'L',      factor: 0.001   },
-  { from_unit: 'dozen',  to_unit: 'pieces', factor: 12      },
-  { from_unit: 'pieces', to_unit: 'dozen',  factor: 0.08333 },
+  { from_unit: 'kg',     to_unit: 'g',      factor: 1000      },
+  { from_unit: 'g',      to_unit: 'kg',     factor: 0.001     },
+  { from_unit: 'L',      to_unit: 'ml',     factor: 1000      },
+  { from_unit: 'ml',     to_unit: 'L',      factor: 0.001     },
+  { from_unit: 'dozen',  to_unit: 'pieces', factor: 12        },
+  { from_unit: 'pieces', to_unit: 'dozen',  factor: 0.08333   },
+  { from_unit: 'oz',     to_unit: 'g',      factor: 28.3495   },
+  { from_unit: 'g',      to_unit: 'oz',     factor: 0.035274  },
+  { from_unit: 'lb',     to_unit: 'kg',     factor: 0.453592  },
+  { from_unit: 'kg',     to_unit: 'lb',     factor: 2.20462   },
+  { from_unit: 'lb',     to_unit: 'g',      factor: 453.592   },
+  { from_unit: 'g',      to_unit: 'lb',     factor: 0.00220462 },
+  { from_unit: 'oz',     to_unit: 'kg',     factor: 0.0283495 },
+  { from_unit: 'kg',     to_unit: 'oz',     factor: 35.274    },
+  { from_unit: 'tsp',    to_unit: 'ml',     factor: 5         },
+  { from_unit: 'ml',     to_unit: 'tsp',    factor: 0.2       },
+  { from_unit: 'tbsp',   to_unit: 'ml',     factor: 15        },
+  { from_unit: 'ml',     to_unit: 'tbsp',   factor: 0.0667    },
+  { from_unit: 'cup',    to_unit: 'ml',     factor: 240       },
+  { from_unit: 'ml',     to_unit: 'cup',    factor: 0.00417   },
 ];
 
 // --- Tiptap JSON helpers ---
