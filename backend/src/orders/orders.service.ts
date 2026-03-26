@@ -8,6 +8,7 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import * as QRCode from 'qrcode';
 import { PrismaService } from '../prisma/prisma.service';
 import { RazorpayService } from '../razorpay/razorpay.service';
+import { PusherService } from '../chat/pusher.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { RecordPaymentDto } from './dto/record-payment.dto';
 import { UpdateDeliveryDto } from './dto/update-delivery.dto';
@@ -34,6 +35,7 @@ export class OrdersService {
     private readonly prisma: PrismaService,
     private readonly eventEmitter: EventEmitter2,
     private readonly razorpayService: RazorpayService,
+    private readonly pusherService: PusherService,
   ) {}
 
   // ---------------------------------------------------------------
@@ -249,7 +251,7 @@ export class OrdersService {
   async updateOrderStatus(orderId: string, newStatus: string) {
     const order = await this.prisma.order.findUnique({
       where: { id: orderId },
-      select: { id: true, status: true },
+      select: { id: true, status: true, customer_id: true, order_number: true },
     });
 
     if (!order) {
@@ -270,6 +272,19 @@ export class OrdersService {
       if (cancelResult.count === 0) {
         throw new ConflictException('Order status was changed by another request. Please retry.');
       }
+
+      // Pusher trigger for customer orders (D-13 + Pitfall 4: null-guard for POS orders)
+      if (order.customer_id) {
+        this.pusherService
+          .trigger(`private-customer-${order.customer_id}`, 'order.status-changed', {
+            orderId: order.id,
+            orderNumber: order.order_number,
+            status: 'cancelled',
+            updatedAt: new Date().toISOString(),
+          })
+          .catch((err) => console.error('[Pusher] Status trigger error:', err));
+      }
+
       return this.prisma.order.findUnique({ where: { id: orderId } });
     }
 
@@ -289,6 +304,19 @@ export class OrdersService {
     if (updateResult.count === 0) {
       throw new ConflictException('Order status was changed by another request. Please retry.');
     }
+
+    // Pusher trigger for customer orders (D-13 + Pitfall 4: null-guard for POS orders)
+    if (order.customer_id) {
+      this.pusherService
+        .trigger(`private-customer-${order.customer_id}`, 'order.status-changed', {
+          orderId: order.id,
+          orderNumber: order.order_number,
+          status: newStatus,
+          updatedAt: new Date().toISOString(),
+        })
+        .catch((err) => console.error('[Pusher] Status trigger error:', err));
+    }
+
     return this.prisma.order.findUnique({ where: { id: orderId } });
   }
 
@@ -372,7 +400,7 @@ export class OrdersService {
   async updateDelivery(orderId: string, dto: UpdateDeliveryDto) {
     const order = await this.prisma.order.findUnique({
       where: { id: orderId },
-      select: { id: true, channel: true, status: true, delivery_status: true, delivery_address: true, created_by: true },
+      select: { id: true, channel: true, status: true, delivery_status: true, delivery_address: true, created_by: true, customer_id: true },
     });
 
     if (!order) {
@@ -420,6 +448,17 @@ export class OrdersService {
         createdBy: order.created_by,
       });
     } catch (e) { /* event emission failed - non-critical */ }
+
+    // Pusher trigger for customer orders (D-13 + Pitfall 4: null-guard for POS orders)
+    if (order.customer_id) {
+      this.pusherService
+        .trigger(`private-customer-${order.customer_id}`, 'delivery.updated', {
+          orderId: order.id,
+          deliveryStatus: dto.delivery_status ?? order.delivery_status,
+          updatedAt: new Date().toISOString(),
+        })
+        .catch((err) => console.error('[Pusher] Delivery trigger error:', err));
+    }
 
     return updated;
   }

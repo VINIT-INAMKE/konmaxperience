@@ -2,6 +2,7 @@ import { Injectable, UnauthorizedException, ServiceUnavailableException } from '
 import { RazorpayService } from '../razorpay/razorpay.service';
 import { RedisService } from '../customer-auth/redis.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { PusherService } from '../chat/pusher.service';
 
 @Injectable()
 export class WebhooksService {
@@ -9,6 +10,7 @@ export class WebhooksService {
     private readonly razorpayService: RazorpayService,
     private readonly redisService: RedisService,
     private readonly prisma: PrismaService,
+    private readonly pusherService: PusherService,
   ) {}
 
   async processWebhook(rawBody: Buffer | undefined, signature: string, eventId: string) {
@@ -57,8 +59,7 @@ export class WebhooksService {
           await this.handlePosOrderPayment(payment, notes.entity_id);
           break;
         case 'marketplace':
-          // Phase 24 — noop for now
-          console.log('[Webhook] Marketplace payment received — not yet implemented');
+          await this.handleMarketplacePayment(payment, notes.entity_id);
           break;
         default:
           console.warn('[Webhook] Unknown payment type:', notes.type);
@@ -123,6 +124,91 @@ export class WebhooksService {
       where: { id: orderId, status: 'placed' },
       data: { status: 'preparing' },
     });
+  }
+
+  private async handleMarketplacePayment(payment: any, customerId: string) {
+    // Backup path — normal flow is POST /customer/orders/confirm
+    // Webhook fires for payment.captured in case confirm endpoint wasn't called
+    // (browser crash, timeout, etc.)
+
+    // Check if order already exists for this razorpay_payment_id
+    const existingPayment = await this.prisma.payment.findFirst({
+      where: { razorpay_payment_id: payment.id },
+    });
+    if (existingPayment) {
+      console.log('[Webhook] Marketplace order already confirmed:', payment.id);
+      return;
+    }
+
+    // Read pending order data from Redis
+    const redis = this.redisService.getClient();
+    const pendingRaw = await redis?.get(`pending_order:${payment.order_id}`);
+    if (!pendingRaw) {
+      console.warn('[Webhook] No pending order found for:', payment.order_id);
+      return;
+    }
+
+    const pendingData = JSON.parse(pendingRaw);
+
+    // Build delivery address string if delivery channel
+    let deliveryAddress: string | null = null;
+    if (pendingData.channel === 'delivery' && pendingData.deliveryAddressId) {
+      const addr = await this.prisma.customerAddress.findFirst({
+        where: { id: pendingData.deliveryAddressId, customer_id: customerId },
+      });
+      if (addr) {
+        deliveryAddress = addr.address;
+        if (addr.landmark) deliveryAddress += `, ${addr.landmark}`;
+        deliveryAddress += ` - ${addr.pincode}`;
+      }
+    }
+
+    // Create Order + OrderItems + Payment using inline Prisma transaction
+    const order = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.order.create({
+        data: {
+          channel: pendingData.channel,
+          customer_id: customerId,
+          subtotal: pendingData.subtotal,
+          channel_modifier_amount: pendingData.modifierAmount,
+          total: pendingData.total,
+          delivery_address: deliveryAddress,
+          status: 'placed',
+          items: {
+            create: pendingData.cart.items.map((item: any) => ({
+              menu_item_id: item.menuItemId,
+              quantity: item.quantity,
+              unit_price: item.unitPrice,
+            })),
+          },
+          payment: {
+            create: {
+              method: 'razorpay',
+              amount: pendingData.total,
+              status: 'paid',
+              razorpay_order_id: payment.order_id,
+              razorpay_payment_id: payment.id,
+            },
+          },
+        },
+      });
+      return created;
+    });
+
+    // Clean up Redis
+    if (redis) {
+      await redis.del(`pending_order:${payment.order_id}`);
+      await redis.del(`cart:${customerId}`);
+    }
+
+    // Trigger Pusher
+    this.pusherService
+      .trigger(`private-customer-${customerId}`, 'order.placed', {
+        orderId: order.id,
+        orderNumber: order.order_number,
+        status: 'placed',
+      })
+      .catch((err) => console.error('[Pusher] Webhook order trigger error:', err));
   }
 
   private async handleRefundProcessed(payload: any) {
