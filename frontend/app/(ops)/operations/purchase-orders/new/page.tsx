@@ -33,6 +33,7 @@ export default function NewPurchaseOrderPage() {
   const [vendorId, setVendorId] = useState('');
   const [zoneId, setZoneId] = useState('');
   const [notes, setNotes] = useState('');
+  const [linkedTaskId, setLinkedTaskId] = useState('');
   const [lineItems, setLineItems] = useState<LineItemState[]>([
     { ingredient_id: '', quantity: '', unit: '', unit_cost: '' },
   ]);
@@ -50,6 +51,11 @@ export default function NewPurchaseOrderPage() {
   const { data: zones = [] } = useQuery({
     queryKey: ['zones'],
     queryFn: () => apiClient.get<Zone[]>('/zones'),
+  });
+
+  const { data: activeTasks = [] } = useQuery({
+    queryKey: ['tasks', 'for-linking'],
+    queryFn: () => apiClient.get<{ id: string; title: string; mission_id: string }[]>('/tasks'),
   });
 
   // Default zone to first zone once loaded
@@ -133,6 +139,7 @@ export default function NewPurchaseOrderPage() {
       vendor_id: vendorId,
       zone_id: effectiveZoneId,
       notes: notes || undefined,
+      linked_task_id: linkedTaskId || undefined,
       status: saveAsOrdered ? 'ordered' : 'draft',
       lines: lineItems
         .filter((l) => l.ingredient_id)
@@ -293,7 +300,7 @@ export default function NewPurchaseOrderPage() {
           </div>
         </div>
 
-        {/* Section 3: Notes + Actions */}
+        {/* Section 3: Notes + Link to Task + Actions */}
         <div className="space-y-4">
           <div className="space-y-2">
             <label className="text-sm font-medium">Notes (optional)</label>
@@ -303,6 +310,30 @@ export default function NewPurchaseOrderPage() {
               onChange={(e) => setNotes(e.target.value)}
               rows={3}
             />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Link to Task (optional)</label>
+            <Select
+              value={linkedTaskId}
+              onValueChange={(val) => setLinkedTaskId(val ?? '')}
+            >
+              <SelectTrigger className="w-full h-9 text-sm">
+                <SelectValue placeholder="No linked task">
+                  {(value: string) => {
+                    if (!value) return 'No linked task';
+                    return activeTasks.find((t) => t.id === value)?.title ?? 'No linked task';
+                  }}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {activeTasks.slice(0, 50).map((t) => (
+                  <SelectItem key={t.id} value={t.id}>
+                    {t.title}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="flex items-center gap-3 pt-2">
