@@ -137,7 +137,7 @@ export function TaskKanbanCard({ task, isDraggable }: TaskKanbanCardProps) {
           {task.readiness_value > 0 && (
             <Badge variant="outline" className="text-[10px] h-4 px-1 text-blue-500 border-blue-500/30">
               <TrendingUp className="size-2.5 mr-0.5" />
-              +{task.readiness_value}
+              +{task.readiness_value}{task.readiness_meter?.name ? ` ${task.readiness_meter.name.length > 12 ? task.readiness_meter.name.slice(0, 12) + '...' : task.readiness_meter.name}` : ''}
             </Badge>
           )}
         </div>

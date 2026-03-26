@@ -84,6 +84,20 @@ export interface Task {
   created_at: string;
   updated_at: string;
   is_own?: boolean;
+  quest?: {
+    id: string;
+    title: string;
+    mission?: { id: string; title: string };
+  } | null;
+  mission?: { id: string; title: string } | null;
+  readiness_meter?: { id: string; name: string } | null;
+  linked_assets?: { id: string; name: string; asset_type: string }[];
+  linked_purchase_orders?: {
+    id: string;
+    status: string;
+    total_amount: number;
+    vendor: { id: string; name: string };
+  }[];
 }
 
 export interface CreateTaskDto {

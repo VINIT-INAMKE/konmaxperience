@@ -146,32 +146,34 @@ export function TaskListView({
           <TableHeader>
             <TableRow>
               <TableHead
-                className="cursor-pointer select-none w-[35%]"
+                className="cursor-pointer select-none w-[25%]"
                 onClick={() => toggleSort('title')}
               >
                 Title{sortIndicator('title')}
               </TableHead>
               <TableHead
-                className="cursor-pointer select-none w-[12%]"
+                className="cursor-pointer select-none w-[10%]"
                 onClick={() => toggleSort('status')}
               >
                 Status{sortIndicator('status')}
               </TableHead>
               <TableHead
-                className="cursor-pointer select-none w-[12%]"
+                className="cursor-pointer select-none w-[10%]"
                 onClick={() => toggleSort('priority')}
               >
                 Priority{sortIndicator('priority')}
               </TableHead>
-              <TableHead className="w-[15%]">Owner</TableHead>
+              <TableHead className="w-[12%]">Owner</TableHead>
               <TableHead
-                className="cursor-pointer select-none w-[14%]"
+                className="cursor-pointer select-none w-[10%]"
                 onClick={() => toggleSort('due_date')}
               >
                 Due Date{sortIndicator('due_date')}
               </TableHead>
-              <TableHead className="w-[10%]">XP</TableHead>
-              <TableHead className="w-[10%]">Blocked</TableHead>
+              <TableHead className="hidden md:table-cell w-[12%]">Quest</TableHead>
+              <TableHead className="hidden md:table-cell w-[12%]">Mission</TableHead>
+              <TableHead className="w-[8%]">XP</TableHead>
+              <TableHead className="w-[8%]">Blocked</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -252,6 +254,16 @@ export function TaskListView({
                         {task.due_date
                           ? `${format(parseISO(task.due_date), 'MMM d')}${isOverdue ? ' \u00b7 Overdue' : ''}`
                           : '-'}
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell text-xs text-muted-foreground">
+                        <span className="truncate max-w-[140px] block">
+                          {task.quest?.title ?? '-'}
+                        </span>
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell text-xs text-muted-foreground">
+                        <span className="truncate max-w-[140px] block">
+                          {task.quest?.mission?.title ?? task.mission?.title ?? '-'}
+                        </span>
                       </TableCell>
                       <TableCell className="text-xs">
                         {task.valid ? (

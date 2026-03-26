@@ -55,7 +55,10 @@ export function EvidenceSection({ task, isOwn, isAdmin }: EvidenceSectionProps) 
       });
 
       // Fire toast
-      toast.success(`Task validated! +${task.valid_xp} XP`);
+      const readinessMsg = task.readiness_meter_id && task.readiness_value > 0
+        ? ` \u00b7 +${task.readiness_value} ${task.readiness_meter?.name ?? 'Readiness'}`
+        : '';
+      toast.success(`Task validated! +${task.valid_xp} XP${readinessMsg}`);
     }
     prevValidRef.current = task.valid;
   }, [task.valid, task.valid_xp]);
