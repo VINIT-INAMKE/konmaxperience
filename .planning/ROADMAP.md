@@ -98,7 +98,7 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 14 -> 14.x -> 15 -> 15.x -> 16 -> 16.x -> 17 -> 17.x -> 18 -> 18.x -> 19 -> 19.x -> 20 -> 20.x -> 21 -> 22 -> 23
+Phases execute in numeric order: 14 -> 14.x -> 15 -> 15.x -> 16 -> 16.x -> 17 -> 17.x -> 18 -> 18.x -> 19 -> 19.x -> 20 -> 20.x -> 21 -> 22 -> 23 -> 24
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -112,6 +112,7 @@ Phases execute in numeric order: 14 -> 14.x -> 15 -> 15.x -> 16 -> 16.x -> 17 ->
 | 21. In-App Chat | v1.1 | 4/4 | Complete    | 2026-03-23 |
 | 22. Recipe Page Redesign | v1.1 | 4/4 | Complete    | 2026-03-24 |
 | 23. Razorpay Payments + Customer Auth | v1.2 | 4/4 | Complete    | 2026-03-25 |
+| 24. Customer Marketplace | v1.2 | 0/4 | Planning    | — |
 
 ### Phase 18: Data Export
 **Goal**: CSV/XLSX export for all 22 report types with server-side file generation, R2 storage, export history, and export buttons on 13 data pages
@@ -237,12 +238,24 @@ Plans:
 
 ### Phase 24: Customer Marketplace
 
-**Goal:** Full customer-facing marketplace — cart + checkout with Razorpay custom checkout modal, takeaway & delivery ordering, delivery address management, checkpoint-based order tracking (staff fires events, customer sees timeline via Pusher), customer order history, booking/order receipt download (PDF/printable), and enriched customer profile (order history, saved addresses, active order tracking)
+**Goal:** Full customer-facing marketplace — cart + checkout with Razorpay custom checkout modal, takeaway & delivery ordering, delivery address management, checkpoint-based order tracking (staff fires events, customer sees timeline via Pusher), customer order history, booking/order receipt download (printable HTML), and enriched customer profile (order history, saved addresses, active order tracking)
 **Depends on:** Phase 23 — customer auth and Razorpay payment infrastructure
-**Plans:** 4/4 plans complete
+**Requirements:** MKT-01, MKT-02, MKT-03, MKT-04, MKT-05, MKT-06, MKT-07, MKT-08
+**Success Criteria** (what must be TRUE):
+  1. Customer can browse menu with category tabs, add items via quantity steppers, and see floating cart bar
+  2. Customer can checkout via cart bottom sheet with Pickup/Delivery toggle, Google Places address input, and Razorpay payment
+  3. Customer can track order in real-time at /orders/[id]/track with 4-step timeline updating via Pusher
+  4. Customer can view order history, re-order past orders, and download HTML receipts at /profile
+  5. Customer can manage delivery addresses with Google Places autocomplete and pincode serviceability check
+  6. Cart persists in localStorage before login and syncs to Redis on OTP verify
+  7. Unavailable items are greyed out and cannot be added to cart
+**Plans**: 4 plans
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 24 to break down)
+- [ ] 24-01-PLAN.md -- Backend foundation: Prisma migration (CustomerAddress), CustomerOrdersModule with cart Redis CRUD, address CRUD, Pusher customer auth, apiClient fix
+- [ ] 24-02-PLAN.md -- Backend checkout + tracking: checkout/confirm endpoints, Pusher triggers in order status/delivery updates, webhook marketplace handler, receipt endpoints, unit tests
+- [ ] 24-03-PLAN.md -- Frontend cart + menu: Zustand cart store, CSS tokens, menu page enhancement (CategoryTabBar, MenuItemOrderCard, FloatingCartBar, CartBottomSheet, Google Places)
+- [ ] 24-04-PLAN.md -- Frontend tracking + profile: order tracking page with Pusher timeline, profile enrichment (Orders/Addresses/Bookings tabs, re-order flow), human verification
 
 ### Phase 25: Third-Party Delivery Integration
 
