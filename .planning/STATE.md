@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: User Guide & Data Management
 status: unknown
-stopped_at: Completed 23-04-PLAN.md (all tasks complete, checkpoint approved)
-last_updated: "2026-03-25T22:25:48.108Z"
+stopped_at: Completed 24-01-PLAN.md
+last_updated: "2026-03-26T09:19:45.249Z"
 progress:
   total_phases: 13
   completed_phases: 10
-  total_plans: 36
-  completed_plans: 36
+  total_plans: 40
+  completed_plans: 37
 ---
 
 # Project State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-22)
 
 **Core value:** Every piece of work must be evidence-backed, approved, and validated before it counts -- turning real execution into measurable readiness and progress.
-**Current focus:** Phase 23 — razorpay-payments-customer-auth
+**Current focus:** Phase 24 — customer-marketplace
 
 ## Current Position
 
-Phase: 24
-Plan: Not started
+Phase: 24 (customer-marketplace) — EXECUTING
+Plan: 2 of 4
 
 ## Performance Metrics
 
@@ -82,6 +82,7 @@ Plan: Not started
 | Phase 23 P03 | 13min | 2 tasks | 13 files |
 | Phase 23 P04 | 7min | 2 tasks | 16 files |
 | Phase 23 P04 | 7 | 3 tasks | 16 files |
+| Phase 24 P01 | 11min | 2 tasks | 16 files |
 
 ## Accumulated Context
 
@@ -190,6 +191,7 @@ Recent decisions affecting current work:
 - [Phase 23]: optionsRef pattern in useRazorpay to avoid stale closure in Razorpay callbacks
 - [Phase 23]: Auto-verify OTP when 6 digits entered for faster UX
 - [Phase 23]: Cookie-based session detection in public layout for login/profile link (document.cookie check for instant render)
+- [Phase 24]: UpdateAddressDto written manually (no @nestjs/mapped-types); KDS filters null zone_id for customer orders; Pusher channel: private-customer-{customerId}
 
 ### Roadmap Evolution
 
@@ -213,6 +215,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-25T22:12:34.030Z
-Stopped at: Completed 23-04-PLAN.md (all tasks complete, checkpoint approved)
+Last session: 2026-03-26T09:19:45.240Z
+Stopped at: Completed 24-01-PLAN.md
 Resume file: None

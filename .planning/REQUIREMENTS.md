@@ -138,12 +138,12 @@ Requirements for milestone v1.1 — User Guide System & Data Management. Each ma
 
 ### Customer Marketplace
 
-- [ ] **MKT-01**: Cart stored in Redis (Upstash) keyed by cart:{customerId} with 7-day TTL. Pre-login cart in Zustand with localStorage persist. Sync to Redis on login with merge logic. Login required at checkout only.
+- [x] **MKT-01**: Cart stored in Redis (Upstash) keyed by cart:{customerId} with 7-day TTL. Pre-login cart in Zustand with localStorage persist. Sync to Redis on login with merge logic. Login required at checkout only.
 - [ ] **MKT-02**: Swiggy-style /menu page with horizontal category tabs, horizontal item cards with +/- quantity steppers, floating cart bar, and availability badges. Unavailable items greyed out and not addable.
 - [ ] **MKT-03**: POST /customer/orders creates Razorpay order from Redis cart with server-side price validation. POST /customer/orders/confirm verifies payment + creates Order/OrderItems/Payment in serializable transaction. Cart deleted on confirm.
-- [ ] **MKT-04**: Customer self-ordering for takeaway and delivery only. Channel modifier applied at checkout using existing ChannelModifier model. Dine-in remains staff POS only.
+- [x] **MKT-04**: Customer self-ordering for takeaway and delivery only. Channel modifier applied at checkout using existing ChannelModifier model. Dine-in remains staff POS only.
 - [ ] **MKT-05**: Real-time order tracking at /orders/[id]/track with 4-step vertical timeline. Pusher private-customer-{id} channel. Staff updateOrderStatus and updateDelivery trigger Pusher events. Simplified customer-facing statuses mapped from internal KDS statuses.
-- [ ] **MKT-06**: CustomerAddress Prisma model with CRUD endpoints. Google Places Autocomplete for address input with pincode and lat/lng extraction. Pincode-based delivery zone restriction via DELIVERY_PINCODES env var.
+- [x] **MKT-06**: CustomerAddress Prisma model with CRUD endpoints. Google Places Autocomplete for address input with pincode and lat/lng extraction. Pincode-based delivery zone restriction via DELIVERY_PINCODES env var.
 - [ ] **MKT-07**: Server-rendered HTML receipts at GET /customer/orders/:id/receipt and GET /customer/bookings/:id/receipt. Print-optimized CSS. Tamper-proof (all data rendered server-side). CustomerGuard with ownership check.
 - [ ] **MKT-08**: Customer profile /profile enriched with Orders tab (history + re-order), Addresses tab (CRUD + set-default), and Bookings tab. Re-order checks availability, prompts on cart conflict, skips unavailable items with toast.
 
