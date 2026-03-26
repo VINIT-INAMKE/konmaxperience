@@ -2,8 +2,14 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { sanitizeNumber } from '../import-types';
 import type { CellError, ImportRow } from '../import-types';
 
-const VALID_CATEGORIES = ['dairy', 'vegetable', 'spice', 'grain', 'meat', 'oil'];
-const VALID_BASE_UNITS = ['g', 'ml', 'pieces', 'kg', 'L'];
+const VALID_CATEGORIES = [
+  'dairy', 'vegetable', 'spice', 'grain', 'meat', 'oil', 'fruit', 'bakery',
+  'beverage', 'seafood', 'condiment', 'sweetener', 'nut', 'herb', 'other',
+];
+const VALID_BASE_UNITS = [
+  'g', 'ml', 'pieces', 'kg', 'L', 'dozen', 'tray', 'packet', 'bunch',
+  'can', 'bottle', 'oz', 'lb',
+];
 
 export async function validateIngredientRow(
   raw: Record<string, string>,

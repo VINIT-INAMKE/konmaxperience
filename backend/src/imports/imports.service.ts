@@ -21,6 +21,7 @@ import {
 } from './validators/recipes.validator';
 import { validateMenuCategoryRow } from './validators/menu-categories.validator';
 import { validateMenuItemRow } from './validators/menu-items.validator';
+import { validatePurchaseOrderRow } from './validators/purchase-orders.validator';
 import {
   IMPORT_TYPE_CONFIG,
   type ImportType,
@@ -272,6 +273,8 @@ export class ImportsService {
         return validateMenuCategoryRow(raw, rowIndex, this.prisma);
       case 'menu_items':
         return validateMenuItemRow(raw, rowIndex, this.prisma);
+      case 'purchase_orders':
+        return validatePurchaseOrderRow(raw, rowIndex, this.prisma);
       default:
         return {
           rowIndex,
@@ -804,6 +807,14 @@ export class ImportsService {
             priority: v.priority as string,
             xp: (v.xp as number) ?? 25,
             due_date: v.due_date ? (v.due_date as Date) : undefined,
+            readiness_meter_id: v.readiness_meter_id
+              ? (v.readiness_meter_id as string)
+              : undefined,
+            kpi_id: v.kpi_id ? (v.kpi_id as string) : undefined,
+            depends_on_task_id: v.depends_on_task_id
+              ? (v.depends_on_task_id as string)
+              : undefined,
+            requires_approval: (v.requires_approval as boolean) ?? true,
           },
         });
         break;
@@ -851,6 +862,21 @@ export class ImportsService {
             category_id: v.category_id as string,
             base_price: v.base_price as number,
             available: (v.available as boolean) ?? true,
+          },
+        });
+        break;
+      case 'purchase_orders':
+        await tx.purchaseOrder.create({
+          data: {
+            vendor_id: v.vendor_id as string,
+            zone_id: v.zone_id as string,
+            status: (v.status as string) || 'draft',
+            notes: v.notes ? (v.notes as string) : undefined,
+            linked_task_id: v.linked_task_id
+              ? (v.linked_task_id as string)
+              : undefined,
+            ordered_by: userId,
+            total_amount: 0,
           },
         });
         break;
@@ -934,7 +960,7 @@ export class ImportsService {
         break;
       case 'tasks':
         // D-02: Task validator already blocks completed tasks (status='blocked')
-        // Only SAFE fields: description, priority, xp, due_date, domain
+        // Only SAFE fields: description, priority, xp, due_date, domain, task_type, readiness_meter, kpi, depends_on, requires_approval
         await tx.task.update({
           where: { id },
           data: {
@@ -944,6 +970,15 @@ export class ImportsService {
             xp: (v.xp as number) ?? 25,
             due_date: v.due_date ? (v.due_date as Date) : undefined,
             domain: v.domain as string,
+            task_type: v.task_type as string,
+            readiness_meter_id: v.readiness_meter_id
+              ? (v.readiness_meter_id as string)
+              : undefined,
+            kpi_id: v.kpi_id ? (v.kpi_id as string) : undefined,
+            depends_on_task_id: v.depends_on_task_id
+              ? (v.depends_on_task_id as string)
+              : undefined,
+            requires_approval: (v.requires_approval as boolean) ?? true,
             // NEVER: status, valid, verified, valid_xp, blocked, completed_at, readiness_value
           },
         });
@@ -997,6 +1032,18 @@ export class ImportsService {
             base_price: v.base_price as number,
             available: (v.available as boolean) ?? true,
             // NEVER: status
+          },
+        });
+        break;
+      case 'purchase_orders':
+        await tx.purchaseOrder.update({
+          where: { id },
+          data: {
+            status: (v.status as string) || 'draft',
+            notes: v.notes ? (v.notes as string) : undefined,
+            linked_task_id: v.linked_task_id
+              ? (v.linked_task_id as string)
+              : undefined,
           },
         });
         break;

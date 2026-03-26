@@ -11,6 +11,7 @@ export const IMPORT_TYPES = [
   'recipes',
   'menu_categories',
   'menu_items',
+  'purchase_orders',
 ] as const;
 export type ImportType = (typeof IMPORT_TYPES)[number];
 
@@ -179,6 +180,10 @@ export const IMPORT_TYPE_CONFIG: Record<ImportType, ImportTypeConfig> = {
       'priority',
       'xp',
       'due_date',
+      'readiness_meter',
+      'kpi',
+      'depends_on',
+      'requires_approval',
     ],
     requiredColumns: [
       'title',
@@ -267,5 +272,12 @@ export const IMPORT_TYPE_CONFIG: Record<ImportType, ImportTypeConfig> = {
       'available',
     ],
     requiredColumns: ['name', 'recipe', 'category', 'brand', 'base_price'],
+  },
+  purchase_orders: {
+    label: 'Purchase Orders',
+    description:
+      'Bulk import PO headers with vendor, zone, and optional task linking. Lines must be added in-app.',
+    columns: ['vendor', 'zone', 'status', 'notes', 'linked_task'],
+    requiredColumns: ['vendor', 'zone', 'status'],
   },
 };

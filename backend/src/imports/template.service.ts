@@ -64,6 +64,10 @@ const SAMPLE_DATA: Record<ImportType, Record<string, string>> = {
     priority: 'high',
     xp: '30',
     due_date: '2026-04-03',
+    readiness_meter: 'Kitchen Readiness',
+    kpi: 'Food Cost Percentage',
+    depends_on: '',
+    requires_approval: 'true',
   },
   kpis: {
     name: 'Food Cost Percentage',
@@ -111,6 +115,13 @@ const SAMPLE_DATA: Record<ImportType, Record<string, string>> = {
     base_price: '350',
     available: 'true',
   },
+  purchase_orders: {
+    vendor: 'Fresh Farms Ltd',
+    zone: 'Main Kitchen',
+    status: 'draft',
+    notes: 'Weekly vegetable order',
+    linked_task: '',
+  },
 };
 
 const INSTRUCTIONS: Record<ImportType, string[][]> = {
@@ -126,13 +137,13 @@ const INSTRUCTIONS: Record<ImportType, string[][]> = {
       'category',
       'Yes',
       'Text',
-      'Category — valid values: dairy, vegetable, spice, grain, meat, oil',
+      'Category — valid values: dairy, vegetable, spice, grain, meat, oil, fruit, bakery, beverage, seafood, condiment, sweetener, nut, herb, other',
     ],
     [
       'base_unit',
       'Yes',
       'Text',
-      'Base measurement unit — valid values: g, ml, pieces, kg, L',
+      'Base measurement unit — valid values: g, ml, pieces, kg, L, dozen, tray, packet, bunch, can, bottle, oz, lb',
     ],
     [
       'min_stock_level',
@@ -290,6 +301,25 @@ const INSTRUCTIONS: Record<ImportType, string[][]> = {
       'XP points. Defaults to 25 if blank. Set to 0 for no-XP tasks.',
     ],
     ['due_date', 'No', 'Date', 'YYYY-MM-DD format'],
+    [
+      'readiness_meter',
+      'No',
+      'Text',
+      'Must match an existing readiness meter name',
+    ],
+    ['kpi', 'No', 'Text', 'Must match an existing KPI name'],
+    [
+      'depends_on',
+      'No',
+      'Text',
+      'Task title of a dependency within the same mission',
+    ],
+    [
+      'requires_approval',
+      'No',
+      'Boolean',
+      'true or false. Defaults to true if blank.',
+    ],
     ['', '', '', ''],
     [
       'WARNING',
@@ -490,6 +520,47 @@ const INSTRUCTIONS: Record<ImportType, string[][]> = {
       '',
       '',
       'The recipe MUST be approved. The category is looked up by name within the brand.',
+    ],
+  ],
+  purchase_orders: [
+    ['Field Name', 'Required', 'Type', 'Description'],
+    [
+      'vendor',
+      'Yes',
+      'Text',
+      'Must match an existing vendor name',
+    ],
+    [
+      'zone',
+      'Yes',
+      'Text',
+      'Must match an existing zone name (receiving zone)',
+    ],
+    [
+      'status',
+      'Yes',
+      'Enum',
+      'Valid values: draft, ordered',
+    ],
+    ['notes', 'No', 'Text', 'Optional notes for the purchase order'],
+    [
+      'linked_task',
+      'No',
+      'Text',
+      'Optional task title to link this PO to. Must match an existing task.',
+    ],
+    ['', '', '', ''],
+    [
+      'NOTE',
+      '',
+      '',
+      'PO headers only — order lines (ingredients + quantities) must be added in the app after import.',
+    ],
+    [
+      'NOTE',
+      '',
+      '',
+      'total_amount starts at 0 and is computed from lines added in-app.',
     ],
   ],
 };

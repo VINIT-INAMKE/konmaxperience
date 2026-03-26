@@ -62,7 +62,13 @@ export async function validateTaskRow(
 
   // quest — optional, FK resolution by title within mission
   const questName = (raw.quest ?? '').trim();
-  if (questName && validated.mission_id) {
+  if (questName && !validated.mission_id) {
+    // FIX 5: Explicit error when quest specified but mission is invalid
+    errors.push({
+      field: 'quest',
+      message: 'Cannot resolve quest without a valid mission',
+    });
+  } else if (questName && validated.mission_id) {
     const quest = await prisma.quest.findFirst({
       where: {
         title: { equals: questName, mode: 'insensitive' },
@@ -174,6 +180,84 @@ export async function validateTaskRow(
     } else {
       validated.due_date = parsed;
     }
+  }
+
+  // readiness_meter — optional, FK resolution by name
+  const readinessMeterName = (raw.readiness_meter ?? '').trim();
+  if (readinessMeterName) {
+    const meter = await prisma.readinessMeter.findFirst({
+      where: { name: { equals: readinessMeterName, mode: 'insensitive' } },
+      select: { id: true },
+    });
+    if (!meter) {
+      errors.push({
+        field: 'readiness_meter',
+        message: `Readiness meter '${readinessMeterName}' not found`,
+      });
+    } else {
+      validated.readiness_meter_id = meter.id;
+    }
+  }
+
+  // kpi — optional, FK resolution by name
+  const kpiName = (raw.kpi ?? '').trim();
+  if (kpiName) {
+    const kpi = await prisma.kpi.findFirst({
+      where: { name: { equals: kpiName, mode: 'insensitive' } },
+      select: { id: true },
+    });
+    if (!kpi) {
+      errors.push({
+        field: 'kpi',
+        message: `KPI '${kpiName}' not found`,
+      });
+    } else {
+      validated.kpi_id = kpi.id;
+    }
+  }
+
+  // depends_on — optional, FK resolution by task title within same mission
+  const dependsOnTitle = (raw.depends_on ?? '').trim();
+  if (dependsOnTitle) {
+    if (!validated.mission_id) {
+      errors.push({
+        field: 'depends_on',
+        message: 'Cannot resolve dependency without a valid mission',
+      });
+    } else {
+      const depTask = await prisma.task.findFirst({
+        where: {
+          title: { equals: dependsOnTitle, mode: 'insensitive' },
+          mission_id: validated.mission_id as string,
+        },
+        select: { id: true },
+      });
+      if (!depTask) {
+        errors.push({
+          field: 'depends_on',
+          message: `Task '${dependsOnTitle}' not found in mission`,
+        });
+      } else {
+        validated.depends_on_task_id = depTask.id;
+      }
+    }
+  }
+
+  // requires_approval — optional boolean, defaults to true
+  const requiresApprovalRaw = (raw.requires_approval ?? '').trim().toLowerCase();
+  if (requiresApprovalRaw) {
+    if (requiresApprovalRaw === 'true' || requiresApprovalRaw === '1' || requiresApprovalRaw === 'yes') {
+      validated.requires_approval = true;
+    } else if (requiresApprovalRaw === 'false' || requiresApprovalRaw === '0' || requiresApprovalRaw === 'no') {
+      validated.requires_approval = false;
+    } else {
+      errors.push({
+        field: 'requires_approval',
+        message: 'Must be true or false',
+      });
+    }
+  } else {
+    validated.requires_approval = true;
   }
 
   // Duplicate detection: title + mission_id + quest_id
