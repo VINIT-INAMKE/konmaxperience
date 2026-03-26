@@ -98,7 +98,7 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 14 -> 14.x -> 15 -> 15.x -> 16 -> 16.x -> 17 -> 17.x -> 18 -> 18.x -> 19 -> 19.x -> 20 -> 20.x -> 21 -> 22 -> 23 -> 24
+Phases execute in numeric order: 14 -> 14.x -> 15 -> 15.x -> 16 -> 16.x -> 17 -> 17.x -> 18 -> 18.x -> 19 -> 19.x -> 20 -> 20.x -> 21 -> 22 -> 23 -> 24 -> 25 -> 26 -> 27
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -275,3 +275,28 @@ Plans:
 
 Plans:
 - [ ] TBD (run /gsd:plan-phase 26 to break down)
+
+### Phase 27: Mission Flow & Assessment Gap Closure
+
+**Goal:** Close every gap identified in the v2 assessment review — `GET /mission-control` aggregation endpoint, PurchaseOrder/Asset to Task FK linking with UI display, activity feed widget on admin dashboard, team contribution breakdown view (tasks/valid/readiness/blocked per person), "Today's Focus" section on non-admin dashboard, readiness meter name on task card badges, quest to mission breadcrumb on task detail pages, readiness impact in task validation toast, mission/quest context in task list view. After this phase, 0 of the assessment's 47 claims remain valid (except the intentionally deferred Experience module).
+**Requirements**: MC-01, MC-02, AF-01, AF-02, TC-01, TF-01, PO-01, PO-02, LR-01, KB-01, LV-01, BC-01, VT-01
+**Depends on:** Phase 24 — customer marketplace
+**Success Criteria** (what must be TRUE):
+  1. GET /missions/mission-control returns active missions, readiness snapshot, and action-required counts with role scoping
+  2. Admin dashboard has ActivityFeedWidget (48h lookback, last 5 items) and TeamContributionWidget (per-role, time-scoped)
+  3. Non-admin dashboard has TodaysFocusSection (overdue/due-today/quest tasks, max 5, hidden when empty)
+  4. Task kanban card readiness badge shows "+N MetricName" with meter name
+  5. Task list view has Quest and Mission columns (collapsible on mobile)
+  6. Task detail page has Mission -> Quest -> Task breadcrumb chain with links
+  7. Task validation toast shows readiness impact ("Task validated! +N XP . +M MeterName")
+  8. Task detail page shows Linked Resources section (POs and Assets)
+  9. PO model has linked_task_id FK, PO form has "Link to Task" dropdown
+  10. /activity full page and /team-contribution detail page accessible from dashboard widgets
+**Plans**: 5 plans
+
+Plans:
+- [ ] 27-01-PLAN.md -- Backend foundation: Prisma migration (PO linked_task_id), /missions/mission-control aggregation endpoint, ActivityModule with feed + contribution endpoints
+- [ ] 27-02-PLAN.md -- Backend task includes: extend findAll/findOne with quest.mission + readiness_meter, PO create/update accepts linked_task_id, task detail returns linked resources
+- [ ] 27-03-PLAN.md -- Frontend task UX: Task type updates, kanban badge meter name, list view columns, detail breadcrumb, validation toast, linked resources section
+- [ ] 27-04-PLAN.md -- Frontend dashboard widgets: ActivityFeedWidget, TeamContributionWidget, TodaysFocusSection, wired into admin and non-admin dashboards
+- [ ] 27-05-PLAN.md -- Frontend pages + checkpoint: /activity full page, /team-contribution detail page, PO form "Link to Task" dropdown, visual verification
