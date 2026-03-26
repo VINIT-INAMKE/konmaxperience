@@ -62,7 +62,7 @@ export function TodaysFocusSection({ allTasks }: TodaysFocusSectionProps) {
   if (focusItems.length === 0) return null;
 
   return (
-    <Card>
+    <Card className="border-l-2 border-l-blue-500">
       <CardContent className="pt-4">
         <span className="text-sm font-bold">Today&apos;s Focus</span>
         <div className="space-y-2 mt-3">

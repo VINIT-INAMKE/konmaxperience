@@ -2,11 +2,11 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { BlurFade } from '@/components/ui/blur-fade';
-import { Card, CardContent } from '@/components/ui/card';
 import { AdminUserFilter } from '@/components/ops/AdminUserFilter';
 import { AdminPendingApprovalsWidget } from '@/components/ops/dashboard/AdminPendingApprovalsWidget';
 import { AdminBlockersWidget } from '@/components/ops/dashboard/AdminBlockersWidget';
 import { AdminAdHocInjectorWidget } from '@/components/ops/dashboard/AdminAdHocInjectorWidget';
+import { MissionContextStrip } from '@/components/ops/dashboard/MissionContextStrip';
 import { DashboardReadinessStrip } from '@/components/ops/dashboard/DashboardReadinessStrip';
 import { DashboardKpiAlert } from '@/components/ops/dashboard/DashboardKpiAlert';
 import { AdminRecentDecisionsWidget } from '@/components/ops/dashboard/AdminRecentDecisionsWidget';
@@ -126,98 +126,124 @@ function AdminDashboard() {
   const hasLowStock = lowStockItems && lowStockItems.length > 0;
 
   return (
-    <BlurFade>
-      <div className="space-y-10">
-        {/* Page header */}
-        <div className="flex items-center justify-between gap-4 flex-wrap">
-          <h1 className="text-2xl font-bold">Mission Control</h1>
-          <AdminUserFilter />
+    <div className="space-y-10">
+      {/* Page header */}
+      <BlurFade delay={0.05}>
+        <div className="space-y-4">
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <h1 className="text-2xl font-bold">Mission Control</h1>
+            <AdminUserFilter />
+          </div>
+          <MissionContextStrip />
         </div>
+      </BlurFade>
 
-        {/* === ACTION ZONE — what needs you NOW === */}
-        <section className="space-y-5">
+      {/* === ACTION ZONE — what needs you NOW === */}
+      <BlurFade delay={0.15}>
+        <section className="bg-amber-500/[0.02] dark:bg-amber-500/[0.03] rounded-2xl p-4 -mx-2 space-y-5">
           <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Action Required</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-            <AdminPendingApprovalsWidget />
-            <AdminBlockersWidget />
-            <AdminAdHocInjectorWidget />
+            <BlurFade delay={0.2}>
+              <AdminPendingApprovalsWidget />
+            </BlurFade>
+            <BlurFade delay={0.28}>
+              <AdminBlockersWidget />
+            </BlurFade>
+            <BlurFade delay={0.36}>
+              <AdminAdHocInjectorWidget />
+            </BlurFade>
           </div>
 
           {/* KPI Alerts */}
           {(kpisLoading || hasAlertKpis) && (
-            <div>
-              {kpisLoading ? (
-                <div className="space-y-3">
-                  <span className="text-sm font-semibold">KPIs Requiring Attention</span>
-                  <KpiAlertSkeleton />
-                </div>
-              ) : (
-                kpis && <DashboardKpiAlert kpis={kpis} />
-              )}
-            </div>
+            <BlurFade delay={0.44}>
+              <div>
+                {kpisLoading ? (
+                  <div className="space-y-3">
+                    <span className="text-sm font-semibold">KPIs Requiring Attention</span>
+                    <KpiAlertSkeleton />
+                  </div>
+                ) : (
+                  kpis && <DashboardKpiAlert kpis={kpis} />
+                )}
+              </div>
+            </BlurFade>
           )}
         </section>
+      </BlurFade>
 
-        {/* === STATUS ZONE — current state of things === */}
-        <section className="space-y-5 border-t border-border/40 pt-8">
+      {/* === STATUS ZONE — current state of things === */}
+      <BlurFade delay={0.35}>
+        <section className="bg-blue-500/[0.02] dark:bg-blue-500/[0.03] rounded-2xl p-4 -mx-2 space-y-5">
           <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Status</h2>
 
           {/* Readiness Strip */}
           {(metersLoading || hasLowMeters) && (
-            <div className="space-y-3">
-              {metersLoading ? (
-                <>
-                  <span className="text-sm font-semibold">Readiness</span>
+            <BlurFade delay={0.4}>
+              <div>
+                {metersLoading ? (
                   <ReadinessStripSkeleton />
-                </>
-              ) : (
-                meters && <DashboardReadinessStrip meters={meters} />
-              )}
-            </div>
+                ) : (
+                  meters && <DashboardReadinessStrip meters={meters} />
+                )}
+              </div>
+            </BlurFade>
           )}
 
           {/* Activity Feed + Team Contribution */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <ActivityFeedWidget />
-            <TeamContributionWidget />
+            <BlurFade delay={0.48}>
+              <ActivityFeedWidget />
+            </BlurFade>
+            <BlurFade delay={0.56}>
+              <TeamContributionWidget />
+            </BlurFade>
           </div>
 
           {/* Recent Decisions */}
-          <AdminRecentDecisionsWidget />
+          <BlurFade delay={0.64}>
+            <AdminRecentDecisionsWidget />
+          </BlurFade>
         </section>
+      </BlurFade>
 
-        {/* === INTELLIGENCE ZONE — context & insights === */}
-        <section className="space-y-5 border-t border-border/40 pt-8">
+      {/* === INTELLIGENCE ZONE — context & insights === */}
+      <BlurFade delay={0.55}>
+        <section className="bg-emerald-500/[0.02] dark:bg-emerald-500/[0.03] rounded-2xl p-4 -mx-2 space-y-5">
           <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Intelligence</h2>
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-          <div className="lg:col-span-3">
-            {(leaderboardLoading || (leaderboard && leaderboard.enabled)) ? (
-              <section>
-                {leaderboardLoading ? (
-                  <div className="space-y-3">
-                    <span className="text-sm font-semibold">Leaderboard</span>
-                    <LeaderboardSkeleton />
-                  </div>
-                ) : (
-                  leaderboard && <DashboardLeaderboardPreview data={leaderboard} />
-                )}
-              </section>
-            ) : null}
+            <div className="lg:col-span-3">
+              {(leaderboardLoading || (leaderboard && leaderboard.enabled)) ? (
+                <BlurFade delay={0.6}>
+                  <section>
+                    {leaderboardLoading ? (
+                      <div className="space-y-3">
+                        <span className="text-sm font-semibold">Leaderboard</span>
+                        <LeaderboardSkeleton />
+                      </div>
+                    ) : (
+                      leaderboard && <DashboardLeaderboardPreview data={leaderboard} />
+                    )}
+                  </section>
+                </BlurFade>
+              ) : null}
+            </div>
+            <div className="lg:col-span-2">
+              {(lowStockLoading || hasLowStock) ? (
+                <BlurFade delay={0.68}>
+                  <section className="space-y-3">
+                    {lowStockLoading ? (
+                      <div className="animate-pulse h-24 bg-muted/30 rounded-lg" />
+                    ) : (
+                      lowStockItems && <DashboardLowStockAlert lowStockItems={lowStockItems} />
+                    )}
+                  </section>
+                </BlurFade>
+              ) : null}
+            </div>
           </div>
-          <div className="lg:col-span-2">
-            {(lowStockLoading || hasLowStock) ? (
-              <section className="space-y-3">
-                {lowStockLoading ? (
-                  <div className="animate-pulse h-24 bg-muted/30 rounded-lg" />
-                ) : (
-                  lowStockItems && <DashboardLowStockAlert lowStockItems={lowStockItems} />
-                )}
-              </section>
-            ) : null}
-          </div>
-        </div>
         </section>
-      </div>
-    </BlurFade>
+      </BlurFade>
+    </div>
   );
 }

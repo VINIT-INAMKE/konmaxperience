@@ -56,27 +56,42 @@ export function TeamContributionWidget() {
           </div>
         ) : (
           <div className="space-y-1">
-            {data.map((row) => (
-              <div
-                key={row.roleCode}
-                className="flex items-center gap-3 text-sm px-2 py-1.5 rounded-md hover:bg-muted"
-              >
-                <span className="w-32 truncate font-medium">{row.roleName}</span>
-                <span className="text-xs text-muted-foreground">{row.tasksCompleted} done</span>
-                <span className="text-xs text-muted-foreground">{row.tasksValidated} valid</span>
-                {row.blockedCount > 0 && (
-                  <Badge variant="destructive" className="text-[10px] h-4 px-1">
-                    {row.blockedCount} blocked
-                  </Badge>
-                )}
-                {row.readinessDelta.length > 0 && (
-                  <span className="flex items-center gap-0.5 text-xs text-blue-500 ml-auto">
-                    <TrendingUp className="size-2.5" />
-                    +{row.readinessDelta.reduce((s, d) => s + d.value, 0)}
-                  </span>
-                )}
-              </div>
-            ))}
+            {data.map((row) => {
+              const totalTasks = row.tasksCompleted + row.blockedCount;
+              const validPct = totalTasks > 0 ? Math.round((row.tasksValidated / totalTasks) * 100) : 0;
+
+              return (
+                <div
+                  key={row.roleCode}
+                  className="rounded-md px-2 py-1.5 hover:bg-muted"
+                >
+                  <div className="flex items-center gap-3 text-sm">
+                    <span className="w-32 truncate font-medium">{row.roleName}</span>
+                    <span className="text-xs text-muted-foreground">{row.tasksCompleted} done</span>
+                    <span className="text-xs text-muted-foreground">{row.tasksValidated} valid</span>
+                    {row.blockedCount > 0 && (
+                      <Badge variant="destructive" className="text-[10px] h-4 px-1">
+                        {row.blockedCount} blocked
+                      </Badge>
+                    )}
+                    {row.readinessDelta.length > 0 && (
+                      <span className="flex items-center gap-0.5 text-xs text-blue-500 ml-auto">
+                        <TrendingUp className="size-2.5" />
+                        +{row.readinessDelta.reduce((s, d) => s + d.value, 0)}
+                      </span>
+                    )}
+                  </div>
+                  {totalTasks > 0 && (
+                    <div className="h-1 bg-muted rounded-full overflow-hidden mt-1.5">
+                      <div
+                        className="h-full bg-emerald-500 rounded-full transition-all duration-300"
+                        style={{ width: `${validPct}%` }}
+                      />
+                    </div>
+                  )}
+                </div>
+              );
+            })}
             <div className="pt-2 text-right">
               <Link href="/team-contribution" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
                 View details

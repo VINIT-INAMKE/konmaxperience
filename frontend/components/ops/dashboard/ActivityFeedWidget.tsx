@@ -22,6 +22,13 @@ const EVENT_COLORS: Record<string, string> = {
   blocker_resolved: 'text-muted-foreground',
 };
 
+const EVENT_DOT_COLORS: Record<string, string> = {
+  validation: 'bg-emerald-500',
+  readiness: 'bg-blue-500',
+  quest_complete: 'bg-amber-500',
+  blocker_resolved: 'bg-red-500',
+};
+
 export function ActivityFeedWidget() {
   const { data, isLoading, isError } = useQuery({
     queryKey: ['activity-feed'],
@@ -62,8 +69,10 @@ export function ActivityFeedWidget() {
             {data.map((item) => {
               const Icon = EVENT_ICONS[item.type] ?? Activity;
               const color = EVENT_COLORS[item.type] ?? 'text-muted-foreground';
+              const dotColor = EVENT_DOT_COLORS[item.type] ?? 'bg-muted-foreground';
               return (
                 <div key={item.id} className="flex items-start gap-2 text-sm">
+                  <div className={`w-0.5 self-stretch shrink-0 rounded-full ${dotColor}`} />
                   <Icon className={`size-3.5 mt-0.5 shrink-0 ${color}`} />
                   <span className="flex-1 text-sm leading-tight">{item.description}</span>
                   <span className="text-xs text-muted-foreground shrink-0 whitespace-nowrap">
