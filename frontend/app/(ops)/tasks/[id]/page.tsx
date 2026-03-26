@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   ArrowLeft,
+  ChevronRight,
   Loader2,
   AlertCircle,
   Link as LinkIcon,
@@ -166,14 +167,40 @@ export default function TaskDetailPage(props: {
 
   return (
       <div className="space-y-6">
-        {/* Back link */}
-        <Link
-          href={task.quest_id ? `/quests/${task.quest_id}` : `/missions/${task.mission_id}`}
-          className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <ArrowLeft className="size-3" />
-          Back to {task.quest_id ? 'quest' : 'mission'}
-        </Link>
+        {/* Breadcrumb / Back link */}
+        {task.quest_id && task.quest?.mission ? (
+          <nav aria-label="Breadcrumb">
+            <ol className="flex items-center gap-1 text-sm text-muted-foreground">
+              <li>
+                <Link
+                  href={`/missions/${task.quest.mission.id}`}
+                  className="hover:text-foreground transition-colors"
+                >
+                  {task.quest.mission.title}
+                </Link>
+              </li>
+              <li><ChevronRight className="size-3" /></li>
+              <li>
+                <Link
+                  href={`/quests/${task.quest_id}`}
+                  className="hover:text-foreground transition-colors"
+                >
+                  {task.quest.title}
+                </Link>
+              </li>
+              <li><ChevronRight className="size-3" /></li>
+              <li className="text-foreground font-medium">{task.title}</li>
+            </ol>
+          </nav>
+        ) : (
+          <Link
+            href={task.quest_id ? `/quests/${task.quest_id}` : `/missions/${task.mission_id}`}
+            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ArrowLeft className="size-3" />
+            Back to {task.quest_id ? 'quest' : 'mission'}
+          </Link>
+        )}
 
         {/* Header */}
         <div className="space-y-2">
@@ -388,6 +415,49 @@ export default function TaskDetailPage(props: {
 
             {/* Evidence section */}
             <EvidenceSection task={task} isOwn={isOwn} isAdmin={isAdmin} />
+
+            {/* Linked Resources */}
+            {((task.linked_purchase_orders && task.linked_purchase_orders.length > 0) ||
+              (task.linked_assets && task.linked_assets.length > 0)) && (
+              <Card>
+                <CardContent className="pt-4 space-y-4">
+                  <span className="text-sm font-bold">Linked Resources</span>
+
+                  {task.linked_purchase_orders && task.linked_purchase_orders.length > 0 && (
+                    <div className="space-y-2">
+                      <span className="text-xs font-medium text-muted-foreground">Purchase Orders</span>
+                      {task.linked_purchase_orders.map((po) => (
+                        <Link
+                          key={po.id}
+                          href={`/procurement/purchase-orders/${po.id}`}
+                          className="flex items-center gap-2 text-sm rounded-md px-2 py-1.5 hover:bg-muted transition-colors"
+                        >
+                          <Badge variant="outline" className="text-[10px]">PO</Badge>
+                          <span className="flex-1 truncate">{po.vendor.name}</span>
+                          <Badge variant="secondary" className="text-[10px]">{po.status}</Badge>
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+
+                  {task.linked_assets && task.linked_assets.length > 0 && (
+                    <div className="space-y-2">
+                      <span className="text-xs font-medium text-muted-foreground">Assets</span>
+                      {task.linked_assets.map((asset) => (
+                        <div
+                          key={asset.id}
+                          className="flex items-center gap-2 text-sm rounded-md px-2 py-1.5"
+                        >
+                          <Badge variant="outline" className="text-[10px]">Asset</Badge>
+                          <span className="flex-1 truncate">{asset.name}</span>
+                          <span className="text-xs text-muted-foreground">{asset.asset_type}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
           </div>
 
           {/* Right column - 1/3 metadata */}
