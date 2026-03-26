@@ -70,7 +70,7 @@ async function request<T>(
 
   if (response.status === 401) {
     // Customer auth endpoints handle their own 401 — don't redirect to staff login
-    const isCustomerEndpoint = path.startsWith('/customer-auth');
+    const isCustomerEndpoint = path.startsWith('/customer-auth') || path.startsWith('/customer/');
     if (isCustomerEndpoint) {
       throw new ApiError(401, 'Not authenticated');
     }

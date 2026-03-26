@@ -7,10 +7,13 @@ import {
   Req,
   Res,
   UseGuards,
+  HttpCode,
+  ForbiddenException,
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import express from 'express';
 import { CustomerAuthService } from './customer-auth.service';
+import { PusherService } from '../chat/pusher.service';
 import { CustomerGuard } from './guards/customer.guard';
 import { SendOtpDto } from './dto/send-otp.dto';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
@@ -19,7 +22,10 @@ import { Public } from '../common/decorators/public.decorator';
 
 @Controller('customer-auth')
 export class CustomerAuthController {
-  constructor(private readonly customerAuthService: CustomerAuthService) {}
+  constructor(
+    private readonly customerAuthService: CustomerAuthService,
+    private readonly pusherService: PusherService,
+  ) {}
 
   @Post('send-otp')
   @Public()
@@ -59,5 +65,20 @@ export class CustomerAuthController {
   @UseGuards(CustomerGuard)
   async logout(@Res({ passthrough: true }) res: express.Response) {
     return this.customerAuthService.logout(res);
+  }
+
+  @Post('pusher-auth')
+  @UseGuards(CustomerGuard)
+  @HttpCode(200)
+  async pusherAuth(
+    @Body() body: { socket_id: string; channel_name: string },
+    @Req() req: any,
+  ) {
+    const customerId: string = req.user.customerId;
+    const expectedChannel = `private-customer-${customerId}`;
+    if (body.channel_name !== expectedChannel) {
+      throw new ForbiddenException('Not authorized for this channel');
+    }
+    return this.pusherService.authorizeChannel(body.socket_id, body.channel_name);
   }
 }
