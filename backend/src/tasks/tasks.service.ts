@@ -71,6 +71,14 @@ export class TasksService {
         owner: { select: { id: true, name: true } },
         creator: { select: { id: true, name: true } },
         depends_on: { select: { id: true, title: true, status: true } },
+        quest: {
+          select: {
+            id: true,
+            title: true,
+            mission: { select: { id: true, title: true } },
+          },
+        },
+        readiness_meter: { select: { id: true, name: true } },
       },
       orderBy: [{ priority: 'desc' }, { created_at: 'desc' }],
       take: 200,
@@ -90,8 +98,26 @@ export class TasksService {
         owner: { select: { id: true, name: true } },
         creator: { select: { id: true, name: true } },
         depends_on: { select: { id: true, title: true, status: true } },
-        quest: { select: { id: true, title: true } },
+        quest: {
+          select: {
+            id: true,
+            title: true,
+            mission: { select: { id: true, title: true } },
+          },
+        },
         mission: { select: { id: true, title: true } },
+        readiness_meter: { select: { id: true, name: true } },
+        linked_assets: {
+          select: { id: true, name: true, asset_type: true },
+        },
+        linked_purchase_orders: {
+          select: {
+            id: true,
+            status: true,
+            total_amount: true,
+            vendor: { select: { id: true, name: true } },
+          },
+        },
       },
     });
 
