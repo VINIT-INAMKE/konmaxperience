@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: User Guide & Data Management
 status: unknown
-stopped_at: Completed 24-04 Tasks 1-2, awaiting human-verify checkpoint (Task 3)
-last_updated: "2026-03-26T09:48:50.578Z"
+stopped_at: Completed 27-02-PLAN.md
+last_updated: "2026-03-26T12:09:36.664Z"
 progress:
-  total_phases: 13
+  total_phases: 14
   completed_phases: 11
-  total_plans: 40
-  completed_plans: 40
+  total_plans: 45
+  completed_plans: 41
 ---
 
 # Project State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-22)
 
 **Core value:** Every piece of work must be evidence-backed, approved, and validated before it counts -- turning real execution into measurable readiness and progress.
-**Current focus:** Phase 24 — customer-marketplace
+**Current focus:** Phase 27 — mission-flow-assessment-gap-closure
 
 ## Current Position
 
-Phase: 24 (customer-marketplace) — EXECUTING
-Plan: 4 of 4
+Phase: 27 (mission-flow-assessment-gap-closure) — EXECUTING
+Plan: 2 of 5
 
 ## Performance Metrics
 
@@ -86,6 +86,7 @@ Plan: 4 of 4
 | Phase 24 P03 | 9min | 2 tasks | 15 files |
 | Phase 24 P02 | 11min | 2 tasks | 10 files |
 | Phase 24 P04 | 9min | 2 tasks | 5 files |
+| Phase 27 P02 | 5min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -203,6 +204,8 @@ Recent decisions affecting current work:
 - [Phase 24]: Webhook marketplace handler uses inline Prisma tx; receipt route before :id route in controller
 - [Phase 24]: No changes to useCustomerAuth needed -- customer.id already exposed for Pusher channel name
 - [Phase 24]: Re-order fetches fresh /menu/items each time for up-to-date availability (no stale cache)
+- [Phase 27]: Kept direct mission include alongside quest.mission on findOne for adhoc tasks with no quest
+- [Phase 27]: PO update uses empty-string-to-null coalescion for linked_task_id clearing
 
 ### Roadmap Evolution
 
@@ -215,6 +218,7 @@ Recent decisions affecting current work:
 - Phase 24 added: Customer Marketplace — cart, checkout, takeaway/delivery ordering, checkpoint-based order tracking via Pusher
 - Phase 25 added: Third-Party Delivery Integration — Porter for local overflow, Shiprocket for interstate shipping
 - Phase 26 added: Order Detail Page — /orders/[id] with payment processing (QR + WhatsApp link), receipt download, order timeline
+- Phase 27 added: Mission Flow & Assessment Gap Closure — aggregation API, ops-to-mission linking, dashboard widgets, UX flow improvements
 
 ### Pending Todos
 
@@ -226,6 +230,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-26T09:48:50.562Z
-Stopped at: Completed 24-04 Tasks 1-2, awaiting human-verify checkpoint (Task 3)
+Last session: 2026-03-26T12:09:36.653Z
+Stopped at: Completed 27-02-PLAN.md
 Resume file: None
