@@ -20,6 +20,15 @@ export class IngredientsService {
     return this.prisma.ingredient.findMany({
       where,
       orderBy: { name: 'asc' },
+      include: {
+        RecipeLines: {
+          include: {
+            recipe: {
+              select: { id: true, name: true, status: true },
+            },
+          },
+        },
+      },
     });
   }
 
@@ -32,6 +41,15 @@ export class IngredientsService {
   async findOne(id: string) {
     const ingredient = await this.prisma.ingredient.findUnique({
       where: { id },
+      include: {
+        RecipeLines: {
+          include: {
+            recipe: {
+              select: { id: true, name: true, status: true },
+            },
+          },
+        },
+      },
     });
     if (!ingredient) {
       throw new NotFoundException(`Ingredient with ID ${id} not found`);

@@ -24,6 +24,12 @@ export const MISSION_STATUS_LABELS: Record<MissionStatus, string> = {
   paused: 'Paused',
 };
 
+export interface ReadinessImpact {
+  meter_code: string;
+  meter_label: string;
+  total_value: number;
+}
+
 export interface Mission {
   id: string;
   title: string;
@@ -38,6 +44,7 @@ export interface Mission {
   created_at: string;
   updated_at: string;
   quests?: QuestSummary[];
+  readiness_impact?: ReadinessImpact[];
 }
 
 export interface QuestSummary {

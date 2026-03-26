@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { format } from 'date-fns';
-import { Calendar } from 'lucide-react';
+import { Calendar, TrendingUp } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { MagicCard } from '@/components/ui/magic-card';
 import { AnimatedCircularProgressBar } from '@/components/ui/animated-circular-progress-bar';
@@ -113,6 +113,25 @@ export function MissionCard({
               )}
             </div>
           </div>
+
+          {/* Readiness impact badges (top 3 meters) */}
+          {mission.readiness_impact && mission.readiness_impact.length > 0 && (
+            <div className="flex flex-wrap items-center gap-1.5">
+              <TrendingUp className="size-3.5 text-blue-500" />
+              {mission.readiness_impact.slice(0, 3).map((ri) => (
+                <Badge
+                  key={ri.meter_code}
+                  variant="outline"
+                  className="text-[10px] h-5 px-1.5 text-blue-500 border-blue-500/30"
+                >
+                  +{ri.total_value}{' '}
+                  {ri.meter_label.length > 15
+                    ? ri.meter_label.slice(0, 15) + '...'
+                    : ri.meter_label}
+                </Badge>
+              ))}
+            </div>
+          )}
 
           {/* Footer: dates and avatars */}
           <div className="flex items-center justify-between">

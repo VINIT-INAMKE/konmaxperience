@@ -5,9 +5,68 @@ import { UpdateMissionDto } from './dto/update-mission.dto';
 import { getPermissionsForRole } from '../permissions/permissions.cache';
 import { Permission } from '../types/permissions';
 
+export interface ReadinessImpactEntry {
+  meter_code: string;
+  meter_label: string;
+  total_value: number;
+}
+
 @Injectable()
 export class MissionsService {
   constructor(private readonly prisma: PrismaService) {}
+
+  /**
+   * Aggregate readiness impact for a set of missions.
+   * Chain: Mission → Tasks (valid=true, readiness_meter_id != null) → group by readiness_meter.
+   * Returns a map of mission_id → ReadinessImpactEntry[].
+   */
+  private async aggregateReadinessImpact(
+    missionIds: string[],
+  ): Promise<Record<string, ReadinessImpactEntry[]>> {
+    if (missionIds.length === 0) return {};
+
+    // Fetch all valid tasks with a readiness meter across these missions
+    const tasks = await this.prisma.task.findMany({
+      where: {
+        mission_id: { in: missionIds },
+        valid: true,
+        readiness_meter_id: { not: null },
+        readiness_value: { gt: 0 },
+      },
+      select: {
+        mission_id: true,
+        readiness_value: true,
+        readiness_meter: {
+          select: { code: true, name: true },
+        },
+      },
+    });
+
+    // Group by mission_id → meter_code → sum
+    const map: Record<string, Record<string, { label: string; total: number }>> = {};
+    for (const t of tasks) {
+      if (!t.readiness_meter) continue;
+      const missionBucket = (map[t.mission_id] ??= {});
+      const meterKey = t.readiness_meter.code;
+      if (!missionBucket[meterKey]) {
+        missionBucket[meterKey] = { label: t.readiness_meter.name, total: 0 };
+      }
+      missionBucket[meterKey].total += t.readiness_value;
+    }
+
+    // Convert to sorted arrays (highest total first)
+    const result: Record<string, ReadinessImpactEntry[]> = {};
+    for (const missionId of Object.keys(map)) {
+      result[missionId] = Object.entries(map[missionId])
+        .map(([code, { label, total }]) => ({
+          meter_code: code,
+          meter_label: label,
+          total_value: total,
+        }))
+        .sort((a, b) => b.total_value - a.total_value);
+    }
+    return result;
+  }
 
   async findAll(
     requestingUser: { id: string; roleCode: string },
@@ -30,7 +89,7 @@ export class MissionsService {
       ];
     }
 
-    return this.prisma.mission.findMany({
+    const missions = await this.prisma.mission.findMany({
       where,
       include: {
         _count: { select: { quests: true } },
@@ -39,6 +98,13 @@ export class MissionsService {
       take,
       skip,
     });
+
+    // Attach readiness impact per mission
+    const impactMap = await this.aggregateReadinessImpact(missions.map((m) => m.id));
+    return missions.map((m) => ({
+      ...m,
+      readiness_impact: impactMap[m.id] ?? [],
+    }));
   }
 
   async findAllForExport(): Promise<any[]> {
@@ -73,7 +139,11 @@ export class MissionsService {
       throw new NotFoundException(`Mission with ID ${id} not found`);
     }
 
-    return mission;
+    const impactMap = await this.aggregateReadinessImpact([id]);
+    return {
+      ...mission,
+      readiness_impact: impactMap[id] ?? [],
+    };
   }
 
   async create(dto: CreateMissionDto, userId: string) {
@@ -125,8 +195,15 @@ export class MissionsService {
       }),
     ]);
 
+    // Attach readiness impact to each active mission
+    const impactMap = await this.aggregateReadinessImpact(activeMissions.map((m) => m.id));
+    const missionsWithImpact = activeMissions.map((m) => ({
+      ...m,
+      readiness_impact: impactMap[m.id] ?? [],
+    }));
+
     return {
-      missions: activeMissions,
+      missions: missionsWithImpact,
       readiness: meters,
       actionRequired: {
         pendingApprovals: pendingCount,

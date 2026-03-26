@@ -2,8 +2,10 @@
 
 import Link from 'next/link';
 import { format } from 'date-fns';
+import { TrendingUp } from 'lucide-react';
 import { MagicCard } from '@/components/ui/magic-card';
 import { Progress } from '@/components/ui/progress';
+import { Badge } from '@/components/ui/badge';
 import type { Mission, MissionPhase } from '@/lib/types/missions';
 import { GRADIENT_OVERLAY } from '@/lib/brand-colors';
 
@@ -42,6 +44,25 @@ export function BoardMissionCard({ mission }: BoardMissionCardProps) {
               ? `${mission.quests.length} quest${mission.quests.length !== 1 ? 's' : ''}`
               : 'No quests yet'}
           </p>
+          {/* Readiness impact badges (top 3 meters) */}
+          {mission.readiness_impact && mission.readiness_impact.length > 0 && (
+            <div className="flex flex-wrap items-center gap-1.5">
+              <TrendingUp className="size-3.5 text-blue-500" />
+              {mission.readiness_impact.slice(0, 3).map((ri) => (
+                <Badge
+                  key={ri.meter_code}
+                  variant="outline"
+                  className="text-[10px] h-5 px-1.5 text-blue-500 border-blue-500/30"
+                >
+                  +{ri.total_value}{' '}
+                  {ri.meter_label.length > 15
+                    ? ri.meter_label.slice(0, 15) + '...'
+                    : ri.meter_label}
+                </Badge>
+              ))}
+            </div>
+          )}
+
           <p className="text-sm text-muted-foreground">
             {mission.end_date
               ? format(new Date(mission.end_date), 'MMM d, yyyy')

@@ -1,5 +1,14 @@
 export type IngredientCategory = 'dairy' | 'vegetable' | 'spice' | 'grain' | 'meat' | 'oil';
 
+export interface IngredientRecipeLink {
+  id: string;
+  recipe: {
+    id: string;
+    name: string;
+    status: string;
+  };
+}
+
 export interface Ingredient {
   id: string;
   name: string;
@@ -8,6 +17,7 @@ export interface Ingredient {
   min_stock_level: number;
   created_at: string;
   updated_at: string;
+  RecipeLines?: IngredientRecipeLink[];
 }
 
 export const INGREDIENT_CATEGORIES: IngredientCategory[] = ['dairy', 'vegetable', 'spice', 'grain', 'meat', 'oil'];
