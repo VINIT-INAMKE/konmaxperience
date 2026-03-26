@@ -42,10 +42,10 @@ interface QuestItem {
 }
 
 const STATUS_BADGE_CLASSES: Record<string, string> = {
-  todo: 'bg-muted text-muted-foreground border-0',
-  in_progress: 'bg-amber-500/15 text-amber-600 border-0',
+  planned: 'bg-muted text-muted-foreground border-0',
+  active: 'bg-amber-500/15 text-amber-600 border-0',
   blocked: 'bg-destructive/10 text-destructive border-0',
-  done: 'bg-emerald-500/15 text-emerald-700 border-0',
+  completed: 'bg-emerald-500/15 text-emerald-700 border-0',
 };
 
 /** Maps role codes to relevant readiness meter names for contribution display */
@@ -97,7 +97,7 @@ export function RoleDashboardSections() {
   });
 
   const activeQuest = allQuests?.find(
-    (q) => q.owner_user_id === user?.id && q.status === 'in_progress',
+    (q) => q.owner_user_id === user?.id && q.status === 'active',
   );
 
   // Section 4: My Contributions - Readiness meters

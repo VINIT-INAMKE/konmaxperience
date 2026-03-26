@@ -67,7 +67,7 @@ interface EvidenceFeedCardProps {
 
 export function EvidenceFeedCard({ evidence }: EvidenceFeedCardProps) {
   return (
-    <Link href="/missions" className="block">
+    <Link href={`/tasks/${evidence.task_id}`} className="block">
       <div className="flex gap-4 rounded-lg border bg-card p-4">
         <EvidenceThumbnail type={evidence.type} url={evidence.url} />
 

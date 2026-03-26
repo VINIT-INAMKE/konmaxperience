@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { GripVertical, Link as LinkIcon, CheckCircle2 } from 'lucide-react';
+import { GripVertical, Link as LinkIcon, CheckCircle2, FileCheck, FileQuestion, TrendingUp } from 'lucide-react';
 import { format, isPast, parseISO } from 'date-fns';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -102,8 +102,9 @@ export function TaskKanbanCard({ task, isDraggable }: TaskKanbanCardProps) {
           </div>
         )}
 
-        {/* XP value display */}
-        <div className="flex items-center gap-1">
+        {/* Bottom row: XP + evidence status + readiness impact */}
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {/* XP */}
           {task.valid ? (
             <CoolMode>
               <div className="flex items-center gap-1">
@@ -112,13 +113,31 @@ export function TaskKanbanCard({ task, isDraggable }: TaskKanbanCardProps) {
                   variant="outline"
                   className="text-[10px] h-4 px-1 text-green-500 border-green-500/30"
                 >
-                  {task.valid_xp} XP earned
+                  {task.valid_xp} XP
                 </Badge>
               </div>
             </CoolMode>
           ) : (
             <Badge variant="outline" className="text-[10px] h-4 px-1">
               +{Math.floor(task.xp * (TASK_TYPE_XP_WEIGHT[task.task_type] ?? 1))} XP
+            </Badge>
+          )}
+
+          {/* Evidence status indicator */}
+          {task.status === 'done' && task.valid && (
+            <FileCheck className="size-3.5 text-green-500" />
+          )}
+          {task.status === 'done' && !task.valid && (
+            <span title="Evidence pending">
+              <FileQuestion className="size-3.5 text-amber-500" />
+            </span>
+          )}
+
+          {/* Readiness impact */}
+          {task.readiness_value > 0 && (
+            <Badge variant="outline" className="text-[10px] h-4 px-1 text-blue-500 border-blue-500/30">
+              <TrendingUp className="size-2.5 mr-0.5" />
+              +{task.readiness_value}
             </Badge>
           )}
         </div>
