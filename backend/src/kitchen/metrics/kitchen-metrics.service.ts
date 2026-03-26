@@ -72,10 +72,10 @@ export class KitchenMetricsService {
           order: { select: { created_at: true } },
         },
       }),
-      // 7. Zone utilization: active orders grouped by zone
+      // 7. Zone utilization: active orders grouped by zone (exclude customer orders without zone)
       this.prisma.order.groupBy({
         by: ['zone_id'],
-        where: { status: { in: ['placed', 'preparing'] } },
+        where: { status: { in: ['placed', 'preparing'] }, zone_id: { not: null } },
         _count: { id: true },
       }),
     ]);
@@ -111,14 +111,14 @@ export class KitchenMetricsService {
 
     const zones = zoneOrders.length > 0
       ? await this.prisma.zone.findMany({
-          where: { id: { in: zoneOrders.map((z) => z.zone_id) } },
+          where: { id: { in: zoneOrders.map((z) => z.zone_id).filter((id): id is string => id !== null) } },
           select: { id: true, name: true },
         })
       : [];
 
     const zoneMap = new Map(zones.map((z) => [z.id, z.name]));
     const zone_utilization: ZoneUtilization[] = zoneOrders.map((z) => ({
-      zone_name: zoneMap.get(z.zone_id) ?? 'Unknown',
+      zone_name: zoneMap.get(z.zone_id!) ?? 'Unknown',
       active_orders: z._count.id,
     }));
 

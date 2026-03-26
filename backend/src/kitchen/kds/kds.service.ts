@@ -45,6 +45,7 @@ export class KdsService {
     const orders = await this.prisma.order.findMany({
       where: {
         status: { in: ['placed', 'preparing'] },
+        zone_id: { not: null }, // KDS only shows kitchen (staff) orders with a zone
       },
       include: {
         items: {
@@ -61,11 +62,11 @@ export class KdsService {
     const zoneMap = new Map<string, KdsZoneData>();
 
     for (const order of orders) {
-      const zoneId = order.zone_id;
+      const zoneId = order.zone_id!;
       if (!zoneMap.has(zoneId)) {
         zoneMap.set(zoneId, {
           zone_id: zoneId,
-          zone_name: order.zone.name,
+          zone_name: order.zone!.name,
           orders: [],
         });
       }
@@ -76,7 +77,7 @@ export class KdsService {
         customer_name: order.customer_name,
         created_at: order.created_at.toISOString(),
         status: order.status,
-        zone_id: order.zone_id,
+        zone_id: zoneId,
         items: order.items.map((item) => ({
           id: item.id,
           status: item.status,
@@ -113,7 +114,7 @@ export class KdsService {
     // When status is 'ready' — wrap in $transaction with deduction and Serializable isolation
     if (newStatus === 'ready') {
       let wasAllReady = false;
-      let orderData: { id: string; channel: string; created_by: string } | null =
+      let orderData: { id: string; channel: string; created_by: string | null } | null =
         null;
 
       const result = await this.prisma.$transaction(async (tx) => {
@@ -151,8 +152,8 @@ export class KdsService {
             menu_item_id: item.menu_item_id,
             quantity: item.quantity,
           },
-          order.created_by,
-          order.zone_id,
+          order.created_by!,
+          order.zone_id!,
         );
 
         // Update item status

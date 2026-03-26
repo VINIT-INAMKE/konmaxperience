@@ -644,8 +644,26 @@ model Customer {
   bookings  EventBooking[]
   orders    Order[]
   feedbacks Feedback[]
+  addresses CustomerAddress[]
 
   @@index([phone])
+}
+
+model CustomerAddress {
+  id          String   @id @default(uuid())
+  customer_id String
+  customer    Customer @relation(fields: [customer_id], references: [id], onDelete: Cascade)
+  label       String   // "Home" | "Work" | "Other"
+  address     String
+  landmark    String?
+  pincode     String
+  lat         Float?
+  lng         Float?
+  is_default  Boolean  @default(false)
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  @@index([customer_id])
 }
 
 model Order {
@@ -665,12 +683,12 @@ model Order {
   channel_modifier_amount Decimal     @default(0)
   total                   Decimal
   notes                   String?
-  created_by              String
-  zone_id                 String
+  created_by              String?
+  zone_id                 String?
   created_at              DateTime    @default(now())
   updated_at              DateTime    @updatedAt
-  creator                 User        @relation("OrderCreator", fields: [created_by], references: [id])
-  zone                    Zone        @relation(fields: [zone_id], references: [id])
+  creator                 User?       @relation("OrderCreator", fields: [created_by], references: [id])
+  zone                    Zone?       @relation(fields: [zone_id], references: [id])
   items                   OrderItem[]
   payment                 Payment?
   feedbacks               Feedback[]
