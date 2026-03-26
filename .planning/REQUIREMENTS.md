@@ -139,7 +139,7 @@ Requirements for milestone v1.1 — User Guide System & Data Management. Each ma
 ### Customer Marketplace
 
 - [x] **MKT-01**: Cart stored in Redis (Upstash) keyed by cart:{customerId} with 7-day TTL. Pre-login cart in Zustand with localStorage persist. Sync to Redis on login with merge logic. Login required at checkout only.
-- [ ] **MKT-02**: Swiggy-style /menu page with horizontal category tabs, horizontal item cards with +/- quantity steppers, floating cart bar, and availability badges. Unavailable items greyed out and not addable.
+- [x] **MKT-02**: Swiggy-style /menu page with horizontal category tabs, horizontal item cards with +/- quantity steppers, floating cart bar, and availability badges. Unavailable items greyed out and not addable.
 - [ ] **MKT-03**: POST /customer/orders creates Razorpay order from Redis cart with server-side price validation. POST /customer/orders/confirm verifies payment + creates Order/OrderItems/Payment in serializable transaction. Cart deleted on confirm.
 - [x] **MKT-04**: Customer self-ordering for takeaway and delivery only. Channel modifier applied at checkout using existing ChannelModifier model. Dine-in remains staff POS only.
 - [ ] **MKT-05**: Real-time order tracking at /orders/[id]/track with 4-step vertical timeline. Pusher private-customer-{id} channel. Staff updateOrderStatus and updateDelivery trigger Pusher events. Simplified customer-facing statuses mapped from internal KDS statuses.
