@@ -112,7 +112,7 @@ Phases execute in numeric order: 14 -> 14.x -> 15 -> 15.x -> 16 -> 16.x -> 17 ->
 | 21. In-App Chat | v1.1 | 4/4 | Complete    | 2026-03-23 |
 | 22. Recipe Page Redesign | v1.1 | 4/4 | Complete    | 2026-03-24 |
 | 23. Razorpay Payments + Customer Auth | v1.2 | 4/4 | Complete    | 2026-03-25 |
-| 24. Customer Marketplace | v1.2 | 3/4 | In Progress|  |
+| 24. Customer Marketplace | v1.2 | 4/4 | Complete   | 2026-03-26 |
 
 ### Phase 18: Data Export
 **Goal**: CSV/XLSX export for all 22 report types with server-side file generation, R2 storage, export history, and export buttons on 13 data pages
@@ -255,13 +255,13 @@ Plans:
 - [x] 24-01-PLAN.md -- Backend foundation: Prisma migration (CustomerAddress), CustomerOrdersModule with cart Redis CRUD, address CRUD, Pusher customer auth, apiClient fix
 - [x] 24-02-PLAN.md -- Backend checkout + tracking: checkout/confirm endpoints, Pusher triggers in order status/delivery updates, webhook marketplace handler, receipt endpoints, unit tests
 - [x] 24-03-PLAN.md -- Frontend cart + menu: Zustand cart store, CSS tokens, menu page enhancement (CategoryTabBar, MenuItemOrderCard, FloatingCartBar, CartBottomSheet, Google Places)
-- [ ] 24-04-PLAN.md -- Frontend tracking + profile: order tracking page with Pusher timeline, profile enrichment (Orders/Addresses/Bookings tabs, re-order flow), human verification
+- [x] 24-04-PLAN.md -- Frontend tracking + profile: order tracking page with Pusher timeline, profile enrichment (Orders/Addresses/Bookings tabs, re-order flow), human verification
 
 ### Phase 25: Third-Party Delivery Integration
 
 **Goal:** Porter API for local overflow delivery (when own team can't deliver) and Shiprocket API for interstate shipping of non-food items (art, merchandise) — with courier selection, AWB generation, tracking webhooks, and delivery status synced to order tracking
 **Depends on:** Phase 24 — marketplace ordering and order tracking infrastructure
-**Plans:** 3/4 plans executed
+**Plans:** 4/4 plans complete
 
 Plans:
 - [ ] TBD (run /gsd:plan-phase 25 to break down)

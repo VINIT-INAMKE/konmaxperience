@@ -145,7 +145,7 @@ Requirements for milestone v1.1 — User Guide System & Data Management. Each ma
 - [x] **MKT-05**: Real-time order tracking at /orders/[id]/track with 4-step vertical timeline. Pusher private-customer-{id} channel. Staff updateOrderStatus and updateDelivery trigger Pusher events. Simplified customer-facing statuses mapped from internal KDS statuses.
 - [x] **MKT-06**: CustomerAddress Prisma model with CRUD endpoints. Google Places Autocomplete for address input with pincode and lat/lng extraction. Pincode-based delivery zone restriction via DELIVERY_PINCODES env var.
 - [x] **MKT-07**: Server-rendered HTML receipts at GET /customer/orders/:id/receipt and GET /customer/bookings/:id/receipt. Print-optimized CSS. Tamper-proof (all data rendered server-side). CustomerGuard with ownership check.
-- [ ] **MKT-08**: Customer profile /profile enriched with Orders tab (history + re-order), Addresses tab (CRUD + set-default), and Bookings tab. Re-order checks availability, prompts on cart conflict, skips unavailable items with toast.
+- [x] **MKT-08**: Customer profile /profile enriched with Orders tab (history + re-order), Addresses tab (CRUD + set-default), and Bookings tab. Re-order checks availability, prompts on cart conflict, skips unavailable items with toast.
 
 ## Future Requirements
 

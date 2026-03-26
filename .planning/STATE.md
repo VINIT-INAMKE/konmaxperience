@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: User Guide & Data Management
 status: unknown
-stopped_at: Completed 24-02-PLAN.md
-last_updated: "2026-03-26T09:35:52.230Z"
+stopped_at: Completed 24-04 Tasks 1-2, awaiting human-verify checkpoint (Task 3)
+last_updated: "2026-03-26T09:48:50.578Z"
 progress:
   total_phases: 13
-  completed_phases: 10
+  completed_phases: 11
   total_plans: 40
-  completed_plans: 39
+  completed_plans: 40
 ---
 
 # Project State
@@ -85,6 +85,7 @@ Plan: 4 of 4
 | Phase 24 P01 | 11min | 2 tasks | 16 files |
 | Phase 24 P03 | 9min | 2 tasks | 15 files |
 | Phase 24 P02 | 11min | 2 tasks | 10 files |
+| Phase 24 P04 | 9min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -200,6 +201,8 @@ Recent decisions affecting current work:
 - [Phase 24]: Pending order stored in Redis with 30-min TTL keyed by Razorpay order ID for webhook fallback
 - [Phase 24]: Serializable isolation for confirmOrder Prisma transaction; Pusher triggers fire-and-forget with .catch()
 - [Phase 24]: Webhook marketplace handler uses inline Prisma tx; receipt route before :id route in controller
+- [Phase 24]: No changes to useCustomerAuth needed -- customer.id already exposed for Pusher channel name
+- [Phase 24]: Re-order fetches fresh /menu/items each time for up-to-date availability (no stale cache)
 
 ### Roadmap Evolution
 
@@ -223,6 +226,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-26T09:35:52.216Z
-Stopped at: Completed 24-02-PLAN.md
+Last session: 2026-03-26T09:48:50.562Z
+Stopped at: Completed 24-04 Tasks 1-2, awaiting human-verify checkpoint (Task 3)
 Resume file: None
