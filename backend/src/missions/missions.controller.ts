@@ -34,6 +34,15 @@ export class MissionsController {
     );
   }
 
+  @Get('mission-control')
+  async getMissionControl(@Req() request: express.Request) {
+    const user = (request as any).user;
+    return this.missionsService.getMissionControl({
+      id: user.id,
+      roleCode: user.roleCode,
+    });
+  }
+
   @Get(':id')
   async findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.missionsService.findOne(id);

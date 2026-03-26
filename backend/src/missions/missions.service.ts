@@ -90,6 +90,52 @@ export class MissionsService {
     });
   }
 
+  async getMissionControl(requestingUser: { id: string; roleCode: string }) {
+    const perms = await getPermissionsForRole(requestingUser.roleCode, this.prisma);
+    const isAdmin = perms.includes(Permission.VIEW_ALL);
+
+    const missionWhere: Record<string, unknown> = { status: 'active' };
+    if (!isAdmin) {
+      missionWhere.OR = [
+        { created_by: requestingUser.id },
+        { quests: { some: { owner_user_id: requestingUser.id } } },
+        { tasks: { some: { owner_user_id: requestingUser.id } } },
+      ];
+    }
+
+    const [activeMissions, meters, pendingCount, blockerCount, overdueCount] = await Promise.all([
+      this.prisma.mission.findMany({
+        where: missionWhere,
+        include: {
+          _count: { select: { quests: true, tasks: true } },
+          quests: {
+            select: { id: true, title: true, status: true, progress_percent: true },
+          },
+        },
+        orderBy: { created_at: 'desc' },
+      }),
+      this.prisma.readinessMeter.findMany({ orderBy: { code: 'asc' } }),
+      this.prisma.evidence.count({ where: { approval_status: 'pending' } }),
+      this.prisma.task.count({ where: { blocked: true, status: 'blocked' } }),
+      this.prisma.task.count({
+        where: {
+          status: { notIn: ['done', 'cancelled'] },
+          due_date: { lt: new Date() },
+        },
+      }),
+    ]);
+
+    return {
+      missions: activeMissions,
+      readiness: meters,
+      actionRequired: {
+        pendingApprovals: pendingCount,
+        blockers: blockerCount,
+        overdueTasks: overdueCount,
+      },
+    };
+  }
+
   async update(id: string, dto: UpdateMissionDto) {
     const existing = await this.prisma.mission.findUnique({
       where: { id },

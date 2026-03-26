@@ -168,8 +168,9 @@ model Task {
   evidence             Evidence[]
   approvals            Approval[]           @relation("TaskApprovals")
   readiness_events     TaskReadinessEvent[]
-  linked_assets        Asset[]
-  linked_decisions     Decision[]           @relation("DecisionTask")
+  linked_assets            Asset[]
+  linked_purchase_orders   PurchaseOrder[]
+  linked_decisions         Decision[]           @relation("DecisionTask")
 
   @@index([owner_user_id, status])
   @@index([quest_id, valid])
@@ -555,11 +556,13 @@ model PurchaseOrder {
   ordered_by      String
   ordered_at      DateTime?
   received_at     DateTime?
+  linked_task_id  String?
   created_at      DateTime            @default(now())
   updated_at      DateTime            @updatedAt
   vendor          Vendor              @relation(fields: [vendor_id], references: [id])
   zone            Zone                @relation(fields: [zone_id], references: [id])
   ordered_by_user User                @relation("PurchaseOrderer", fields: [ordered_by], references: [id])
+  linked_task     Task?               @relation(fields: [linked_task_id], references: [id], onDelete: SetNull)
   lines           PurchaseOrderLine[]
 
   // Optimizes: procurement pending PO count, PO status breakdown
@@ -568,6 +571,8 @@ model PurchaseOrder {
   @@index([status, ordered_at])
   // Optimizes: vendor-scoped PO lookups
   @@index([vendor_id])
+  // Optimizes: task-linked PO lookups
+  @@index([linked_task_id])
 }
 
 model PurchaseOrderLine {
