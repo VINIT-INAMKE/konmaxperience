@@ -7,13 +7,21 @@ import {
   Param,
   Query,
   Request,
+  Headers,
+  HttpCode,
   ParseUUIDPipe,
+  UnauthorizedException,
+  Logger,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { IsString, IsNotEmpty, IsOptional, MaxLength } from 'class-validator';
+import { Receiver } from '@upstash/qstash';
 import { NotificationsService } from './notifications.service';
+import { NotificationsProcessor } from './notifications.processor';
 import { NotificationQueryDto } from './dto/notification-query.dto';
 import { RequiresPermission } from '../common/decorators/permissions.decorator';
 import { Permission } from '../types/permissions';
+import { Public } from '../common/decorators/public.decorator';
 
 class BroadcastNoticeDto {
   @IsString()
@@ -33,7 +41,48 @@ class BroadcastNoticeDto {
 
 @Controller('notifications')
 export class NotificationsController {
-  constructor(private readonly notifications: NotificationsService) {}
+  private readonly logger = new Logger(NotificationsController.name);
+  private receiver: Receiver | null = null;
+
+  constructor(
+    private readonly notifications: NotificationsService,
+    private readonly processor: NotificationsProcessor,
+    private readonly config: ConfigService,
+  ) {
+    const signingKey = this.config.get<string>('QSTASH_CURRENT_SIGNING_KEY');
+    const nextSigningKey = this.config.get<string>('QSTASH_NEXT_SIGNING_KEY');
+    if (signingKey && nextSigningKey) {
+      this.receiver = new Receiver({
+        currentSigningKey: signingKey,
+        nextSigningKey: nextSigningKey,
+      });
+    }
+  }
+
+  /**
+   * QStash webhook endpoint — receives notification jobs from Upstash QStash.
+   * Verifies signature, then routes to the processor.
+   */
+  @Post('qstash-webhook')
+  @Public()
+  @HttpCode(200)
+  async handleQStashWebhook(
+    @Body() body: { jobName: string; data: Record<string, any> },
+    @Headers('upstash-signature') signature: string,
+  ) {
+    // Verify QStash signature if receiver is configured
+    if (this.receiver) {
+      if (!signature) throw new UnauthorizedException('Missing QStash signature');
+      try {
+        await this.receiver.verify({ signature, body: JSON.stringify(body) });
+      } catch {
+        throw new UnauthorizedException('Invalid QStash signature');
+      }
+    }
+
+    await this.processor.process(body.jobName, body.data);
+    return { status: 'ok' };
+  }
 
   @Get()
   async findForUser(@Request() req, @Query() query: NotificationQueryDto) {

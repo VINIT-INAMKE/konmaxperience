@@ -37,7 +37,6 @@ import { KitchenModule } from './kitchen/kitchen.module';
 import { OrdersModule } from './orders/orders.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { ScheduleModule } from '@nestjs/schedule';
-import { BullModule } from '@nestjs/bullmq';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { NotificationsModule } from './notifications/notifications.module';
 import { FeedbackModule } from './feedback/feedback.module';
@@ -64,41 +63,6 @@ import { PermissionsGuard } from './auth/permissions.guard';
     ]),
     ScheduleModule.forRoot(),
     EventEmitterModule.forRoot(),
-    ...((() => {
-      if (!process.env.UPSTASH_REDIS_URL) {
-        console.warn('[BullMQ] UPSTASH_REDIS_URL not set — notification queue disabled');
-        return [];
-      }
-      try {
-        const Redis = require('ioredis');
-        let errorLogged = false;
-        const conn = new Redis(process.env.UPSTASH_REDIS_URL, {
-          maxRetriesPerRequest: null,
-          enableReadyCheck: false,
-          connectTimeout: 5000,
-          lazyConnect: true,
-          retryStrategy: (times: number) => {
-            if (times > 2) {
-              if (!errorLogged) {
-                console.warn('[BullMQ] Redis unreachable after 3 attempts — queue disabled. App continues without notifications.');
-                errorLogged = true;
-              }
-              return null; // stop retrying
-            }
-            return Math.min(times * 1000, 3000);
-          },
-        });
-        conn.on('error', (err: Error) => {
-          if (!errorLogged) {
-            console.warn(`[BullMQ] Redis error: ${err.message}`);
-          }
-        });
-        return [BullModule.forRoot({ connection: conn })];
-      } catch (err) {
-        console.warn('[BullMQ] Failed to initialize Redis — notification queue disabled');
-        return [];
-      }
-    })()),
     PrismaModule,
     AuthModule,
     PermissionsModule,

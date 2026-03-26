@@ -1,6 +1,4 @@
-import { Processor, WorkerHost } from '@nestjs/bullmq';
-import { Logger } from '@nestjs/common';
-import { Job } from 'bullmq';
+import { Injectable, Logger } from '@nestjs/common';
 import { NotificationsService } from './notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { EmailService } from '../email/email.service';
@@ -14,49 +12,47 @@ function escapeHtml(s: string): string {
     .replace(/'/g, '&#039;');
 }
 
-@Processor('notifications')
-export class NotificationsWorker extends WorkerHost {
-  private readonly logger = new Logger(NotificationsWorker.name);
+@Injectable()
+export class NotificationsProcessor {
+  private readonly logger = new Logger(NotificationsProcessor.name);
 
   constructor(
     private readonly notifications: NotificationsService,
     private readonly prisma: PrismaService,
     private readonly emailService: EmailService,
-  ) {
-    super();
-  }
+  ) {}
 
-  async process(job: Job): Promise<void> {
-    switch (job.name) {
+  async process(jobName: string, data: Record<string, any>): Promise<void> {
+    switch (jobName) {
       case 'notify-task-due':
-        await this.handleTaskDue(job);
+        await this.handleTaskDue(data);
         break;
       case 'notify-task-blocked':
-        await this.handleTaskBlocked(job);
+        await this.handleTaskBlocked(data);
         break;
       case 'notify-approval-pending':
-        await this.handleApprovalPending(job);
+        await this.handleApprovalPending(data);
         break;
       case 'notify-low-stock':
-        await this.handleLowStock(job);
+        await this.handleLowStock(data);
         break;
       case 'notify-new-order':
-        await this.handleNewOrder(job);
+        await this.handleNewOrder(data);
         break;
       case 'notify-order-ready':
-        await this.handleOrderReady(job);
+        await this.handleOrderReady(data);
         break;
       case 'notify-delivery-update':
-        await this.handleDeliveryUpdate(job);
+        await this.handleDeliveryUpdate(data);
         break;
       default:
-        this.logger.warn(`Unknown job name: ${job.name}`);
+        this.logger.warn(`Unknown job name: ${jobName}`);
     }
   }
 
-  private async handleTaskDue(job: Job): Promise<void> {
+  private async handleTaskDue(data: Record<string, any>): Promise<void> {
     try {
-      const { userId, taskId, taskName, questName, hours } = job.data;
+      const { userId, taskId, taskName, questName, hours } = data;
       const shouldSend = await this.notifications.shouldNotify(
         userId,
         'task_due',
@@ -78,15 +74,15 @@ export class NotificationsWorker extends WorkerHost {
       await this.sendCriticalEmail(notification.id, userId, notification.title, notification.body);
     } catch (error) {
       this.logger.error(
-        `Failed to process notify-task-due job ${job.id}`,
+        'Failed to process notify-task-due',
         error instanceof Error ? error.stack : String(error),
       );
     }
   }
 
-  private async handleTaskBlocked(job: Job): Promise<void> {
+  private async handleTaskBlocked(data: Record<string, any>): Promise<void> {
     try {
-      const { userId, taskId, taskName, reason } = job.data;
+      const { userId, taskId, taskName, reason } = data;
 
       const notification = await this.notifications.create({
         user_id: userId,
@@ -101,23 +97,21 @@ export class NotificationsWorker extends WorkerHost {
       await this.sendCriticalEmail(notification.id, userId, notification.title, notification.body);
     } catch (error) {
       this.logger.error(
-        `Failed to process notify-task-blocked job ${job.id}`,
+        'Failed to process notify-task-blocked',
         error instanceof Error ? error.stack : String(error),
       );
     }
   }
 
-  private async handleApprovalPending(job: Job): Promise<void> {
+  private async handleApprovalPending(data: Record<string, any>): Promise<void> {
     try {
-      const { approvalId, taskName, hours } = job.data;
+      const { approvalId, taskName, hours } = data;
 
-      // Get all FOUNDER_ADMIN users with email + name in a single query (avoids per-admin fetch in sendCriticalEmail)
       const admins = await this.prisma.user.findMany({
         where: { status: 'active', role: { code: 'FOUNDER_ADMIN' } },
         select: { id: true, email: true, name: true },
       });
 
-      // Batch check cooldowns: fetch last notification per admin for this approval in one query
       const recentNotifications = await this.prisma.notification.findMany({
         where: {
           user_id: { in: admins.map((a) => a.id) },
@@ -128,7 +122,6 @@ export class NotificationsWorker extends WorkerHost {
         select: { user_id: true, created_at: true },
       });
 
-      // Build a map of userId -> last notification time
       const lastNotifMap = new Map<string, Date>();
       for (const n of recentNotifications) {
         if (!lastNotifMap.has(n.user_id)) {
@@ -139,7 +132,6 @@ export class NotificationsWorker extends WorkerHost {
       const title = `Approval waiting ${hours}h`;
       const body = `${taskName} evidence has been pending approval for over 24 hours.`;
 
-      // Process eligible admins in parallel
       const eligibleAdmins = admins.filter((admin) => {
         const lastSent = lastNotifMap.get(admin.id);
         if (!lastSent) return true;
@@ -164,18 +156,16 @@ export class NotificationsWorker extends WorkerHost {
       );
     } catch (error) {
       this.logger.error(
-        `Failed to process notify-approval-pending job ${job.id}`,
+        'Failed to process notify-approval-pending',
         error instanceof Error ? error.stack : String(error),
       );
     }
   }
 
-  private async handleLowStock(job: Job): Promise<void> {
+  private async handleLowStock(data: Record<string, any>): Promise<void> {
     try {
-      const { ingredientId, ingredientName, currentQty, minQty, unit } =
-        job.data;
+      const { ingredientId, ingredientName, currentQty, minQty, unit } = data;
 
-      // Fetch users with email + name to avoid per-user lookup in sendCriticalEmail
       const users = await this.prisma.user.findMany({
         where: {
           status: 'active',
@@ -184,7 +174,6 @@ export class NotificationsWorker extends WorkerHost {
         select: { id: true, email: true, name: true },
       });
 
-      // Batch check cooldowns in one query
       const recentNotifications = await this.prisma.notification.findMany({
         where: {
           user_id: { in: users.map((u) => u.id) },
@@ -229,24 +218,21 @@ export class NotificationsWorker extends WorkerHost {
       );
     } catch (error) {
       this.logger.error(
-        `Failed to process notify-low-stock job ${job.id}`,
+        'Failed to process notify-low-stock',
         error instanceof Error ? error.stack : String(error),
       );
     }
   }
 
-  private async handleNewOrder(job: Job): Promise<void> {
+  private async handleNewOrder(data: Record<string, any>): Promise<void> {
     try {
-      const { orderId, channel, itemCount } = job.data;
+      const { orderId, channel, itemCount } = data;
 
-      const users = await this.notifications.getUsersByPermission(
-        'MANAGE_KITCHEN',
-      );
+      const users = await this.notifications.getUsersByPermission('MANAGE_KITCHEN');
 
       const title = `New order #${orderId.slice(-6).toUpperCase()}`;
       const body = `${channel} order placed. ${itemCount} item(s).`;
 
-      // Create all notifications in parallel
       await Promise.all(
         users.map((user) =>
           this.notifications.create({
@@ -260,18 +246,17 @@ export class NotificationsWorker extends WorkerHost {
           }),
         ),
       );
-      // No email for new orders
     } catch (error) {
       this.logger.error(
-        `Failed to process notify-new-order job ${job.id}`,
+        'Failed to process notify-new-order',
         error instanceof Error ? error.stack : String(error),
       );
     }
   }
 
-  private async handleOrderReady(job: Job): Promise<void> {
+  private async handleOrderReady(data: Record<string, any>): Promise<void> {
     try {
-      const { orderId, channel } = job.data;
+      const { orderId, channel } = data;
 
       const actionMap: Record<string, string> = {
         dine_in: 'serving',
@@ -280,14 +265,11 @@ export class NotificationsWorker extends WorkerHost {
       };
       const action = actionMap[channel] || 'serving';
 
-      const users = await this.notifications.getUsersByPermission(
-        'MANAGE_POS',
-      );
+      const users = await this.notifications.getUsersByPermission('MANAGE_POS');
 
       const title = `Order #${orderId.slice(-6).toUpperCase()} ready`;
       const body = `${channel} order is ready for ${action}.`;
 
-      // Create all notifications in parallel
       await Promise.all(
         users.map((user) =>
           this.notifications.create({
@@ -301,18 +283,17 @@ export class NotificationsWorker extends WorkerHost {
           }),
         ),
       );
-      // No email for order ready
     } catch (error) {
       this.logger.error(
-        `Failed to process notify-order-ready job ${job.id}`,
+        'Failed to process notify-order-ready',
         error instanceof Error ? error.stack : String(error),
       );
     }
   }
 
-  private async handleDeliveryUpdate(job: Job): Promise<void> {
+  private async handleDeliveryUpdate(data: Record<string, any>): Promise<void> {
     try {
-      const { orderId, deliveryStatus, deliveryAddress, createdBy } = job.data;
+      const { orderId, deliveryStatus, deliveryAddress, createdBy } = data;
 
       await this.notifications.create({
         user_id: createdBy,
@@ -323,19 +304,14 @@ export class NotificationsWorker extends WorkerHost {
         reference_id: orderId,
         reference_type: 'order',
       });
-      // No email for delivery updates
     } catch (error) {
       this.logger.error(
-        `Failed to process notify-delivery-update job ${job.id}`,
+        'Failed to process notify-delivery-update',
         error instanceof Error ? error.stack : String(error),
       );
     }
   }
 
-  /**
-   * Send a critical email. Accepts either a userId (string) to look up,
-   * or a pre-fetched user object { email, name } to avoid an extra DB query.
-   */
   private async sendCriticalEmail(
     notificationId: string,
     userOrId: string | { email: string; name: string },
@@ -370,15 +346,11 @@ export class NotificationsWorker extends WorkerHost {
           `-- Konma Xperience Team`,
       );
 
-      // Mark email as sent on the notification record
       await this.prisma.notification.update({
         where: { id: notificationId },
         data: { is_email_sent: true },
       });
-
-      this.logger.log(`Critical email sent to ${user.email} for notification ${notificationId}`);
     } catch (error) {
-      // Email failure should not block notification processing
       this.logger.error(
         `Failed to send critical email for notification ${notificationId}`,
         error instanceof Error ? error.stack : String(error),
