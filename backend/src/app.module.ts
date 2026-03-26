@@ -50,6 +50,7 @@ import { CustomerAuthModule } from './customer-auth/customer-auth.module';
 import { RazorpayModule } from './razorpay/razorpay.module';
 import { WebhooksModule } from './webhooks/webhooks.module';
 import { CustomerOrdersModule } from './customer-orders/customer-orders.module';
+import { ActivityModule } from './activity/activity.module';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { PermissionsGuard } from './auth/permissions.guard';
 
@@ -141,6 +142,7 @@ import { PermissionsGuard } from './auth/permissions.guard';
     RazorpayModule,
     WebhooksModule,
     CustomerOrdersModule,
+    ActivityModule,
   ],
   controllers: [AppController],
   providers: [
