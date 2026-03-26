@@ -12,6 +12,8 @@ import { DashboardKpiAlert } from '@/components/ops/dashboard/DashboardKpiAlert'
 import { AdminRecentDecisionsWidget } from '@/components/ops/dashboard/AdminRecentDecisionsWidget';
 import { DashboardLeaderboardPreview } from '@/components/ops/dashboard/DashboardLeaderboardPreview';
 import { DashboardLowStockAlert } from '@/components/ops/dashboard/DashboardLowStockAlert';
+import { ActivityFeedWidget } from '@/components/ops/dashboard/ActivityFeedWidget';
+import { TeamContributionWidget } from '@/components/ops/dashboard/TeamContributionWidget';
 import { RoleDashboardSections } from '@/components/ops/dashboard/RoleDashboardSections';
 import { apiClient } from '@/lib/api-client';
 import { useAuthStore } from '@/lib/stores/auth-store';
@@ -173,6 +175,12 @@ function AdminDashboard() {
               )}
             </div>
           )}
+
+          {/* Activity Feed + Team Contribution */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <ActivityFeedWidget />
+            <TeamContributionWidget />
+          </div>
 
           {/* Recent Decisions */}
           <AdminRecentDecisionsWidget />

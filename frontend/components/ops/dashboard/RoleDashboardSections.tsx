@@ -12,6 +12,7 @@ import { XpProgressBar } from '@/components/ops/gamification/XpProgressBar';
 import { LevelBadge } from '@/components/ops/gamification/LevelBadge';
 import { DashboardKpiAlert } from '@/components/ops/dashboard/DashboardKpiAlert';
 import { DashboardLowStockAlert } from '@/components/ops/dashboard/DashboardLowStockAlert';
+import { TodaysFocusSection } from '@/components/ops/dashboard/TodaysFocusSection';
 import { apiClient } from '@/lib/api-client';
 import { useAuthStore } from '@/lib/stores/auth-store';
 import { RoleCode } from '@/lib/types/roles';
@@ -149,6 +150,9 @@ export function RoleDashboardSections() {
 
   return (
     <div className="space-y-6">
+      {/* Today's Focus — shown when there are overdue/due-today tasks */}
+      <TodaysFocusSection allTasks={allTasks as any} />
+
       {/* Row 1: My Tasks + Active Quest */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Section 1: My Tasks */}
