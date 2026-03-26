@@ -104,6 +104,11 @@
   --public-fg-subtle: #44403c;
   --public-border-light: #d6cfc4;
   --public-accent: #a16207;
+  --public-cart-bar: #1c1917;
+  --public-cart-bar-fg: #fafaf9;
+  --public-tracking-active: #c2410c;
+  --public-tracking-done: #365314;
+  --public-tracking-pending: #d6cfc4;
 }
 
 :root {

@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useRef } from 'react';
 import { apiClient } from '@/lib/api-client';
+import { useCartStore } from '@/lib/stores/cart-store';
 import type { Customer, VerifyOtpResponse } from '@/lib/types/customer-auth';
 
 export function useCustomerAuth() {
@@ -39,6 +40,19 @@ export function useCustomerAuth() {
     );
     setCustomer(result.customer);
     fetchedRef.current = true; // mark as fetched so profile doesn't re-call
+
+    // Sync local cart to Redis (fire-and-forget, per D-02)
+    const { items, channel, deliveryAddressId } = useCartStore.getState();
+    if (items.length > 0) {
+      apiClient.post('/customer/cart/sync', { items, channel, deliveryAddressId })
+        .then((syncResult: any) => {
+          if (syncResult?.items) {
+            useCartStore.getState().replaceCart(syncResult.items, syncResult.channel, syncResult.deliveryAddressId);
+          }
+        })
+        .catch(() => { /* silent fail -- local cart still usable */ });
+    }
+
     return result;
   }, []);
 
