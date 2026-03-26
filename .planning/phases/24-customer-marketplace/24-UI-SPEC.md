@@ -152,7 +152,7 @@ Structure (top to bottom):
 [Scrollable content — pt-4 pb-16]
   category sections anchor-scroll on tab click
   each section: space-y-3
-    section heading: text-lg font-semibold text-[var(--public-fg)] sticky top-[6.5rem]
+    section heading: text-xl font-semibold text-[var(--public-fg)] sticky top-[6.5rem]
     item list: flex flex-col gap-2 (single column list, NOT grid — Swiggy/Zomato pattern)
 [Floating cart bar — fixed, bottom-0, h-16, z-50]
 ```
@@ -198,7 +198,7 @@ Triggered by "View Cart" button. Uses existing shadcn `Sheet` component with `si
 ```
 [Sheet side="bottom" max-h-[90vh]]
   [Handle bar: mx-auto mt-3 mb-4 w-10 h-1 rounded-full bg-[var(--public-border-warm)]]
-  [Header: text-lg font-semibold text-[var(--public-fg)] px-4]  "Your Cart"
+  [Header: text-xl font-semibold text-[var(--public-fg)] px-4]  "Your Cart"
   [Scrollable content: overflow-y-auto px-4 space-y-4]
 
   [Section: Cart items]
@@ -256,7 +256,7 @@ Triggered by "View Cart" button. Uses existing shadcn `Sheet` component with `si
         [Right column: pb-8]
           [Label: text-sm font-semibold text-[var(--public-fg)] for completed/active]
                   [text-sm text-[var(--public-muted)] for pending]
-          [Timestamp: text-xs text-[var(--public-muted)] mt-0.5] "2:34 PM" (only for completed)
+          [Timestamp: text-xs text-[var(--public-muted)] mt-1] "2:34 PM" (only for completed)
 
   Active step transition: BlurFade direction="up" on new checkpoint appearing via Pusher
 
