@@ -109,7 +109,7 @@ export function PasswordSetupForm({
     setIsLoading(true);
     try {
       await onSubmitAction(token, data.password);
-      router.push('/login?message=Password+set.+You+can+now+sign+in.');
+      router.push('/team?message=Password+set.+You+can+now+sign+in.');
     } catch (err) {
       if (err instanceof ApiError) {
         if (err.status === 400 || err.status === 410) {

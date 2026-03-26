@@ -132,8 +132,8 @@ export class CustomerAuthService {
       { expiresIn: '30d' },
     );
 
-    // Set cookie — same name as staff token, type field distinguishes
-    res.cookie('access_token', token, {
+    // Separate cookie from staff — both can coexist in the same browser
+    res.cookie('customer_token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
@@ -177,7 +177,7 @@ export class CustomerAuthService {
   }
 
   async logout(res: express.Response) {
-    res.clearCookie('access_token', { path: '/' });
+    res.clearCookie('customer_token', { path: '/' });
     return { message: 'Logged out' };
   }
 }

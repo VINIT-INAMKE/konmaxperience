@@ -95,7 +95,7 @@ export default function ForgotPasswordPage() {
             : 'Resend email'}
         </button>
         <Link
-          href="/login"
+          href="/team"
           className="text-sm text-[var(--public-muted)] hover:text-[var(--public-fg)] transition-colors inline-flex items-center gap-1"
         >
           <ArrowLeft className="size-3" />
@@ -109,7 +109,7 @@ export default function ForgotPasswordPage() {
     <div className="w-full max-w-sm space-y-8">
       <div className="space-y-2">
         <Link
-          href="/login"
+          href="/team"
           className="text-sm text-[var(--public-muted)] hover:text-[var(--public-fg)] transition-colors inline-flex items-center gap-1 mb-4"
         >
           <ArrowLeft className="size-3" />

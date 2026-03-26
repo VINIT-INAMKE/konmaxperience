@@ -22,7 +22,7 @@ export async function logout(): Promise<void> {
     // Even if the API call fails, clear local state
   }
   useAuthStore.getState().clearUser();
-  window.location.href = '/login';
+  window.location.href = '/team';
 }
 
 export async function logoutAll(): Promise<void> {
@@ -32,7 +32,7 @@ export async function logoutAll(): Promise<void> {
     // Even if the API call fails, clear local state
   }
   useAuthStore.getState().clearUser();
-  window.location.href = '/login';
+  window.location.href = '/team';
 }
 
 export async function refreshSession(): Promise<boolean> {

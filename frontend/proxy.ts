@@ -2,8 +2,8 @@ import { jwtVerify } from 'jose';
 import { NextRequest, NextResponse } from 'next/server';
 
 const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET!);
-const PUBLIC_PATHS = ['/login', '/forgot-password', '/set-password', '/reset-password', '/menu', '/events', '/feedback', '/profile'];
-const AUTH_PAGES = ['/login', '/forgot-password', '/set-password', '/reset-password'];
+const PUBLIC_PATHS = ['/login', '/menu', '/events', '/feedback', '/profile'];
+const STAFF_AUTH_PAGES = ['/team', '/forgot-password', '/set-password', '/reset-password'];
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -14,26 +14,29 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Public pages (menu, events, feedback) — always accessible
+  // Public pages — always accessible (customer login, menu, events, profile)
   if (PUBLIC_PATHS.some((p) => pathname.startsWith(p))) {
-    // If logged-in user visits an auth page (login, etc.)
-    if (AUTH_PAGES.some((p) => pathname.startsWith(p)) && token) {
+    return NextResponse.next();
+  }
+
+  // Staff auth pages (/team, /forgot-password, /set-password, /reset-password)
+  if (STAFF_AUTH_PAGES.some((p) => pathname.startsWith(p))) {
+    if (token) {
       try {
         const { payload } = await jwtVerify(token, JWT_SECRET);
-        // Staff → dashboard, Customer → profile (customer has no reason to see staff login)
-        if (payload.type === 'customer') {
-          return NextResponse.redirect(new URL('/profile', request.url));
+        if (payload.type === 'staff') {
+          return NextResponse.redirect(new URL('/dashboard', request.url));
         }
-        return NextResponse.redirect(new URL('/dashboard', request.url));
+        // Customer token on staff auth page — let them through (they see the staff form)
       } catch {
-        // Token invalid — let them through to login
+        // Token invalid — let them through
       }
     }
     return NextResponse.next();
   }
 
   if (!token) {
-    const loginUrl = new URL('/login', request.url);
+    const loginUrl = new URL('/team', request.url);
     loginUrl.searchParams.set('redirect', pathname);
     return NextResponse.redirect(loginUrl);
   }
@@ -51,7 +54,7 @@ export async function proxy(request: NextRequest) {
     response.headers.set('x-role-code', payload.roleCode as string);
     return response;
   } catch {
-    const loginUrl = new URL('/login', request.url);
+    const loginUrl = new URL('/team', request.url);
     loginUrl.searchParams.set('redirect', pathname);
     return NextResponse.redirect(loginUrl);
   }

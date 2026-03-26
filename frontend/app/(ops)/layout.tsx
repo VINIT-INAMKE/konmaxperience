@@ -61,7 +61,7 @@ export default function OpsLayout({
         });
         setReady(true);
       } catch {
-        router.push('/login');
+        router.push('/team');
       }
     }
     void initUser();

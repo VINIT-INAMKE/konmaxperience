@@ -83,7 +83,7 @@ async function request<T>(
       if (typeof window !== 'undefined') {
         const { useAuthStore } = await import('@/lib/stores/auth-store');
         useAuthStore.getState().clearUser();
-        window.location.href = '/login';
+        window.location.href = '/team';
       }
       throw new ApiError(401, 'Session expired');
     }

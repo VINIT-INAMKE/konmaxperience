@@ -5,13 +5,19 @@ import { ConfigService } from '@nestjs/config';
 import { Request } from 'express';
 import { JwtPayload } from '../types/auth';
 
-// Custom extractor: tries Bearer header first, then access_token cookie (single cookie for both staff + customer)
+// Custom extractor: tries Bearer header, then access_token (staff), then customer_token (customer)
+// Two separate cookies allow both sessions to coexist in the same browser
 function extractJwtFromHeaderOrCookie(req: Request): string | null {
   const fromHeader = ExtractJwt.fromAuthHeaderAsBearerToken()(req);
   if (fromHeader) return fromHeader;
 
+  // Staff cookie (ops routes)
   if (req?.cookies?.access_token) {
     return req.cookies.access_token;
+  }
+  // Customer cookie (public routes)
+  if (req?.cookies?.customer_token) {
+    return req.cookies.customer_token;
   }
   return null;
 }

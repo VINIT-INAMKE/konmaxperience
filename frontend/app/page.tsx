@@ -201,7 +201,7 @@ export default function LandingPage() {
                 Every quest moves the mission forward.
               </p>
               <Link
-                href="/login"
+                href="/team"
                 className="inline-flex items-center gap-2 mt-8 bg-amber-500 text-[var(--public-fg)] px-6 py-3 rounded-lg text-sm font-bold hover:bg-amber-400 transition-colors"
               >
                 Team login <ArrowRight className="size-4" />
@@ -272,7 +272,7 @@ export default function LandingPage() {
           <div className="flex items-center gap-6">
             <Link href="/menu" className="text-xs text-[var(--public-muted-warm)] hover:text-[var(--public-fg)] transition-colors">Menu</Link>
             <Link href="/events" className="text-xs text-[var(--public-muted-warm)] hover:text-[var(--public-fg)] transition-colors">Events</Link>
-            <Link href="/login" className="text-xs text-[var(--public-muted-warm)] hover:text-[var(--public-fg)] transition-colors">Team Login</Link>
+            <Link href="/team" className="text-xs text-[var(--public-muted-warm)] hover:text-[var(--public-fg)] transition-colors">Team Login</Link>
           </div>
         </div>
       </footer>

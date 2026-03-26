@@ -163,7 +163,7 @@ describe('CustomerAuthService', () => {
         { expiresIn: '30d' },
       );
       expect(mockRes.cookie).toHaveBeenCalledWith(
-        'access_token',
+        'customer_token',
         'mock-jwt-token',
         expect.objectContaining({
           httpOnly: true,
