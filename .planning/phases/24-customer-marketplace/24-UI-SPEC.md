@@ -90,13 +90,15 @@ Exceptions:
 | Role | Size | Weight | Line Height | Token Usage |
 |------|------|--------|-------------|-------------|
 | Body | 14px | 400 (regular) | 1.5 | Default for descriptions, secondary text |
-| Label | 16px | 500 (medium) | 1.4 | Item names, form labels, tab names |
+| Label | 16px | 400 (regular) | 1.4 | Item names, form labels, tab names |
 | Heading | 20px | 600 (semibold) | 1.25 | Category section headers, sheet titles |
 | Display | 28px | 600 (semibold) | 1.2 | Page-level "Our Menu" heading only |
 
+Two weights only: 400 (regular) and 600 (semibold). Weight 500 (medium) is not used in this phase.
+
 Source: Observed in existing public pages — `text-base font-semibold` (16px/600), `text-sm text-[var(--public-muted)]` (14px/400), `text-xl font-semibold` (20px/600), `text-3xl font-semibold` (30px/600, which we normalise down to 28px for this phase).
 
-Currency values (₹XX.XX) use the Label role (16px/500) with `text-[var(--public-fg)]`.
+Currency values (₹XX.XX) use the Label role (16px/400) with `text-[var(--public-fg)]`.
 
 Total/subtotal amounts in cart use Heading role (20px/600).
 
@@ -115,7 +117,7 @@ Accent (`--public-terracotta`) reserved for exactly these elements — nothing e
 1. The `+` add-to-cart button on item cards (initial add)
 2. The quantity `+` and `-` stepper buttons
 3. The [Pay ₹XXX] CTA button in the cart bottom sheet
-4. The [Re-order] button on past order history cards
+4. The [Order again] button on past order history cards
 5. The active/selected state of channel toggle (Pickup / Delivery pill)
 6. Active checkpoint dot on the order tracking timeline
 7. Links and inline actions (resend OTP, "Change address")
@@ -210,7 +212,7 @@ Triggered by "View Cart" button. Uses existing shadcn `Sheet` component with `si
     Two pill toggles: [Pickup] [Delivery]
       Active: bg-[var(--public-terracotta)] text-white
       Inactive: bg-[var(--public-surface)] text-[var(--public-fg-subtle)] border border-[var(--public-border)]
-      Each pill: flex-1 py-2.5 text-sm font-medium text-center rounded-lg cursor-pointer
+      Each pill: flex-1 py-2 text-sm font-medium text-center rounded-lg cursor-pointer
 
   [Section: Delivery address — only shown when Delivery selected]
     If no address saved:
@@ -283,7 +285,7 @@ Triggered by "View Cart" button. Uses existing shadcn `Sheet` component with `si
       Total: text-base font-semibold text-[var(--public-fg)]
       Actions row: flex gap-2
         [Receipt: text-xs border border-[var(--public-border)] text-[var(--public-fg-subtle)] rounded-lg px-3 py-1.5]
-        [Re-order: text-xs bg-[var(--public-terracotta)] text-white rounded-lg px-3 py-1.5 font-medium]
+        [Order again: text-xs bg-[var(--public-terracotta)] text-white rounded-lg px-3 py-1.5 font-medium]
 
   [Addresses tab content]
     each address card: rounded-xl border border-[var(--public-border)] bg-[var(--public-surface)] p-4
@@ -342,7 +344,7 @@ New components to build for this phase:
 | AddressSelector | `components/public/AddressSelector.tsx` | — | Saved addresses list + Google Places input |
 | GooglePlacesInput | `components/public/GooglePlacesInput.tsx` | — | Autocomplete input using Places API |
 | OrderTrackingTimeline | `components/public/OrderTrackingTimeline.tsx` | — | 4-step vertical timeline with Pusher-live updates |
-| CustomerOrderCard | `components/public/CustomerOrderCard.tsx` | — | Order history card with Re-order + Receipt actions |
+| CustomerOrderCard | `components/public/CustomerOrderCard.tsx` | — | Order history card with Order again + Receipt actions |
 | CustomerAddressCard | `components/public/CustomerAddressCard.tsx` | — | Address card with set-default/edit/delete |
 | OrderReceipt (server) | `backend/src/customer/receipt.template.ts` | — | Pure HTML string template, no React |
 
@@ -390,7 +392,7 @@ Existing components to enhance:
 | State | Visual |
 |-------|--------|
 | Cart is empty | Adds items silently, floating cart bar appears |
-| Cart has items | Dialog: "Replace your cart or add to it?" with [Replace] [Add to cart] [Cancel] |
+| Cart has items | Dialog: "Replace your cart or add to it?" with [Replace] [Add to cart] [Keep browsing] |
 | Some items unavailable | Toast: "Dosa was skipped — currently unavailable" after re-order completes |
 
 ---
@@ -401,7 +403,7 @@ Existing components to enhance:
 |---------|------|
 | Primary CTA (add item) | "+" (icon only, aria-label: "Add {item name} to cart") |
 | Primary CTA (checkout) | "Pay ₹{total}" |
-| Primary CTA (re-order) | "Re-order" |
+| Primary CTA (re-order) | "Order again" |
 | Cart bar CTA | "View Cart" |
 | Channel: pickup | "Pickup" |
 | Channel: delivery | "Delivery" |
@@ -415,8 +417,8 @@ Existing components to enhance:
 | Cart merge prompt heading | "You have an existing cart" |
 | Cart merge options | "Use existing cart" / "Replace with new items" |
 | Re-order — cart not empty heading | "Your cart has items" |
-| Re-order — cart not empty options | "Add to cart" / "Replace cart" / "Cancel" |
-| Remove address confirmation | "Remove this address?" / "This cannot be undone." / [Remove] [Cancel] |
+| Re-order — cart not empty options | "Add to cart" / "Replace cart" / "Keep browsing" |
+| Remove address confirmation | "Remove this address?" / "This cannot be undone." / [Remove] [Keep address] |
 | Order placed toast | "Order placed! Tracking your order." |
 | Payment failed toast | "Payment could not be completed. Try again." |
 | Skipped items toast | "{Name} was skipped — currently unavailable" |
