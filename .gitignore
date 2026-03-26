@@ -28,5 +28,7 @@ coverage/
 .DS_Store
 Thumbs.db
 
+contextdocsv2
+
 # Prisma
 prisma/migrations/**/migration_lock.toml

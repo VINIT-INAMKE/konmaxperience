@@ -8,7 +8,8 @@
       "mcp__magicuidesign-mcp__searchRegistryItems",
       "mcp__magicuidesign-mcp__listRegistryItems",
       "Bash(npx tsc:*)",
-      "mcp__context7__resolve-library-id"
+      "mcp__context7__resolve-library-id",
+      "Bash(ls:*)"
     ]
   },
   "enableAllProjectMcpServers": true,
