@@ -16,10 +16,14 @@ export async function proxy(request: NextRequest) {
 
   // Public pages (menu, events, feedback) — always accessible
   if (PUBLIC_PATHS.some((p) => pathname.startsWith(p))) {
-    // If logged-in user visits an auth page (login, etc.), redirect to dashboard
+    // If logged-in user visits an auth page (login, etc.)
     if (AUTH_PAGES.some((p) => pathname.startsWith(p)) && token) {
       try {
-        await jwtVerify(token, JWT_SECRET);
+        const { payload } = await jwtVerify(token, JWT_SECRET);
+        // Staff → dashboard, Customer → profile (customer has no reason to see staff login)
+        if (payload.type === 'customer') {
+          return NextResponse.redirect(new URL('/profile', request.url));
+        }
         return NextResponse.redirect(new URL('/dashboard', request.url));
       } catch {
         // Token invalid — let them through to login

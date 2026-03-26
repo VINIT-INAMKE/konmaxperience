@@ -61,9 +61,9 @@ function LoginContent() {
     <div className="w-full max-w-sm space-y-8">
       {/* Heading */}
       <div className="space-y-2">
-        <h1 className="text-2xl font-bold tracking-tight text-[var(--public-fg)]">Welcome back</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-[var(--public-fg)]">Team Login</h1>
         <p className="text-sm text-[var(--public-muted)]">
-          Sign in to your account to continue.
+          For Konma Xperience staff only.
         </p>
       </div>
 
@@ -153,6 +153,17 @@ function LoginContent() {
           )}
         </button>
       </form>
+
+      {/* Customer escape hatch */}
+      <div className="pt-4 border-t border-[var(--public-border)] text-center space-y-1">
+        <p className="text-xs text-[var(--public-muted)]">Looking to order food or book an event?</p>
+        <Link
+          href="/menu"
+          className="text-sm font-medium text-[var(--public-terracotta)] hover:underline"
+        >
+          Go to menu →
+        </Link>
+      </div>
     </div>
   );
 }
