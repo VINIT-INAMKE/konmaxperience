@@ -45,8 +45,8 @@ Full customer-facing marketplace — cart + checkout with Razorpay custom checko
 - **D-16:** Pincode-based delivery zone restriction. Serviceable pincodes stored as env var (`DELIVERY_PINCODES=560001,560002,...`). At checkout, validate delivery address pincode is in the list. Shows "Sorry, we don't deliver to this area yet" if not. This check is designed as a simple `isServiceable(pincode)` function — Phase 25 can replace it with Porter/Shiprocket serviceability API calls without touching checkout flow
 
 ### Receipt
-- **D-17:** Printable HTML receipt at `/orders/[id]/receipt`. Print-optimized CSS (`@media print` hides nav/footer). Shows: business name, order number, date/time, channel, itemized list with quantities and prices, subtotal, delivery charge (if applicable), total, payment method, Razorpay payment ID. Customer clicks "Download Receipt" → browser print dialog (Save as PDF)
-- **D-18:** Same receipt route works for event bookings too: `/bookings/[id]/receipt` with event name, date, guests, amount, Razorpay payment ID
+- **D-17:** Server-generated receipt — backend renders the receipt HTML at `GET /customer/orders/:id/receipt` (returns `text/html`). The HTML is pre-rendered with all order data server-side — tamper-proof, customer cannot modify amounts or items. Frontend opens this URL in a new tab/iframe, customer uses browser print (Save as PDF). No client-side React rendering of receipt data. Print-optimized CSS (`@media print` hides any chrome). Shows: business name, order number, date/time, channel, itemized list with quantities and prices, subtotal, delivery charge (if applicable), total, payment method, Razorpay payment ID
+- **D-18:** Same pattern for event booking receipts: `GET /customer/bookings/:id/receipt` with event name, date, guests, amount, Razorpay payment ID. Both endpoints require CustomerGuard — customer can only view their own receipts
 
 ### Order history + enriched profile
 - **D-19:** Customer profile page (`/profile`) enhanced with Orders tab. Lists past orders with: order number, date, items summary (first 2-3 items + "and X more"), total, status badge. Each order has [Receipt] and [Re-order] buttons
