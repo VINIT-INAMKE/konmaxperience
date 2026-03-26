@@ -90,7 +90,7 @@ export default function LandingPage() {
               Events
             </Link>
             <Link
-              href="/login"
+              href="/team"
               className={`text-sm font-semibold px-4 py-1.5 rounded-lg transition-all duration-500 ${
                 pastVideo
                   ? 'bg-[var(--public-fg)] text-[var(--public-bg)] hover:bg-[var(--public-fg-hover)]'
