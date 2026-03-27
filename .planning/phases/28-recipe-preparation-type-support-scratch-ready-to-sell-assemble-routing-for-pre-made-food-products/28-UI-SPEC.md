@@ -43,7 +43,7 @@ Declared values (must be multiples of 4):
 
 Exceptions:
 - KDS-style touch targets (order item rows): minimum height 48px — matches existing `KdsOrderItem` min-h-[48px] pattern
-- Preparation type selector buttons: minimum height 44px for reliable touch targeting on kitchen displays
+- Preparation type selector buttons: minimum height 48px — matches KDS touch target standard
 
 ---
 
@@ -54,11 +54,11 @@ Exceptions:
 | Body | 14px | 400 | 1.5 |
 | Label | 12px | 400 (uppercase tracking-wide) | 1.4 |
 | Heading | 20px | 600 | 1.2 |
-| Display | 28px | 700 | 1.1 |
+| Display | 28px | 600 | 1.1 |
 
 Notes:
 - Label role matches existing `RecipeMetaGrid` pattern: `text-xs text-muted-foreground uppercase tracking-wide font-normal`
-- Display role matches existing `KdsOrderCard` order number: `text-[28px] font-bold leading-[1.1]`
+- Display role matches existing `KdsOrderCard` order number pattern: `text-[28px] leading-[1.1]` — 28px size creates sufficient hierarchy without needing a third weight
 - Body and Heading match the general ops layout used across kitchen pages
 - Monospace font (`var(--font-geist-mono)`) used for quantities, counts, and cost figures (existing pattern from `WasteLogRow` and `WasteLogForm`)
 
@@ -109,7 +109,7 @@ Components available (already installed, no new installs needed):
 | Table | `@/components/ui/table` | Supply usage history table (mirrors WasteLog table) |
 | Separator | `@/components/ui/separator` | Divider between Pick & Pack queue sections |
 | Skeleton | `@/components/ui/skeleton` | Loading state for Pick & Pack queue and supply history |
-| Tooltip | `@/components/ui/tooltip` | Availability count tooltip explaining "0 batches — out of stock" |
+| Tooltip | `@/components/ui/tooltip` | Availability count tooltip, delete category icon button label |
 | BorderBeam | `@/components/ui/border-beam` | New order arrival animation on Pick & Pack cards (mirrors KDS) |
 
 New components needed (add via shadcn or build):
@@ -139,7 +139,7 @@ Source: `frontend/components/ui/` directory scan
 
 **Behavior:** Selecting `ready_to_sell` shows an amber info note below: "Prep steps and cooking method are optional for shelf items."
 
-**Touch target:** Each option button minimum height 44px.
+**Touch target:** Each option button minimum height 48px.
 
 ---
 
@@ -178,12 +178,12 @@ Source: `frontend/components/ui/` directory scan
 **Order cards:**
 
 Each card is a white Card with:
-- Header row: Order number as Display (28px bold), customer name in 14px muted, elapsed timer (reuse KdsElapsedTimer), channel badge (Takeaway / Delivery / Dine-in)
+- Header row: Order number as Display (28px, weight 600), customer name in 14px muted, elapsed timer (reuse KdsElapsedTimer), channel badge (Takeaway / Delivery / Dine-in)
 - BorderBeam animation for 3 seconds on new card arrival (mirrors KdsOrderCard)
 - Item list below header — one row per non-scratch item
 
 **Item row (batch_prepared / ready_to_sell):**
-- Item name 18px, quantity badge
+- Item name 20px Heading (weight 600), quantity badge
 - Preparation type badge: "Batch Prepared" (info color) or "Ready to Sell" (muted)
 - Tap/click row to mark item picked → row gets strikethrough + success icon + opacity-50
 
@@ -227,10 +227,10 @@ Each card is a white Card with:
 **Component:** A Card titled "Ingredient Categories" with:
 - Table of existing categories (name, is_default badge, sort_order, delete action)
 - is_default = true → no delete button, shows "Default" Badge (muted)
-- is_default = false → delete icon button (Trash2, destructive variant)
+- is_default = false → delete icon button (Trash2, destructive variant) wrapped in a `Tooltip` with content "Delete category" and `aria-label="Delete category"` on the button element
 - "+ Add Category" button at bottom of table → opens inline Input row (not a dialog) with name field and checkmark confirm button
 
-**Delete confirmation:** No dialog — inline destructive icon button. On click, button shows spinner while DELETE request is in flight. No undo.
+**Delete confirmation:** No confirmation dialog — inline destructive icon button. On click, button shows spinner while DELETE request is in flight. No undo.
 
 ---
 
@@ -264,7 +264,8 @@ Availability display updated to reflect preparation_type:
 | Empty state — Pick & Pack body | "Non-scratch items will appear here when new orders come in." |
 | Empty state — Supply Usage history heading | "No usage logged yet" |
 | Empty state — Supply Usage history body | "Use the form to record supply usage at the end of each shift." |
-| Empty state — Ingredient categories | "No custom categories yet" |
+| Empty state — Ingredient categories heading | "No custom categories yet" |
+| Empty state — Ingredient categories body | "Use the field below to add your first category." |
 | Info note — ready_to_sell recipe | "Prep steps and cooking method are optional for shelf items." |
 | Info note — supply / equipment ingredient | "This item will not appear in recipe BOM lines or availability calculations." |
 | Out of stock — batch_prepared | "Out of stock — no active batches" |
