@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: User Guide & Data Management
 status: unknown
-stopped_at: Completed 28-02-PLAN.md
-last_updated: "2026-03-27T12:57:51.913Z"
+stopped_at: Completed 28-04-PLAN.md
+last_updated: "2026-03-27T13:12:52.863Z"
 progress:
   total_phases: 15
   completed_phases: 12
   total_plans: 50
-  completed_plans: 48
+  completed_plans: 49
 ---
 
 # Project State
@@ -93,6 +93,7 @@ Plan: 5 of 5 (all done)
 | Phase 28 P01 | 7min | 2 tasks | 8 files |
 | Phase 28 P03 | 5min | 2 tasks | 8 files |
 | Phase 28 P02 | 7min | 2 tasks | 5 files |
+| Phase 28 P04 | 10min | 2 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -226,6 +227,9 @@ Recent decisions affecting current work:
 - [Phase 28]: No standalone pick-and-pack.module.ts or supply-usage.module.ts created -- direct registration in KitchenModule matches existing pattern
 - [Phase 28]: OrdersService injected into CustomerOrdersService via OrdersModule import for deductItemIngredients reuse
 - [Phase 28]: Non-scratch items auto-set to ready at order creation; deductBatchPrepared warns on insufficient stock instead of throwing
+- [Phase 28]: RadioGroup built manually from base-ui primitives since shadcn registry was unreachable
+- [Phase 28]: Card-style RadioGroup: sr-only RadioGroupItem inside styled label for accessible custom radio UI
+- [Phase 28]: IngredientForm category validation relaxed (optional) since DB categories use UUID IDs
 
 ### Roadmap Evolution
 
@@ -251,6 +255,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-27T12:57:51.896Z
-Stopped at: Completed 28-02-PLAN.md
+Last session: 2026-03-27T13:12:52.851Z
+Stopped at: Completed 28-04-PLAN.md
 Resume file: None
