@@ -20,8 +20,11 @@ export class IngredientsController {
   constructor(private readonly ingredientsService: IngredientsService) {}
 
   @Get()
-  async findAll(@Query('category') category?: string) {
-    return this.ingredientsService.findAll(category);
+  async findAll(
+    @Query('category') category?: string,
+    @Query('usage_type') usageType?: string,
+  ) {
+    return this.ingredientsService.findAll(category, usageType);
   }
 
   @Get(':id')

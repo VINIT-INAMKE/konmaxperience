@@ -12,15 +12,19 @@ import { getCompatibleUnits } from '../common/utils/unit-conversion';
 export class IngredientsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll(category?: string) {
+  async findAll(category?: string, usageType?: string) {
     const where: Record<string, unknown> = {};
     if (category) {
       where.category = category;
+    }
+    if (usageType) {
+      where.usage_type = usageType;
     }
     return this.prisma.ingredient.findMany({
       where,
       orderBy: { name: 'asc' },
       include: {
+        category_obj: { select: { id: true, name: true } },
         RecipeLines: {
           include: {
             recipe: {
