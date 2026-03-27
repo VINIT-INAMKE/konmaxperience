@@ -96,7 +96,7 @@ export class MenuService {
       where,
       include: {
         recipe: {
-          select: { id: true, name: true, computed_cost: true, yield_qty: true },
+          select: { id: true, name: true, computed_cost: true, yield_qty: true, preparation_type: true },
         },
         category: {
           select: { id: true, name: true, brand_id: true },
@@ -136,7 +136,7 @@ export class MenuService {
       },
       include: {
         recipe: {
-          select: { id: true, name: true, computed_cost: true, yield_qty: true },
+          select: { id: true, name: true, computed_cost: true, yield_qty: true, preparation_type: true },
         },
         category: {
           select: { id: true, name: true, brand_id: true },
@@ -181,7 +181,7 @@ export class MenuService {
       },
       include: {
         recipe: {
-          select: { id: true, name: true, computed_cost: true, yield_qty: true },
+          select: { id: true, name: true, computed_cost: true, yield_qty: true, preparation_type: true },
         },
         category: {
           select: { id: true, name: true, brand_id: true },
@@ -250,6 +250,8 @@ export class MenuService {
       available: boolean;
       status: string;
       recipe: {
+        id: string;
+        preparation_type: string;
         RecipeLines: Array<{
           input_type: string;
           quantity: any;
@@ -263,11 +265,50 @@ export class MenuService {
     },
     prefetchedStocks?: Map<string, number>,
     prefetchedBatches?: Map<string, number>,
-  ): Promise<{ available: boolean; servings_remaining: number }> {
+  ): Promise<{ available: boolean; servings_remaining: number; preparation_type: string }> {
     if (!menuItem.available || menuItem.status !== 'active') {
-      return { available: false, servings_remaining: 0 };
+      return { available: false, servings_remaining: 0, preparation_type: menuItem.recipe?.preparation_type ?? 'scratch' };
     }
 
+    const prepType = menuItem.recipe?.preparation_type ?? 'scratch';
+
+    // batch_prepared: availability from active PrepBatch records for THIS recipe
+    if (prepType === 'batch_prepared') {
+      const batchTotal = prefetchedBatches?.get(menuItem.recipe.id) ?? 0;
+      return {
+        available: batchTotal > 0,
+        servings_remaining: Math.floor(batchTotal),
+        preparation_type: prepType,
+      };
+    }
+
+    // assemble: min(availability of each component recipe/ingredient)
+    if (prepType === 'assemble') {
+      const lines = menuItem.recipe?.RecipeLines ?? [];
+      let minServings = Infinity;
+      for (const line of lines) {
+        if (line.input_type === 'recipe' && line.source_recipe_id) {
+          const compBatchQty = prefetchedBatches?.get(line.source_recipe_id) ?? 0;
+          const qtyPerServing = Number(line.quantity) || 1;
+          const compServings = Math.floor(compBatchQty / qtyPerServing);
+          minServings = Math.min(minServings, compServings);
+        }
+        if (line.input_type === 'ingredient' && line.ingredient_id) {
+          const stock = prefetchedStocks?.get(line.ingredient_id) ?? 0;
+          const qtyPerServing = Number(line.quantity) || 1;
+          const lineServings = Math.floor(stock / qtyPerServing);
+          minServings = Math.min(minServings, lineServings);
+        }
+      }
+      const remaining = minServings === Infinity ? 0 : minServings;
+      return {
+        available: remaining > 0,
+        servings_remaining: remaining,
+        preparation_type: prepType,
+      };
+    }
+
+    // scratch and ready_to_sell: existing ingredient stock BOM logic (unchanged)
     let minServings = Infinity;
 
     for (const line of menuItem.recipe.RecipeLines) {
@@ -292,7 +333,7 @@ export class MenuService {
         );
         if (neededPerServing === null) {
           // Conversion failure means we cannot determine availability — treat as unavailable
-          return { available: false, servings_remaining: 0 };
+          return { available: false, servings_remaining: 0, preparation_type: prepType };
         }
         if (neededPerServing === 0) {
           this.logger.warn(
@@ -329,7 +370,7 @@ export class MenuService {
         );
         if (neededPerServing === null) {
           // Conversion failure means we cannot determine availability — treat as unavailable
-          return { available: false, servings_remaining: 0 };
+          return { available: false, servings_remaining: 0, preparation_type: prepType };
         }
         if (neededPerServing === 0) {
           this.logger.warn(
@@ -343,12 +384,12 @@ export class MenuService {
     }
 
     const remaining = minServings === Infinity ? 0 : minServings;
-    return { available: remaining > 0, servings_remaining: remaining };
+    return { available: remaining > 0, servings_remaining: remaining, preparation_type: prepType };
   }
 
   async getServingsAvailable(
     menuItemId: string,
-  ): Promise<{ available: boolean; servings_remaining: number }> {
+  ): Promise<{ available: boolean; servings_remaining: number; preparation_type: string }> {
     const menuItem = await this.prisma.menuItem.findUniqueOrThrow({
       where: { id: menuItemId },
       include: {
@@ -369,7 +410,7 @@ export class MenuService {
   }
 
   async getAllServingsAvailable(): Promise<
-    Record<string, { available: boolean; servings_remaining: number }>
+    Record<string, { available: boolean; servings_remaining: number; preparation_type: string }>
   > {
     const menuItems = await this.prisma.menuItem.findMany({
       where: { status: 'active' },
@@ -399,6 +440,14 @@ export class MenuService {
         if (line.input_type === 'recipe' && line.source_recipe_id) {
           recipeIds.add(line.source_recipe_id);
         }
+      }
+    }
+
+    // Also collect batch_prepared recipe IDs for direct batch lookup
+    // (batch_prepared PrepBatches are keyed by the recipe's OWN id, not a BOM source_recipe_id)
+    for (const item of menuItems) {
+      if (item.recipe?.preparation_type === 'batch_prepared') {
+        recipeIds.add(item.recipe.id);
       }
     }
 
@@ -436,7 +485,7 @@ export class MenuService {
 
     const result: Record<
       string,
-      { available: boolean; servings_remaining: number }
+      { available: boolean; servings_remaining: number; preparation_type: string }
     > = {};
 
     for (const item of menuItems) {
