@@ -26,6 +26,7 @@ import {
   Radio,
   FolderOpen,
   ChefHat,
+  Package,
   Salad,
   Truck,
   UtensilsCrossed,
@@ -330,7 +331,9 @@ export function Sidebar({ onNavigate }: SidebarProps = {}) {
     ? [
         { label: 'Dashboard', href: '/operations/kitchen/dashboard', icon: <LayoutDashboard className="size-4" /> },
         { label: 'KDS', href: '/operations/kitchen/kds', icon: <Monitor className="size-4" /> },
+        { label: 'Pick & Pack', href: '/operations/kitchen/pick-and-pack', icon: <Package className="size-4" /> },
         { label: 'Prep Batches', href: '/operations/kitchen/prep-batches', icon: <ChefHat className="size-4" /> },
+        { label: 'Supply Usage', href: '/operations/kitchen/supply-usage', icon: <ClipboardList className="size-4" /> },
         { label: 'Waste Log', href: '/operations/kitchen/waste', icon: <Trash2 className="size-4" /> },
       ]
     : [];
