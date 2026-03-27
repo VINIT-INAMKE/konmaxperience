@@ -201,6 +201,43 @@ const UNIT_CONVERSIONS = [
   { from_unit: 'ml',     to_unit: 'cup',    factor: 0.00417   },
 ];
 
+const INGREDIENT_CATEGORIES = [
+  { name: 'Dairy', sort_order: 1 },
+  { name: 'Vegetables', sort_order: 2 },
+  { name: 'Fruits', sort_order: 3 },
+  { name: 'Herbs (fresh)', sort_order: 4 },
+  { name: 'Spices (dried)', sort_order: 5 },
+  { name: 'Flours & Starches', sort_order: 6 },
+  { name: 'Sugars & Sweeteners', sort_order: 7 },
+  { name: 'Leaveners', sort_order: 8 },
+  { name: 'Nuts & Seeds', sort_order: 9 },
+  { name: 'Oils & Fats', sort_order: 10 },
+  { name: 'Proteins (meat)', sort_order: 11 },
+  { name: 'Seafood', sort_order: 12 },
+  { name: 'Eggs', sort_order: 13 },
+  { name: 'Chocolates & Cocoa', sort_order: 14 },
+  { name: 'Extracts & Essences', sort_order: 15 },
+  { name: 'Grains & Cereals', sort_order: 16 },
+  { name: 'Legumes & Pulses', sort_order: 17 },
+  { name: 'Condiments & Sauces', sort_order: 18 },
+  { name: 'Vinegars', sort_order: 19 },
+  { name: 'Beverages', sort_order: 20 },
+  { name: 'Baking Supplies', sort_order: 21 },
+  { name: 'Frozen', sort_order: 22 },
+  { name: 'Canned & Preserved', sort_order: 23 },
+  { name: 'Packaging', sort_order: 24 },
+  { name: 'Equipment', sort_order: 25 },
+];
+
+const CATEGORY_MAPPING: Record<string, string> = {
+  dairy: 'Dairy',
+  vegetable: 'Vegetables',
+  spice: 'Spices (dried)',
+  grain: 'Grains & Cereals',
+  meat: 'Proteins (meat)',
+  oil: 'Oils & Fats',
+};
+
 // --- Tiptap JSON helpers ---
 
 function p(text: string) {
@@ -2206,6 +2243,35 @@ async function main() {
       await tx.unitConversion.create({ data: uc });
     }
 
+    // Seed ingredient categories (upsert for idempotency)
+    for (const cat of INGREDIENT_CATEGORIES) {
+      await tx.ingredientCategory.upsert({
+        where: { name: cat.name },
+        update: { sort_order: cat.sort_order },
+        create: { ...cat, is_default: true },
+      });
+    }
+
+    // Backfill category_id from old category string
+    const allCategories = await tx.ingredientCategory.findMany();
+    const catNameToId = new Map(allCategories.map((c: { name: string; id: string }) => [c.name, c.id]));
+
+    const ingredientsToUpdate = await tx.ingredient.findMany({
+      where: { category_id: null, category: { not: null } },
+      select: { id: true, category: true },
+    });
+
+    for (const ing of ingredientsToUpdate) {
+      const newCatName = CATEGORY_MAPPING[ing.category ?? ''];
+      const catId = newCatName ? catNameToId.get(newCatName) : catNameToId.get('Dairy');
+      if (catId) {
+        await tx.ingredient.update({
+          where: { id: ing.id },
+          data: { category_id: catId },
+        });
+      }
+    }
+
     // Upsert system settings
     await tx.systemSetting.upsert({
       where: { key: 'leaderboard_enabled' },
@@ -2237,6 +2303,7 @@ async function main() {
   console.log(`  - ${BRANDS.length} brands`);
   console.log(`  - ${CHANNELS.length} channels`);
   console.log(`  - ${UNIT_CONVERSIONS.length} unit conversions`);
+  console.log(`  - ${INGREDIENT_CATEGORIES.length} ingredient categories`);
   console.log('  - 17 guide sections with 53+ pages');
 }
 

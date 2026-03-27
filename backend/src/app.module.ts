@@ -27,6 +27,7 @@ import { BrandsModule } from './brands/brands.module';
 import { ChannelsModule } from './channels/channels.module';
 import { AssetsModule } from './assets/assets.module';
 import { IngredientsModule } from './ingredients/ingredients.module';
+import { IngredientCategoriesModule } from './ingredient-categories/ingredient-categories.module';
 import { VendorsModule } from './vendors/vendors.module';
 import { RecipesModule } from './recipes/recipes.module';
 import { MenuModule } from './menu/menu.module';
@@ -86,6 +87,7 @@ import { PermissionsGuard } from './auth/permissions.guard';
     ChannelsModule,
     AssetsModule,
     IngredientsModule,
+    IngredientCategoriesModule,
     MenuModule,
     RecipesModule,
     VendorsModule,
