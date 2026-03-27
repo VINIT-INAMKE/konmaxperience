@@ -54,9 +54,21 @@ export function IngredientRow({ ingredient, stock, onEdit, onDelete, isAdmin }: 
     <tr className="border-b last:border-b-0 hover:bg-muted/30 transition-colors">
       <td className="px-4 py-3 text-sm font-medium">{ingredient.name}</td>
       <td className="px-4 py-3">
-        <Badge className={`text-xs border-0 ${CATEGORY_COLORS[ingredient.category]}`}>
-          {CATEGORY_LABELS[ingredient.category]}
-        </Badge>
+        {(() => {
+          const catKey = ingredient.category as IngredientCategory | null;
+          const catName = ingredient.category_obj?.name
+            ?? (catKey && CATEGORY_LABELS[catKey])
+            ?? ingredient.category
+            ?? 'Uncategorized';
+          const catColor = catKey && CATEGORY_COLORS[catKey]
+            ? CATEGORY_COLORS[catKey]
+            : 'bg-muted text-muted-foreground';
+          return (
+            <Badge className={`text-xs border-0 ${catColor}`}>
+              {catName}
+            </Badge>
+          );
+        })()}
       </td>
       <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
         {ingredient.base_unit}

@@ -82,3 +82,45 @@ export const WASTE_TYPE_LABELS: Record<WasteType, string> = {
   ingredient: 'Ingredient',
   prep_batch: 'Prep Batch',
 };
+
+// --- Pick & Pack types ---
+
+export interface PickAndPackOrder {
+  id: string;
+  order_number: number;
+  customer_name: string | null;
+  created_at: string;
+  channel: string;
+  items: PickAndPackItem[];
+}
+
+export interface PickAndPackItem {
+  id: string;
+  status: string;
+  menu_item_id: string;
+  menu_item_name: string;
+  quantity: number;
+  item_notes: string | null;
+  preparation_type: string;
+  components?: AssembleComponent[];
+}
+
+export interface AssembleComponent {
+  recipe_id: string;
+  recipe_name: string;
+  quantity: number;
+  unit: string;
+}
+
+// --- Supply Usage types ---
+
+export interface SupplyUsageEntry {
+  id: string;
+  ingredient: { id: string; name: string; base_unit: string };
+  zone: { id: string; name: string };
+  creator: { id: string; name: string };
+  original_quantity: number;
+  unit: string;
+  reason: string | null;
+  created_at: string;
+}

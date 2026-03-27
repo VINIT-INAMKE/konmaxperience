@@ -19,7 +19,7 @@ import { RecipeStatusBanner } from './builder/RecipeStatusBanner';
 import { useAuthStore } from '@/lib/stores/auth-store';
 import { RoleCode } from '@/lib/types/roles';
 import { apiClient } from '@/lib/api-client';
-import type { Recipe, RecipeStatus, BomLineState, CostData, CostPreviewResponse, RecipeLine } from '@/lib/types/recipe';
+import type { Recipe, RecipeStatus, BomLineState, CostData, CostPreviewResponse, RecipeLine, PreparationType } from '@/lib/types/recipe';
 import type { Brand } from '@/lib/types/brand';
 import type { Zone } from '@/lib/types/zone';
 import type { Ingredient } from '@/lib/types/ingredient';
@@ -46,6 +46,7 @@ export function RecipeBuilderPage({ recipeId }: RecipeBuilderPageProps) {
   const [brandId, setBrandId] = useState<string | null>(null);
   const [zoneId, setZoneId] = useState<string | null>(null);
   const [imageUrl, setImageUrl] = useState('');
+  const [preparationType, setPreparationType] = useState<PreparationType>('scratch');
   const [status, setStatus] = useState<RecipeStatus>('draft');
   const [bomLines, setBomLines] = useState<BomLineState[]>([]);
   const [isDirty, setIsDirty] = useState(false);
@@ -229,6 +230,7 @@ export function RecipeBuilderPage({ recipeId }: RecipeBuilderPageProps) {
       setBrandId(recipe.brand_id);
       setZoneId(recipe.zone_id);
       setImageUrl(recipe.image_url ?? '');
+      setPreparationType(recipe.preparation_type ?? 'scratch');
       setStatus(recipe.status);
       setBomLines(
         (recipe.RecipeLines ?? []).map((line) => ({
@@ -270,8 +272,9 @@ export function RecipeBuilderPage({ recipeId }: RecipeBuilderPageProps) {
       const payload = {
         name,
         description,
-        prep_steps: prepSteps,
-        cooking_method: cookingMethod,
+        preparation_type: preparationType,
+        prep_steps: prepSteps || (preparationType === 'ready_to_sell' ? null : prepSteps),
+        cooking_method: cookingMethod || (preparationType === 'ready_to_sell' ? null : cookingMethod),
         yield_qty: parseFloat(yieldQty) || 0,
         yield_unit: yieldUnit,
         portion_size: portionSize,
@@ -390,6 +393,9 @@ export function RecipeBuilderPage({ recipeId }: RecipeBuilderPageProps) {
           break;
         case 'description':
           setDescription(value);
+          break;
+        case 'preparationType':
+          setPreparationType(value as PreparationType);
           break;
         default:
           break;
@@ -550,6 +556,7 @@ export function RecipeBuilderPage({ recipeId }: RecipeBuilderPageProps) {
             portionSize={portionSize}
             shelfLifeHours={shelfLifeHours}
             description={description}
+            preparationType={preparationType}
             brands={brands ?? []}
             zones={zones ?? []}
             isLocked={isLocked}

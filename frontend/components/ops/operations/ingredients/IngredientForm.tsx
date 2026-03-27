@@ -54,7 +54,7 @@ export function IngredientForm({
   useEffect(() => {
     if (ingredient) {
       setName(ingredient.name);
-      setCategory(ingredient.category);
+      setCategory((ingredient.category ?? '') as IngredientCategory | '');
       setBaseUnit(ingredient.base_unit as typeof BASE_UNITS[number]);
       setMinStockLevel(String(ingredient.min_stock_level));
     } else {

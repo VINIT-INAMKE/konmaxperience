@@ -1,3 +1,19 @@
+export type UsageType = 'recipe_input' | 'supply' | 'equipment';
+
+export const USAGE_TYPE_LABELS: Record<UsageType, string> = {
+  recipe_input: 'Recipe Ingredient',
+  supply: 'Disposable Supply',
+  equipment: 'Reusable Equipment',
+};
+
+export interface IngredientCategoryItem {
+  id: string;
+  name: string;
+  sort_order: number;
+  is_default: boolean;
+}
+
+/** @deprecated Use IngredientCategoryItem from DB instead */
 export type IngredientCategory = 'dairy' | 'vegetable' | 'spice' | 'grain' | 'meat' | 'oil';
 
 export interface IngredientRecipeLink {
@@ -12,7 +28,11 @@ export interface IngredientRecipeLink {
 export interface Ingredient {
   id: string;
   name: string;
-  category: IngredientCategory;
+  /** @deprecated Use category_id + category_obj instead */
+  category: string | null;
+  usage_type: UsageType;
+  category_id: string | null;
+  category_obj?: IngredientCategoryItem | null;
   base_unit: string;
   min_stock_level: number;
   created_at: string;
@@ -20,8 +40,10 @@ export interface Ingredient {
   RecipeLines?: IngredientRecipeLink[];
 }
 
+/** @deprecated Use DB-driven IngredientCategoryItem[] from GET /ingredient-categories */
 export const INGREDIENT_CATEGORIES: IngredientCategory[] = ['dairy', 'vegetable', 'spice', 'grain', 'meat', 'oil'];
 
+/** @deprecated Use DB-driven IngredientCategoryItem[] from GET /ingredient-categories */
 export const INGREDIENT_CATEGORY_LABELS: Record<IngredientCategory, string> = {
   dairy: 'Dairy',
   vegetable: 'Vegetable',

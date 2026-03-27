@@ -1,5 +1,23 @@
 export type RecipeStatus = 'draft' | 'pending' | 'approved' | 'archived';
 
+export type PreparationType = 'scratch' | 'batch_prepared' | 'ready_to_sell' | 'assemble';
+
+export const PREPARATION_TYPES: PreparationType[] = ['scratch', 'batch_prepared', 'ready_to_sell', 'assemble'];
+
+export const PREPARATION_TYPE_LABELS: Record<PreparationType, string> = {
+  scratch: 'Fresh Prep',
+  batch_prepared: 'Batch Prepared',
+  ready_to_sell: 'Ready to Sell',
+  assemble: 'Assembly',
+};
+
+export const PREPARATION_TYPE_DESCRIPTIONS: Record<PreparationType, string> = {
+  scratch: 'Made per order',
+  batch_prepared: 'Pre-batched',
+  ready_to_sell: 'Off the shelf',
+  assemble: 'Combine parts',
+};
+
 export interface RecipeLine {
   id: string;
   recipe_id: string;
@@ -18,8 +36,8 @@ export interface Recipe {
   id: string;
   name: string;
   description: string;
-  prep_steps: string;
-  cooking_method: string;
+  prep_steps: string | null;
+  cooking_method: string | null;
   yield_qty: number;
   yield_unit: string;
   portion_size: string;
@@ -31,6 +49,7 @@ export interface Recipe {
   image_url: string | null;
   computed_cost: number | null;
   status: RecipeStatus;
+  preparation_type: PreparationType;
   created_by: string;
   creator?: { id: string; name: string } | null;
   created_at: string;

@@ -8,7 +8,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { YIELD_UNITS } from '@/lib/types/recipe';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { UtensilsCrossed, Package, ShoppingBag, Layers } from 'lucide-react';
+import {
+  YIELD_UNITS,
+  PREPARATION_TYPES,
+  PREPARATION_TYPE_LABELS,
+  PREPARATION_TYPE_DESCRIPTIONS,
+  type PreparationType,
+} from '@/lib/types/recipe';
 
 interface RecipeMetaGridProps {
   brandId: string | null;
@@ -18,11 +26,19 @@ interface RecipeMetaGridProps {
   portionSize: string;
   shelfLifeHours: string;
   description: string;
+  preparationType: PreparationType;
   brands: Array<{ id: string; name: string }>;
   zones: Array<{ id: string; name: string }>;
   isLocked: boolean;
   onChange: (field: string, value: string) => void;
 }
+
+const PREP_TYPE_ICONS: Record<PreparationType, React.ReactNode> = {
+  scratch: <UtensilsCrossed className="size-4" />,
+  batch_prepared: <Package className="size-4" />,
+  ready_to_sell: <ShoppingBag className="size-4" />,
+  assemble: <Layers className="size-4" />,
+};
 
 export function RecipeMetaGrid({
   brandId,
@@ -32,6 +48,7 @@ export function RecipeMetaGrid({
   portionSize,
   shelfLifeHours,
   description,
+  preparationType,
   brands,
   zones,
   isLocked,
@@ -39,6 +56,43 @@ export function RecipeMetaGrid({
 }: RecipeMetaGridProps) {
   return (
     <div className="space-y-4">
+      {/* Preparation Type selector -- full width row */}
+      <div className="space-y-1.5">
+        <label className="text-xs text-muted-foreground uppercase tracking-wide font-normal">
+          Preparation Type
+        </label>
+        <RadioGroup
+          value={preparationType}
+          onValueChange={(v) => onChange('preparationType', v as string)}
+          disabled={isLocked}
+          className="grid grid-cols-2 sm:grid-cols-4 gap-3"
+        >
+          {PREPARATION_TYPES.map((type) => {
+            const isSelected = preparationType === type;
+            return (
+              <label
+                key={type}
+                className={`flex flex-col items-center gap-1 rounded-lg border px-3 py-3 min-h-[48px] cursor-pointer transition-colors ${
+                  isSelected
+                    ? 'border-[var(--primary)] bg-[var(--primary)]/5 text-foreground font-medium'
+                    : 'border-border bg-transparent text-muted-foreground'
+                } ${isLocked ? 'opacity-50 pointer-events-none' : ''}`}
+              >
+                <RadioGroupItem value={type} className="sr-only" />
+                {PREP_TYPE_ICONS[type]}
+                <span className="text-sm">{PREPARATION_TYPE_LABELS[type]}</span>
+                <span className="text-xs text-muted-foreground">{PREPARATION_TYPE_DESCRIPTIONS[type]}</span>
+              </label>
+            );
+          })}
+        </RadioGroup>
+        {preparationType === 'ready_to_sell' && (
+          <p className="text-xs text-amber-500 mt-1">
+            Prep steps and cooking method are optional for shelf items.
+          </p>
+        )}
+      </div>
+
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-4">
         {/* Brand */}
         <div className="flex flex-col gap-0.5">
