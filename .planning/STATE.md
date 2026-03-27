@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: User Guide & Data Management
 status: unknown
-stopped_at: Completed 27-04-PLAN.md
-last_updated: "2026-03-26T12:21:54.704Z"
+stopped_at: Completed 28-01-PLAN.md
+last_updated: "2026-03-27T12:46:16.255Z"
 progress:
-  total_phases: 14
-  completed_phases: 11
-  total_plans: 45
-  completed_plans: 44
+  total_phases: 15
+  completed_phases: 12
+  total_plans: 50
+  completed_plans: 46
 ---
 
 # Project State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-22)
 
 **Core value:** Every piece of work must be evidence-backed, approved, and validated before it counts -- turning real execution into measurable readiness and progress.
-**Current focus:** Phase 27 — mission-flow-assessment-gap-closure
+**Current focus:** Phase 27 complete. Next: Phase 25, 26, or 28 (unplanned)
 
 ## Current Position
 
-Phase: 27 (mission-flow-assessment-gap-closure) — EXECUTING
-Plan: 5 of 5
+Phase: 27 (mission-flow-assessment-gap-closure) — COMPLETE
+Plan: 5 of 5 (all done)
 
 ## Performance Metrics
 
@@ -90,6 +90,7 @@ Plan: 5 of 5
 | Phase 27 P01 | 8min | 2 tasks | 11 files |
 | Phase 27 P03 | 5min | 2 tasks | 6 files |
 | Phase 27 P04 | 5min | 2 tasks | 5 files |
+| Phase 28 P01 | 7min | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -216,6 +217,8 @@ Recent decisions affecting current work:
 - [Phase 27]: Kanban meter name truncated at 12 chars with ellipsis to prevent badge overflow
 - [Phase 27]: TodaysFocusSection uses owner_user_id (actual Prisma field) not assigned_to from existing TaskItem interface
 - [Phase 27]: TodaysFocusSection receives allTasks as prop from existing query — no new API call needed (D-14)
+- [Phase 28]: JwtAuthGuard omitted from controller since globally applied via APP_GUARD
+- [Phase 28]: Old category String field kept nullable during migration for backward compatibility
 
 ### Roadmap Evolution
 
@@ -229,6 +232,7 @@ Recent decisions affecting current work:
 - Phase 25 added: Third-Party Delivery Integration — Porter for local overflow, Shiprocket for interstate shipping
 - Phase 26 added: Order Detail Page — /orders/[id] with payment processing (QR + WhatsApp link), receipt download, order timeline
 - Phase 27 added: Mission Flow & Assessment Gap Closure — aggregation API, ops-to-mission linking, dashboard widgets, UX flow improvements
+- Phase 28 added: Recipe preparation_type — multi-fulfillment food product support (scratch, batch_prepared, ready_to_sell, assemble). Forked availability, deduction timing, KDS routing, pick & pack queue. 10 requirements scoped.
 
 ### Pending Todos
 
@@ -240,6 +244,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-26T12:21:54.692Z
-Stopped at: Completed 27-04-PLAN.md
+Last session: 2026-03-27T12:46:16.240Z
+Stopped at: Completed 28-01-PLAN.md
 Resume file: None
