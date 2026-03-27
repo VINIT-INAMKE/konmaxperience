@@ -370,8 +370,8 @@ model Recipe {
   id                String       @id @default(uuid())
   name              String
   description       String
-  prep_steps        String
-  cooking_method    String
+  prep_steps        String?
+  cooking_method    String?
   yield_qty         Decimal
   yield_unit        String
   portion_size      String
@@ -381,6 +381,7 @@ model Recipe {
   image_url         String?
   computed_cost     Decimal?
   status            String       @default("draft")
+  preparation_type  String       @default("scratch")
   created_by        String
   created_at        DateTime     @default(now())
   updated_at        DateTime     @updatedAt
@@ -412,14 +413,25 @@ model RecipeLine {
   @@index([recipe_id])
 }
 
+model IngredientCategory {
+  id          String       @id @default(uuid())
+  name        String       @unique
+  sort_order  Int          @default(0)
+  is_default  Boolean      @default(false)
+  ingredients Ingredient[]
+}
+
 model Ingredient {
   id              String              @id @default(uuid())
   name            String
-  category        String
+  category        String?
+  usage_type      String              @default("recipe_input")
+  category_id     String?
   base_unit       String
   min_stock_level Decimal
   created_at      DateTime            @default(now())
   updated_at      DateTime            @updatedAt
+  category_obj    IngredientCategory? @relation(fields: [category_id], references: [id])
   RecipeLines     RecipeLine[]
   VendorPrices    VendorPrice[]
   IngredientStocks    IngredientStock[]
