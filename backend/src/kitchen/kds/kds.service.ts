@@ -49,6 +49,13 @@ export class KdsService {
       },
       include: {
         items: {
+          where: {
+            menu_item: {
+              recipe: {
+                preparation_type: 'scratch',
+              },
+            },
+          },
           include: {
             menu_item: { select: { id: true, name: true } },
           },
@@ -58,10 +65,13 @@ export class KdsService {
       orderBy: { created_at: 'asc' },
     });
 
+    // Filter out orders with zero scratch items (only non-scratch items = nothing for KDS)
+    const ordersWithScratchItems = orders.filter(o => o.items.length > 0);
+
     // Group by zone
     const zoneMap = new Map<string, KdsZoneData>();
 
-    for (const order of orders) {
+    for (const order of ordersWithScratchItems) {
       const zoneId = order.zone_id!;
       if (!zoneMap.has(zoneId)) {
         zoneMap.set(zoneId, {

@@ -113,6 +113,30 @@ export class OrdersService {
         include: { items: true, payment: true },
       });
 
+      // Non-scratch items: auto-set to 'ready' and deduct immediately (D-04, D-05)
+      for (const createdItem of created.items) {
+        const menuItemData = await tx.menuItem.findUnique({
+          where: { id: createdItem.menu_item_id },
+          select: { recipe: { select: { id: true, preparation_type: true } } },
+        });
+        const prepType = menuItemData?.recipe?.preparation_type ?? 'scratch';
+
+        if (prepType !== 'scratch') {
+          // D-05: auto-set to ready (no kitchen preparation needed)
+          await tx.orderItem.update({
+            where: { id: createdItem.id },
+            data: { status: 'ready', ready_at: new Date() },
+          });
+          // D-04: deduct immediately
+          if (prepType === 'batch_prepared') {
+            await this.deductBatchPrepared(tx, menuItemData!.recipe!.id, createdItem.quantity, created.id);
+          } else {
+            // ready_to_sell and assemble: BOM-based deduction
+            await this.deductItemIngredients(tx, createdItem, userId, dto.zone_id);
+          }
+        }
+      }
+
       return created;
     });
 
@@ -600,6 +624,53 @@ export class OrdersService {
         razorpay_payment_id: dto.razorpay_payment_id,
       },
     });
+  }
+
+  // ---------------------------------------------------------------
+  // Deduct Batch Prepared (FIFO against PrepBatch for batch_prepared recipes)
+  // ---------------------------------------------------------------
+  /**
+   * FIFO deduction against PrepBatch records for a batch_prepared recipe.
+   * Consumes from batches expiring soonest first (per D-10).
+   */
+  private async deductBatchPrepared(
+    tx: any,
+    recipeId: string,
+    quantity: number,
+    orderId: string,
+  ) {
+    const batches = await tx.prepBatch.findMany({
+      where: {
+        recipe_id: recipeId,
+        status: 'active',
+        OR: [{ expires_at: null }, { expires_at: { gt: new Date() } }],
+      },
+      orderBy: [{ expires_at: 'asc' }, { created_at: 'asc' }],
+    });
+
+    let remaining = quantity;
+    for (const batch of batches) {
+      if (remaining <= 0) break;
+      const batchQty = Number(batch.quantity_remaining);
+      const deductFromBatch = Math.min(batchQty, remaining);
+
+      await tx.prepBatch.update({
+        where: { id: batch.id },
+        data: {
+          quantity_remaining: { decrement: deductFromBatch },
+          status: batchQty - deductFromBatch <= 0 ? 'depleted' : 'active',
+        },
+      });
+
+      remaining -= deductFromBatch;
+    }
+
+    if (remaining > 0) {
+      // Insufficient batch quantity -- log but don't throw (order already confirmed)
+      console.warn(
+        `Insufficient batch quantity for recipe ${recipeId}: needed ${quantity}, short by ${remaining}`,
+      );
+    }
   }
 
   // ---------------------------------------------------------------

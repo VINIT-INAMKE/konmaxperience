@@ -8,6 +8,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../customer-auth/redis.service';
 import { RazorpayService } from '../razorpay/razorpay.service';
 import { PusherService } from '../chat/pusher.service';
+import { OrdersService } from '../orders/orders.service';
 import { CreateAddressDto } from './dto/create-address.dto';
 import { UpdateAddressDto } from './dto/update-address.dto';
 import { SyncCartDto } from './dto/sync-cart.dto';
@@ -40,6 +41,7 @@ export class CustomerOrdersService {
     private readonly redisService: RedisService,
     private readonly razorpayService: RazorpayService,
     private readonly pusherService: PusherService,
+    private readonly ordersService: OrdersService,
   ) {}
 
   // ---------------------------------------------------------------
@@ -389,6 +391,58 @@ export class CustomerOrdersService {
             payment: true,
           },
         });
+
+        // Non-scratch items: auto-set to 'ready' and deduct immediately (D-04, D-05)
+        for (const createdItem of created.items) {
+          const menuItemData = await tx.menuItem.findUnique({
+            where: { id: createdItem.menu_item_id },
+            select: { recipe: { select: { id: true, preparation_type: true } } },
+          });
+          const prepType = menuItemData?.recipe?.preparation_type ?? 'scratch';
+
+          if (prepType !== 'scratch') {
+            // D-05: auto-set to ready (no kitchen preparation needed)
+            await tx.orderItem.update({
+              where: { id: createdItem.id },
+              data: { status: 'ready', ready_at: new Date() },
+            });
+            // D-04: deduct immediately (marketplace orders have zone_id=null)
+            if (prepType === 'batch_prepared') {
+              // FIFO deduction against PrepBatch records
+              const batches = await tx.prepBatch.findMany({
+                where: {
+                  recipe_id: menuItemData!.recipe!.id,
+                  status: 'active',
+                  OR: [{ expires_at: null }, { expires_at: { gt: new Date() } }],
+                },
+                orderBy: [{ expires_at: 'asc' }, { created_at: 'asc' }],
+              });
+              let remaining = createdItem.quantity;
+              for (const batch of batches) {
+                if (remaining <= 0) break;
+                const batchQty = Number(batch.quantity_remaining);
+                const deductFromBatch = Math.min(batchQty, remaining);
+                await tx.prepBatch.update({
+                  where: { id: batch.id },
+                  data: {
+                    quantity_remaining: { decrement: deductFromBatch },
+                    status: batchQty - deductFromBatch <= 0 ? 'depleted' : 'active',
+                  },
+                });
+                remaining -= deductFromBatch;
+              }
+              if (remaining > 0) {
+                console.warn(
+                  `Insufficient batch quantity for recipe ${menuItemData!.recipe!.id}: needed ${createdItem.quantity}, short by ${remaining}`,
+                );
+              }
+            } else {
+              // ready_to_sell and assemble: BOM-based deduction
+              await this.ordersService.deductItemIngredients(tx, createdItem, customerId);
+            }
+          }
+        }
+
         return created;
       },
       { isolationLevel: 'Serializable' },
