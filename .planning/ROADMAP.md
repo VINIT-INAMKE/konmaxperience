@@ -98,7 +98,7 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 14 -> 14.x -> 15 -> 15.x -> 16 -> 16.x -> 17 -> 17.x -> 18 -> 18.x -> 19 -> 19.x -> 20 -> 20.x -> 21 -> 22 -> 23 -> 24 -> 25 -> 26 -> 27
+Phases execute in numeric order: 14 -> 14.x -> 15 -> 15.x -> 16 -> 16.x -> 17 -> 17.x -> 18 -> 18.x -> 19 -> 19.x -> 20 -> 20.x -> 21 -> 22 -> 23 -> 24 -> 25 -> 26 -> 27 -> 28
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -113,6 +113,7 @@ Phases execute in numeric order: 14 -> 14.x -> 15 -> 15.x -> 16 -> 16.x -> 17 ->
 | 22. Recipe Page Redesign | v1.1 | 4/4 | Complete    | 2026-03-24 |
 | 23. Razorpay Payments + Customer Auth | v1.2 | 4/4 | Complete    | 2026-03-25 |
 | 24. Customer Marketplace | v1.2 | 4/4 | Complete   | 2026-03-26 |
+| 28. Recipe preparation_type | v1.2 | 0/5 | Planned | - |
 
 ### Phase 18: Data Export
 **Goal**: CSV/XLSX export for all 22 report types with server-side file generation, R2 storage, export history, and export buttons on 13 data pages
@@ -299,4 +300,73 @@ Plans:
 - [x] 27-02-PLAN.md -- Backend task includes: extend findAll/findOne with quest.mission + readiness_meter, PO create/update accepts linked_task_id, task detail returns linked resources
 - [x] 27-03-PLAN.md -- Frontend task UX: Task type updates, kanban badge meter name, list view columns, detail breadcrumb, validation toast, linked resources section
 - [x] 27-04-PLAN.md -- Frontend dashboard widgets: ActivityFeedWidget, TeamContributionWidget, TodaysFocusSection, wired into admin and non-admin dashboards
-- [ ] 27-05-PLAN.md -- Frontend pages + checkpoint: /activity full page, /team-contribution detail page, PO form "Link to Task" dropdown, visual verification
+- [x] 27-05-PLAN.md -- Frontend pages + checkpoint: /activity full page, /team-contribution detail page, PO form "Link to Task" dropdown, visual verification
+
+### Phase 28: Recipe preparation_type — multi-fulfillment food product support
+
+**Goal:** Enable the system to handle 4 food product types (scratch, batch_prepared, ready_to_sell, assemble) through the existing recipe/inventory pipeline, with fulfillment routing that matches how each type is actually produced and sold. Also add supply/equipment inventory tracking for non-consumable kitchen items.
+
+**Requirements:**
+
+*Recipe preparation types:*
+- R28-01: `preparation_type` field on Recipe model (scratch | batch_prepared | ready_to_sell | assemble), default scratch
+- R28-02: Forked availability calculation — scratch uses ingredient BOM, batch_prepared uses PrepBatch.quantity_remaining, ready_to_sell uses IngredientStock directly, assemble uses min(component availability)
+- R28-03: Forked deduction timing — scratch deducts at KDS "ready", non-scratch deducts at order confirmation (prevents double-selling last item)
+- R28-04: Order items auto-set to "ready" for non-scratch types (no kitchen prep needed)
+- R28-05: KDS filters to scratch items only — kitchen staff sees only what needs cooking
+- R28-06: Pick & Pack queue or notification for non-scratch order items (someone needs to know to grab the pickle jar)
+- R28-07: Mixed order handling — order with coffee (scratch) + cookie (batch_prepared) + pickle (ready_to_sell) routes correctly, order status tracks partial readiness
+- R28-08: Recipe form updated with preparation_type selector
+- R28-09: Batch-prepared FIFO — sell from batches expiring soonest first
+- R28-10: Menu availability endpoint returns correct counts per preparation_type
+
+*Supply & equipment inventory:*
+- R28-11: `usage_type` field on Ingredient model (recipe_input | supply), default recipe_input. Supplies are non-consumable items (moulds, cups, baking sheets, cling wrap) tracked by count but never auto-deducted from recipes or orders.
+- R28-12: Supplies excluded from recipe BOM lookups and availability calculations — they don't feed into menu servings
+- R28-13: Manual "Log Usage" action for supplies — record quantity used with reason, date, and who logged it. Creates StockMovement with a new movement_type (e.g., "supply_usage")
+- R28-14: Supplies still use full procurement pipeline — PO receiving, VendorPrice, IngredientStock per zone, low stock alerts. Only the deduction path differs.
+- R28-15: Frontend: ingredient form gets usage_type selector; ingredient list filters/badges by type; supply usage log UI (similar to waste log pattern)
+
+**Key design decisions to make during planning:**
+- batch_prepared out-of-stock: show "out of stock" or fall back to "can make more from ingredients"?
+- Assemble packing step: KDS item (assembly station) or pick & pack item?
+- Pick & Pack: new page or filtered view within existing KDS/POS?
+- Supply usage log: standalone page or integrated into existing waste log page?
+- Disposable supplies: DECIDED — all supply usage is manual end-of-day logging, no auto-deduction (even for cups/containers). Keeps the system simple and matches how kitchen teams actually work.
+
+**Product types this enables:**
+
+| Type | Example | Made how | Sold how |
+|------|---------|----------|----------|
+| scratch | Coffee, sandwich, fresh pasta | Per order in kitchen | KDS > cook > serve |
+| batch_prepared | Cookies, bread, cakes | Bulk via prep batch, sold throughout day | Pick from existing batch |
+| ready_to_sell | Pickle jars, packaged snacks, bottled drinks | Purchased from vendor | Pick from shelf |
+| assemble | Gift box, thali, combo meal | Combine ready components | Pick + assemble |
+
+**Supply/equipment types this enables:**
+
+| Type | Examples | Depletes how | Tracked how |
+|------|----------|-------------|-------------|
+| Reusable equipment | Moulds, baking sheets, pans, spatulas | Breakage/wear — logged manually | Count, log when damaged/lost |
+| Disposable supplies | Paper cups, takeaway containers, napkins, cling wrap | Used per batch/period — logged manually | Count, log usage periodically |
+
+
+**Depends on:** Phase 27
+**Success Criteria** (what must be TRUE):
+  1. Recipe model has preparation_type field with 4 values; menu availability forks correctly per type
+  2. Non-scratch order items deduct stock at order confirmation (not KDS) and auto-set status='ready'
+  3. KDS shows only scratch items — kitchen staff never sees pre-made or assembled items
+  4. Pick & Pack page at /operations/kitchen/pick-and-pack shows non-scratch order queue with assemble checklists
+  5. Supply Usage page at /operations/kitchen/supply-usage lets staff log supply consumption with StockMovement audit trail
+  6. Ingredient model has usage_type field; supplies/equipment excluded from recipe BOM ingredient selectors
+  7. IngredientCategory table replaces hardcoded category string; 25+ default categories seeded, admin can add custom categories
+  8. Recipe form has preparation_type RadioGroup selector; ingredient form has usage_type selector and DB-driven category dropdown
+  9. Sidebar has "Pick & Pack" and "Supply Usage" entries under Kitchen section
+**Plans**: 5 plans
+
+Plans:
+- [ ] 28-01-PLAN.md -- Schema foundation: Prisma migration (preparation_type, usage_type, IngredientCategory), seed 25 categories, IngredientCategories CRUD module
+- [ ] 28-02-PLAN.md -- Backend logic fork: computeServings availability by preparation_type, non-scratch deduction at order creation, KDS scratch-only filter
+- [ ] 28-03-PLAN.md -- New backend modules: Pick & Pack queue endpoint, Supply Usage logging endpoint, ingredients usage_type filtering
+- [ ] 28-04-PLAN.md -- Frontend forms: RadioGroup install, types update, RecipeMetaGrid preparation_type selector, IngredientForm usage_type + DB categories, IngredientCategoriesSection
+- [ ] 28-05-PLAN.md -- Frontend pages: Pick & Pack page, Supply Usage page, sidebar entries, visual verification checkpoint
