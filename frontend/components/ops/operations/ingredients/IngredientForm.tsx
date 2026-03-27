@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Wheat, Package, Wrench } from 'lucide-react';
 import { toast } from 'sonner';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQueryClient, useQuery } from '@tanstack/react-query';
 import {
   Sheet,
   SheetContent,
@@ -20,14 +20,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { ShimmerButton } from '@/components/ui/shimmer-button';
 import { apiClient } from '@/lib/api-client';
-import type { Ingredient, IngredientCategory } from '@/lib/types/ingredient';
-import {
-  INGREDIENT_CATEGORIES,
-  INGREDIENT_CATEGORY_LABELS,
-  BASE_UNITS,
-} from '@/lib/types/ingredient';
+import type { Ingredient, IngredientCategoryItem, UsageType } from '@/lib/types/ingredient';
+import { BASE_UNITS } from '@/lib/types/ingredient';
 
 interface IngredientFormProps {
   open: boolean;
@@ -35,6 +32,12 @@ interface IngredientFormProps {
   ingredient?: Ingredient;
   onSuccess: () => void;
 }
+
+const USAGE_TYPE_OPTIONS = [
+  { value: 'recipe_input' as const, icon: <Wheat className="size-4" />, label: 'Recipe Ingredient' },
+  { value: 'supply' as const, icon: <Package className="size-4" />, label: 'Disposable Supply' },
+  { value: 'equipment' as const, icon: <Wrench className="size-4" />, label: 'Reusable Equipment' },
+];
 
 export function IngredientForm({
   open,
@@ -46,20 +49,28 @@ export function IngredientForm({
   const isEditing = !!ingredient;
 
   const [name, setName] = useState('');
-  const [category, setCategory] = useState<IngredientCategory | ''>('');
+  const [usageType, setUsageType] = useState<UsageType>('recipe_input');
+  const [categoryId, setCategoryId] = useState('');
   const [baseUnit, setBaseUnit] = useState<typeof BASE_UNITS[number] | ''>('');
   const [minStockLevel, setMinStockLevel] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const { data: categories = [] } = useQuery({
+    queryKey: ['ingredient-categories'],
+    queryFn: () => apiClient.get<IngredientCategoryItem[]>('/ingredient-categories'),
+  });
+
   useEffect(() => {
     if (ingredient) {
       setName(ingredient.name);
-      setCategory((ingredient.category ?? '') as IngredientCategory | '');
+      setUsageType(ingredient.usage_type ?? 'recipe_input');
+      setCategoryId(ingredient.category_id ?? '');
       setBaseUnit(ingredient.base_unit as typeof BASE_UNITS[number]);
       setMinStockLevel(String(ingredient.min_stock_level));
     } else {
       setName('');
-      setCategory('');
+      setUsageType('recipe_input');
+      setCategoryId('');
       setBaseUnit('');
       setMinStockLevel('');
     }
@@ -67,7 +78,8 @@ export function IngredientForm({
 
   const handleClose = () => {
     setName('');
-    setCategory('');
+    setUsageType('recipe_input');
+    setCategoryId('');
     setBaseUnit('');
     setMinStockLevel('');
     onOpenChange(false);
@@ -75,13 +87,14 @@ export function IngredientForm({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !category || !baseUnit) return;
+    if (!name.trim() || !baseUnit) return;
 
     setIsSubmitting(true);
     try {
       const body = {
         name: name.trim(),
-        category,
+        usage_type: usageType,
+        category_id: categoryId || undefined,
         base_unit: baseUnit,
         min_stock_level: Number(minStockLevel) || 0,
       };
@@ -113,6 +126,42 @@ export function IngredientForm({
         </SheetHeader>
 
         <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4 mt-4 px-4 pb-4 overflow-y-auto">
+          {/* Item Type (usage_type) */}
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground uppercase tracking-wide font-normal">
+              Item Type
+            </Label>
+            <RadioGroup
+              value={usageType}
+              onValueChange={(v) => setUsageType(v as UsageType)}
+              disabled={isSubmitting}
+              className="grid grid-cols-3 gap-2"
+            >
+              {USAGE_TYPE_OPTIONS.map((opt) => {
+                const isSelected = usageType === opt.value;
+                return (
+                  <label
+                    key={opt.value}
+                    className={`flex flex-col items-center gap-1 rounded-lg border px-2 py-2.5 min-h-[48px] cursor-pointer transition-colors text-center ${
+                      isSelected
+                        ? 'border-[var(--primary)] bg-[var(--primary)]/5 text-foreground font-medium'
+                        : 'border-border bg-transparent text-muted-foreground'
+                    } ${isSubmitting ? 'opacity-50 pointer-events-none' : ''}`}
+                  >
+                    <RadioGroupItem value={opt.value} className="sr-only" />
+                    {opt.icon}
+                    <span className="text-xs">{opt.label}</span>
+                  </label>
+                );
+              })}
+            </RadioGroup>
+            {(usageType === 'supply' || usageType === 'equipment') && (
+              <p className="text-xs text-amber-500 mt-1">
+                This item will not appear in recipe BOM lines or availability calculations.
+              </p>
+            )}
+          </div>
+
           {/* Name */}
           <div className="space-y-2">
             <Label htmlFor="ingredient-name">Name</Label>
@@ -126,21 +175,26 @@ export function IngredientForm({
             />
           </div>
 
-          {/* Category */}
+          {/* Category (DB-driven) */}
           <div className="space-y-2">
             <Label>Category</Label>
             <Select
-              value={category}
-              onValueChange={(v) => setCategory(v as IngredientCategory)}
+              value={categoryId}
+              onValueChange={(v) => setCategoryId(v ?? '')}
               disabled={isSubmitting}
             >
               <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select category" />
+                <SelectValue placeholder="Select category">
+                  {(value: string) => {
+                    if (!value) return 'Select category';
+                    return categories.find((c) => c.id === value)?.name ?? 'Select category';
+                  }}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
-                {INGREDIENT_CATEGORIES.map((cat) => (
-                  <SelectItem key={cat} value={cat}>
-                    {INGREDIENT_CATEGORY_LABELS[cat]}
+                {categories.map((cat) => (
+                  <SelectItem key={cat.id} value={cat.id}>
+                    {cat.name}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -188,7 +242,7 @@ export function IngredientForm({
             <ShimmerButton
               shimmerColor="#4ade80"
               type="submit"
-              disabled={isSubmitting || !name.trim() || !category || !baseUnit}
+              disabled={isSubmitting || !name.trim() || !baseUnit}
               className="h-9 text-sm px-4"
             >
               {isSubmitting ? (

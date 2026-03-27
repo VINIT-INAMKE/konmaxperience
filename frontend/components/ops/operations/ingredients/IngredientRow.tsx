@@ -52,7 +52,17 @@ export function IngredientRow({ ingredient, stock, onEdit, onDelete, isAdmin }: 
 
   return (
     <tr className="border-b last:border-b-0 hover:bg-muted/30 transition-colors">
-      <td className="px-4 py-3 text-sm font-medium">{ingredient.name}</td>
+      <td className="px-4 py-3 text-sm font-medium">
+        <span className="flex items-center gap-1.5">
+          {ingredient.name}
+          {ingredient.usage_type === 'supply' && (
+            <Badge variant="secondary" className="text-[10px] py-0">Supply</Badge>
+          )}
+          {ingredient.usage_type === 'equipment' && (
+            <Badge variant="secondary" className="text-[10px] py-0">Equipment</Badge>
+          )}
+        </span>
+      </td>
       <td className="px-4 py-3">
         {(() => {
           const catKey = ingredient.category as IngredientCategory | null;

@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/dialog';
 import { IngredientRow } from '@/components/ops/operations/ingredients/IngredientRow';
 import { IngredientForm } from '@/components/ops/operations/ingredients/IngredientForm';
+import { IngredientCategoriesSection } from '@/components/ops/operations/ingredients/IngredientCategoriesSection';
 import { apiClient } from '@/lib/api-client';
 import { useAuthStore } from '@/lib/stores/auth-store';
 import { RoleCode } from '@/lib/types/roles';
@@ -223,6 +224,9 @@ export default function IngredientsPage() {
           ingredient={editingIngredient ?? undefined}
           onSuccess={handleFormSuccess}
         />
+
+        {/* Ingredient Categories Management */}
+        {isAdmin && <IngredientCategoriesSection />}
 
         {/* Delete confirmation Dialog */}
         <Dialog
