@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: User Guide & Data Management
 status: unknown
-stopped_at: Completed 28-01-PLAN.md
-last_updated: "2026-03-27T12:46:16.255Z"
+stopped_at: Completed 28-03-PLAN.md
+last_updated: "2026-03-27T12:55:07.388Z"
 progress:
   total_phases: 15
   completed_phases: 12
   total_plans: 50
-  completed_plans: 46
+  completed_plans: 47
 ---
 
 # Project State
@@ -91,6 +91,7 @@ Plan: 5 of 5 (all done)
 | Phase 27 P03 | 5min | 2 tasks | 6 files |
 | Phase 27 P04 | 5min | 2 tasks | 5 files |
 | Phase 28 P01 | 7min | 2 tasks | 8 files |
+| Phase 28 P03 | 5min | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -219,6 +220,9 @@ Recent decisions affecting current work:
 - [Phase 27]: TodaysFocusSection receives allTasks as prop from existing query — no new API call needed (D-14)
 - [Phase 28]: JwtAuthGuard omitted from controller since globally applied via APP_GUARD
 - [Phase 28]: Old category String field kept nullable during migration for backward compatibility
+- [Phase 28]: Controllers use RequiresPermission(Permission.MANAGE_KITCHEN) matching existing KDS/Waste pattern (JwtAuthGuard is global APP_GUARD)
+- [Phase 28]: Supply usage controller uses @Req() express.Request pattern (matching WasteController) instead of @CurrentUser decorator
+- [Phase 28]: No standalone pick-and-pack.module.ts or supply-usage.module.ts created -- direct registration in KitchenModule matches existing pattern
 
 ### Roadmap Evolution
 
@@ -244,6 +248,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-27T12:46:16.240Z
-Stopped at: Completed 28-01-PLAN.md
+Last session: 2026-03-27T12:55:07.376Z
+Stopped at: Completed 28-03-PLAN.md
 Resume file: None

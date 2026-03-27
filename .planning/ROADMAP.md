@@ -113,7 +113,7 @@ Phases execute in numeric order: 14 -> 14.x -> 15 -> 15.x -> 16 -> 16.x -> 17 ->
 | 22. Recipe Page Redesign | v1.1 | 4/4 | Complete    | 2026-03-24 |
 | 23. Razorpay Payments + Customer Auth | v1.2 | 4/4 | Complete    | 2026-03-25 |
 | 24. Customer Marketplace | v1.2 | 4/4 | Complete   | 2026-03-26 |
-| 28. Recipe preparation_type | v1.2 | 1/5 | In Progress|  |
+| 28. Recipe preparation_type | v1.2 | 2/5 | In Progress|  |
 
 ### Phase 18: Data Export
 **Goal**: CSV/XLSX export for all 22 report types with server-side file generation, R2 storage, export history, and export buttons on 13 data pages
@@ -367,6 +367,6 @@ Plans:
 Plans:
 - [x] 28-01-PLAN.md -- Schema foundation: Prisma migration (preparation_type, usage_type, IngredientCategory), seed 25 categories, IngredientCategories CRUD module
 - [ ] 28-02-PLAN.md -- Backend logic fork: computeServings availability by preparation_type, non-scratch deduction at order creation, KDS scratch-only filter
-- [ ] 28-03-PLAN.md -- New backend modules: Pick & Pack queue endpoint, Supply Usage logging endpoint, ingredients usage_type filtering
+- [x] 28-03-PLAN.md -- New backend modules: Pick & Pack queue endpoint, Supply Usage logging endpoint, ingredients usage_type filtering
 - [ ] 28-04-PLAN.md -- Frontend forms: RadioGroup install, types update, RecipeMetaGrid preparation_type selector, IngredientForm usage_type + DB categories, IngredientCategoriesSection
 - [ ] 28-05-PLAN.md -- Frontend pages: Pick & Pack page, Supply Usage page, sidebar entries, visual verification checkpoint
