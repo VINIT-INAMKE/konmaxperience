@@ -8,6 +8,10 @@ import { WasteService } from './waste/waste.service';
 import { KitchenMetricsController } from './metrics/kitchen-metrics.controller';
 import { KitchenMetricsService } from './metrics/kitchen-metrics.service';
 import { KitchenExpiryCron } from './expiry/kitchen-expiry.cron';
+import { PickAndPackController } from './pick-and-pack/pick-and-pack.controller';
+import { PickAndPackService } from './pick-and-pack/pick-and-pack.service';
+import { SupplyUsageController } from './supply-usage/supply-usage.controller';
+import { SupplyUsageService } from './supply-usage/supply-usage.service';
 import { OrdersModule } from '../orders/orders.module';
 
 @Module({
@@ -17,6 +21,8 @@ import { OrdersModule } from '../orders/orders.module';
     KdsController,
     WasteController,
     KitchenMetricsController,
+    PickAndPackController,
+    SupplyUsageController,
   ],
   providers: [
     PrepBatchesService,
@@ -24,6 +30,8 @@ import { OrdersModule } from '../orders/orders.module';
     WasteService,
     KitchenMetricsService,
     KitchenExpiryCron,
+    PickAndPackService,
+    SupplyUsageService,
   ],
   exports: [PrepBatchesService, WasteService],
 })
