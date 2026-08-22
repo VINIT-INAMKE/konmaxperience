@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
-import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
@@ -54,15 +54,13 @@ import { ActivityModule } from './activity/activity.module';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { PermissionsGuard } from './auth/permissions.guard';
 import { validate } from './config/env.validation';
+import { THROTTLER_CONFIG } from './config/throttler.config';
+import { UserAwareThrottlerGuard } from './common/guards/user-aware-throttler.guard';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true, validate }),
-    ThrottlerModule.forRoot([
-      { name: 'short', ttl: 1000, limit: 3 },
-      { name: 'medium', ttl: 10000, limit: 20 },
-      { name: 'long', ttl: 60000, limit: 100 },
-    ]),
+    ThrottlerModule.forRoot(THROTTLER_CONFIG),
     ScheduleModule.forRoot(),
     EventEmitterModule.forRoot(),
     PrismaModule,
@@ -116,7 +114,7 @@ import { validate } from './config/env.validation';
     AppService,
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: PermissionsGuard },
-    { provide: APP_GUARD, useClass: ThrottlerGuard },
+    { provide: APP_GUARD, useClass: UserAwareThrottlerGuard },
   ],
 })
 export class AppModule {}
