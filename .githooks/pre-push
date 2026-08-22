@@ -1,0 +1,12 @@
+#!/bin/sh
+# Pre-push: typecheck both packages. Enable with: git config core.hooksPath .githooks
+set -e
+ROOT="$(git rev-parse --show-toplevel)"
+
+echo "[pre-push] backend: tsc --noEmit"
+(cd "$ROOT/backend" && npx tsc --noEmit -p tsconfig.json)
+
+echo "[pre-push] frontend: tsc --noEmit"
+(cd "$ROOT/frontend" && npx tsc --noEmit)
+
+echo "[pre-push] ok"
