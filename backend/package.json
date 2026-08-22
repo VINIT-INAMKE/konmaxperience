@@ -22,8 +22,8 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
-    "seed:reference": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed-reference.ts",
-    "seed:demo": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed-demo.ts",
+    "seed:reference": "ts-node prisma/seed-reference.ts",
+    "seed:demo": "ts-node prisma/seed-demo.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {
@@ -95,7 +95,7 @@
     "typescript-eslint": "^8.20.0"
   },
   "prisma": {
-    "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
+    "seed": "ts-node prisma/seed.ts"
   },
   "jest": {
     "moduleFileExtensions": [
