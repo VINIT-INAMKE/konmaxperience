@@ -2,19 +2,6 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { GuidesService } from '../guides.service';
 import { PrismaService } from '../../prisma/prisma.service';
 
-// Mock DOMPurify (same pattern as guides.service.spec.ts)
-jest.mock('isomorphic-dompurify', () => ({
-  __esModule: true,
-  default: {
-    sanitize: jest.fn((content: string, _opts?: any) => {
-      // Pass through content (preserves <mark> tags like real config)
-      return content
-        .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '')
-        .replace(/javascript:/gi, '');
-    }),
-  },
-}));
-
 describe('GuidesService - searchPages', () => {
   let service: GuidesService;
   let prisma: { $queryRaw: jest.Mock };

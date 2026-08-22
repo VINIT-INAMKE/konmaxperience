@@ -3,19 +3,6 @@ import { NotFoundException } from '@nestjs/common';
 import { GuidesService } from '../guides.service';
 import { PrismaService } from '../../prisma/prisma.service';
 
-// Mock DOMPurify
-jest.mock('isomorphic-dompurify', () => ({
-  __esModule: true,
-  default: {
-    sanitize: jest.fn((content: string, _opts?: any) => {
-      // Simulate stripping <script> tags and javascript: hrefs
-      return content
-        .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '')
-        .replace(/javascript:/gi, '');
-    }),
-  },
-}));
-
 describe('GuidesService', () => {
   let service: GuidesService;
   let prisma: {
