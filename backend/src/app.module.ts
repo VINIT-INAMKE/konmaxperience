@@ -53,10 +53,11 @@ import { CustomerOrdersModule } from './customer-orders/customer-orders.module';
 import { ActivityModule } from './activity/activity.module';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { PermissionsGuard } from './auth/permissions.guard';
+import { validate } from './config/env.validation';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({ isGlobal: true, validate }),
     ThrottlerModule.forRoot([
       { name: 'short', ttl: 1000, limit: 3 },
       { name: 'medium', ttl: 10000, limit: 20 },

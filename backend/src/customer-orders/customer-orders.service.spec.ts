@@ -3,6 +3,7 @@ import {
   BadRequestException,
   ForbiddenException,
   NotFoundException,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import { CustomerOrdersService } from './customer-orders.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -390,6 +391,38 @@ describe('CustomerOrdersService', () => {
       await expect(service.checkoutCart(customerId)).rejects.toThrow(
         BadRequestException,
       );
+    });
+
+    it('throws 503 and does not create a Razorpay order when Redis drops mid-checkout', async () => {
+      redisClient.get.mockResolvedValue(
+        JSON.stringify({
+          items: [
+            {
+              menuItemId: 'm1',
+              name: 'Burger',
+              quantity: 1,
+              unitPrice: 150,
+              imageUrl: null,
+            },
+          ],
+          channel: 'takeaway',
+          deliveryAddressId: null,
+          updatedAt: '',
+        }),
+      );
+      prisma.menuItem.findMany.mockResolvedValue([
+        { id: 'm1', base_price: 150 },
+      ]);
+      prisma.channelModifier.findFirst.mockResolvedValue(null);
+      // First getClient() (cart read) returns a client; the second (pending-order write) returns null
+      redisService.getClient
+        .mockReturnValueOnce(redisClient)
+        .mockReturnValueOnce(null);
+
+      await expect(service.checkoutCart(customerId)).rejects.toThrow(
+        ServiceUnavailableException,
+      );
+      expect(razorpayService.createOrder).not.toHaveBeenCalled();
     });
   });
 

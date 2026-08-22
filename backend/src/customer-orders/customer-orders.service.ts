@@ -244,26 +244,33 @@ export class CustomerOrdersService {
     // 8. Convert to paise
     const amountInPaise = Math.round(total * 100);
 
-    // 9. Create Razorpay order
+    // 9. Redis must be reachable BEFORE we create a Razorpay order — otherwise the
+    //    pending-order record is lost and the payment can never be confirmed.
+    const redis = this.redisService.getClient();
+    if (!redis) {
+      throw new ServiceUnavailableException(
+        'Checkout is temporarily unavailable. Please try again in a moment.',
+      );
+    }
+
+    // 10. Create Razorpay order
     const rzpOrder = await this.razorpayService.createOrder({
       amount: amountInPaise,
       receipt: `mkt_${customerId.slice(0, 8)}_${Date.now()}`,
       notes: { type: 'marketplace', entity_id: customerId },
     });
 
-    // 10. Store pending order data in Redis with 30-min TTL
-    const redis = this.redisService.getClient();
-    if (redis) {
-      // Build cart items with server-validated prices
-      const validatedItems = cart.items.map((item) => ({
-        menuItemId: item.menuItemId,
-        name: item.name,
-        quantity: item.quantity,
-        unitPrice: priceMap.get(item.menuItemId)!,
-        imageUrl: item.imageUrl,
-      }));
-
-      const pendingData = {
+    // 11. Store pending order data in Redis with 30-min TTL (server-validated prices)
+    const validatedItems = cart.items.map((item) => ({
+      menuItemId: item.menuItemId,
+      name: item.name,
+      quantity: item.quantity,
+      unitPrice: priceMap.get(item.menuItemId)!,
+      imageUrl: item.imageUrl,
+    }));
+    await redis.set(
+      `pending_order:${rzpOrder.id}`,
+      JSON.stringify({
         customerId,
         cart: { ...cart, items: validatedItems },
         subtotal,
@@ -271,17 +278,12 @@ export class CustomerOrdersService {
         total,
         channel: cart.channel,
         deliveryAddressId: cart.deliveryAddressId,
-      };
+      }),
+      'EX',
+      PENDING_ORDER_TTL,
+    );
 
-      await redis.set(
-        `pending_order:${rzpOrder.id}`,
-        JSON.stringify(pendingData),
-        'EX',
-        PENDING_ORDER_TTL,
-      );
-    }
-
-    // 11. Return Razorpay order ID
+    // 12. Return Razorpay order ID
     return { razorpay_order_id: rzpOrder.id };
   }
 
