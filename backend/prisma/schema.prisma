@@ -786,8 +786,6 @@ model SystemSetting {
 /// a role may hold MANAGE_KITCHEN without seeing every kitchen page.
 model ModuleAccess {
   module_key String   @id
-  // TODO(p2-05): add node Node @relation(fields: [node_id], references: [id], onDelete: Restrict) and back-relation module_access ModuleAccess[] on Node
-  node_id    String   @default("11111111-1111-4111-8111-111111111111")
   role_codes String[] @default([])
   enabled    Boolean  @default(true)
   sort_order Int      @default(0)
