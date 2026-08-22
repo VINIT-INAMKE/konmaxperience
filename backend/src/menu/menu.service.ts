@@ -11,6 +11,7 @@ import { CreateMenuItemDto } from './dto/create-menu-item.dto';
 import { UpdateMenuItemDto } from './dto/update-menu-item.dto';
 import { UpsertChannelModifierDto } from './dto/upsert-channel-modifier.dto';
 import { convertUnit } from '../common/utils/unit-conversion';
+import { DEFAULT_NODE_ID } from '../node/node.constants';
 
 @Injectable()
 export class MenuService {
@@ -276,8 +277,11 @@ export class MenuService {
 
   async upsertModifier(dto: UpsertChannelModifierDto) {
     return this.prisma.channelModifier.upsert({
-      where: { channel: dto.channel },
+      where: {
+        node_id_channel: { node_id: DEFAULT_NODE_ID, channel: dto.channel },
+      },
       create: {
+        node_id: DEFAULT_NODE_ID,
         channel: dto.channel,
         modifier_type: dto.modifier_type,
         modifier_value: dto.modifier_value,

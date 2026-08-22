@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
+import { ApprovalEntityType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { QStashService } from './qstash.service';
 
@@ -69,14 +70,27 @@ export class NotificationsCron {
           },
           select: {
             id: true,
+            entity_type: true,
             entity_id: true,
             created_at: true,
-            task: { select: { id: true, title: true } },
           },
         }),
       );
 
       this.logger.log(`Scan: found ${pendingApprovals.length} approvals pending >24h`);
+
+      // `Approval.entity_id` is polymorphic (SPEC §3.5) — there is no `task`
+      // relation to include, so resolve the titles with an explicit query.
+      const taskIds = pendingApprovals
+        .filter((approval) => approval.entity_type === ApprovalEntityType.task)
+        .map((approval) => approval.entity_id);
+      const tasks = taskIds.length
+        ? await this.prisma.task.findMany({
+            where: { id: { in: taskIds } },
+            select: { id: true, title: true },
+          })
+        : [];
+      const taskTitleById = new Map(tasks.map((task) => [task.id, task.title]));
 
       const dispatches = pendingApprovals.map((approval) => {
         const hoursPending = Math.round(
@@ -84,7 +98,7 @@ export class NotificationsCron {
         );
         return this.qstash.publish('notify-approval-pending', {
           approvalId: approval.id,
-          taskName: approval.task?.title ?? 'Unknown Task',
+          taskName: taskTitleById.get(approval.entity_id) ?? 'Unknown Task',
           hours: hoursPending,
         });
       });

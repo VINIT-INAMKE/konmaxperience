@@ -388,13 +388,52 @@ enum NotificationChannel {
   whatsapp
 }
 
+/// The deployment's operating node. v2.0 runs exactly one node (SPEC §1.2); every
+/// aggregate carries `node_id` with a Prisma-level @default pointing at the seeded
+/// row so existing create() call sites need no edit. Drop the @default when a
+/// second node is introduced.
+model Node {
+  id         String     @id @default(uuid())
+  code       String     @unique
+  name       String
+  timezone   String     @default("Asia/Kolkata")
+  currency   String     @default("INR")
+  status     NodeStatus @default(active)
+  created_at DateTime   @default(now()) @db.Timestamptz(3)
+  updated_at DateTime   @updatedAt @db.Timestamptz(3)
+
+  zones               Zone[]
+  missions            Mission[]
+  quests              Quest[]
+  tasks               Task[]
+  readiness_meters    ReadinessMeter[]
+  kpis                Kpi[]
+  recipes             Recipe[]
+  ingredients         Ingredient[]
+  vendors             Vendor[]
+  purchase_orders     PurchaseOrder[]
+  prep_batches        PrepBatch[]
+  waste_logs          WasteLog[]
+  orders              Order[]
+  events              Event[]
+  brands              Brand[]
+  assets              Asset[]
+  decisions           Decision[]
+  channel_modifiers   ChannelModifier[]
+  approval_policies   ApprovalPolicy[]
+  readiness_signals   ReadinessSignal[]
+  readiness_snapshots ReadinessSnapshot[]
+  products            Product[]
+  product_categories  ProductCategory[]
+}
+
 model Role {
   id          String   @id @default(uuid())
   code        String   @unique
   name        String
   description String
   permissions String[]
-  created_at  DateTime @default(now())
+  created_at  DateTime @default(now()) @db.Timestamptz(3)
   users       User[]
 }
 
@@ -410,8 +449,8 @@ model User {
   xp_total             Int                       @default(0)
   level                Int                       @default(1)
   streak_days          Int                       @default(0)
-  created_at           DateTime                  @default(now())
-  updated_at           DateTime                  @updatedAt
+  created_at           DateTime                  @default(now()) @db.Timestamptz(3)
+  updated_at           DateTime                  @updatedAt @db.Timestamptz(3)
   refresh_tokens       RefreshToken[]
   reset_tokens         PasswordResetToken[]
   owned_tasks          Task[]                    @relation("TaskOwner")
@@ -453,9 +492,9 @@ model RefreshToken {
   user_id    String
   user       User      @relation(fields: [user_id], references: [id])
   token_hash String
-  revoked_at DateTime?
-  expires_at DateTime
-  created_at DateTime  @default(now())
+  revoked_at DateTime? @db.Timestamptz(3)
+  expires_at DateTime  @db.Timestamptz(3)
+  created_at DateTime  @default(now()) @db.Timestamptz(3)
 
   @@index([user_id])
   @@index([token_hash])
@@ -466,26 +505,28 @@ model PasswordResetToken {
   user_id    String
   user       User      @relation(fields: [user_id], references: [id])
   token_hash String
-  expires_at DateTime
-  used_at    DateTime?
-  created_at DateTime  @default(now())
+  expires_at DateTime  @db.Timestamptz(3)
+  used_at    DateTime? @db.Timestamptz(3)
+  created_at DateTime  @default(now()) @db.Timestamptz(3)
 
   @@index([token_hash])
 }
 
 model Mission {
   id               String        @id @default(uuid())
+  node_id          String        @default("11111111-1111-4111-8111-111111111111")
+  node             Node          @relation(fields: [node_id], references: [id], onDelete: Restrict)
   title            String
   description      String
   phase            MissionPhase  @default(setup)
   scope            MissionScope  @default(food)
   status           MissionStatus @default(planned)
-  start_date       DateTime?
-  end_date         DateTime?
+  start_date       DateTime?     @db.Timestamptz(3)
+  end_date         DateTime?     @db.Timestamptz(3)
   progress_percent Float         @default(0)
   created_by       String
-  created_at       DateTime      @default(now())
-  updated_at       DateTime      @updatedAt
+  created_at       DateTime      @default(now()) @db.Timestamptz(3)
+  updated_at       DateTime      @updatedAt @db.Timestamptz(3)
   quests           Quest[]
   tasks            Task[]
   decisions        Decision[]    @relation("DecisionMission")
@@ -493,6 +534,8 @@ model Mission {
 
 model Quest {
   id                     String      @id @default(uuid())
+  node_id                String      @default("11111111-1111-4111-8111-111111111111")
+  node                   Node        @relation(fields: [node_id], references: [id], onDelete: Restrict)
   mission_id             String
   mission                Mission     @relation(fields: [mission_id], references: [id])
   title                  String
@@ -505,15 +548,17 @@ model Quest {
   core_progress_percent  Float       @default(0)
   adhoc_progress_percent Float       @default(0)
   progress_percent       Float       @default(0)
-  start_date             DateTime?
-  end_date               DateTime?
-  created_at             DateTime    @default(now())
-  updated_at             DateTime    @updatedAt
+  start_date             DateTime?   @db.Timestamptz(3)
+  end_date               DateTime?   @db.Timestamptz(3)
+  created_at             DateTime    @default(now()) @db.Timestamptz(3)
+  updated_at             DateTime    @updatedAt @db.Timestamptz(3)
   tasks                  Task[]
 }
 
 model Task {
   id                     String               @id @default(uuid())
+  node_id                String               @default("11111111-1111-4111-8111-111111111111")
+  node                   Node                 @relation(fields: [node_id], references: [id], onDelete: Restrict)
   mission_id             String
   mission                Mission              @relation(fields: [mission_id], references: [id])
   quest_id               String?
@@ -547,12 +592,11 @@ model Task {
   readiness_value        Int                  @default(0)
   kpi_id                 String?
   kpi                    Kpi?                 @relation(fields: [kpi_id], references: [id])
-  due_date               DateTime?
-  completed_at           DateTime?
-  created_at             DateTime             @default(now())
-  updated_at             DateTime             @updatedAt
+  due_date               DateTime?            @db.Timestamptz(3)
+  completed_at           DateTime?            @db.Timestamptz(3)
+  created_at             DateTime             @default(now()) @db.Timestamptz(3)
+  updated_at             DateTime             @updatedAt @db.Timestamptz(3)
   evidence               Evidence[]
-  approvals              Approval[]           @relation("TaskApprovals")
   readiness_events       TaskReadinessEvent[]
   linked_assets          Asset[]
   linked_purchase_orders PurchaseOrder[]
@@ -585,8 +629,8 @@ model Evidence {
   approval_status ApprovalStatus @default(pending)
   reviewed_by     String?
   reviewer        User?          @relation("EvidenceReviewer", fields: [reviewed_by], references: [id])
-  reviewed_at     DateTime?
-  created_at      DateTime       @default(now())
+  reviewed_at     DateTime?      @db.Timestamptz(3)
+  created_at      DateTime       @default(now()) @db.Timestamptz(3)
 
   // Optimizes: findByTask (evidence by task_id)
   @@index([task_id])
@@ -597,8 +641,10 @@ model Evidence {
 model Approval {
   id                     String             @id @default(uuid())
   entity_type            ApprovalEntityType
+  // `entity_id` is polymorphic (task | evidence | decision | recipe) — no FK
+  // relation is declared for it (SPEC §3.5). Resolve it with an explicit
+  // `approval.findMany({ where: { entity_type, entity_id } })`.
   entity_id              String
-  task                   Task?              @relation("TaskApprovals", fields: [entity_id], references: [id])
   approval_scope         ApprovalScope
   required_role_code     String
   approved_by            String?
@@ -608,13 +654,13 @@ model Approval {
   override_by            String?
   overrider              User?              @relation("ApprovalOverrider", fields: [override_by], references: [id])
   override_reason        String?
-  override_at            DateTime?
+  override_at            DateTime?          @db.Timestamptz(3)
   delegated_from_user_id String?
   delegated_from_user    User?              @relation("ApprovalDelegate", fields: [delegated_from_user_id], references: [id])
   policy_id              String?
   policy                 ApprovalPolicy?    @relation(fields: [policy_id], references: [id], onDelete: SetNull)
-  created_at             DateTime           @default(now())
-  updated_at             DateTime           @updatedAt
+  created_at             DateTime           @default(now()) @db.Timestamptz(3)
+  updated_at             DateTime           @updatedAt @db.Timestamptz(3)
 
   // Optimizes: findPending, notifications.cron scanApprovalsPending (status + created_at)
   @@index([status, created_at])
@@ -624,6 +670,8 @@ model Approval {
 
 model Decision {
   id                  String         @id @default(uuid())
+  node_id             String         @default("11111111-1111-4111-8111-111111111111")
+  node                Node           @relation(fields: [node_id], references: [id], onDelete: Restrict)
   title               String
   decision_type       String
   context             String
@@ -635,21 +683,20 @@ model Decision {
   tier                GovernanceTier @default(tier_1)
   required_role_codes String[]       @default([])
   resolved_by         String?
-  resolved_at         DateTime?
+  resolved_at         DateTime?      @db.Timestamptz(3)
   linked_task_id      String?
   linked_task         Task?          @relation("DecisionTask", fields: [linked_task_id], references: [id])
   linked_mission_id   String?
   linked_mission      Mission?       @relation("DecisionMission", fields: [linked_mission_id], references: [id])
-  created_at          DateTime       @default(now())
-  updated_at          DateTime       @updatedAt
+  created_at          DateTime       @default(now()) @db.Timestamptz(3)
+  updated_at          DateTime       @updatedAt @db.Timestamptz(3)
   votes               DecisionVote[]
 }
 
 model ApprovalPolicy {
   id                  String        @id @default(uuid())
-  // TODO(p2-05): add `node Node @relation(fields: [node_id], references: [id], onDelete: Restrict)`
-  // and the `approval_policies ApprovalPolicy[]` back-relation once Task 5 introduces `Node`.
   node_id             String        @default("11111111-1111-4111-8111-111111111111")
+  node                Node          @relation(fields: [node_id], references: [id], onDelete: Restrict)
   scope               ApprovalScope
   domain              TaskDomain?
   required_role_codes String[]
@@ -681,9 +728,8 @@ model DecisionVote {
 
 model ReadinessSignal {
   id           String         @id @default(uuid())
-  // TODO(p2-05): add `node Node @relation(fields: [node_id], references: [id], onDelete: Restrict)`
-  // and the `readiness_signals ReadinessSignal[]` back-relation once Task 5 introduces `Node`.
   node_id      String         @default("11111111-1111-4111-8111-111111111111")
+  node         Node           @relation(fields: [node_id], references: [id], onDelete: Restrict)
   meter_id     String
   meter        ReadinessMeter @relation(fields: [meter_id], references: [id], onDelete: Cascade)
   source_event String
@@ -698,9 +744,8 @@ model ReadinessSignal {
 
 model ReadinessSnapshot {
   id       String         @id @default(uuid())
-  // TODO(p2-05): add `node Node @relation(fields: [node_id], references: [id], onDelete: Restrict)`
-  // and the `readiness_snapshots ReadinessSnapshot[]` back-relation once Task 5 introduces `Node`.
   node_id  String         @default("11111111-1111-4111-8111-111111111111")
+  node     Node           @relation(fields: [node_id], references: [id], onDelete: Restrict)
   meter_id String
   meter    ReadinessMeter @relation(fields: [meter_id], references: [id], onDelete: Cascade)
   date     DateTime       @db.Date
@@ -716,13 +761,13 @@ model ApprovalDelegation {
   from_user    User     @relation("DelegationFrom", fields: [from_user_id], references: [id])
   to_user_id   String
   to_user      User     @relation("DelegationTo", fields: [to_user_id], references: [id])
-  start_date   DateTime
-  end_date     DateTime
+  start_date   DateTime @db.Timestamptz(3)
+  end_date     DateTime @db.Timestamptz(3)
   created_by   String
   creator      User     @relation("DelegationCreator", fields: [created_by], references: [id])
   active       Boolean  @default(true)
-  created_at   DateTime @default(now())
-  updated_at   DateTime @updatedAt
+  created_at   DateTime @default(now()) @db.Timestamptz(3)
+  updated_at   DateTime @updatedAt @db.Timestamptz(3)
 
   // Optimizes: getActiveDelegationForUser (to_user_id + active + date range)
   @@index([to_user_id, active, start_date, end_date])
@@ -732,7 +777,9 @@ model ApprovalDelegation {
 
 model ReadinessMeter {
   id            String               @id @default(uuid())
-  code          String               @unique
+  node_id       String               @default("11111111-1111-4111-8111-111111111111")
+  node          Node                 @relation(fields: [node_id], references: [id], onDelete: Restrict)
+  code          String
   name          String
   description   String
   current_value Float                @default(0)
@@ -740,11 +787,13 @@ model ReadinessMeter {
   weight        Float                @default(1.0)
   mode          MeterMode            @default(task_driven)
   formula_key   String?
-  updated_at    DateTime             @updatedAt
+  updated_at    DateTime             @updatedAt @db.Timestamptz(3)
   tasks         Task[]
   events        TaskReadinessEvent[]
   signals       ReadinessSignal[]
   snapshots     ReadinessSnapshot[]
+
+  @@unique([node_id, code])
 }
 
 model TaskReadinessEvent {
@@ -755,12 +804,14 @@ model TaskReadinessEvent {
   readiness_meter    ReadinessMeter @relation(fields: [readiness_meter_id], references: [id])
   value              Int
   applied            Boolean        @default(true)
-  revoked_at         DateTime?
-  created_at         DateTime       @default(now())
+  revoked_at         DateTime?      @db.Timestamptz(3)
+  created_at         DateTime       @default(now()) @db.Timestamptz(3)
 }
 
 model Kpi {
   id            String   @id @default(uuid())
+  node_id       String   @default("11111111-1111-4111-8111-111111111111")
+  node          Node     @relation(fields: [node_id], references: [id], onDelete: Restrict)
   name          String
   description   String
   unit          String
@@ -768,7 +819,7 @@ model Kpi {
   current_value Float    @default(0)
   status        String   @default("on_track")
   domain        String
-  updated_at    DateTime @updatedAt
+  updated_at    DateTime @updatedAt @db.Timestamptz(3)
   tasks         Task[]
 }
 
@@ -796,6 +847,8 @@ model ModuleAccess {
 
 model Zone {
   id               String            @id @default(uuid())
+  node_id          String            @default("11111111-1111-4111-8111-111111111111")
+  node             Node              @relation(fields: [node_id], references: [id], onDelete: Restrict)
   name             String
   zone_type        String
   owner_user_id    String?
@@ -814,6 +867,8 @@ model Zone {
 
 model Brand {
   id                 String            @id @default(uuid())
+  node_id            String            @default("11111111-1111-4111-8111-111111111111")
+  node               Node              @relation(fields: [node_id], references: [id], onDelete: Restrict)
   name               String
   brand_type         String
   status             String            @default("idea")
@@ -837,6 +892,8 @@ model Channel {
 
 model Asset {
   id               String   @id @default(uuid())
+  node_id          String   @default("11111111-1111-4111-8111-111111111111")
+  node             Node     @relation(fields: [node_id], references: [id], onDelete: Restrict)
   name             String
   asset_type       String
   linked_task_id   String?
@@ -849,30 +906,32 @@ model Asset {
   status           String   @default("draft")
   created_by       String
   creator          User     @relation(fields: [created_by], references: [id])
-  created_at       DateTime @default(now())
+  created_at       DateTime @default(now()) @db.Timestamptz(3)
 }
 
 model Recipe {
   id               String          @id @default(uuid())
+  node_id          String          @default("11111111-1111-4111-8111-111111111111")
+  node             Node            @relation(fields: [node_id], references: [id], onDelete: Restrict)
   name             String
   description      String
   prep_steps       String?
   cooking_method   String?
-  yield_qty        Decimal
+  yield_qty        Decimal         @db.Decimal(14, 4)
   yield_unit       String
   portion_size     String
   shelf_life_hours Int?
   brand_id         String?
   zone_id          String?
   image_url        String?
-  computed_cost    Decimal?
+  computed_cost    Decimal?        @db.Decimal(12, 2)
   status           RecipeStatus    @default(draft)
   preparation_type PreparationType @default(scratch)
   parent_recipe_id String?
   version          Int             @default(1)
   created_by       String
-  created_at       DateTime        @default(now())
-  updated_at       DateTime        @updatedAt
+  created_at       DateTime        @default(now()) @db.Timestamptz(3)
+  updated_at       DateTime        @updatedAt @db.Timestamptz(3)
   brand            Brand?          @relation(fields: [brand_id], references: [id])
   zone             Zone?           @relation(fields: [zone_id], references: [id])
   creator          User            @relation("RecipeCreator", fields: [created_by], references: [id])
@@ -892,12 +951,12 @@ model RecipeLine {
   input_type       String
   ingredient_id    String?
   source_recipe_id String?
-  quantity         Decimal
+  quantity         Decimal     @db.Decimal(14, 4)
   unit             String
   prep_notes       String?
   sort_order       Int         @default(0)
-  recipe           Recipe      @relation("RecipeLines", fields: [recipe_id], references: [id])
-  ingredient       Ingredient? @relation(fields: [ingredient_id], references: [id])
+  recipe           Recipe      @relation("RecipeLines", fields: [recipe_id], references: [id], onDelete: Cascade)
+  ingredient       Ingredient? @relation(fields: [ingredient_id], references: [id], onDelete: Restrict)
   source_recipe    Recipe?     @relation("SourceRecipeLines", fields: [source_recipe_id], references: [id])
 
   // Optimizes: recipe BOM loading (all lines for a recipe)
@@ -914,13 +973,15 @@ model IngredientCategory {
 
 model Ingredient {
   id                 String              @id @default(uuid())
+  node_id            String              @default("11111111-1111-4111-8111-111111111111")
+  node               Node                @relation(fields: [node_id], references: [id], onDelete: Restrict)
   name               String
   usage_type         UsageType           @default(recipe_input)
   category_id        String?
   base_unit          String
-  min_stock_level    Decimal
-  created_at         DateTime            @default(now())
-  updated_at         DateTime            @updatedAt
+  min_stock_level    Decimal             @db.Decimal(14, 4)
+  created_at         DateTime            @default(now()) @db.Timestamptz(3)
+  updated_at         DateTime            @updatedAt @db.Timestamptz(3)
   category_obj       IngredientCategory? @relation(fields: [category_id], references: [id])
   RecipeLines        RecipeLine[]
   VendorPrices       VendorPrice[]
@@ -934,20 +995,22 @@ model UnitConversion {
   id        String  @id @default(uuid())
   from_unit String
   to_unit   String
-  factor    Decimal
+  factor    Decimal @db.Decimal(14, 4)
 
   @@unique([from_unit, to_unit])
 }
 
 model Vendor {
   id             String          @id @default(uuid())
+  node_id        String          @default("11111111-1111-4111-8111-111111111111")
+  node           Node            @relation(fields: [node_id], references: [id], onDelete: Restrict)
   name           String
   phone          String?
   email          String?
   address        String?
   payment_terms  String?
   status         String          @default("active")
-  created_at     DateTime        @default(now())
+  created_at     DateTime        @default(now()) @db.Timestamptz(3)
   VendorPrices   VendorPrice[]
   PurchaseOrders PurchaseOrder[]
 }
@@ -956,10 +1019,10 @@ model VendorPrice {
   id             String     @id @default(uuid())
   vendor_id      String
   ingredient_id  String
-  price          Decimal
+  price          Decimal    @db.Decimal(12, 2)
   unit           String
-  effective_date DateTime
-  created_at     DateTime   @default(now())
+  effective_date DateTime   @db.Timestamptz(3)
+  created_at     DateTime   @default(now()) @db.Timestamptz(3)
   vendor         Vendor     @relation(fields: [vendor_id], references: [id])
   ingredient     Ingredient @relation(fields: [ingredient_id], references: [id])
 
@@ -987,12 +1050,12 @@ model MenuItem {
   recipe_id   String
   category_id String
   name        String
-  base_price  Decimal
+  base_price  Decimal      @db.Decimal(12, 2)
   image_url   String?
   available   Boolean      @default(true)
   status      String       @default("active")
-  created_at  DateTime     @default(now())
-  updated_at  DateTime     @updatedAt
+  created_at  DateTime     @default(now()) @db.Timestamptz(3)
+  updated_at  DateTime     @updatedAt @db.Timestamptz(3)
   recipe      Recipe       @relation(fields: [recipe_id], references: [id])
   category    MenuCategory @relation(fields: [category_id], references: [id])
   orderItems  OrderItem[]
@@ -1005,9 +1068,8 @@ model MenuItem {
 
 model ProductCategory {
   id            String        @id @default(uuid())
-  // TODO(p2-05): add `node Node @relation(fields: [node_id], references: [id], onDelete: Restrict)`
-  // and the `product_categories ProductCategory[]` back-relation once Task 5 introduces `Node`.
   node_id       String        @default("11111111-1111-4111-8111-111111111111")
+  node          Node          @relation(fields: [node_id], references: [id], onDelete: Restrict)
   brand_id      String
   brand         Brand         @relation(fields: [brand_id], references: [id])
   name          String
@@ -1025,9 +1087,8 @@ model ProductCategory {
 
 model Product {
   id              String           @id @default(uuid())
-  // TODO(p2-05): add `node Node @relation(fields: [node_id], references: [id], onDelete: Restrict)`
-  // and the `products Product[]` back-relation once Task 5 introduces `Node`.
   node_id         String           @default("11111111-1111-4111-8111-111111111111")
+  node            Node             @relation(fields: [node_id], references: [id], onDelete: Restrict)
   brand_id        String
   brand           Brand            @relation(fields: [brand_id], references: [id])
   category_id     String
@@ -1100,20 +1161,22 @@ model ProductMedia {
 
 model ChannelModifier {
   id             String       @id @default(uuid())
+  node_id        String       @default("11111111-1111-4111-8111-111111111111")
+  node           Node         @relation(fields: [node_id], references: [id], onDelete: Restrict)
   channel        OrderChannel
   modifier_type  String
-  modifier_value Decimal
+  modifier_value Decimal      @db.Decimal(12, 2)
   status         String       @default("active")
 
-  @@unique([channel])
+  @@unique([node_id, channel])
 }
 
 model IngredientStock {
   id               String     @id @default(uuid())
   ingredient_id    String
   zone_id          String
-  current_quantity Decimal
-  updated_at       DateTime   @updatedAt
+  current_quantity Decimal    @db.Decimal(14, 4)
+  updated_at       DateTime   @updatedAt @db.Timestamptz(3)
   ingredient       Ingredient @relation(fields: [ingredient_id], references: [id])
   zone             Zone       @relation(fields: [zone_id], references: [id])
 
@@ -1125,8 +1188,8 @@ model StockMovement {
   ingredient_id     String
   zone_id           String
   movement_type     MovementType
-  quantity          Decimal // in base_unit, signed (+/-)
-  original_quantity Decimal // in original unit for display
+  quantity          Decimal      @db.Decimal(14, 4) // in base_unit, signed (+/-)
+  original_quantity Decimal      @db.Decimal(14, 4) // in original unit for display
   unit              String // original unit for display
   reason            String?
   reference_type    String? // "purchase_order" | "prep_batch" | "order" | "waste_log"
@@ -1134,7 +1197,7 @@ model StockMovement {
   created_by        String?
   actor_type        ActorType    @default(user)
   actor_id          String?
-  created_at        DateTime     @default(now())
+  created_at        DateTime     @default(now()) @db.Timestamptz(3)
   ingredient        Ingredient   @relation(fields: [ingredient_id], references: [id])
   zone              Zone         @relation(fields: [zone_id], references: [id])
   creator           User?        @relation("StockMovementCreator", fields: [created_by], references: [id])
@@ -1147,17 +1210,19 @@ model StockMovement {
 
 model PurchaseOrder {
   id              String              @id @default(uuid())
+  node_id         String              @default("11111111-1111-4111-8111-111111111111")
+  node            Node                @relation(fields: [node_id], references: [id], onDelete: Restrict)
   vendor_id       String
   zone_id         String // receiving needs a zone for IngredientStock upsert
   status          PurchaseOrderStatus @default(draft)
-  total_amount    Decimal             @default(0)
+  total_amount    Decimal             @default(0) @db.Decimal(12, 2)
   notes           String?
   ordered_by      String
-  ordered_at      DateTime?
-  received_at     DateTime?
+  ordered_at      DateTime?           @db.Timestamptz(3)
+  received_at     DateTime?           @db.Timestamptz(3)
   linked_task_id  String?
-  created_at      DateTime            @default(now())
-  updated_at      DateTime            @updatedAt
+  created_at      DateTime            @default(now()) @db.Timestamptz(3)
+  updated_at      DateTime            @updatedAt @db.Timestamptz(3)
   vendor          Vendor              @relation(fields: [vendor_id], references: [id])
   zone            Zone                @relation(fields: [zone_id], references: [id])
   ordered_by_user User                @relation("PurchaseOrderer", fields: [ordered_by], references: [id])
@@ -1178,10 +1243,10 @@ model PurchaseOrderLine {
   id                String        @id @default(uuid())
   po_id             String
   ingredient_id     String
-  quantity          Decimal
+  quantity          Decimal       @db.Decimal(14, 4)
   unit              String
-  unit_cost         Decimal
-  received_quantity Decimal?
+  unit_cost         Decimal       @db.Decimal(12, 2)
+  received_quantity Decimal?      @db.Decimal(14, 4)
   purchase_order    PurchaseOrder @relation(fields: [po_id], references: [id], onDelete: Cascade)
   ingredient        Ingredient    @relation(fields: [ingredient_id], references: [id])
 
@@ -1191,15 +1256,17 @@ model PurchaseOrderLine {
 
 model PrepBatch {
   id                 String          @id @default(uuid())
+  node_id            String          @default("11111111-1111-4111-8111-111111111111")
+  node               Node            @relation(fields: [node_id], references: [id], onDelete: Restrict)
   recipe_id          String
   zone_id            String
-  quantity_produced  Decimal
-  quantity_remaining Decimal
+  quantity_produced  Decimal         @db.Decimal(14, 4)
+  quantity_remaining Decimal         @db.Decimal(14, 4)
   unit               String
   prepared_by        String
-  expires_at         DateTime?
+  expires_at         DateTime?       @db.Timestamptz(3)
   status             PrepBatchStatus @default(active)
-  created_at         DateTime        @default(now())
+  created_at         DateTime        @default(now()) @db.Timestamptz(3)
   recipe             Recipe          @relation(fields: [recipe_id], references: [id])
   zone               Zone            @relation(fields: [zone_id], references: [id])
   creator            User            @relation("PrepBatchCreator", fields: [prepared_by], references: [id])
@@ -1215,17 +1282,19 @@ model PrepBatch {
 
 model WasteLog {
   id            String      @id @default(uuid())
+  node_id       String      @default("11111111-1111-4111-8111-111111111111")
+  node          Node        @relation(fields: [node_id], references: [id], onDelete: Restrict)
   waste_type    String // "ingredient" | "prep_batch"
   ingredient_id String?
   prep_batch_id String?
-  quantity      Decimal
+  quantity      Decimal     @db.Decimal(14, 4)
   unit          String
   reason        String // "spoilage" | "over_prep" | "cooking_error" | "expired" | "other"
   reason_notes  String?
-  cost_impact   Decimal
+  cost_impact   Decimal     @db.Decimal(12, 2)
   logged_by     String? // nullable for system-generated expiry entries
   zone_id       String
-  created_at    DateTime    @default(now())
+  created_at    DateTime    @default(now()) @db.Timestamptz(3)
   ingredient    Ingredient? @relation(fields: [ingredient_id], references: [id])
   prep_batch    PrepBatch?  @relation(fields: [prep_batch_id], references: [id])
   zone          Zone        @relation(fields: [zone_id], references: [id])
@@ -1242,8 +1311,8 @@ model Customer {
   phone      String   @unique
   name       String?
   email      String?
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
+  created_at DateTime @default(now()) @db.Timestamptz(3)
+  updated_at DateTime @updatedAt @db.Timestamptz(3)
 
   bookings  EventBooking[]
   orders    Order[]
@@ -1264,14 +1333,16 @@ model CustomerAddress {
   lat         Float?
   lng         Float?
   is_default  Boolean  @default(false)
-  created_at  DateTime @default(now())
-  updated_at  DateTime @updatedAt
+  created_at  DateTime @default(now()) @db.Timestamptz(3)
+  updated_at  DateTime @updatedAt @db.Timestamptz(3)
 
   @@index([customer_id])
 }
 
 model Order {
   id                      String          @id @default(uuid())
+  node_id                 String          @default("11111111-1111-4111-8111-111111111111")
+  node                    Node            @relation(fields: [node_id], references: [id], onDelete: Restrict)
   order_number            Int             @unique @default(autoincrement())
   channel                 OrderChannel
   status                  OrderStatus     @default(placed)
@@ -1284,12 +1355,12 @@ model Order {
   placed_via              OrderSource     @default(pos)
   customer_id             String?
   customer                Customer?       @relation(fields: [customer_id], references: [id])
-  subtotal                Decimal
-  channel_modifier_amount Decimal         @default(0)
-  discount_amount         Decimal         @default(0)
-  shipping_amount         Decimal         @default(0)
-  tax_amount              Decimal         @default(0)
-  total                   Decimal
+  subtotal                Decimal         @db.Decimal(12, 2)
+  channel_modifier_amount Decimal         @default(0) @db.Decimal(12, 2)
+  discount_amount         Decimal         @default(0) @db.Decimal(12, 2)
+  shipping_amount         Decimal         @default(0) @db.Decimal(12, 2)
+  tax_amount              Decimal         @default(0) @db.Decimal(12, 2)
+  total                   Decimal         @db.Decimal(12, 2)
   loyalty_points_earned   Int             @default(0)
   loyalty_points_redeemed Int             @default(0)
   idempotency_key         String?         @unique
@@ -1298,8 +1369,8 @@ model Order {
   created_by              String?
   updated_by              String?
   zone_id                 String?
-  created_at              DateTime        @default(now())
-  updated_at              DateTime        @updatedAt
+  created_at              DateTime        @default(now()) @db.Timestamptz(3)
+  updated_at              DateTime        @updatedAt @db.Timestamptz(3)
   creator                 User?           @relation("OrderCreator", fields: [created_by], references: [id])
   zone                    Zone?           @relation(fields: [zone_id], references: [id])
   items                   OrderItem[]
@@ -1321,13 +1392,13 @@ model OrderItem {
   order_id     String
   menu_item_id String
   quantity     Int
-  unit_price   Decimal
+  unit_price   Decimal         @db.Decimal(12, 2)
   item_notes   String?
   status       OrderItemStatus @default(pending)
   fulfilment   FulfilmentType  @default(local)
-  tax_rate     Decimal         @default(0)
-  ready_at     DateTime?
-  created_at   DateTime        @default(now())
+  tax_rate     Decimal         @default(0) @db.Decimal(5, 2)
+  ready_at     DateTime?       @db.Timestamptz(3)
+  created_at   DateTime        @default(now()) @db.Timestamptz(3)
   order        Order           @relation(fields: [order_id], references: [id], onDelete: Cascade)
   menu_item    MenuItem        @relation(fields: [menu_item_id], references: [id])
   // Nullable while MenuItem is still the source of truth; Task 11 makes product_id
@@ -1351,13 +1422,13 @@ model Payment {
   id                  String        @id @default(uuid())
   order_id            String        @unique
   method              PaymentMethod
-  amount              Decimal
+  amount              Decimal       @db.Decimal(12, 2)
   status              PaymentStatus @default(pending)
-  refunded_amount     Decimal       @default(0)
+  refunded_amount     Decimal       @default(0) @db.Decimal(12, 2)
   notes               String?
   razorpay_order_id   String?       @unique
   razorpay_payment_id String?       @unique
-  created_at          DateTime      @default(now())
+  created_at          DateTime      @default(now()) @db.Timestamptz(3)
   order               Order         @relation(fields: [order_id], references: [id])
 }
 
@@ -1374,7 +1445,7 @@ model Notification {
   reference_type String? // "task" | "order" | "ingredient" | "approval"
   is_read        Boolean               @default(false)
   is_email_sent  Boolean               @default(false)
-  created_at     DateTime              @default(now())
+  created_at     DateTime              @default(now()) @db.Timestamptz(3)
 
   @@index([user_id, is_read, created_at(sort: Desc)])
   @@index([user_id, type, reference_id])
@@ -1390,7 +1461,7 @@ model Feedback {
   customer_phone String?
   customer_id    String?
   customer       Customer? @relation(fields: [customer_id], references: [id])
-  created_at     DateTime  @default(now())
+  created_at     DateTime  @default(now()) @db.Timestamptz(3)
 
   // Optimizes: findAll by order_id
   @@index([order_id])
@@ -1404,18 +1475,20 @@ model Feedback {
 
 model Event {
   id          String         @id @default(uuid())
+  node_id     String         @default("11111111-1111-4111-8111-111111111111")
+  node        Node           @relation(fields: [node_id], references: [id], onDelete: Restrict)
   title       String
   event_type  EventType
-  date        DateTime
+  date        DateTime       @db.Timestamptz(3)
   capacity    Int
-  price       Decimal
+  price       Decimal        @db.Decimal(12, 2)
   zone_id     String?
   brand_id    String?
   description String?
   image_url   String?
   status      EventStatus    @default(upcoming)
-  created_at  DateTime       @default(now())
-  updated_at  DateTime       @updatedAt
+  created_at  DateTime       @default(now()) @db.Timestamptz(3)
+  updated_at  DateTime       @updatedAt @db.Timestamptz(3)
   zone        Zone?          @relation(fields: [zone_id], references: [id])
   brand       Brand?         @relation(fields: [brand_id], references: [id])
   bookings    EventBooking[]
@@ -1425,7 +1498,7 @@ model Event {
 model EventBooking {
   id                  String        @id @default(uuid())
   event_id            String
-  event               Event         @relation(fields: [event_id], references: [id], onDelete: Cascade)
+  event               Event         @relation(fields: [event_id], references: [id], onDelete: Restrict)
   customer_name       String
   customer_phone      String
   guests              Int
@@ -1435,9 +1508,9 @@ model EventBooking {
   razorpay_payment_id String?       @unique
   payment_status      String        @default("pending") // pending | paid | refunded | free
   status              BookingStatus @default(confirmed)
-  hold_expires_at     DateTime?
-  payment_amount      Decimal?
-  created_at          DateTime      @default(now())
+  hold_expires_at     DateTime?     @db.Timestamptz(3)
+  payment_amount      Decimal?      @db.Decimal(12, 2)
+  created_at          DateTime      @default(now()) @db.Timestamptz(3)
 
   @@unique([event_id, customer_phone])
   @@index([customer_id])
@@ -1454,8 +1527,8 @@ model GuideSection {
   sort_order   Int         @default(0)
   role_codes   String[]
   status       String      @default("draft")
-  created_at   DateTime    @default(now())
-  updated_at   DateTime    @updatedAt
+  created_at   DateTime    @default(now()) @db.Timestamptz(3)
+  updated_at   DateTime    @updatedAt @db.Timestamptz(3)
   pages        GuidePage[]
 
   @@index([status])
@@ -1474,8 +1547,8 @@ model GuidePage {
   estimated_read_time Int?
   status              String       @default("draft")
   search_text         String       @default("")
-  created_at          DateTime     @default(now())
-  updated_at          DateTime     @updatedAt
+  created_at          DateTime     @default(now()) @db.Timestamptz(3)
+  updated_at          DateTime     @updatedAt @db.Timestamptz(3)
 
   @@unique([section_id, slug])
   @@index([section_id, sort_order])
@@ -1493,7 +1566,7 @@ model ExportRecord {
   generated_by    String
   user            User     @relation(fields: [generated_by], references: [id])
   status          String   @default("completed")
-  created_at      DateTime @default(now())
+  created_at      DateTime @default(now()) @db.Timestamptz(3)
 
   @@index([report_type, created_at(sort: Desc)])
   @@index([generated_by, created_at(sort: Desc)])
@@ -1506,8 +1579,8 @@ model Conversation {
   name         String? // null for 1-1 chats, required for groups
   avatar_key   String? // R2 key for group avatar (optional)
   created_by   String // user_id of creator
-  created_at   DateTime                  @default(now())
-  updated_at   DateTime                  @updatedAt
+  created_at   DateTime                  @default(now()) @db.Timestamptz(3)
+  updated_at   DateTime                  @updatedAt @db.Timestamptz(3)
   participants ConversationParticipant[]
   messages     Message[]
 
@@ -1521,8 +1594,8 @@ model ConversationParticipant {
   conversation    Conversation @relation(fields: [conversation_id], references: [id])
   user_id         String
   user            User         @relation(fields: [user_id], references: [id])
-  last_read_at    DateTime?
-  joined_at       DateTime     @default(now())
+  last_read_at    DateTime?    @db.Timestamptz(3)
+  joined_at       DateTime     @default(now()) @db.Timestamptz(3)
 
   @@unique([conversation_id, user_id])
   @@index([user_id])
@@ -1540,7 +1613,7 @@ model Message {
   attachment_url  String?
   attachment_name String?
   attachment_type String? // "image" | "file"
-  created_at      DateTime     @default(now())
+  created_at      DateTime     @default(now()) @db.Timestamptz(3)
 
   @@index([conversation_id, created_at(sort: Desc)])
   @@index([sender_id])

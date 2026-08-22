@@ -9,6 +9,13 @@ import {
   INGREDIENT_CATEGORIES,
 } from './seed-data/reference';
 import { guideSections, computeReadTime } from './seed-data/guide-content';
+import {
+  DEFAULT_NODE_ID,
+  DEFAULT_NODE_CODE,
+  DEFAULT_NODE_NAME,
+  DEFAULT_NODE_TIMEZONE,
+  DEFAULT_NODE_CURRENCY,
+} from '../src/node/node.constants';
 
 type Tx = Prisma.TransactionClient;
 
@@ -22,6 +29,20 @@ export async function seedReference(prisma: PrismaClient): Promise<void> {
 
   await prisma.$transaction(
     async (tx: Tx) => {
+      // The single Node must exist before anything else — every aggregate's
+      // `node_id` @default points at it (full seed rewrite lands in Task 14).
+      await tx.node.upsert({
+        where: { id: DEFAULT_NODE_ID },
+        update: {},
+        create: {
+          id: DEFAULT_NODE_ID,
+          code: DEFAULT_NODE_CODE,
+          name: DEFAULT_NODE_NAME,
+          timezone: DEFAULT_NODE_TIMEZONE,
+          currency: DEFAULT_NODE_CURRENCY,
+        },
+      });
+
       for (const seed of ROLE_SEEDS) {
         const data = {
           name: seed.name,
@@ -38,9 +59,11 @@ export async function seedReference(prisma: PrismaClient): Promise<void> {
       for (const meter of READINESS_METERS) {
         const data = { name: meter.name, description: meter.description };
         await tx.readinessMeter.upsert({
-          where: { code: meter.code },
+          where: {
+            node_id_code: { node_id: DEFAULT_NODE_ID, code: meter.code },
+          },
           update: data,
-          create: { code: meter.code, ...data },
+          create: { node_id: DEFAULT_NODE_ID, code: meter.code, ...data },
         });
       }
 
