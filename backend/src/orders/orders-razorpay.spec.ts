@@ -4,6 +4,8 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { OrdersService } from './orders.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { RazorpayService } from '../razorpay/razorpay.service';
+import { PusherService } from '../chat/pusher.service';
+import { FulfilmentService } from '../fulfilment/fulfilment.service';
 import { Prisma } from '@prisma/client';
 
 describe('OrdersService — Razorpay', () => {
@@ -45,6 +47,16 @@ describe('OrdersService — Razorpay', () => {
         { provide: PrismaService, useValue: prisma },
         { provide: RazorpayService, useValue: razorpay },
         { provide: EventEmitter2, useValue: mockEventEmitter },
+        {
+          provide: PusherService,
+          useValue: { trigger: jest.fn().mockResolvedValue(undefined) },
+        },
+        {
+          provide: FulfilmentService,
+          useValue: {
+            applyPrepTypeOnCreate: jest.fn().mockResolvedValue(undefined),
+          },
+        },
       ],
     }).compile();
 
@@ -58,8 +70,16 @@ describe('OrdersService — Razorpay', () => {
     it('should call razorpayService.createOrder with amount in paise from order.total', async () => {
       prisma.order.findUnique.mockResolvedValue(mockOrder);
       prisma.payment.findFirst.mockResolvedValue(null);
-      razorpay.createOrder.mockResolvedValue({ id: 'order_rzp_1', amount: 150000, currency: 'INR', status: 'created' });
-      prisma.payment.upsert.mockResolvedValue({ id: 'pay-1', status: 'pending' });
+      razorpay.createOrder.mockResolvedValue({
+        id: 'order_rzp_1',
+        amount: 150000,
+        currency: 'INR',
+        status: 'created',
+      });
+      prisma.payment.upsert.mockResolvedValue({
+        id: 'pay-1',
+        status: 'pending',
+      });
 
       const result = await service.createRazorpayOrder('order-1');
 
@@ -73,17 +93,30 @@ describe('OrdersService — Razorpay', () => {
 
     it('should throw BadRequestException when order already has a paid payment', async () => {
       prisma.order.findUnique.mockResolvedValue(mockOrder);
-      prisma.payment.findFirst.mockResolvedValue({ id: 'pay-1', status: 'paid' });
+      prisma.payment.findFirst.mockResolvedValue({
+        id: 'pay-1',
+        status: 'paid',
+      });
 
-      await expect(service.createRazorpayOrder('order-1'))
-        .rejects.toThrow(BadRequestException);
+      await expect(service.createRazorpayOrder('order-1')).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('should upsert pending Payment record with razorpay_order_id', async () => {
       prisma.order.findUnique.mockResolvedValue(mockOrder);
       prisma.payment.findFirst.mockResolvedValue(null);
-      razorpay.createOrder.mockResolvedValue({ id: 'order_rzp_1', amount: 150000, currency: 'INR', status: 'created' });
-      prisma.payment.upsert.mockResolvedValue({ id: 'pay-1', status: 'pending', razorpay_order_id: 'order_rzp_1' });
+      razorpay.createOrder.mockResolvedValue({
+        id: 'order_rzp_1',
+        amount: 150000,
+        currency: 'INR',
+        status: 'created',
+      });
+      prisma.payment.upsert.mockResolvedValue({
+        id: 'pay-1',
+        status: 'pending',
+        razorpay_order_id: 'order_rzp_1',
+      });
 
       await service.createRazorpayOrder('order-1');
 
@@ -106,8 +139,9 @@ describe('OrdersService — Razorpay', () => {
     it('should throw NotFoundException when order does not exist', async () => {
       prisma.order.findUnique.mockResolvedValue(null);
 
-      await expect(service.createRazorpayOrder('order-1'))
-        .rejects.toThrow(NotFoundException);
+      await expect(service.createRazorpayOrder('order-1')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -129,14 +163,30 @@ describe('OrdersService — Razorpay', () => {
         order_id: 'order_rzp_1',
         amount: 150000,
       });
-      const pendingPayment = { id: 'pay-1', order_id: 'order-1', status: 'pending', razorpay_order_id: 'order_rzp_1' };
+      const pendingPayment = {
+        id: 'pay-1',
+        order_id: 'order-1',
+        status: 'pending',
+        razorpay_order_id: 'order_rzp_1',
+      };
       prisma.payment.findFirst.mockResolvedValue(pendingPayment);
-      const updatedPayment = { ...pendingPayment, status: 'paid', razorpay_payment_id: 'pay_rzp_1' };
+      const updatedPayment = {
+        ...pendingPayment,
+        status: 'paid',
+        razorpay_payment_id: 'pay_rzp_1',
+      };
       prisma.payment.update.mockResolvedValue(updatedPayment);
 
-      const result = await service.confirmRazorpayPayment('order-1', confirmDto);
+      const result = await service.confirmRazorpayPayment(
+        'order-1',
+        confirmDto,
+      );
 
-      expect(razorpay.verifyPaymentSignature).toHaveBeenCalledWith('order_rzp_1', 'pay_rzp_1', 'valid_sig');
+      expect(razorpay.verifyPaymentSignature).toHaveBeenCalledWith(
+        'order_rzp_1',
+        'pay_rzp_1',
+        'valid_sig',
+      );
       expect(razorpay.fetchPayment).toHaveBeenCalledWith('pay_rzp_1');
       expect(result.status).toBe('paid');
     });
@@ -144,22 +194,24 @@ describe('OrdersService — Razorpay', () => {
     it('should throw BadRequestException for invalid HMAC signature', async () => {
       razorpay.verifyPaymentSignature.mockReturnValue(false);
 
-      await expect(service.confirmRazorpayPayment('order-1', confirmDto))
-        .rejects.toThrow(BadRequestException);
+      await expect(
+        service.confirmRazorpayPayment('order-1', confirmDto),
+      ).rejects.toThrow(BadRequestException);
       expect(razorpay.fetchPayment).not.toHaveBeenCalled();
     });
 
-    it('should throw BadRequestException when payment status is not captured', async () => {
+    it('should throw BadRequestException when payment is neither captured nor authorized', async () => {
       razorpay.verifyPaymentSignature.mockReturnValue(true);
       razorpay.fetchPayment.mockResolvedValue({
         id: 'pay_rzp_1',
-        status: 'authorized',
+        status: 'failed',
         order_id: 'order_rzp_1',
         amount: 150000,
       });
 
-      await expect(service.confirmRazorpayPayment('order-1', confirmDto))
-        .rejects.toThrow(BadRequestException);
+      await expect(
+        service.confirmRazorpayPayment('order-1', confirmDto),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('should return existing payment if already paid (idempotent)', async () => {
@@ -170,10 +222,18 @@ describe('OrdersService — Razorpay', () => {
         order_id: 'order_rzp_1',
         amount: 150000,
       });
-      const paidPayment = { id: 'pay-1', order_id: 'order-1', status: 'paid', razorpay_order_id: 'order_rzp_1' };
+      const paidPayment = {
+        id: 'pay-1',
+        order_id: 'order-1',
+        status: 'paid',
+        razorpay_order_id: 'order_rzp_1',
+      };
       prisma.payment.findFirst.mockResolvedValue(paidPayment);
 
-      const result = await service.confirmRazorpayPayment('order-1', confirmDto);
+      const result = await service.confirmRazorpayPayment(
+        'order-1',
+        confirmDto,
+      );
 
       expect(result).toEqual(paidPayment);
       expect(prisma.payment.update).not.toHaveBeenCalled();
@@ -189,8 +249,9 @@ describe('OrdersService — Razorpay', () => {
       });
       prisma.payment.findFirst.mockResolvedValue(null);
 
-      await expect(service.confirmRazorpayPayment('order-1', confirmDto))
-        .rejects.toThrow(NotFoundException);
+      await expect(
+        service.confirmRazorpayPayment('order-1', confirmDto),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 });

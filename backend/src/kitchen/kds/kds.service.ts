@@ -3,10 +3,16 @@ import {
   BadRequestException,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../../prisma/prisma.service';
-import { OrdersService } from '../../orders/orders.service';
+import {
+  FulfilmentService,
+  actorForOrder,
+} from '../../fulfilment/fulfilment.service';
+import {
+  SERIALIZABLE_TX_OPTIONS,
+  withSerializableRetry,
+} from '../../common/utils/transaction-retry';
 
 export interface KdsOrderItem {
   id: string;
@@ -37,7 +43,7 @@ export interface KdsZoneData {
 export class KdsService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly ordersService: OrdersService,
+    private readonly fulfilmentService: FulfilmentService,
     private readonly eventEmitter: EventEmitter2,
   ) {}
 
@@ -66,7 +72,7 @@ export class KdsService {
     });
 
     // Filter out orders with zero scratch items (only non-scratch items = nothing for KDS)
-    const ordersWithScratchItems = orders.filter(o => o.items.length > 0);
+    const ordersWithScratchItems = orders.filter((o) => o.items.length > 0);
 
     // Group by zone
     const zoneMap = new Map<string, KdsZoneData>();
@@ -124,93 +130,119 @@ export class KdsService {
     // When status is 'ready' — wrap in $transaction with deduction and Serializable isolation
     if (newStatus === 'ready') {
       let wasAllReady = false;
-      let orderData: { id: string; channel: string; created_by: string | null } | null =
-        null;
+      let orderData: {
+        id: string;
+        channel: string;
+        created_by: string | null;
+      } | null = null;
 
-      const result = await this.prisma.$transaction(async (tx) => {
-        // Fetch item INSIDE transaction to prevent concurrent status race
-        const item = await tx.orderItem.findUnique({
-          where: { id: itemId },
-        });
-        if (!item) {
-          throw new NotFoundException(`Order item with ID ${itemId} not found`);
-        }
-
-        // Validate status progression inside transaction
-        const progressionMap: Record<string, string> = {
-          pending: 'preparing',
-          preparing: 'ready',
-        };
-
-        if (progressionMap[item.status] !== newStatus) {
-          throw new BadRequestException(
-            `Cannot transition from "${item.status}" to "${newStatus}". ` +
-              `Valid next status: ${progressionMap[item.status] ?? 'none (already at final status)'}`,
-          );
-        }
-
-        // Deduct ingredients/prep batches for this item (atomic)
-        const order = await tx.order.findUniqueOrThrow({
-          where: { id: item.order_id },
-          select: { id: true, channel: true, created_by: true, zone_id: true },
-        });
-        await this.ordersService.deductItemIngredients(
-          tx,
-          {
-            id: item.id,
-            order_id: item.order_id,
-            menu_item_id: item.menu_item_id,
-            quantity: item.quantity,
-          },
-          order.created_by!,
-          order.zone_id!,
-        );
-
-        // Update item status
-        const updated = await tx.orderItem.update({
-          where: { id: itemId },
-          data: updateData,
-        });
-
-        // Check if ALL items in order are ready -> auto-transition order
-        // Only count non-ready siblings (excluding the current item we just marked ready)
-        const notReadyCount = await tx.orderItem.count({
-          where: {
-            order_id: item.order_id,
-            id: { not: itemId },
-            status: { not: 'ready' },
-          },
-        });
-        const allReady = notReadyCount === 0;
-        if (allReady) {
-          await tx.order.update({
-            where: { id: item.order_id },
-            data: { status: 'ready' },
+      const result = await withSerializableRetry(() =>
+        this.prisma.$transaction(async (tx) => {
+          // Fetch item INSIDE transaction to prevent concurrent status race
+          const item = await tx.orderItem.findUnique({
+            where: { id: itemId },
           });
-          wasAllReady = true;
-          orderData = {
-            id: order.id,
-            channel: order.channel,
-            created_by: order.created_by,
-          };
-        }
+          if (!item) {
+            throw new NotFoundException(
+              `Order item with ID ${itemId} not found`,
+            );
+          }
 
-        return {
-          id: updated.id,
-          status: updated.status,
-          ready_at: updated.ready_at,
-        };
-      }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+          // Validate status progression inside transaction
+          const progressionMap: Record<string, string> = {
+            pending: 'preparing',
+            preparing: 'ready',
+          };
+
+          if (progressionMap[item.status] !== newStatus) {
+            throw new BadRequestException(
+              `Cannot transition from "${item.status}" to "${newStatus}". ` +
+                `Valid next status: ${progressionMap[item.status] ?? 'none (already at final status)'}`,
+            );
+          }
+
+          // Deduct ingredients/prep batches for this item (atomic)
+          const order = await tx.order.findUniqueOrThrow({
+            where: { id: item.order_id },
+            select: {
+              id: true,
+              channel: true,
+              created_by: true,
+              customer_id: true,
+              zone_id: true,
+            },
+          });
+          if (!order.zone_id) {
+            throw new BadRequestException(
+              'Order has no fulfilment zone; cannot deduct stock',
+            );
+          }
+          await this.fulfilmentService.deductItemIngredients(
+            tx,
+            {
+              id: item.id,
+              order_id: item.order_id,
+              menu_item_id: item.menu_item_id,
+              quantity: item.quantity,
+            },
+            actorForOrder(order),
+            order.zone_id,
+          );
+
+          // Update item status
+          const updated = await tx.orderItem.update({
+            where: { id: itemId },
+            data: updateData,
+          });
+
+          // Check if ALL items in order are ready -> auto-transition order
+          // Only count non-ready siblings (excluding the current item we just marked ready)
+          const notReadyCount = await tx.orderItem.count({
+            where: {
+              order_id: item.order_id,
+              id: { not: itemId },
+              status: { not: 'ready' },
+            },
+          });
+          const allReady = notReadyCount === 0;
+          if (allReady) {
+            await tx.order.update({
+              where: { id: item.order_id },
+              data: { status: 'ready' },
+            });
+            wasAllReady = true;
+            orderData = {
+              id: order.id,
+              channel: order.channel,
+              created_by: order.created_by,
+            };
+          }
+
+          return {
+            id: updated.id,
+            status: updated.status,
+            ready_at: updated.ready_at,
+          };
+        }, SERIALIZABLE_TX_OPTIONS),
+      );
 
       // Emit AFTER transaction commits (Pitfall 1 compliance)
       if (wasAllReady && orderData) {
         try {
           this.eventEmitter.emit('order.ready', {
-            orderId: (orderData as { id: string; channel: string; created_by: string }).id,
-            channel: (orderData as { id: string; channel: string; created_by: string }).channel,
-            createdBy: (orderData as { id: string; channel: string; created_by: string }).created_by,
+            orderId: (
+              orderData as { id: string; channel: string; created_by: string }
+            ).id,
+            channel: (
+              orderData as { id: string; channel: string; created_by: string }
+            ).channel,
+            createdBy: (
+              orderData as { id: string; channel: string; created_by: string }
+            ).created_by,
           });
-        } catch (e) { /* event emission failed - non-critical */ }
+        } catch (e) {
+          /* event emission failed - non-critical */
+        }
       }
 
       return result;
@@ -249,7 +281,7 @@ export class KdsService {
         status: updatedItem.status,
         ready_at: updatedItem.ready_at,
       };
-    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+    }, SERIALIZABLE_TX_OPTIONS);
 
     return result;
   }

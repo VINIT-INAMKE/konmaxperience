@@ -1,20 +1,28 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import {
-  BadRequestException,
-  ConflictException,
-  NotFoundException,
-} from '@nestjs/common';
+import { BadRequestException, ConflictException } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { OrdersService } from './orders.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { RazorpayService } from '../razorpay/razorpay.service';
+import { PusherService } from '../chat/pusher.service';
+import { FulfilmentService } from '../fulfilment/fulfilment.service';
 
 /** Mock Prisma Decimal -- supports Number() via valueOf() */
 const dec = (n: number) => ({ valueOf: () => n, toNumber: () => n });
 
+const mockFulfilment = {
+  applyPrepTypeOnCreate: jest.fn().mockResolvedValue(undefined),
+};
+
 const createMockTx = () => ({
   channelModifier: {
     findFirst: jest.fn(),
+  },
+  menuItem: {
+    findMany: jest.fn().mockResolvedValue([
+      { id: 'mi-1', base_price: dec(150) },
+      { id: 'mi-2', base_price: dec(200) },
+    ]),
   },
   order: {
     create: jest.fn(),
@@ -26,6 +34,9 @@ const mockPrisma = {
     findMany: jest.fn(),
     findUnique: jest.fn(),
     update: jest.fn(),
+    updateMany: jest.fn(),
+    count: jest.fn(),
+    aggregate: jest.fn(),
   },
   payment: {
     findFirst: jest.fn(),
@@ -43,12 +54,25 @@ describe('OrdersService', () => {
         OrdersService,
         { provide: PrismaService, useValue: mockPrisma },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
-        { provide: RazorpayService, useValue: { createOrder: jest.fn(), verifyPaymentSignature: jest.fn(), fetchPayment: jest.fn() } },
+        {
+          provide: RazorpayService,
+          useValue: {
+            createOrder: jest.fn(),
+            verifyPaymentSignature: jest.fn(),
+            fetchPayment: jest.fn(),
+          },
+        },
+        {
+          provide: PusherService,
+          useValue: { trigger: jest.fn().mockResolvedValue(undefined) },
+        },
+        { provide: FulfilmentService, useValue: mockFulfilment },
       ],
     }).compile();
 
     service = module.get<OrdersService>(OrdersService);
     jest.clearAllMocks();
+    mockFulfilment.applyPrepTypeOnCreate.mockResolvedValue(undefined);
   });
 
   // ---------------------------------------------------------------
@@ -80,6 +104,7 @@ describe('OrdersService', () => {
 
       const expectedOrder = {
         id: 'order-1',
+        zone_id: 'zone-1',
         channel: 'dine_in',
         status: 'placed',
         subtotal: dec(500),
@@ -109,6 +134,12 @@ describe('OrdersService', () => {
           }),
           include: { items: true, payment: true },
         }),
+      );
+      expect(mockFulfilment.applyPrepTypeOnCreate).toHaveBeenCalledWith(
+        mockTx,
+        { id: 'order-1', zone_id: 'zone-1' },
+        [],
+        { actor_type: 'user', actor_id: 'user-1' },
       );
       expect(result).toBe(expectedOrder);
     });
@@ -248,17 +279,35 @@ describe('OrdersService', () => {
   // ---------------------------------------------------------------
   describe('updateOrderStatus', () => {
     it('allows placed -> preparing', async () => {
+      mockPrisma.order.findUnique
+        .mockResolvedValueOnce({
+          id: 'o-1',
+          status: 'placed',
+          customer_id: null,
+        })
+        .mockResolvedValueOnce({ id: 'o-1', status: 'preparing' });
+      mockPrisma.order.updateMany.mockResolvedValue({ count: 1 });
+
+      const result = await service.updateOrderStatus('o-1', 'preparing');
+
+      expect(mockPrisma.order.updateMany).toHaveBeenCalledWith({
+        where: { id: 'o-1', status: 'placed' },
+        data: { status: 'preparing' },
+      });
+      expect(result!.status).toBe('preparing');
+    });
+
+    it('throws 409 when the status changed concurrently', async () => {
       mockPrisma.order.findUnique.mockResolvedValue({
         id: 'o-1',
         status: 'placed',
+        customer_id: null,
       });
-      mockPrisma.order.update.mockResolvedValue({
-        id: 'o-1',
-        status: 'preparing',
-      });
+      mockPrisma.order.updateMany.mockResolvedValue({ count: 0 });
 
-      const result = await service.updateOrderStatus('o-1', 'preparing');
-      expect(result!.status).toBe('preparing');
+      await expect(
+        service.updateOrderStatus('o-1', 'preparing'),
+      ).rejects.toThrow(ConflictException);
     });
 
     it('throws on invalid transition placed -> ready', async () => {
@@ -267,20 +316,20 @@ describe('OrdersService', () => {
         status: 'placed',
       });
 
-      await expect(
-        service.updateOrderStatus('o-1', 'ready'),
-      ).rejects.toThrow(BadRequestException);
+      await expect(service.updateOrderStatus('o-1', 'ready')).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('allows cancellation from non-terminal status', async () => {
-      mockPrisma.order.findUnique.mockResolvedValue({
-        id: 'o-1',
-        status: 'preparing',
-      });
-      mockPrisma.order.update.mockResolvedValue({
-        id: 'o-1',
-        status: 'cancelled',
-      });
+      mockPrisma.order.findUnique
+        .mockResolvedValueOnce({
+          id: 'o-1',
+          status: 'preparing',
+          customer_id: null,
+        })
+        .mockResolvedValueOnce({ id: 'o-1', status: 'cancelled' });
+      mockPrisma.order.updateMany.mockResolvedValue({ count: 1 });
 
       const result = await service.updateOrderStatus('o-1', 'cancelled');
       expect(result!.status).toBe('cancelled');
@@ -351,7 +400,9 @@ describe('OrdersService', () => {
     it('sets delivery_assigned_to and delivery_status', async () => {
       mockPrisma.order.findUnique.mockResolvedValue({
         id: 'o-1',
+        channel: 'delivery',
         delivery_status: null,
+        customer_id: null,
       });
       mockPrisma.order.update.mockResolvedValue({
         id: 'o-1',
@@ -371,7 +422,9 @@ describe('OrdersService', () => {
     it('validates delivery_status progression (null -> picked_up ok)', async () => {
       mockPrisma.order.findUnique.mockResolvedValue({
         id: 'o-1',
+        channel: 'delivery',
         delivery_status: null,
+        customer_id: null,
       });
       mockPrisma.order.update.mockResolvedValue({
         id: 'o-1',
@@ -385,7 +438,9 @@ describe('OrdersService', () => {
     it('rejects invalid delivery_status progression (null -> delivered)', async () => {
       mockPrisma.order.findUnique.mockResolvedValue({
         id: 'o-1',
+        channel: 'delivery',
         delivery_status: null,
+        customer_id: null,
       });
 
       await expect(
@@ -399,37 +454,27 @@ describe('OrdersService', () => {
   // ---------------------------------------------------------------
   describe('getDailySummary', () => {
     it('returns totalOrders, totalRevenue, averageOrderValue for a date', async () => {
-      mockPrisma.order.findMany.mockResolvedValue([
-        {
-          id: 'o-1',
-          total: dec(500),
-          status: 'served',
-          payment: { status: 'paid' },
-        },
-        {
-          id: 'o-2',
-          total: dec(300),
-          status: 'placed',
-          payment: { status: 'paid' },
-        },
-        {
-          id: 'o-3',
-          total: dec(200),
-          status: 'ready',
-          payment: null,
-        },
-      ]);
+      // 3 non-cancelled orders that day; 2 of them paid for a total of 800
+      mockPrisma.order.count.mockResolvedValue(3);
+      mockPrisma.order.aggregate.mockResolvedValue({
+        _sum: { total: dec(800) },
+        _count: { id: 2 },
+      });
 
       const result = await service.getDailySummary('2026-03-20');
 
       expect(result.total_orders).toBe(3);
-      expect(result.total_revenue).toBe(800); // o-1 + o-2 paid
-      expect(result.average_order_value).toBeCloseTo(800 / 3);
+      expect(result.total_revenue).toBe(800);
+      expect(result.average_order_value).toBeCloseTo(400);
 
-      // Verify date range was computed
-      const call = mockPrisma.order.findMany.mock.calls[0][0];
-      expect(call.where.created_at).toBeDefined();
-      expect(call.where.status).toEqual({ not: 'cancelled' });
+      // Verify date range was computed against non-cancelled orders
+      const countCall = mockPrisma.order.count.mock.calls[0][0];
+      expect(countCall.where.created_at).toBeDefined();
+      expect(countCall.where.status).toEqual({ not: 'cancelled' });
+
+      // Revenue only counts paid orders
+      const aggCall = mockPrisma.order.aggregate.mock.calls[0][0];
+      expect(aggCall.where.payment).toEqual({ status: 'paid' });
     });
   });
 });

@@ -12,10 +12,10 @@ import { PickAndPackController } from './pick-and-pack/pick-and-pack.controller'
 import { PickAndPackService } from './pick-and-pack/pick-and-pack.service';
 import { SupplyUsageController } from './supply-usage/supply-usage.controller';
 import { SupplyUsageService } from './supply-usage/supply-usage.service';
-import { OrdersModule } from '../orders/orders.module';
+import { FulfilmentModule } from '../fulfilment/fulfilment.module';
 
 @Module({
-  imports: [OrdersModule],
+  imports: [FulfilmentModule],
   controllers: [
     PrepBatchesController,
     KdsController,

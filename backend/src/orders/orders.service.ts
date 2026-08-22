@@ -14,7 +14,7 @@ import { RecordPaymentDto } from './dto/record-payment.dto';
 import { UpdateDeliveryDto } from './dto/update-delivery.dto';
 import { OrderFiltersDto } from './dto/order-filters.dto';
 import { ConfirmRazorpayPaymentDto } from './dto/create-razorpay-order.dto';
-import { convertUnit } from '../common/utils/unit-conversion';
+import { FulfilmentService } from '../fulfilment/fulfilment.service';
 
 /** Valid order status transitions (non-cancellation) */
 const STATUS_TRANSITIONS: Record<string, string[]> = {
@@ -36,6 +36,7 @@ export class OrdersService {
     private readonly eventEmitter: EventEmitter2,
     private readonly razorpayService: RazorpayService,
     private readonly pusherService: PusherService,
+    private readonly fulfilmentService: FulfilmentService,
   ) {}
 
   // ---------------------------------------------------------------
@@ -114,28 +115,12 @@ export class OrdersService {
       });
 
       // Non-scratch items: auto-set to 'ready' and deduct immediately (D-04, D-05)
-      for (const createdItem of created.items) {
-        const menuItemData = await tx.menuItem.findUnique({
-          where: { id: createdItem.menu_item_id },
-          select: { recipe: { select: { id: true, preparation_type: true } } },
-        });
-        const prepType = menuItemData?.recipe?.preparation_type ?? 'scratch';
-
-        if (prepType !== 'scratch') {
-          // D-05: auto-set to ready (no kitchen preparation needed)
-          await tx.orderItem.update({
-            where: { id: createdItem.id },
-            data: { status: 'ready', ready_at: new Date() },
-          });
-          // D-04: deduct immediately
-          if (prepType === 'batch_prepared') {
-            await this.deductBatchPrepared(tx, menuItemData!.recipe!.id, createdItem.quantity, created.id);
-          } else {
-            // ready_to_sell and assemble: BOM-based deduction
-            await this.deductItemIngredients(tx, createdItem, userId, dto.zone_id);
-          }
-        }
-      }
+      await this.fulfilmentService.applyPrepTypeOnCreate(
+        tx,
+        { id: created.id, zone_id: created.zone_id },
+        created.items,
+        { actor_type: 'user', actor_id: userId },
+      );
 
       return created;
     });
@@ -149,7 +134,9 @@ export class OrdersService {
         total: String(order.total),
         createdBy: userId,
       });
-    } catch (e) { /* event emission failed - non-critical */ }
+    } catch (e) {
+      /* event emission failed - non-critical */
+    }
 
     return order;
   }
@@ -196,7 +183,9 @@ export class OrdersService {
       where,
       include: {
         _count: { select: { items: true } },
-        payment: { select: { id: true, method: true, amount: true, status: true } },
+        payment: {
+          select: { id: true, method: true, amount: true, status: true },
+        },
       },
       orderBy: { created_at: 'desc' },
       take,
@@ -294,18 +283,24 @@ export class OrdersService {
         data: { status: 'cancelled' },
       });
       if (cancelResult.count === 0) {
-        throw new ConflictException('Order status was changed by another request. Please retry.');
+        throw new ConflictException(
+          'Order status was changed by another request. Please retry.',
+        );
       }
 
       // Pusher trigger for customer orders (D-13 + Pitfall 4: null-guard for POS orders)
       if (order.customer_id) {
         this.pusherService
-          .trigger(`private-customer-${order.customer_id}`, 'order.status-changed', {
-            orderId: order.id,
-            orderNumber: order.order_number,
-            status: 'cancelled',
-            updatedAt: new Date().toISOString(),
-          })
+          .trigger(
+            `private-customer-${order.customer_id}`,
+            'order.status-changed',
+            {
+              orderId: order.id,
+              orderNumber: order.order_number,
+              status: 'cancelled',
+              updatedAt: new Date().toISOString(),
+            },
+          )
           .catch((err) => console.error('[Pusher] Status trigger error:', err));
       }
 
@@ -326,18 +321,24 @@ export class OrdersService {
       data: { status: newStatus },
     });
     if (updateResult.count === 0) {
-      throw new ConflictException('Order status was changed by another request. Please retry.');
+      throw new ConflictException(
+        'Order status was changed by another request. Please retry.',
+      );
     }
 
     // Pusher trigger for customer orders (D-13 + Pitfall 4: null-guard for POS orders)
     if (order.customer_id) {
       this.pusherService
-        .trigger(`private-customer-${order.customer_id}`, 'order.status-changed', {
-          orderId: order.id,
-          orderNumber: order.order_number,
-          status: newStatus,
-          updatedAt: new Date().toISOString(),
-        })
+        .trigger(
+          `private-customer-${order.customer_id}`,
+          'order.status-changed',
+          {
+            orderId: order.id,
+            orderNumber: order.order_number,
+            status: newStatus,
+            updatedAt: new Date().toISOString(),
+          },
+        )
         .catch((err) => console.error('[Pusher] Status trigger error:', err));
     }
 
@@ -380,9 +381,7 @@ export class OrdersService {
       });
 
       if (existing) {
-        throw new ConflictException(
-          'Payment already recorded for this order',
-        );
+        throw new ConflictException('Payment already recorded for this order');
       }
 
       return await this.prisma.payment.create({
@@ -410,9 +409,7 @@ export class OrdersService {
         'code' in error &&
         (error as any).code === 'P2002'
       ) {
-        throw new ConflictException(
-          'Payment already recorded for this order',
-        );
+        throw new ConflictException('Payment already recorded for this order');
       }
       throw error;
     }
@@ -424,7 +421,15 @@ export class OrdersService {
   async updateDelivery(orderId: string, dto: UpdateDeliveryDto) {
     const order = await this.prisma.order.findUnique({
       where: { id: orderId },
-      select: { id: true, channel: true, status: true, delivery_status: true, delivery_address: true, created_by: true, customer_id: true },
+      select: {
+        id: true,
+        channel: true,
+        status: true,
+        delivery_status: true,
+        delivery_address: true,
+        created_by: true,
+        customer_id: true,
+      },
     });
 
     if (!order) {
@@ -432,7 +437,9 @@ export class OrdersService {
     }
 
     if (order.channel !== 'delivery') {
-      throw new BadRequestException('Delivery updates only apply to delivery orders');
+      throw new BadRequestException(
+        'Delivery updates only apply to delivery orders',
+      );
     }
 
     // Validate delivery_status progression if provided
@@ -471,7 +478,9 @@ export class OrdersService {
         deliveryAddress: order.delivery_address,
         createdBy: order.created_by,
       });
-    } catch (e) { /* event emission failed - non-critical */ }
+    } catch (e) {
+      /* event emission failed - non-critical */
+    }
 
     // Pusher trigger for customer orders (D-13 + Pitfall 4: null-guard for POS orders)
     if (order.customer_id) {
@@ -544,7 +553,9 @@ export class OrdersService {
   // ---------------------------------------------------------------
   async createRazorpayOrder(orderId: string) {
     // Fetch order
-    const order = await this.prisma.order.findUnique({ where: { id: orderId } });
+    const order = await this.prisma.order.findUnique({
+      where: { id: orderId },
+    });
     if (!order) {
       throw new NotFoundException(`Order with ID ${orderId} not found`);
     }
@@ -590,10 +601,15 @@ export class OrdersService {
   // ---------------------------------------------------------------
   // Confirm Razorpay Payment for POS (D-09, D-12)
   // ---------------------------------------------------------------
-  async confirmRazorpayPayment(orderId: string, dto: ConfirmRazorpayPaymentDto) {
+  async confirmRazorpayPayment(
+    orderId: string,
+    dto: ConfirmRazorpayPaymentDto,
+  ) {
     // Step 1: Verify HMAC signature — BEFORE fetchPayment (D-09)
     const isValid = this.razorpayService.verifyPaymentSignature(
-      dto.razorpay_order_id, dto.razorpay_payment_id, dto.razorpay_signature,
+      dto.razorpay_order_id,
+      dto.razorpay_payment_id,
+      dto.razorpay_signature,
     );
     if (!isValid) {
       throw new BadRequestException('Invalid payment signature');
@@ -601,9 +617,13 @@ export class OrdersService {
 
     // Step 2: Re-fetch payment from Razorpay API (D-12 belt-and-suspenders)
     // Accept both 'captured' (auto-capture on) and 'authorized' (auto-capture off / test mode)
-    const payment = await this.razorpayService.fetchPayment(dto.razorpay_payment_id);
+    const payment = await this.razorpayService.fetchPayment(
+      dto.razorpay_payment_id,
+    );
     if (payment.status !== 'captured' && payment.status !== 'authorized') {
-      throw new BadRequestException(`Payment not captured — status: ${payment.status}`);
+      throw new BadRequestException(
+        `Payment not captured — status: ${payment.status}`,
+      );
     }
 
     // Step 3: Update Payment record
@@ -624,212 +644,5 @@ export class OrdersService {
         razorpay_payment_id: dto.razorpay_payment_id,
       },
     });
-  }
-
-  // ---------------------------------------------------------------
-  // Deduct Batch Prepared (FIFO against PrepBatch for batch_prepared recipes)
-  // ---------------------------------------------------------------
-  /**
-   * FIFO deduction against PrepBatch records for a batch_prepared recipe.
-   * Consumes from batches expiring soonest first (per D-10).
-   */
-  private async deductBatchPrepared(
-    tx: any,
-    recipeId: string,
-    quantity: number,
-    orderId: string,
-  ) {
-    const batches = await tx.prepBatch.findMany({
-      where: {
-        recipe_id: recipeId,
-        status: 'active',
-        OR: [{ expires_at: null }, { expires_at: { gt: new Date() } }],
-      },
-      orderBy: [{ expires_at: 'asc' }, { created_at: 'asc' }],
-    });
-
-    let remaining = quantity;
-    for (const batch of batches) {
-      if (remaining <= 0) break;
-      const batchQty = Number(batch.quantity_remaining);
-      const deductFromBatch = Math.min(batchQty, remaining);
-
-      await tx.prepBatch.update({
-        where: { id: batch.id },
-        data: {
-          quantity_remaining: { decrement: deductFromBatch },
-          status: batchQty - deductFromBatch <= 0 ? 'depleted' : 'active',
-        },
-      });
-
-      remaining -= deductFromBatch;
-    }
-
-    if (remaining > 0) {
-      // Insufficient batch quantity -- log but don't throw (order already confirmed)
-      console.warn(
-        `Insufficient batch quantity for recipe ${recipeId}: needed ${quantity}, short by ${remaining}`,
-      );
-    }
-  }
-
-  // ---------------------------------------------------------------
-  // Deduct Item Ingredients (called from KDS within $transaction)
-  // ---------------------------------------------------------------
-  /**
-   * Deduct stock for an order item when marked "ready" on KDS.
-   * Handles both ingredient-type (IngredientStock decrement + StockMovement)
-   * and recipe-type (FIFO PrepBatch decrement) RecipeLines.
-   * CRITICAL: tx must be the Prisma transaction client, NOT this.prisma.
-   */
-  async deductItemIngredients(
-    tx: any,
-    orderItem: {
-      id: string;
-      order_id: string;
-      menu_item_id: string;
-      quantity: number;
-    },
-    userId: string,
-    /** Pass zone_id from the order to avoid an extra DB round-trip */
-    zoneId?: string,
-  ): Promise<void> {
-    // 1. Load MenuItem with Recipe and RecipeLines (only fields needed for deduction)
-    const menuItem = await tx.menuItem.findUniqueOrThrow({
-      where: { id: orderItem.menu_item_id },
-      select: {
-        recipe: {
-          select: {
-            RecipeLines: {
-              select: {
-                input_type: true,
-                quantity: true,
-                unit: true,
-                ingredient_id: true,
-                ingredient: { select: { name: true, base_unit: true } },
-                source_recipe_id: true,
-                source_recipe: { select: { name: true, yield_unit: true } },
-              },
-            },
-          },
-        },
-      },
-    });
-
-    const recipe = menuItem.recipe;
-
-    // Only fetch order for zone_id if not passed by caller
-    if (!zoneId) {
-      const order = await tx.order.findUniqueOrThrow({
-        where: { id: orderItem.order_id },
-        select: { zone_id: true },
-      });
-      zoneId = order.zone_id;
-    }
-
-    // 2. Multiply per-serving needs by quantity to avoid looping per serving.
-    //    This eliminates N redundant stock lookups for N servings.
-    const servings = orderItem.quantity;
-
-    for (const line of recipe.RecipeLines) {
-      const neededPerServing = Number(line.quantity);
-      const totalNeeded = neededPerServing * servings;
-
-      if (line.input_type === 'ingredient' && line.ingredient) {
-        // Deduct raw ingredient from IngredientStock
-        // CRITICAL: pass tx (not this.prisma) per Research Pitfall 2
-        const neededBase = await convertUnit(
-          totalNeeded,
-          line.unit,
-          line.ingredient.base_unit,
-          tx,
-        );
-        if (neededBase === null) {
-          throw new BadRequestException(
-            `No unit conversion from ${line.unit} to ${line.ingredient.base_unit}`,
-          );
-        }
-
-        const stock = await tx.ingredientStock.findFirst({
-          where: { ingredient_id: line.ingredient_id, zone_id: zoneId },
-        });
-        if (!stock || Number(stock.current_quantity) < neededBase) {
-          throw new BadRequestException(
-            `Insufficient stock for ${line.ingredient.name}`,
-          );
-        }
-
-        await tx.ingredientStock.update({
-          where: { id: stock.id },
-          data: { current_quantity: { decrement: neededBase } },
-        });
-
-        await tx.stockMovement.create({
-          data: {
-            ingredient_id: line.ingredient_id,
-            zone_id: zoneId,
-            movement_type: 'order_deducted',
-            quantity: -neededBase,
-            original_quantity: totalNeeded,
-            unit: line.unit,
-            reason: 'Order item deduction',
-            reference_type: 'order',
-            reference_id: orderItem.order_id,
-            created_by: userId,
-          },
-        });
-      }
-
-      if (line.input_type === 'recipe' && line.source_recipe) {
-        // FIFO deduct from PrepBatches — same pattern as PrepBatchesService
-        const batches = await tx.prepBatch.findMany({
-          where: {
-            recipe_id: line.source_recipe_id,
-            status: 'active',
-            OR: [
-              { expires_at: null },
-              { expires_at: { gt: new Date() } },
-            ],
-          },
-          orderBy: { created_at: 'asc' }, // FIFO — oldest first
-        });
-
-        // Convert total needed to batch yield unit — pass tx (Pitfall 2)
-        let remainingNeed = await convertUnit(
-          totalNeeded,
-          line.unit,
-          line.source_recipe.yield_unit,
-          tx,
-        );
-        if (remainingNeed === null) {
-          throw new BadRequestException(
-            `No unit conversion from ${line.unit} to ${line.source_recipe.yield_unit}`,
-          );
-        }
-
-        for (const batch of batches) {
-          if (remainingNeed <= 0) break;
-          const batchRemaining = Number(batch.quantity_remaining);
-          const deduct = Math.min(batchRemaining, remainingNeed);
-          const newRemaining = batchRemaining - deduct;
-
-          await tx.prepBatch.update({
-            where: { id: batch.id },
-            data: {
-              quantity_remaining: { decrement: deduct },
-              ...(newRemaining <= 0 ? { status: 'depleted' } : {}),
-            },
-          });
-
-          remainingNeed -= deduct;
-        }
-
-        if (remainingNeed > 0) {
-          throw new BadRequestException(
-            `Insufficient prep batch stock for ${line.source_recipe.name}`,
-          );
-        }
-      }
-    }
   }
 }

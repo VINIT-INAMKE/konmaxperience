@@ -9,6 +9,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../customer-auth/redis.service';
 import { RazorpayService } from '../razorpay/razorpay.service';
 import { PusherService } from '../chat/pusher.service';
+import { FulfilmentService } from '../fulfilment/fulfilment.service';
 
 describe('CustomerOrdersService', () => {
   let service: CustomerOrdersService;
@@ -17,6 +18,10 @@ describe('CustomerOrdersService', () => {
   let redisService: { getClient: jest.Mock };
   let razorpayService: Record<string, jest.Mock>;
   let pusherService: { trigger: jest.Mock };
+  let fulfilmentService: {
+    confirmPaidOrder: jest.Mock;
+    findOrderByRazorpayPaymentId: jest.Mock;
+  };
 
   const customerId = 'cust-001';
 
@@ -25,6 +30,7 @@ describe('CustomerOrdersService', () => {
       get: jest.fn(),
       set: jest.fn(),
       del: jest.fn(),
+      getdel: jest.fn(),
     };
 
     redisService = {
@@ -69,6 +75,11 @@ describe('CustomerOrdersService', () => {
       trigger: jest.fn().mockResolvedValue(undefined),
     };
 
+    fulfilmentService = {
+      confirmPaidOrder: jest.fn(),
+      findOrderByRazorpayPaymentId: jest.fn().mockResolvedValue(null),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         CustomerOrdersService,
@@ -76,6 +87,7 @@ describe('CustomerOrdersService', () => {
         { provide: RedisService, useValue: redisService },
         { provide: RazorpayService, useValue: razorpayService },
         { provide: PusherService, useValue: pusherService },
+        { provide: FulfilmentService, useValue: fulfilmentService },
       ],
     }).compile();
 
@@ -89,7 +101,15 @@ describe('CustomerOrdersService', () => {
   describe('getCart', () => {
     it('should return parsed cart from Redis', async () => {
       const cart = {
-        items: [{ menuItemId: 'm1', name: 'Burger', quantity: 2, unitPrice: 150, imageUrl: null }],
+        items: [
+          {
+            menuItemId: 'm1',
+            name: 'Burger',
+            quantity: 2,
+            unitPrice: 150,
+            imageUrl: null,
+          },
+        ],
         channel: 'takeaway',
         deliveryAddressId: null,
         updatedAt: '2026-01-01T00:00:00Z',
@@ -143,8 +163,20 @@ describe('CustomerOrdersService', () => {
     it('should keep Redis cart when it has more items', async () => {
       const existing = {
         items: [
-          { menuItemId: 'm1', name: 'A', quantity: 1, unitPrice: 100, imageUrl: null },
-          { menuItemId: 'm2', name: 'B', quantity: 1, unitPrice: 200, imageUrl: null },
+          {
+            menuItemId: 'm1',
+            name: 'A',
+            quantity: 1,
+            unitPrice: 100,
+            imageUrl: null,
+          },
+          {
+            menuItemId: 'm2',
+            name: 'B',
+            quantity: 1,
+            unitPrice: 200,
+            imageUrl: null,
+          },
         ],
         channel: 'takeaway' as const,
         deliveryAddressId: null,
@@ -164,7 +196,15 @@ describe('CustomerOrdersService', () => {
 
     it('should keep local cart when it has more items', async () => {
       const existing = {
-        items: [{ menuItemId: 'm1', name: 'A', quantity: 1, unitPrice: 100, imageUrl: null }],
+        items: [
+          {
+            menuItemId: 'm1',
+            name: 'A',
+            quantity: 1,
+            unitPrice: 100,
+            imageUrl: null,
+          },
+        ],
         channel: 'takeaway' as const,
         deliveryAddressId: null,
         updatedAt: '2026-01-01T00:00:00Z',
@@ -229,14 +269,23 @@ describe('CustomerOrdersService', () => {
   describe('checkoutCart', () => {
     it('should throw if cart is empty', async () => {
       redisClient.get.mockResolvedValue(
-        JSON.stringify({ items: [], channel: null, deliveryAddressId: null, updatedAt: '' }),
+        JSON.stringify({
+          items: [],
+          channel: null,
+          deliveryAddressId: null,
+          updatedAt: '',
+        }),
       );
-      await expect(service.checkoutCart(customerId)).rejects.toThrow(BadRequestException);
+      await expect(service.checkoutCart(customerId)).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('should throw if cart is null', async () => {
       redisClient.get.mockResolvedValue(null);
-      await expect(service.checkoutCart(customerId)).rejects.toThrow(BadRequestException);
+      await expect(service.checkoutCart(customerId)).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('should throw for delivery with non-serviceable pincode', async () => {
@@ -244,7 +293,15 @@ describe('CustomerOrdersService', () => {
 
       redisClient.get.mockResolvedValue(
         JSON.stringify({
-          items: [{ menuItemId: 'm1', name: 'A', quantity: 1, unitPrice: 100, imageUrl: null }],
+          items: [
+            {
+              menuItemId: 'm1',
+              name: 'A',
+              quantity: 1,
+              unitPrice: 100,
+              imageUrl: null,
+            },
+          ],
           channel: 'delivery',
           deliveryAddressId: 'addr-1',
           updatedAt: '',
@@ -268,7 +325,15 @@ describe('CustomerOrdersService', () => {
     it('should create Razorpay order with server-side prices and marketplace notes', async () => {
       redisClient.get.mockResolvedValue(
         JSON.stringify({
-          items: [{ menuItemId: 'm1', name: 'Burger', quantity: 2, unitPrice: 999, imageUrl: null }],
+          items: [
+            {
+              menuItemId: 'm1',
+              name: 'Burger',
+              quantity: 2,
+              unitPrice: 999,
+              imageUrl: null,
+            },
+          ],
           channel: 'takeaway',
           deliveryAddressId: null,
           updatedAt: '',
@@ -305,7 +370,15 @@ describe('CustomerOrdersService', () => {
     it('should throw when menu item no longer available', async () => {
       redisClient.get.mockResolvedValue(
         JSON.stringify({
-          items: [{ menuItemId: 'm1', name: 'Gone Item', quantity: 1, unitPrice: 100, imageUrl: null }],
+          items: [
+            {
+              menuItemId: 'm1',
+              name: 'Gone Item',
+              quantity: 1,
+              unitPrice: 100,
+              imageUrl: null,
+            },
+          ],
           channel: 'takeaway',
           deliveryAddressId: null,
           updatedAt: '',
@@ -314,7 +387,9 @@ describe('CustomerOrdersService', () => {
 
       prisma.menuItem.findMany.mockResolvedValue([]); // no items found
 
-      await expect(service.checkoutCart(customerId)).rejects.toThrow(BadRequestException);
+      await expect(service.checkoutCart(customerId)).rejects.toThrow(
+        BadRequestException,
+      );
     });
   });
 
@@ -332,7 +407,15 @@ describe('CustomerOrdersService', () => {
     const pendingData = {
       customerId,
       cart: {
-        items: [{ menuItemId: 'm1', name: 'Burger', quantity: 2, unitPrice: 150, imageUrl: null }],
+        items: [
+          {
+            menuItemId: 'm1',
+            name: 'Burger',
+            quantity: 2,
+            unitPrice: 150,
+            imageUrl: null,
+          },
+        ],
         channel: 'takeaway',
         deliveryAddressId: null,
       },
@@ -343,28 +426,23 @@ describe('CustomerOrdersService', () => {
       deliveryAddressId: null,
     };
 
-    it('should verify signature, create order, delete cart, trigger Pusher', async () => {
+    it('verifies signature, consumes the pending key, confirms via FulfilmentService, clears cart, triggers Pusher', async () => {
       redisClient.get.mockResolvedValue(JSON.stringify(pendingData));
+      redisClient.getdel.mockResolvedValue(JSON.stringify(pendingData));
       razorpayService.verifyPaymentSignature.mockReturnValue(true);
       razorpayService.fetchPayment.mockResolvedValue({
         status: 'captured',
         amount: 30000,
       });
-
       const createdOrder = {
         id: 'ord-1',
         order_number: 42,
         status: 'placed',
+        customer_id: customerId,
         items: [],
         payment: { id: 'pay-1' },
       };
-      prisma.$transaction.mockImplementation(async (fn: any) => {
-        // Simulate the transaction by providing a mock tx with order.create
-        const tx = {
-          order: { create: jest.fn().mockResolvedValue(createdOrder) },
-        };
-        return fn(tx);
-      });
+      fulfilmentService.confirmPaidOrder.mockResolvedValue(createdOrder);
 
       const result = await service.confirmOrder(customerId, dto);
 
@@ -374,14 +452,57 @@ describe('CustomerOrdersService', () => {
         dto.razorpay_payment_id,
         dto.razorpay_signature,
       );
-      // Redis cleanup
-      expect(redisClient.del).toHaveBeenCalledWith('pending_order:order_rzp123');
+      expect(redisClient.getdel).toHaveBeenCalledWith(
+        'pending_order:order_rzp123',
+      );
+      expect(fulfilmentService.confirmPaidOrder).toHaveBeenCalledWith({
+        customerId,
+        razorpayOrderId: 'order_rzp123',
+        razorpayPaymentId: 'pay_123',
+        pending: pendingData,
+      });
+      expect(prisma.$transaction).not.toHaveBeenCalled();
       expect(redisClient.del).toHaveBeenCalledWith(`cart:${customerId}`);
-      // Pusher trigger
       expect(pusherService.trigger).toHaveBeenCalledWith(
         `private-customer-${customerId}`,
         'order.placed',
         expect.objectContaining({ orderId: 'ord-1', status: 'placed' }),
+      );
+    });
+
+    it('returns the webhook-created order when the pending key is already gone', async () => {
+      redisClient.get.mockResolvedValue(null);
+      const existing = { id: 'ord-1', customer_id: customerId };
+      fulfilmentService.findOrderByRazorpayPaymentId.mockResolvedValue(
+        existing,
+      );
+
+      const result = await service.confirmOrder(customerId, dto);
+
+      expect(result).toEqual(existing);
+      expect(fulfilmentService.confirmPaidOrder).not.toHaveBeenCalled();
+    });
+
+    it('restores the pending key when confirmPaidOrder throws', async () => {
+      const raw = JSON.stringify(pendingData);
+      redisClient.get.mockResolvedValue(raw);
+      redisClient.getdel.mockResolvedValue(raw);
+      razorpayService.verifyPaymentSignature.mockReturnValue(true);
+      razorpayService.fetchPayment.mockResolvedValue({
+        status: 'captured',
+        amount: 30000,
+      });
+      fulfilmentService.confirmPaidOrder.mockRejectedValue(new Error('boom'));
+
+      await expect(service.confirmOrder(customerId, dto)).rejects.toThrow(
+        'boom',
+      );
+      expect(redisClient.set).toHaveBeenCalledWith(
+        'pending_order:order_rzp123',
+        raw,
+        'EX',
+        1800,
+        'NX',
       );
     });
 
@@ -438,17 +559,17 @@ describe('CustomerOrdersService', () => {
         items: [],
       });
 
-      await expect(
-        service.getOrderById(customerId, 'ord-1'),
-      ).rejects.toThrow(ForbiddenException);
+      await expect(service.getOrderById(customerId, 'ord-1')).rejects.toThrow(
+        ForbiddenException,
+      );
     });
 
     it('should throw NotFoundException when order not found', async () => {
       prisma.order.findUnique.mockResolvedValue(null);
 
-      await expect(
-        service.getOrderById(customerId, 'ord-999'),
-      ).rejects.toThrow(NotFoundException);
+      await expect(service.getOrderById(customerId, 'ord-999')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -459,9 +580,12 @@ describe('CustomerOrdersService', () => {
   describe('createAddress', () => {
     it('should set is_default=true for first address', async () => {
       prisma.customerAddress.count.mockResolvedValue(0);
-      prisma.customerAddress.create.mockResolvedValue({ id: 'addr-1', is_default: true });
+      prisma.customerAddress.create.mockResolvedValue({
+        id: 'addr-1',
+        is_default: true,
+      });
 
-      const result = await service.createAddress(customerId, {
+      await service.createAddress(customerId, {
         label: 'Home',
         address: '123 Main St',
         pincode: '560001',
@@ -476,7 +600,10 @@ describe('CustomerOrdersService', () => {
 
     it('should not set is_default for subsequent addresses', async () => {
       prisma.customerAddress.count.mockResolvedValue(2);
-      prisma.customerAddress.create.mockResolvedValue({ id: 'addr-2', is_default: false });
+      prisma.customerAddress.create.mockResolvedValue({
+        id: 'addr-2',
+        is_default: false,
+      });
 
       await service.createAddress(customerId, {
         label: 'Work',
@@ -513,7 +640,11 @@ describe('CustomerOrdersService', () => {
   describe('deleteAddress', () => {
     it('should promote next address when deleting default', async () => {
       prisma.customerAddress.findFirst
-        .mockResolvedValueOnce({ id: 'addr-1', is_default: true, customer_id: customerId })
+        .mockResolvedValueOnce({
+          id: 'addr-1',
+          is_default: true,
+          customer_id: customerId,
+        })
         .mockResolvedValueOnce({ id: 'addr-2', is_default: false });
       prisma.customerAddress.delete.mockResolvedValue({});
       prisma.customerAddress.update.mockResolvedValue({});

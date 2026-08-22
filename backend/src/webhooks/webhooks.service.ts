@@ -1,32 +1,53 @@
-import { Injectable, UnauthorizedException, ServiceUnavailableException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  UnauthorizedException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { RazorpayService } from '../razorpay/razorpay.service';
 import { RedisService } from '../customer-auth/redis.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { PusherService } from '../chat/pusher.service';
+import {
+  FulfilmentService,
+  PendingOrderData,
+} from '../fulfilment/fulfilment.service';
 
 @Injectable()
 export class WebhooksService {
+  private readonly logger = new Logger(WebhooksService.name);
+
   constructor(
     private readonly razorpayService: RazorpayService,
     private readonly redisService: RedisService,
     private readonly prisma: PrismaService,
     private readonly pusherService: PusherService,
+    private readonly fulfilmentService: FulfilmentService,
   ) {}
 
-  async processWebhook(rawBody: Buffer | undefined, signature: string, eventId: string) {
+  async processWebhook(
+    rawBody: Buffer | undefined,
+    signature: string,
+    eventId: string,
+  ) {
     // 1. Validate rawBody exists
     if (!rawBody) throw new UnauthorizedException('Missing raw body');
 
     // 2. Verify webhook signature (D-10) — BEFORE any other processing
     const bodyStr = rawBody.toString();
-    const isValid = this.razorpayService.verifyWebhookSignature(bodyStr, signature);
+    const isValid = this.razorpayService.verifyWebhookSignature(
+      bodyStr,
+      signature,
+    );
     if (!isValid) throw new UnauthorizedException('Invalid webhook signature');
 
     // 3. Dedup by event_id (D-08) — Redis SET NX with 24h TTL
     // Fail CLOSED: if Redis is down, reject the webhook (Razorpay will retry later)
     const redis = this.redisService.getClient();
     if (!redis) {
-      throw new ServiceUnavailableException('Webhook dedup unavailable — retry later');
+      throw new ServiceUnavailableException(
+        'Webhook dedup unavailable — retry later',
+      );
     }
     const dedupKey = `webhook_processed:${eventId}`;
     const isNew = await redis.set(dedupKey, '1', 'EX', 86400, 'NX');
@@ -67,7 +88,9 @@ export class WebhooksService {
     } else if (event === 'payment.failed') {
       // Log but do not update status — customer can retry with same order
       const payment = payload.payment?.entity;
-      console.log(`[Webhook] Payment failed: ${payment?.id} for order ${payment?.order_id}`);
+      console.log(
+        `[Webhook] Payment failed: ${payment?.id} for order ${payment?.order_id}`,
+      );
     } else if (event === 'refund.processed') {
       await this.handleRefundProcessed(payload);
     }
@@ -86,7 +109,9 @@ export class WebhooksService {
       },
     });
     if (result.count === 0) {
-      console.log(`[Webhook] Booking already paid or not found for order: ${payment.order_id}`);
+      console.log(
+        `[Webhook] Booking already paid or not found for order: ${payment.order_id}`,
+      );
     }
   }
 
@@ -126,89 +151,61 @@ export class WebhooksService {
     });
   }
 
-  private async handleMarketplacePayment(payment: any, customerId: string) {
-    // Backup path — normal flow is POST /customer/orders/confirm
-    // Webhook fires for payment.captured in case confirm endpoint wasn't called
-    // (browser crash, timeout, etc.)
+  private async handleMarketplacePayment(
+    payment: { id: string; order_id: string; amount: number },
+    customerId: string,
+  ) {
+    // Backup path — normal flow is POST /customer/orders/confirm. Same FulfilmentService path.
+    const existing = await this.fulfilmentService.findOrderByRazorpayPaymentId(
+      payment.id,
+    );
+    if (existing) return;
 
-    // Check if order already exists for this razorpay_payment_id
-    const existingPayment = await this.prisma.payment.findFirst({
-      where: { razorpay_payment_id: payment.id },
-    });
-    if (existingPayment) {
-      console.log('[Webhook] Marketplace order already confirmed:', payment.id);
-      return;
-    }
-
-    // Read pending order data from Redis
     const redis = this.redisService.getClient();
-    const pendingRaw = await redis?.get(`pending_order:${payment.order_id}`);
+    if (!redis) return; // processWebhook already failed closed without Redis
+    const pendingKey = `pending_order:${payment.order_id}`;
+    const pendingRaw = await redis.getdel(pendingKey);
     if (!pendingRaw) {
-      console.warn('[Webhook] No pending order found for:', payment.order_id);
+      this.logger.warn(
+        `No pending order for ${payment.order_id}; confirm endpoint probably won the race`,
+      );
+      return;
+    }
+    const pending = JSON.parse(pendingRaw) as PendingOrderData;
+    if (Number(payment.amount) !== Math.round(pending.total * 100)) {
+      await redis.set(pendingKey, pendingRaw, 'EX', 1800, 'NX');
+      this.logger.error(
+        `Amount mismatch for ${payment.order_id}: paid ${payment.amount}, expected ${Math.round(pending.total * 100)}`,
+      );
       return;
     }
 
-    const pendingData = JSON.parse(pendingRaw);
-
-    // Build delivery address string if delivery channel
-    let deliveryAddress: string | null = null;
-    if (pendingData.channel === 'delivery' && pendingData.deliveryAddressId) {
-      const addr = await this.prisma.customerAddress.findFirst({
-        where: { id: pendingData.deliveryAddressId, customer_id: customerId },
+    let order: { id: string; order_number: number };
+    try {
+      order = await this.fulfilmentService.confirmPaidOrder({
+        customerId,
+        razorpayOrderId: payment.order_id,
+        razorpayPaymentId: payment.id,
+        pending,
       });
-      if (addr) {
-        deliveryAddress = addr.address;
-        if (addr.landmark) deliveryAddress += `, ${addr.landmark}`;
-        deliveryAddress += ` - ${addr.pincode}`;
-      }
+    } catch (err) {
+      await redis.set(pendingKey, pendingRaw, 'EX', 1800, 'NX');
+      this.logger.error(
+        `confirmPaidOrder failed for ${payment.order_id}: ${(err as Error).message}`,
+      );
+      return;
     }
 
-    // Create Order + OrderItems + Payment using inline Prisma transaction
-    const order = await this.prisma.$transaction(async (tx) => {
-      const created = await tx.order.create({
-        data: {
-          channel: pendingData.channel,
-          customer_id: customerId,
-          subtotal: pendingData.subtotal,
-          channel_modifier_amount: pendingData.modifierAmount,
-          total: pendingData.total,
-          delivery_address: deliveryAddress,
-          status: 'placed',
-          items: {
-            create: pendingData.cart.items.map((item: any) => ({
-              menu_item_id: item.menuItemId,
-              quantity: item.quantity,
-              unit_price: item.unitPrice,
-            })),
-          },
-          payment: {
-            create: {
-              method: 'razorpay',
-              amount: pendingData.total,
-              status: 'paid',
-              razorpay_order_id: payment.order_id,
-              razorpay_payment_id: payment.id,
-            },
-          },
-        },
-      });
-      return created;
-    });
-
-    // Clean up Redis
-    if (redis) {
-      await redis.del(`pending_order:${payment.order_id}`);
-      await redis.del(`cart:${customerId}`);
-    }
-
-    // Trigger Pusher
+    await redis.del(`cart:${customerId}`);
     this.pusherService
       .trigger(`private-customer-${customerId}`, 'order.placed', {
         orderId: order.id,
         orderNumber: order.order_number,
         status: 'placed',
       })
-      .catch((err) => console.error('[Pusher] Webhook order trigger error:', err));
+      .catch((err) =>
+        console.error('[Pusher] Webhook order trigger error:', err),
+      );
   }
 
   private async handleRefundProcessed(payload: any) {

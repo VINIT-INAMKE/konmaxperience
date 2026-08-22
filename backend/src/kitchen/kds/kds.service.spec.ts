@@ -1,29 +1,45 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { BadRequestException } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { KdsService } from './kds.service';
 import { PrismaService } from '../../prisma/prisma.service';
-import { OrdersService } from '../../orders/orders.service';
-
-/** Mock Prisma Decimal -- supports Number() via valueOf() */
-const dec = (n: number) => ({ valueOf: () => n, toNumber: () => n });
+import { FulfilmentService } from '../../fulfilment/fulfilment.service';
 
 const mockPrisma = {
-  orderItem: {
-    findUnique: jest.fn(),
-    findMany: jest.fn(),
-    update: jest.fn(),
-  },
-  order: {
-    findMany: jest.fn(),
-    findUniqueOrThrow: jest.fn(),
-    update: jest.fn(),
-  },
+  orderItem: { findUnique: jest.fn(), update: jest.fn() },
+  order: { findMany: jest.fn() },
   $transaction: jest.fn(),
 };
+const mockFulfilment = { deductItemIngredients: jest.fn() };
+const mockEmitter = { emit: jest.fn() };
 
-const mockOrdersService = {
-  deductItemIngredients: jest.fn(),
-};
+const makeTx = (opts: { notReadyCount: number; zone_id?: string | null }) => ({
+  orderItem: {
+    findUnique: jest.fn().mockResolvedValue({
+      id: 'oi-1',
+      status: 'preparing',
+      order_id: 'order-1',
+      menu_item_id: 'mi-1',
+      quantity: 2,
+    }),
+    update: jest.fn().mockResolvedValue({
+      id: 'oi-1',
+      status: 'ready',
+      ready_at: new Date('2026-03-21T12:00:00Z'),
+    }),
+    count: jest.fn().mockResolvedValue(opts.notReadyCount),
+  },
+  order: {
+    findUniqueOrThrow: jest.fn().mockResolvedValue({
+      id: 'order-1',
+      channel: 'dine_in',
+      created_by: 'user-1',
+      customer_id: null,
+      zone_id: opts.zone_id === undefined ? 'zone-1' : opts.zone_id,
+    }),
+    update: jest.fn().mockResolvedValue({ id: 'order-1', status: 'ready' }),
+  },
+});
 
 describe('KdsService', () => {
   let service: KdsService;
@@ -33,221 +49,124 @@ describe('KdsService', () => {
       providers: [
         KdsService,
         { provide: PrismaService, useValue: mockPrisma },
-        { provide: OrdersService, useValue: mockOrdersService },
+        { provide: FulfilmentService, useValue: mockFulfilment },
+        { provide: EventEmitter2, useValue: mockEmitter },
       ],
     }).compile();
 
     service = module.get<KdsService>(KdsService);
     jest.clearAllMocks();
+    mockFulfilment.deductItemIngredients.mockResolvedValue(undefined);
   });
 
   // ---------------------------------------------------------------
   // updateItemStatus — non-ready transitions
   // ---------------------------------------------------------------
-  describe('updateItemStatus (non-ready)', () => {
-    it('transitions pending -> preparing without $transaction', async () => {
-      mockPrisma.orderItem.findUnique.mockResolvedValue({
-        id: 'oi-1',
-        status: 'pending',
-        order_id: 'order-1',
-        menu_item_id: 'mi-1',
-        quantity: 1,
-      });
-      mockPrisma.orderItem.update.mockResolvedValue({
-        id: 'oi-1',
-        status: 'preparing',
-        ready_at: null,
-      });
-
-      const result = await service.updateItemStatus('oi-1', 'preparing');
-
-      expect(result.status).toBe('preparing');
-      expect(result.ready_at).toBeNull();
-      // Should NOT use $transaction for non-ready transitions
-      expect(mockPrisma.$transaction).not.toHaveBeenCalled();
-      expect(mockOrdersService.deductItemIngredients).not.toHaveBeenCalled();
+  it('pending -> preparing runs in a transaction without deduction', async () => {
+    const tx = makeTx({ notReadyCount: 1 });
+    tx.orderItem.findUnique.mockResolvedValue({
+      id: 'oi-1',
+      status: 'pending',
+      order_id: 'order-1',
+      menu_item_id: 'mi-1',
+      quantity: 1,
     });
+    tx.orderItem.update.mockResolvedValue({
+      id: 'oi-1',
+      status: 'preparing',
+      ready_at: null,
+    });
+    mockPrisma.$transaction.mockImplementation(
+      async (cb: (t: unknown) => unknown) => cb(tx),
+    );
+
+    const result = await service.updateItemStatus('oi-1', 'preparing');
+
+    expect(result.status).toBe('preparing');
+    expect(result.ready_at).toBeNull();
+    expect(mockFulfilment.deductItemIngredients).not.toHaveBeenCalled();
+  });
+
+  it('rejects an invalid status value', async () => {
+    await expect(service.updateItemStatus('oi-1', 'served')).rejects.toThrow(
+      BadRequestException,
+    );
+    expect(mockPrisma.$transaction).not.toHaveBeenCalled();
   });
 
   // ---------------------------------------------------------------
   // updateItemStatus — ready transitions with deduction
   // ---------------------------------------------------------------
-  describe('updateItemStatus (ready with deduction)', () => {
-    it('wraps in $transaction and calls deductItemIngredients on ready', async () => {
-      const readyAt = new Date('2026-03-21T12:00:00Z');
-      mockPrisma.orderItem.findUnique.mockResolvedValue({
-        id: 'oi-1',
-        status: 'preparing',
-        order_id: 'order-1',
-        menu_item_id: 'mi-1',
-        quantity: 2,
-      });
+  it('ready: deducts via FulfilmentService with the order actor and zone, Serializable', async () => {
+    const tx = makeTx({ notReadyCount: 1 });
+    mockPrisma.$transaction.mockImplementation(
+      async (cb: (t: unknown) => unknown) => cb(tx),
+    );
 
-      // Mock transaction execution
-      mockPrisma.$transaction.mockImplementation(async (cb: any) => {
-        const tx = {
-          order: { findUniqueOrThrow: jest.fn(), update: jest.fn() },
-          orderItem: { update: jest.fn(), findMany: jest.fn() },
-        };
-        tx.order.findUniqueOrThrow.mockResolvedValue({
-          id: 'order-1',
-          created_by: 'user-1',
-          zone_id: 'zone-1',
-        });
-        tx.orderItem.update.mockResolvedValue({
-          id: 'oi-1',
-          status: 'ready',
-          ready_at: readyAt,
-        });
-        // Not all items ready — another item still preparing
-        tx.orderItem.findMany.mockResolvedValue([
-          { id: 'oi-1', status: 'ready' },
-          { id: 'oi-2', status: 'preparing' },
-        ]);
-        mockOrdersService.deductItemIngredients.mockResolvedValue(undefined);
+    const result = await service.updateItemStatus('oi-1', 'ready');
 
-        return cb(tx);
-      });
+    expect(result.status).toBe('ready');
+    expect(mockFulfilment.deductItemIngredients).toHaveBeenCalledWith(
+      tx,
+      { id: 'oi-1', order_id: 'order-1', menu_item_id: 'mi-1', quantity: 2 },
+      { actor_type: 'user', actor_id: 'user-1' },
+      'zone-1',
+    );
+    expect(mockPrisma.$transaction).toHaveBeenCalledWith(
+      expect.any(Function),
+      expect.objectContaining({
+        isolationLevel: 'Serializable',
+        maxWait: 5000,
+        timeout: 15000,
+      }),
+    );
+    expect(tx.order.update).not.toHaveBeenCalled();
+    expect(mockEmitter.emit).not.toHaveBeenCalled();
+  });
 
-      const result = await service.updateItemStatus('oi-1', 'ready');
+  it('ready: auto-transitions the order and emits order.ready when all items are ready', async () => {
+    const tx = makeTx({ notReadyCount: 0 });
+    mockPrisma.$transaction.mockImplementation(
+      async (cb: (t: unknown) => unknown) => cb(tx),
+    );
 
-      expect(result.status).toBe('ready');
-      expect(mockPrisma.$transaction).toHaveBeenCalledTimes(1);
-      expect(mockOrdersService.deductItemIngredients).toHaveBeenCalledWith(
-        expect.anything(), // tx
-        {
-          id: 'oi-1',
-          order_id: 'order-1',
-          menu_item_id: 'mi-1',
-          quantity: 2,
-        },
-        'user-1', // created_by from order
-      );
+    await service.updateItemStatus('oi-1', 'ready');
+
+    expect(tx.order.update).toHaveBeenCalledWith({
+      where: { id: 'order-1' },
+      data: { status: 'ready' },
     });
-
-    it('auto-transitions order to ready when ALL items are ready', async () => {
-      mockPrisma.orderItem.findUnique.mockResolvedValue({
-        id: 'oi-1',
-        status: 'preparing',
-        order_id: 'order-1',
-        menu_item_id: 'mi-1',
-        quantity: 1,
-      });
-
-      let orderUpdateCalled = false;
-      mockPrisma.$transaction.mockImplementation(async (cb: any) => {
-        const tx = {
-          order: {
-            findUniqueOrThrow: jest.fn().mockResolvedValue({
-              id: 'order-1',
-              created_by: 'user-1',
-            }),
-            update: jest.fn().mockImplementation(() => {
-              orderUpdateCalled = true;
-              return Promise.resolve({ id: 'order-1', status: 'ready' });
-            }),
-          },
-          orderItem: {
-            update: jest.fn().mockResolvedValue({
-              id: 'oi-1',
-              status: 'ready',
-              ready_at: new Date(),
-            }),
-            findMany: jest.fn().mockResolvedValue([
-              // The current item (oi-1) is being set to ready, and oi-2 already is ready
-              { id: 'oi-1', status: 'ready' },
-              { id: 'oi-2', status: 'ready' },
-            ]),
-          },
-        };
-        mockOrdersService.deductItemIngredients.mockResolvedValue(undefined);
-
-        return cb(tx);
-      });
-
-      await service.updateItemStatus('oi-1', 'ready');
-
-      expect(orderUpdateCalled).toBe(true);
+    expect(mockEmitter.emit).toHaveBeenCalledWith('order.ready', {
+      orderId: 'order-1',
+      channel: 'dine_in',
+      createdBy: 'user-1',
     });
+  });
 
-    it('does NOT advance item status when deduction throws (transaction rollback)', async () => {
-      mockPrisma.orderItem.findUnique.mockResolvedValue({
-        id: 'oi-1',
-        status: 'preparing',
-        order_id: 'order-1',
-        menu_item_id: 'mi-1',
-        quantity: 1,
-      });
+  it('ready: propagates deduction failure so the transaction rolls back', async () => {
+    const tx = makeTx({ notReadyCount: 0 });
+    mockPrisma.$transaction.mockImplementation(
+      async (cb: (t: unknown) => unknown) => cb(tx),
+    );
+    mockFulfilment.deductItemIngredients.mockRejectedValue(
+      new BadRequestException('Insufficient stock for Flour'),
+    );
 
-      mockPrisma.$transaction.mockImplementation(async (cb: any) => {
-        const tx = {
-          order: {
-            findUniqueOrThrow: jest.fn().mockResolvedValue({
-              id: 'order-1',
-              created_by: 'user-1',
-            }),
-          },
-          orderItem: { update: jest.fn(), findMany: jest.fn() },
-        };
-        // Deduction throws — insufficient stock
-        mockOrdersService.deductItemIngredients.mockRejectedValue(
-          new BadRequestException('Insufficient stock for Flour'),
-        );
+    await expect(service.updateItemStatus('oi-1', 'ready')).rejects.toThrow(
+      BadRequestException,
+    );
+    expect(tx.orderItem.update).not.toHaveBeenCalled();
+  });
 
-        return cb(tx);
-      });
+  it('ready: rejects orders without a zone', async () => {
+    const tx = makeTx({ notReadyCount: 0, zone_id: null });
+    mockPrisma.$transaction.mockImplementation(
+      async (cb: (t: unknown) => unknown) => cb(tx),
+    );
 
-      await expect(
-        service.updateItemStatus('oi-1', 'ready'),
-      ).rejects.toThrow(BadRequestException);
-
-      // The transaction would roll back — verify orderItem.update was NOT reached
-      // (deduction is called BEFORE the item update in the transaction)
-    });
-
-    it('order.status stays unchanged when NOT all items ready', async () => {
-      mockPrisma.orderItem.findUnique.mockResolvedValue({
-        id: 'oi-1',
-        status: 'preparing',
-        order_id: 'order-1',
-        menu_item_id: 'mi-1',
-        quantity: 1,
-      });
-
-      let orderUpdateCalled = false;
-      mockPrisma.$transaction.mockImplementation(async (cb: any) => {
-        const tx = {
-          order: {
-            findUniqueOrThrow: jest.fn().mockResolvedValue({
-              id: 'order-1',
-              created_by: 'user-1',
-            }),
-            update: jest.fn().mockImplementation(() => {
-              orderUpdateCalled = true;
-              return Promise.resolve({});
-            }),
-          },
-          orderItem: {
-            update: jest.fn().mockResolvedValue({
-              id: 'oi-1',
-              status: 'ready',
-              ready_at: new Date(),
-            }),
-            findMany: jest.fn().mockResolvedValue([
-              { id: 'oi-1', status: 'ready' },
-              { id: 'oi-2', status: 'pending' },
-            ]),
-          },
-        };
-        mockOrdersService.deductItemIngredients.mockResolvedValue(undefined);
-
-        return cb(tx);
-      });
-
-      await service.updateItemStatus('oi-1', 'ready');
-
-      // order.update should NOT have been called since not all items ready
-      expect(orderUpdateCalled).toBe(false);
-    });
+    await expect(service.updateItemStatus('oi-1', 'ready')).rejects.toThrow(
+      BadRequestException,
+    );
+    expect(mockFulfilment.deductItemIngredients).not.toHaveBeenCalled();
   });
 });

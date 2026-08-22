@@ -3,12 +3,17 @@ import {
   NotFoundException,
   BadRequestException,
   ForbiddenException,
+  ConflictException,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../customer-auth/redis.service';
 import { RazorpayService } from '../razorpay/razorpay.service';
 import { PusherService } from '../chat/pusher.service';
-import { OrdersService } from '../orders/orders.service';
+import {
+  FulfilmentService,
+  PendingOrderData,
+} from '../fulfilment/fulfilment.service';
 import { CreateAddressDto } from './dto/create-address.dto';
 import { UpdateAddressDto } from './dto/update-address.dto';
 import { SyncCartDto } from './dto/sync-cart.dto';
@@ -41,7 +46,7 @@ export class CustomerOrdersService {
     private readonly redisService: RedisService,
     private readonly razorpayService: RazorpayService,
     private readonly pusherService: PusherService,
-    private readonly ordersService: OrdersService,
+    private readonly fulfilmentService: FulfilmentService,
   ) {}
 
   // ---------------------------------------------------------------
@@ -174,9 +179,7 @@ export class CustomerOrdersService {
     // 3. If delivery, validate pincode serviceability
     if (cart.channel === 'delivery') {
       if (!cart.deliveryAddressId) {
-        throw new BadRequestException(
-          'Please select a delivery address',
-        );
+        throw new BadRequestException('Please select a delivery address');
       }
       const address = await this.prisma.customerAddress.findFirst({
         where: { id: cart.deliveryAddressId, customer_id: customerId },
@@ -288,21 +291,30 @@ export class CustomerOrdersService {
 
   async confirmOrder(customerId: string, dto: ConfirmOrderDto) {
     const redis = this.redisService.getClient();
+    if (!redis) {
+      throw new ServiceUnavailableException(
+        'Order confirmation unavailable — retry later',
+      );
+    }
+    const pendingKey = `pending_order:${dto.razorpay_order_id}`;
 
-    // 1. Read pending order from Redis
-    const pendingRaw = await redis?.get(
-      `pending_order:${dto.razorpay_order_id}`,
-    );
+    // 1. Peek (non-consuming) so a rejected signature does not burn the session
+    const pendingRaw = await redis.get(pendingKey);
     if (!pendingRaw) {
+      // The webhook may already have confirmed this payment — idempotent return
+      const existing =
+        await this.fulfilmentService.findOrderByRazorpayPaymentId(
+          dto.razorpay_payment_id,
+        );
+      if (existing && existing.customer_id === customerId) return existing;
       throw new BadRequestException(
         'Order session expired or not found. Please try again.',
       );
     }
-
-    const pendingData = JSON.parse(pendingRaw);
+    const pending = JSON.parse(pendingRaw) as PendingOrderData;
 
     // 2. Verify customerId matches
-    if (pendingData.customerId !== customerId) {
+    if (pending.customerId !== customerId) {
       throw new ForbiddenException('Order does not belong to this customer');
     }
 
@@ -327,132 +339,40 @@ export class CustomerOrdersService {
     }
 
     // 5. Verify amount matches
-    const expectedPaise = Math.round(pendingData.total * 100);
-    if (Number(payment.amount) !== expectedPaise) {
+    if (Number(payment.amount) !== Math.round(pending.total * 100)) {
       throw new BadRequestException('Payment amount mismatch');
     }
 
-    // 6. Look up delivery address text if delivery channel
-    let deliveryAddress: string | null = null;
-    if (
-      pendingData.channel === 'delivery' &&
-      pendingData.deliveryAddressId
-    ) {
-      const addr = await this.prisma.customerAddress.findFirst({
-        where: {
-          id: pendingData.deliveryAddressId,
-          customer_id: customerId,
-        },
+    // 6. Consume the pending key atomically — exactly one caller proceeds to create
+    const consumed = await redis.getdel(pendingKey);
+    if (!consumed) {
+      const existing =
+        await this.fulfilmentService.findOrderByRazorpayPaymentId(
+          dto.razorpay_payment_id,
+        );
+      if (existing) return existing;
+      throw new ConflictException(
+        'Order confirmation already in progress. Please retry.',
+      );
+    }
+
+    // 7. Create Order + Payment + fulfilment (Serializable, retried, P2002 -> existing order)
+    let order;
+    try {
+      order = await this.fulfilmentService.confirmPaidOrder({
+        customerId,
+        razorpayOrderId: dto.razorpay_order_id,
+        razorpayPaymentId: dto.razorpay_payment_id,
+        pending,
       });
-      if (addr) {
-        deliveryAddress = addr.address;
-        if (addr.landmark) deliveryAddress += `, ${addr.landmark}`;
-        deliveryAddress += ` - ${addr.pincode}`;
-      }
+    } catch (err) {
+      // Restore the session so the webhook fallback or a retry can still create the order
+      await redis.set(pendingKey, consumed, 'EX', PENDING_ORDER_TTL, 'NX');
+      throw err;
     }
 
-    // 7. Create Order + OrderItems + Payment in serializable transaction
-    const order = await this.prisma.$transaction(
-      async (tx) => {
-        const created = await tx.order.create({
-          data: {
-            channel: pendingData.channel,
-            customer_id: customerId,
-            subtotal: pendingData.subtotal,
-            channel_modifier_amount: pendingData.modifierAmount,
-            total: pendingData.total,
-            delivery_address: deliveryAddress,
-            status: 'placed',
-            created_by: null,
-            zone_id: null,
-            items: {
-              create: pendingData.cart.items.map((item: any) => ({
-                menu_item_id: item.menuItemId,
-                quantity: item.quantity,
-                unit_price: item.unitPrice,
-              })),
-            },
-            payment: {
-              create: {
-                method: 'razorpay',
-                amount: pendingData.total,
-                status: 'paid',
-                razorpay_order_id: dto.razorpay_order_id,
-                razorpay_payment_id: dto.razorpay_payment_id,
-              },
-            },
-          },
-          include: {
-            items: {
-              include: {
-                menu_item: { select: { id: true, name: true } },
-              },
-            },
-            payment: true,
-          },
-        });
-
-        // Non-scratch items: auto-set to 'ready' and deduct immediately (D-04, D-05)
-        for (const createdItem of created.items) {
-          const menuItemData = await tx.menuItem.findUnique({
-            where: { id: createdItem.menu_item_id },
-            select: { recipe: { select: { id: true, preparation_type: true } } },
-          });
-          const prepType = menuItemData?.recipe?.preparation_type ?? 'scratch';
-
-          if (prepType !== 'scratch') {
-            // D-05: auto-set to ready (no kitchen preparation needed)
-            await tx.orderItem.update({
-              where: { id: createdItem.id },
-              data: { status: 'ready', ready_at: new Date() },
-            });
-            // D-04: deduct immediately (marketplace orders have zone_id=null)
-            if (prepType === 'batch_prepared') {
-              // FIFO deduction against PrepBatch records
-              const batches = await tx.prepBatch.findMany({
-                where: {
-                  recipe_id: menuItemData!.recipe!.id,
-                  status: 'active',
-                  OR: [{ expires_at: null }, { expires_at: { gt: new Date() } }],
-                },
-                orderBy: [{ expires_at: 'asc' }, { created_at: 'asc' }],
-              });
-              let remaining = createdItem.quantity;
-              for (const batch of batches) {
-                if (remaining <= 0) break;
-                const batchQty = Number(batch.quantity_remaining);
-                const deductFromBatch = Math.min(batchQty, remaining);
-                await tx.prepBatch.update({
-                  where: { id: batch.id },
-                  data: {
-                    quantity_remaining: { decrement: deductFromBatch },
-                    status: batchQty - deductFromBatch <= 0 ? 'depleted' : 'active',
-                  },
-                });
-                remaining -= deductFromBatch;
-              }
-              if (remaining > 0) {
-                console.warn(
-                  `Insufficient batch quantity for recipe ${menuItemData!.recipe!.id}: needed ${createdItem.quantity}, short by ${remaining}`,
-                );
-              }
-            } else {
-              // ready_to_sell and assemble: BOM-based deduction
-              await this.ordersService.deductItemIngredients(tx, createdItem, customerId);
-            }
-          }
-        }
-
-        return created;
-      },
-      { isolationLevel: 'Serializable' },
-    );
-
-    // 8. AFTER transaction: clean up Redis
-    if (redis) {
-      await redis.del(`pending_order:${dto.razorpay_order_id}`);
-      await redis.del(this.cartKey(customerId));
-    }
+    // 8. AFTER transaction: clear cart
+    await redis.del(this.cartKey(customerId));
 
     // 9. AFTER transaction: trigger Pusher event
     this.pusherService
@@ -606,9 +526,7 @@ export class CustomerOrdersService {
     }
 
     if (booking.customer_id !== customerId) {
-      throw new ForbiddenException(
-        'You do not have access to this booking',
-      );
+      throw new ForbiddenException('You do not have access to this booking');
     }
 
     return renderBookingReceipt({
