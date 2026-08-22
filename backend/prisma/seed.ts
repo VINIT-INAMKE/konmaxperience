@@ -2215,14 +2215,16 @@ async function main() {
 
     // Create zones (delete and recreate for idempotency)
     await tx.zone.deleteMany({});
+    let marketplaceZoneId: string | null = null;
     for (const zone of ZONES) {
-      await tx.zone.create({
+      const createdZone = await tx.zone.create({
         data: {
           name: zone.name,
           zone_type: zone.zone_type,
           status: 'planned',
         },
       });
+      if (zone.name === 'Main Kitchen') marketplaceZoneId = createdZone.id;
     }
 
     // Create brands (delete and recreate for idempotency)
@@ -2278,6 +2280,13 @@ async function main() {
       update: {},
       create: { key: 'leaderboard_enabled', value: 'true' },
     });
+    if (marketplaceZoneId) {
+      await tx.systemSetting.upsert({
+        where: { key: 'marketplace_fulfilment_zone_id' },
+        update: { value: marketplaceZoneId },
+        create: { key: 'marketplace_fulfilment_zone_id', value: marketplaceZoneId },
+      });
+    }
 
     // Seed guide sections and pages
     await tx.guidePage.deleteMany({});

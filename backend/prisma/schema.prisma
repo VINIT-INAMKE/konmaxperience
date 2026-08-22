@@ -546,11 +546,13 @@ model StockMovement {
   reason            String?
   reference_type    String?    // "purchase_order" | "prep_batch" | "order" | "waste_log"
   reference_id      String?
-  created_by        String
+  created_by        String?
+  actor_type        String     @default("user") // user | customer | system
+  actor_id          String?
   created_at        DateTime   @default(now())
   ingredient        Ingredient @relation(fields: [ingredient_id], references: [id])
   zone              Zone       @relation(fields: [zone_id], references: [id])
-  creator           User       @relation("StockMovementCreator", fields: [created_by], references: [id])
+  creator           User?      @relation("StockMovementCreator", fields: [created_by], references: [id])
 
   // Optimizes: inventory getMovements by ingredient (paginated, ordered by created_at)
   @@index([ingredient_id, created_at(sort: Desc)])
@@ -748,8 +750,8 @@ model Payment {
   amount              Decimal
   status              String   @default("pending") // pending | paid | refunded
   notes               String?
-  razorpay_order_id   String?
-  razorpay_payment_id String?
+  razorpay_order_id   String?  @unique
+  razorpay_payment_id String?  @unique
   created_at          DateTime @default(now())
   order               Order    @relation(fields: [order_id], references: [id])
 }

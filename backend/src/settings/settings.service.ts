@@ -3,7 +3,12 @@ import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class SettingsService {
-  private readonly ALLOWED_KEYS = ['leaderboard_enabled', 'system_name', 'maintenance_mode'];
+  private readonly ALLOWED_KEYS = [
+    'leaderboard_enabled',
+    'system_name',
+    'maintenance_mode',
+    'marketplace_fulfilment_zone_id',
+  ];
 
   constructor(private readonly prisma: PrismaService) {}
 

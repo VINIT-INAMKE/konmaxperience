@@ -47,9 +47,7 @@ describe('SettingsService', () => {
     it('throws NotFoundException when setting does not exist', async () => {
       prisma.systemSetting.findUnique.mockResolvedValue(null);
 
-      await expect(service.getSetting('nonexistent_key')).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(service.getSetting('system_name')).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -70,15 +68,15 @@ describe('SettingsService', () => {
       expect(result.value).toBe('false');
     });
 
-    it('creates setting if it does not exist (upsert creates new)', async () => {
-      const newSetting = { key: 'new_feature_enabled', value: 'true', updated_at: new Date() };
+    it('accepts marketplace_fulfilment_zone_id and upserts it', async () => {
+      const newSetting = { key: 'marketplace_fulfilment_zone_id', value: 'zone-1', updated_at: new Date() };
       prisma.systemSetting.upsert.mockResolvedValue(newSetting);
 
-      const result = await service.updateSetting('new_feature_enabled', 'true');
+      const result = await service.updateSetting('marketplace_fulfilment_zone_id', 'zone-1');
 
       expect(prisma.systemSetting.upsert).toHaveBeenCalledWith(
         expect.objectContaining({
-          create: { key: 'new_feature_enabled', value: 'true' },
+          create: { key: 'marketplace_fulfilment_zone_id', value: 'zone-1' },
         }),
       );
       expect(result).toEqual(newSetting);
