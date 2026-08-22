@@ -216,7 +216,7 @@ export class AuthService {
     });
   }
 
-  async forgotPassword(email: string) {
+  async forgotPassword(email: string): Promise<void> {
     const user = await this.prisma.user.findUnique({
       where: { email },
     });
@@ -246,7 +246,9 @@ export class AuthService {
       },
     });
 
-    return { token, userName: user.name, userEmail: user.email };
+    // EmailService swallows transport failures and logs them, so the fixed 200
+    // response in AuthController.forgotPassword is unaffected (no enumeration signal).
+    await this.emailService.sendPasswordReset(user.email, token, user.name);
   }
 
   async resetPassword(token: string, newPassword: string) {

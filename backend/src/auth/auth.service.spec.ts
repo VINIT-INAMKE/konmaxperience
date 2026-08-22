@@ -47,6 +47,7 @@ describe('AuthService', () => {
       },
       passwordResetToken: {
         create: jest.fn(),
+        updateMany: jest.fn(),
       },
     };
 
@@ -235,6 +236,36 @@ describe('AuthService', () => {
       await expect(authService.refreshToken('valid')).rejects.toThrow(
         UnauthorizedException,
       );
+    });
+  });
+
+  describe('forgotPassword', () => {
+    it('stores a hashed token and emails the raw token to the user', async () => {
+      prismaService.user.findUnique.mockResolvedValue(mockUser);
+      prismaService.passwordResetToken.updateMany.mockResolvedValue({ count: 0 });
+      prismaService.passwordResetToken.create.mockResolvedValue({});
+
+      const result = await authService.forgotPassword('test@example.com');
+
+      expect(result).toBeUndefined();
+      expect(emailService.sendPasswordReset).toHaveBeenCalledTimes(1);
+      const [email, token, name] = emailService.sendPasswordReset.mock.calls[0];
+      expect(email).toBe('test@example.com');
+      expect(name).toBe('Test User');
+      expect(token).toMatch(/^[0-9a-f]{64}$/);
+      const storedHash =
+        prismaService.passwordResetToken.create.mock.calls[0][0].data.token_hash;
+      expect(storedHash).toBe(
+        crypto.createHash('sha256').update(token).digest('hex'),
+      );
+    });
+
+    it('does nothing (and does not leak) for unknown emails', async () => {
+      prismaService.user.findUnique.mockResolvedValue(null);
+      await expect(
+        authService.forgotPassword('nobody@example.com'),
+      ).resolves.toBeUndefined();
+      expect(emailService.sendPasswordReset).not.toHaveBeenCalled();
     });
   });
 
