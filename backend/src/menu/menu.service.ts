@@ -80,7 +80,12 @@ export class MenuService {
   // Menu Items
   // ----------------------------------------------------------------
 
-  async findItems(categoryId?: string, brandId?: string, page?: number, limit?: number) {
+  async findItems(
+    categoryId?: string,
+    brandId?: string,
+    page?: number,
+    limit?: number,
+  ) {
     const where: Record<string, unknown> = {};
     if (categoryId) {
       where.category_id = categoryId;
@@ -96,7 +101,13 @@ export class MenuService {
       where,
       include: {
         recipe: {
-          select: { id: true, name: true, computed_cost: true, yield_qty: true, preparation_type: true },
+          select: {
+            id: true,
+            name: true,
+            computed_cost: true,
+            yield_qty: true,
+            preparation_type: true,
+          },
         },
         category: {
           select: { id: true, name: true, brand_id: true },
@@ -136,7 +147,13 @@ export class MenuService {
       },
       include: {
         recipe: {
-          select: { id: true, name: true, computed_cost: true, yield_qty: true, preparation_type: true },
+          select: {
+            id: true,
+            name: true,
+            computed_cost: true,
+            yield_qty: true,
+            preparation_type: true,
+          },
         },
         category: {
           select: { id: true, name: true, brand_id: true },
@@ -159,7 +176,9 @@ export class MenuService {
       });
 
       if (!recipe) {
-        throw new NotFoundException(`Recipe with ID ${dto.recipe_id} not found`);
+        throw new NotFoundException(
+          `Recipe with ID ${dto.recipe_id} not found`,
+        );
       }
 
       if (recipe.status !== 'approved') {
@@ -181,7 +200,13 @@ export class MenuService {
       },
       include: {
         recipe: {
-          select: { id: true, name: true, computed_cost: true, yield_qty: true, preparation_type: true },
+          select: {
+            id: true,
+            name: true,
+            computed_cost: true,
+            yield_qty: true,
+            preparation_type: true,
+          },
         },
         category: {
           select: { id: true, name: true, brand_id: true },
@@ -265,9 +290,17 @@ export class MenuService {
     },
     prefetchedStocks?: Map<string, number>,
     prefetchedBatches?: Map<string, number>,
-  ): Promise<{ available: boolean; servings_remaining: number; preparation_type: string }> {
+  ): Promise<{
+    available: boolean;
+    servings_remaining: number;
+    preparation_type: string;
+  }> {
     if (!menuItem.available || menuItem.status !== 'active') {
-      return { available: false, servings_remaining: 0, preparation_type: menuItem.recipe?.preparation_type ?? 'scratch' };
+      return {
+        available: false,
+        servings_remaining: 0,
+        preparation_type: menuItem.recipe?.preparation_type ?? 'scratch',
+      };
     }
 
     const prepType = menuItem.recipe?.preparation_type ?? 'scratch';
@@ -282,114 +315,110 @@ export class MenuService {
       };
     }
 
-    // assemble: min(availability of each component recipe/ingredient)
-    if (prepType === 'assemble') {
-      const lines = menuItem.recipe?.RecipeLines ?? [];
-      let minServings = Infinity;
-      for (const line of lines) {
-        if (line.input_type === 'recipe' && line.source_recipe_id) {
-          const compBatchQty = prefetchedBatches?.get(line.source_recipe_id) ?? 0;
-          const qtyPerServing = Number(line.quantity) || 1;
-          const compServings = Math.floor(compBatchQty / qtyPerServing);
-          minServings = Math.min(minServings, compServings);
-        }
-        if (line.input_type === 'ingredient' && line.ingredient_id) {
-          const stock = prefetchedStocks?.get(line.ingredient_id) ?? 0;
-          const qtyPerServing = Number(line.quantity) || 1;
-          const lineServings = Math.floor(stock / qtyPerServing);
-          minServings = Math.min(minServings, lineServings);
-        }
-      }
-      const remaining = minServings === Infinity ? 0 : minServings;
-      return {
-        available: remaining > 0,
-        servings_remaining: remaining,
-        preparation_type: prepType,
-      };
-    }
-
-    // scratch and ready_to_sell: existing ingredient stock BOM logic (unchanged)
+    // assemble, scratch and ready_to_sell: min over BOM lines, unit-converted
     let minServings = Infinity;
-
-    for (const line of menuItem.recipe.RecipeLines) {
-      if (line.input_type === 'ingredient') {
-        let totalStock: number;
-        if (prefetchedStocks && line.ingredient_id) {
-          totalStock = prefetchedStocks.get(line.ingredient_id) ?? 0;
-        } else {
-          const stocks = await this.prisma.ingredientStock.findMany({
-            where: { ingredient_id: line.ingredient_id! },
-          });
-          totalStock = stocks.reduce(
-            (s, st) => s + Number(st.current_quantity),
-            0,
-          );
-        }
-        const neededPerServing = await convertUnit(
-          Number(line.quantity),
-          line.unit,
-          line.ingredient?.base_unit ?? line.unit,
-          this.prisma,
-        );
-        if (neededPerServing === null) {
-          // Conversion failure means we cannot determine availability — treat as unavailable
-          return { available: false, servings_remaining: 0, preparation_type: prepType };
-        }
-        if (neededPerServing === 0) {
-          this.logger.warn(
-            `Skipping recipe line with zero neededPerServing for ingredient ${line.ingredient_id}`,
-          );
-          continue;
-        }
-        const servings = Math.floor(totalStock / neededPerServing);
-        minServings = Math.min(minServings, servings);
+    for (const line of menuItem.recipe?.RecipeLines ?? []) {
+      const stockQty = await this.lineStockQty(
+        line,
+        prefetchedStocks,
+        prefetchedBatches,
+      );
+      if (stockQty === null) continue;
+      const servings = await this.servingsFromStock(line, stockQty);
+      if (servings === null) {
+        // Conversion failure means we cannot determine availability — treat as unavailable
+        return {
+          available: false,
+          servings_remaining: 0,
+          preparation_type: prepType,
+        };
       }
-
-      if (line.input_type === 'recipe') {
-        let totalRemaining: number;
-        if (prefetchedBatches && line.source_recipe_id) {
-          totalRemaining = prefetchedBatches.get(line.source_recipe_id) ?? 0;
-        } else {
-          const batches = await this.prisma.prepBatch.findMany({
-            where: {
-              recipe_id: line.source_recipe_id!,
-              status: 'active',
-              OR: [{ expires_at: null }, { expires_at: { gt: new Date() } }],
-            },
-          });
-          totalRemaining = batches.reduce(
-            (s, b) => s + Number(b.quantity_remaining),
-            0,
-          );
-        }
-        const neededPerServing = await convertUnit(
-          Number(line.quantity),
-          line.unit,
-          line.source_recipe?.yield_unit ?? line.unit,
-          this.prisma,
-        );
-        if (neededPerServing === null) {
-          // Conversion failure means we cannot determine availability — treat as unavailable
-          return { available: false, servings_remaining: 0, preparation_type: prepType };
-        }
-        if (neededPerServing === 0) {
-          this.logger.warn(
-            `Skipping recipe line with zero neededPerServing for sub-recipe ${line.source_recipe_id}`,
-          );
-          continue;
-        }
-        const servings = Math.floor(totalRemaining / neededPerServing);
-        minServings = Math.min(minServings, servings);
-      }
+      minServings = Math.min(minServings, servings);
     }
 
     const remaining = minServings === Infinity ? 0 : minServings;
-    return { available: remaining > 0, servings_remaining: remaining, preparation_type: prepType };
+    return {
+      available: remaining > 0,
+      servings_remaining: remaining,
+      preparation_type: prepType,
+    };
   }
 
-  async getServingsAvailable(
-    menuItemId: string,
-  ): Promise<{ available: boolean; servings_remaining: number; preparation_type: string }> {
+  /**
+   * Stock for one recipe line expressed in its target base unit (the ingredient's
+   * base_unit or the sub-recipe's yield_unit). Returns null for unknown line types.
+   */
+  private async lineStockQty(
+    line: {
+      input_type: string;
+      ingredient_id: string | null;
+      source_recipe_id: string | null;
+    },
+    prefetchedStocks?: Map<string, number>,
+    prefetchedBatches?: Map<string, number>,
+  ): Promise<number | null> {
+    if (line.input_type === 'ingredient' && line.ingredient_id) {
+      if (prefetchedStocks)
+        return prefetchedStocks.get(line.ingredient_id) ?? 0;
+      const stocks = await this.prisma.ingredientStock.findMany({
+        where: { ingredient_id: line.ingredient_id },
+      });
+      return stocks.reduce((s, st) => s + Number(st.current_quantity), 0);
+    }
+    if (line.input_type === 'recipe' && line.source_recipe_id) {
+      if (prefetchedBatches)
+        return prefetchedBatches.get(line.source_recipe_id) ?? 0;
+      const batches = await this.prisma.prepBatch.findMany({
+        where: {
+          recipe_id: line.source_recipe_id,
+          status: 'active',
+          OR: [{ expires_at: null }, { expires_at: { gt: new Date() } }],
+        },
+      });
+      return batches.reduce((s, b) => s + Number(b.quantity_remaining), 0);
+    }
+    return null;
+  }
+
+  /**
+   * Servings obtainable from `stockQtyBase` for one recipe line, converting the line's unit
+   * to the stock's base unit. null = no conversion; Infinity = line needs zero quantity.
+   */
+  private async servingsFromStock(
+    line: {
+      input_type: string;
+      quantity: unknown;
+      unit: string;
+      ingredient: { base_unit: string } | null;
+      source_recipe: { yield_unit: string } | null;
+    },
+    stockQtyBase: number,
+  ): Promise<number | null> {
+    const targetUnit =
+      line.input_type === 'ingredient'
+        ? (line.ingredient?.base_unit ?? line.unit)
+        : (line.source_recipe?.yield_unit ?? line.unit);
+    const neededPerServing = await convertUnit(
+      Number(line.quantity),
+      line.unit,
+      targetUnit,
+      this.prisma,
+    );
+    if (neededPerServing === null) return null;
+    if (neededPerServing === 0) {
+      this.logger.warn(
+        `Skipping recipe line with zero quantity (${line.input_type}) in unit ${line.unit}`,
+      );
+      return Infinity;
+    }
+    return Math.floor(stockQtyBase / neededPerServing);
+  }
+
+  async getServingsAvailable(menuItemId: string): Promise<{
+    available: boolean;
+    servings_remaining: number;
+    preparation_type: string;
+  }> {
     const menuItem = await this.prisma.menuItem.findUniqueOrThrow({
       where: { id: menuItemId },
       include: {
@@ -410,7 +439,14 @@ export class MenuService {
   }
 
   async getAllServingsAvailable(): Promise<
-    Record<string, { available: boolean; servings_remaining: number; preparation_type: string }>
+    Record<
+      string,
+      {
+        available: boolean;
+        servings_remaining: number;
+        preparation_type: string;
+      }
+    >
   > {
     const menuItems = await this.prisma.menuItem.findMany({
       where: { status: 'active' },
@@ -473,7 +509,10 @@ export class MenuService {
     const stockMap = new Map<string, number>();
     for (const stock of allStocks) {
       const current = stockMap.get(stock.ingredient_id) ?? 0;
-      stockMap.set(stock.ingredient_id, current + Number(stock.current_quantity));
+      stockMap.set(
+        stock.ingredient_id,
+        current + Number(stock.current_quantity),
+      );
     }
 
     // Aggregate batches by recipe_id
@@ -485,7 +524,11 @@ export class MenuService {
 
     const result: Record<
       string,
-      { available: boolean; servings_remaining: number; preparation_type: string }
+      {
+        available: boolean;
+        servings_remaining: number;
+        preparation_type: string;
+      }
     > = {};
 
     for (const item of menuItems) {
