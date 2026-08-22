@@ -82,7 +82,7 @@ export default function MenuPage() {
   const { data: menuItems = [], isLoading: itemsLoading } = useQuery({
     queryKey: ['menu-items', effectiveBrandId],
     queryFn: () =>
-      apiClient.get<MenuItem[]>(`/menu/items?brand_id=${effectiveBrandId}`),
+      apiClient.get<MenuItem[]>(`/menu/items/staff?brand_id=${effectiveBrandId}`),
     enabled: !!effectiveBrandId,
   });
 

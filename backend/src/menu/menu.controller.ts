@@ -67,7 +67,16 @@ export class MenuController {
     @Query('category_id') category_id?: string,
     @Query('brand_id') brand_id?: string,
   ) {
-    return this.menuService.findItems(category_id, brand_id);
+    return this.menuService.findItemsPublic(category_id, brand_id);
+  }
+
+  // Authenticated staff (any role) — includes recipe cost/yield for ops screens
+  @Get('items/staff')
+  async findItemsStaff(
+    @Query('category_id') category_id?: string,
+    @Query('brand_id') brand_id?: string,
+  ) {
+    return this.menuService.findItemsStaff(category_id, brand_id);
   }
 
   @Post('items')

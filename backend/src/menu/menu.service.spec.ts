@@ -99,3 +99,30 @@ describe('MenuService.computeServings (assemble)', () => {
     });
   });
 });
+
+describe('MenuService item queries', () => {
+  let service: MenuService;
+  let prisma: { menuItem: { findMany: jest.Mock } };
+
+  beforeEach(async () => {
+    prisma = { menuItem: { findMany: jest.fn().mockResolvedValue([]) } };
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [MenuService, { provide: PrismaService, useValue: prisma }],
+    }).compile();
+    service = module.get(MenuService);
+  });
+
+  it('findItemsPublic selects only id and preparation_type from the recipe', async () => {
+    await service.findItemsPublic('cat-1', 'brand-1');
+    const args = prisma.menuItem.findMany.mock.calls[0][0];
+    expect(args.include.recipe.select).toEqual({ id: true, preparation_type: true });
+    expect(JSON.stringify(args)).not.toMatch(/computed_cost|yield_qty/);
+    expect(args.where).toEqual({ category_id: 'cat-1', category: { brand_id: 'brand-1' } });
+  });
+
+  it('findItemsStaff keeps cost fields for ops screens', async () => {
+    await service.findItemsStaff(undefined, 'brand-1');
+    const args = prisma.menuItem.findMany.mock.calls[0][0];
+    expect(args.include.recipe.select).toMatchObject({ computed_cost: true, yield_qty: true });
+  });
+});

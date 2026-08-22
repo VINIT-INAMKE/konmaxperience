@@ -68,7 +68,7 @@ export default function PosPage() {
   const { data: menuItems = [] } = useQuery({
     queryKey: ['menu-items', effectiveBrandId],
     queryFn: () =>
-      apiClient.get<MenuItem[]>(`/menu/items?brand_id=${effectiveBrandId}`),
+      apiClient.get<MenuItem[]>(`/menu/items/staff?brand_id=${effectiveBrandId}`),
     enabled: !!effectiveBrandId,
   });
 

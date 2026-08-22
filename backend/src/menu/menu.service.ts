@@ -80,7 +80,7 @@ export class MenuService {
   // Menu Items
   // ----------------------------------------------------------------
 
-  async findItems(
+  private itemsQuery(
     categoryId?: string,
     brandId?: string,
     page?: number,
@@ -97,8 +97,38 @@ export class MenuService {
     const take = Math.min(Number(limit) || 50, 100);
     const skip = ((Number(page) || 1) - 1) * take;
 
+    return { where, take, skip, orderBy: { name: 'asc' as const } };
+  }
+
+  /** Public storefront shape — never exposes cost, yield, BOM or margin fields (SPEC §8). */
+  async findItemsPublic(
+    categoryId?: string,
+    brandId?: string,
+    page?: number,
+    limit?: number,
+  ) {
     return this.prisma.menuItem.findMany({
-      where,
+      ...this.itemsQuery(categoryId, brandId, page, limit),
+      include: {
+        recipe: {
+          select: { id: true, preparation_type: true },
+        },
+        category: {
+          select: { id: true, name: true, brand_id: true },
+        },
+      },
+    });
+  }
+
+  /** Staff shape — includes recipe cost and yield for menu management and POS. */
+  async findItemsStaff(
+    categoryId?: string,
+    brandId?: string,
+    page?: number,
+    limit?: number,
+  ) {
+    return this.prisma.menuItem.findMany({
+      ...this.itemsQuery(categoryId, brandId, page, limit),
       include: {
         recipe: {
           select: {
@@ -113,9 +143,6 @@ export class MenuService {
           select: { id: true, name: true, brand_id: true },
         },
       },
-      orderBy: { name: 'asc' },
-      take,
-      skip,
     });
   }
 
