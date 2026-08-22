@@ -3,7 +3,12 @@ import {
   Injectable,
   ServiceUnavailableException,
 } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import {
+  ActorType,
+  MovementType,
+  PrepBatchStatus,
+  Prisma,
+} from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { convertUnit } from '../common/utils/unit-conversion';
 import {
@@ -18,7 +23,7 @@ export const PRODUCTION_ZONE_TYPE = 'kitchen';
 
 type Tx = Prisma.TransactionClient;
 
-export type FulfilmentActorType = 'user' | 'customer' | 'system';
+export type FulfilmentActorType = ActorType;
 
 export interface FulfilmentActor {
   actor_type: FulfilmentActorType;
@@ -166,7 +171,7 @@ export class FulfilmentService {
       where: {
         recipe_id: recipeId,
         zone_id: zoneId,
-        status: 'active',
+        status: PrepBatchStatus.active,
         OR: [{ expires_at: null }, { expires_at: { gt: new Date() } }],
       },
       orderBy: [{ expires_at: 'asc' }, { created_at: 'asc' }],
@@ -181,7 +186,10 @@ export class FulfilmentService {
         where: { id: batch.id },
         data: {
           quantity_remaining: { decrement: deductFromBatch },
-          status: batchQty - deductFromBatch <= 0 ? 'depleted' : 'active',
+          status:
+            batchQty - deductFromBatch <= 0
+              ? PrepBatchStatus.depleted
+              : PrepBatchStatus.active,
         },
       });
       remaining -= deductFromBatch;
@@ -266,7 +274,7 @@ export class FulfilmentService {
           data: {
             ingredient_id: line.ingredient_id,
             zone_id: zoneId,
-            movement_type: 'order_deducted',
+            movement_type: MovementType.order_deducted,
             quantity: -neededBase,
             original_quantity: totalNeeded,
             unit: line.unit,
@@ -301,7 +309,7 @@ export class FulfilmentService {
           where: {
             recipe_id: line.source_recipe_id,
             zone_id: zoneId,
-            status: 'active',
+            status: PrepBatchStatus.active,
             OR: [{ expires_at: null }, { expires_at: { gt: new Date() } }],
           },
           orderBy: [{ expires_at: 'asc' }, { created_at: 'asc' }],
@@ -315,7 +323,9 @@ export class FulfilmentService {
             where: { id: batch.id },
             data: {
               quantity_remaining: { decrement: deduct },
-              ...(batchRemaining - deduct <= 0 ? { status: 'depleted' } : {}),
+              ...(batchRemaining - deduct <= 0
+                ? { status: PrepBatchStatus.depleted }
+                : {}),
             },
           });
           remainingNeed -= deduct;

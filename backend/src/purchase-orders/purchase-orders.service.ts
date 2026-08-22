@@ -3,10 +3,12 @@ import {
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
+import { MovementType, Prisma, PurchaseOrderStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreatePurchaseOrderDto } from './dto/create-purchase-order.dto';
 import { ReceivePurchaseOrderDto } from './dto/receive-purchase-order.dto';
 import { convertUnit } from '../common/utils/unit-conversion';
+import { parseEnum } from '../common/utils/parse-enum';
 
 const PO_INCLUDE = {
   vendor: { select: { id: true, name: true } },
@@ -25,9 +27,9 @@ export class PurchaseOrdersService {
   constructor(private readonly prisma: PrismaService) {}
 
   async findAll(status?: string) {
-    const where: Record<string, unknown> = {};
+    const where: Prisma.PurchaseOrderWhereInput = {};
     if (status) {
-      where.status = status;
+      where.status = parseEnum(PurchaseOrderStatus, status, 'status');
     }
     return this.prisma.purchaseOrder.findMany({
       where,
@@ -53,7 +55,7 @@ export class PurchaseOrdersService {
   }
 
   async create(dto: CreatePurchaseOrderDto, userId: string) {
-    const status = dto.status || 'draft';
+    const status = dto.status ?? PurchaseOrderStatus.draft;
     const totalAmount = dto.lines.reduce(
       (sum, line) => sum + line.quantity * line.unit_cost,
       0,
@@ -69,7 +71,9 @@ export class PurchaseOrdersService {
           total_amount: totalAmount,
           ordered_by: userId,
           ...(dto.linked_task_id && { linked_task_id: dto.linked_task_id }),
-          ...(status === 'ordered' && { ordered_at: new Date() }),
+          ...(status === PurchaseOrderStatus.ordered && {
+            ordered_at: new Date(),
+          }),
           lines: {
             create: dto.lines.map((line) => ({
               ingredient_id: line.ingredient_id,
@@ -85,16 +89,26 @@ export class PurchaseOrdersService {
     });
   }
 
-  async update(id: string, data: { notes?: string; status?: string; linked_task_id?: string }) {
+  async update(
+    id: string,
+    data: {
+      notes?: string;
+      status?: PurchaseOrderStatus;
+      linked_task_id?: string;
+    },
+  ) {
     const po = await this.findOne(id);
 
     // Only allow transitioning from draft to ordered via PATCH
-    if (data.status && data.status !== 'ordered') {
+    if (data.status && data.status !== PurchaseOrderStatus.ordered) {
       throw new BadRequestException(
         'Only draft to ordered status transition is allowed via PATCH',
       );
     }
-    if (data.status === 'ordered' && po.status !== 'draft') {
+    if (
+      data.status === PurchaseOrderStatus.ordered &&
+      po.status !== PurchaseOrderStatus.draft
+    ) {
       throw new BadRequestException(
         'Can only transition to ordered from draft status',
       );
@@ -105,8 +119,8 @@ export class PurchaseOrdersService {
       data: {
         ...(data.notes !== undefined && { notes: data.notes }),
         ...(data.linked_task_id !== undefined && { linked_task_id: data.linked_task_id || null }),
-        ...(data.status === 'ordered' && {
-          status: 'ordered',
+        ...(data.status === PurchaseOrderStatus.ordered && {
+          status: PurchaseOrderStatus.ordered,
           ordered_at: new Date(),
         }),
       },
@@ -130,9 +144,9 @@ export class PurchaseOrdersService {
           },
         },
       });
-      if (po.status !== 'ordered' && po.status !== 'partially_received') {
+      if (po.status !== PurchaseOrderStatus.ordered) {
         throw new BadRequestException(
-          'PO must be in ordered or partially_received status to receive',
+          'PO must be in ordered status to receive',
         );
       }
 
@@ -188,7 +202,7 @@ export class PurchaseOrdersService {
           data: {
             ingredient_id: poLine.ingredient_id,
             zone_id: po.zone_id,
-            movement_type: 'received',
+            movement_type: MovementType.purchase_received,
             quantity: qtyBase,
             original_quantity: lineReceived.received_quantity,
             unit: poLine.unit,
@@ -216,7 +230,9 @@ export class PurchaseOrdersService {
         (line) => Number(line.received_quantity ?? 0) >= Number(line.quantity),
       );
 
-      const newStatus = allFullyReceived ? 'received' : 'ordered';
+      const newStatus = allFullyReceived
+        ? PurchaseOrderStatus.received
+        : PurchaseOrderStatus.ordered;
 
       return tx.purchaseOrder.update({
         where: { id: poId },
@@ -254,14 +270,17 @@ export class PurchaseOrdersService {
 
   async cancel(id: string) {
     const po = await this.findOne(id);
-    if (po.status !== 'draft' && po.status !== 'ordered') {
+    if (
+      po.status !== PurchaseOrderStatus.draft &&
+      po.status !== PurchaseOrderStatus.ordered
+    ) {
       throw new BadRequestException(
         'Can only cancel POs in draft or ordered status',
       );
     }
     return this.prisma.purchaseOrder.update({
       where: { id },
-      data: { status: 'cancelled' },
+      data: { status: PurchaseOrderStatus.cancelled },
       include: PO_INCLUDE,
     });
   }

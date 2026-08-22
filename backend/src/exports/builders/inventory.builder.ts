@@ -40,7 +40,7 @@ export class InventoryLevelsExportBuilder implements ExportBuilder {
     for (const s of data as any[]) {
       sheet.addRow({
         ingredient: s.ingredient?.name ?? '',
-        category: s.ingredient?.category ?? '',
+        category: s.ingredient?.category_obj?.name ?? '',
         zone: s.zone?.name ?? '',
         current_qty: Number(s.current_quantity),
         unit: s.ingredient?.base_unit ?? '',
@@ -60,7 +60,7 @@ export class InventoryLevelsExportBuilder implements ExportBuilder {
   async buildCsv(data: unknown[]): Promise<Buffer> {
     const rows = (data as any[]).map((s) => ({
       Ingredient: s.ingredient?.name ?? '',
-      Category: s.ingredient?.category ?? '',
+      Category: s.ingredient?.category_obj?.name ?? '',
       Zone: s.zone?.name ?? '',
       'Current Qty': Number(s.current_quantity),
       Unit: s.ingredient?.base_unit ?? '',

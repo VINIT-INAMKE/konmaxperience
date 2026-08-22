@@ -31,7 +31,7 @@ export class IngredientsExportBuilder implements ExportBuilder {
     for (const row of data as any[]) {
       sheet.addRow({
         name: row.name,
-        category: row.category,
+        category: row.category_obj?.name ?? '',
         base_unit: row.base_unit,
         min_stock_level: Number(row.min_stock_level),
       });
@@ -46,7 +46,7 @@ export class IngredientsExportBuilder implements ExportBuilder {
   async buildCsv(data: unknown[]): Promise<Buffer> {
     const rows = (data as any[]).map((row) => ({
       name: row.name,
-      category: row.category,
+      category: row.category_obj?.name ?? '',
       base_unit: row.base_unit,
       min_stock_level: Number(row.min_stock_level),
     }));

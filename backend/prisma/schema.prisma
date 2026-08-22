@@ -837,7 +837,7 @@ model Asset {
 }
 
 model Recipe {
-  id               String       @id @default(uuid())
+  id               String          @id @default(uuid())
   name             String
   description      String
   prep_steps       String?
@@ -850,16 +850,20 @@ model Recipe {
   zone_id          String?
   image_url        String?
   computed_cost    Decimal?
-  status           String       @default("draft")
-  preparation_type String       @default("scratch")
+  status           RecipeStatus    @default(draft)
+  preparation_type PreparationType @default(scratch)
+  parent_recipe_id String?
+  version          Int             @default(1)
   created_by       String
-  created_at       DateTime     @default(now())
-  updated_at       DateTime     @updatedAt
-  brand            Brand?       @relation(fields: [brand_id], references: [id])
-  zone             Zone?        @relation(fields: [zone_id], references: [id])
-  creator          User         @relation("RecipeCreator", fields: [created_by], references: [id])
-  RecipeLines      RecipeLine[] @relation("RecipeLines")
-  SourceLines      RecipeLine[] @relation("SourceRecipeLines")
+  created_at       DateTime        @default(now())
+  updated_at       DateTime        @updatedAt
+  brand            Brand?          @relation(fields: [brand_id], references: [id])
+  zone             Zone?           @relation(fields: [zone_id], references: [id])
+  creator          User            @relation("RecipeCreator", fields: [created_by], references: [id])
+  parent_recipe    Recipe?         @relation("RecipeVersions", fields: [parent_recipe_id], references: [id], onDelete: SetNull)
+  versions         Recipe[]        @relation("RecipeVersions")
+  RecipeLines      RecipeLine[]    @relation("RecipeLines")
+  SourceLines      RecipeLine[]    @relation("SourceRecipeLines")
   MenuItems        MenuItem[]
   products         Product[]
   linked_assets    Asset[]
@@ -895,8 +899,7 @@ model IngredientCategory {
 model Ingredient {
   id                 String              @id @default(uuid())
   name               String
-  category           String?
-  usage_type         String              @default("recipe_input")
+  usage_type         UsageType           @default(recipe_input)
   category_id        String?
   base_unit          String
   min_stock_level    Decimal
@@ -1102,10 +1105,10 @@ model IngredientStock {
 }
 
 model StockMovement {
-  id                String     @id @default(uuid())
+  id                String       @id @default(uuid())
   ingredient_id     String
   zone_id           String
-  movement_type     String // "received" | "prep_deducted" | "order_deducted" | "waste" | "adjustment"
+  movement_type     MovementType
   quantity          Decimal // in base_unit, signed (+/-)
   original_quantity Decimal // in original unit for display
   unit              String // original unit for display
@@ -1113,12 +1116,12 @@ model StockMovement {
   reference_type    String? // "purchase_order" | "prep_batch" | "order" | "waste_log"
   reference_id      String?
   created_by        String?
-  actor_type        String     @default("user") // user | customer | system
+  actor_type        ActorType    @default(user)
   actor_id          String?
-  created_at        DateTime   @default(now())
-  ingredient        Ingredient @relation(fields: [ingredient_id], references: [id])
-  zone              Zone       @relation(fields: [zone_id], references: [id])
-  creator           User?      @relation("StockMovementCreator", fields: [created_by], references: [id])
+  created_at        DateTime     @default(now())
+  ingredient        Ingredient   @relation(fields: [ingredient_id], references: [id])
+  zone              Zone         @relation(fields: [zone_id], references: [id])
+  creator           User?        @relation("StockMovementCreator", fields: [created_by], references: [id])
 
   // Optimizes: inventory getMovements by ingredient (paginated, ordered by created_at)
   @@index([ingredient_id, created_at(sort: Desc)])
@@ -1130,7 +1133,7 @@ model PurchaseOrder {
   id              String              @id @default(uuid())
   vendor_id       String
   zone_id         String // receiving needs a zone for IngredientStock upsert
-  status          String              @default("draft") // draft | ordered | received | cancelled
+  status          PurchaseOrderStatus @default(draft)
   total_amount    Decimal             @default(0)
   notes           String?
   ordered_by      String
@@ -1171,7 +1174,7 @@ model PurchaseOrderLine {
 }
 
 model PrepBatch {
-  id                 String     @id @default(uuid())
+  id                 String          @id @default(uuid())
   recipe_id          String
   zone_id            String
   quantity_produced  Decimal
@@ -1179,11 +1182,11 @@ model PrepBatch {
   unit               String
   prepared_by        String
   expires_at         DateTime?
-  status             String     @default("active") // active | depleted | expired
-  created_at         DateTime   @default(now())
-  recipe             Recipe     @relation(fields: [recipe_id], references: [id])
-  zone               Zone       @relation(fields: [zone_id], references: [id])
-  creator            User       @relation("PrepBatchCreator", fields: [prepared_by], references: [id])
+  status             PrepBatchStatus @default(active)
+  created_at         DateTime        @default(now())
+  recipe             Recipe          @relation(fields: [recipe_id], references: [id])
+  zone               Zone            @relation(fields: [zone_id], references: [id])
+  creator            User            @relation("PrepBatchCreator", fields: [prepared_by], references: [id])
   wasteLogs          WasteLog[]
 
   // Optimizes: FIFO batch lookup by recipe+zone+status (prep-batches, KDS deductions, menu availability)
@@ -1331,18 +1334,19 @@ model Payment {
 }
 
 model Notification {
-  id             String   @id @default(uuid())
+  id             String                @id @default(uuid())
   user_id        String
-  user           User     @relation(fields: [user_id], references: [id])
-  type           String // task_due | task_blocked | approval_pending | low_stock | new_order | order_ready | delivery_update
+  user           User                  @relation(fields: [user_id], references: [id])
+  type           NotificationType
+  channel        NotificationChannel[] @default([in_app])
   title          String
   body           String
   link_url       String?
   reference_id   String? // ID of related entity (task_id, order_id, ingredient_id, approval_id)
   reference_type String? // "task" | "order" | "ingredient" | "approval"
-  is_read        Boolean  @default(false)
-  is_email_sent  Boolean  @default(false)
-  created_at     DateTime @default(now())
+  is_read        Boolean               @default(false)
+  is_email_sent  Boolean               @default(false)
+  created_at     DateTime              @default(now())
 
   @@index([user_id, is_read, created_at(sort: Desc)])
   @@index([user_id, type, reference_id])

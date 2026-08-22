@@ -738,7 +738,7 @@ export class ImportsService {
         await tx.ingredient.create({
           data: {
             name: v.name as string,
-            category: v.category as string,
+            category_id: v.category_id as string,
             base_unit: v.base_unit as string,
             min_stock_level: v.min_stock_level as number,
           },
@@ -898,7 +898,7 @@ export class ImportsService {
           where: { id },
           data: {
             name: v.name as string,
-            category: v.category as string,
+            category_id: v.category_id as string,
             // base_unit intentionally NOT updated — D-28 defense-in-depth
             min_stock_level: v.min_stock_level as number,
           },

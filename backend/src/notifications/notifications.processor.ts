@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { NotificationType } from '@prisma/client';
 import { NotificationsService } from './notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { EmailService } from '../email/email.service';
@@ -55,7 +56,7 @@ export class NotificationsProcessor {
       const { userId, taskId, taskName, questName, hours } = data;
       const shouldSend = await this.notifications.shouldNotify(
         userId,
-        'task_due',
+        NotificationType.task_due,
         taskId,
         24,
       );
@@ -63,7 +64,7 @@ export class NotificationsProcessor {
 
       const notification = await this.notifications.create({
         user_id: userId,
-        type: 'task_due',
+        type: NotificationType.task_due,
         title: `Task due in ${hours}h`,
         body: `${taskName} in ${questName} is due soon.`,
         link_url: `/tasks/${taskId}`,
@@ -86,7 +87,7 @@ export class NotificationsProcessor {
 
       const notification = await this.notifications.create({
         user_id: userId,
-        type: 'task_blocked',
+        type: NotificationType.task_blocked,
         title: 'Task blocked',
         body: `${taskName} is blocked: ${reason || 'No reason given'}.`,
         link_url: `/tasks/${taskId}`,
@@ -115,7 +116,7 @@ export class NotificationsProcessor {
       const recentNotifications = await this.prisma.notification.findMany({
         where: {
           user_id: { in: admins.map((a) => a.id) },
-          type: 'approval_pending',
+          type: NotificationType.approval_pending,
           reference_id: approvalId,
         },
         orderBy: { created_at: 'desc' },
@@ -143,7 +144,7 @@ export class NotificationsProcessor {
         eligibleAdmins.map(async (admin) => {
           const notification = await this.notifications.create({
             user_id: admin.id,
-            type: 'approval_pending',
+            type: NotificationType.approval_pending,
             title,
             body,
             link_url: '/approvals',
@@ -177,7 +178,7 @@ export class NotificationsProcessor {
       const recentNotifications = await this.prisma.notification.findMany({
         where: {
           user_id: { in: users.map((u) => u.id) },
-          type: 'low_stock',
+          type: NotificationType.low_stock,
           reference_id: ingredientId,
         },
         orderBy: { created_at: 'desc' },
@@ -205,7 +206,7 @@ export class NotificationsProcessor {
         eligibleUsers.map(async (user) => {
           const notification = await this.notifications.create({
             user_id: user.id,
-            type: 'low_stock',
+            type: NotificationType.low_stock,
             title,
             body,
             link_url: '/operations/inventory',
@@ -237,7 +238,7 @@ export class NotificationsProcessor {
         users.map((user) =>
           this.notifications.create({
             user_id: user.id,
-            type: 'new_order',
+            type: NotificationType.new_order,
             title,
             body,
             link_url: '/operations/kitchen/kds',
@@ -274,7 +275,7 @@ export class NotificationsProcessor {
         users.map((user) =>
           this.notifications.create({
             user_id: user.id,
-            type: 'order_ready',
+            type: NotificationType.order_ready,
             title,
             body,
             link_url: '/pos/orders',
@@ -297,7 +298,7 @@ export class NotificationsProcessor {
 
       await this.notifications.create({
         user_id: createdBy,
-        type: 'delivery_update',
+        type: NotificationType.delivery_update,
         title: `Delivery ${deliveryStatus}`,
         body: `Order #${orderId.slice(-6).toUpperCase()} to ${deliveryAddress || 'unknown'}: ${deliveryStatus}.`,
         link_url: '/pos/delivery',

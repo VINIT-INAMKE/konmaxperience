@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { PrepBatchStatus } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 
 export interface ZoneUtilization {
@@ -47,7 +48,7 @@ export class KitchenMetricsService {
       }),
       // 3. Active prep batches
       this.prisma.prepBatch.count({
-        where: { status: 'active' },
+        where: { status: PrepBatchStatus.active },
       }),
       // 4. Waste today cost: sum of WasteLog.cost_impact where created_at >= today
       this.prisma.wasteLog.aggregate({

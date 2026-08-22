@@ -6,10 +6,12 @@ import {
   ValidateNested,
   IsNumber,
   IsIn,
+  IsEnum,
   Min,
   IsNotEmpty,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+import { PurchaseOrderStatus } from '@prisma/client';
 
 export class PurchaseOrderLineDto {
   @IsUUID()
@@ -39,10 +41,10 @@ export class CreatePurchaseOrderDto {
   @IsOptional()
   notes?: string;
 
-  @IsString()
-  @IsIn(['draft', 'ordered'])
   @IsOptional()
-  status?: string;
+  @IsEnum(PurchaseOrderStatus)
+  @IsIn([PurchaseOrderStatus.draft, PurchaseOrderStatus.ordered])
+  status?: PurchaseOrderStatus;
 
   @IsOptional()
   @IsString()

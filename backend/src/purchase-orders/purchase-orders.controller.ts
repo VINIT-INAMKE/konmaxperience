@@ -9,7 +9,8 @@ import {
   Req,
   ParseUUIDPipe,
 } from '@nestjs/common';
-import { IsOptional, IsString, IsIn } from 'class-validator';
+import { IsOptional, IsString, IsIn, IsEnum } from 'class-validator';
+import { PurchaseOrderStatus } from '@prisma/client';
 import * as express from 'express';
 import { PurchaseOrdersService } from './purchase-orders.service';
 import { RequiresPermission } from '../common/decorators/permissions.decorator';
@@ -23,8 +24,9 @@ export class UpdatePurchaseOrderDto {
   notes?: string;
 
   @IsOptional()
-  @IsIn(['ordered'])
-  status?: string;
+  @IsEnum(PurchaseOrderStatus)
+  @IsIn([PurchaseOrderStatus.ordered])
+  status?: PurchaseOrderStatus;
 
   @IsOptional()
   @IsString()
