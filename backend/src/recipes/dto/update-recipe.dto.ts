@@ -8,9 +8,10 @@ import {
   IsUUID,
   IsArray,
   ValidateNested,
-  IsIn,
+  IsEnum,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+import { PreparationType, RecipeStatus } from '@prisma/client';
 import { BomLineDto } from './upsert-bom-lines.dto';
 
 export class UpdateRecipeDto {
@@ -62,8 +63,12 @@ export class UpdateRecipeDto {
   image_url?: string;
 
   @IsOptional()
-  @IsIn(['draft', 'pending', 'approved', 'archived'])
-  status?: string;
+  @IsEnum(RecipeStatus)
+  status?: RecipeStatus;
+
+  @IsOptional()
+  @IsEnum(PreparationType)
+  preparation_type?: PreparationType;
 
   @IsOptional()
   @IsArray()

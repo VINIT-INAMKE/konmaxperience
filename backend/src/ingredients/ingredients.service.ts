@@ -3,22 +3,24 @@ import {
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
+import { Prisma, UsageType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateIngredientDto } from './dto/create-ingredient.dto';
 import { UpdateIngredientDto } from './dto/update-ingredient.dto';
 import { getCompatibleUnits } from '../common/utils/unit-conversion';
+import { parseEnum } from '../common/utils/parse-enum';
 
 @Injectable()
 export class IngredientsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll(category?: string, usageType?: string) {
-    const where: Record<string, unknown> = {};
-    if (category) {
-      where.category = category;
+  async findAll(categoryId?: string, usageType?: string) {
+    const where: Prisma.IngredientWhereInput = {};
+    if (categoryId) {
+      where.category_id = categoryId;
     }
     if (usageType) {
-      where.usage_type = usageType;
+      where.usage_type = parseEnum(UsageType, usageType, 'usage_type');
     }
     return this.prisma.ingredient.findMany({
       where,
@@ -39,6 +41,7 @@ export class IngredientsService {
   async findAllForExport() {
     return this.prisma.ingredient.findMany({
       orderBy: { name: 'asc' },
+      include: { category_obj: { select: { name: true } } },
     });
   }
 
@@ -65,9 +68,10 @@ export class IngredientsService {
     return this.prisma.ingredient.create({
       data: {
         name: dto.name,
-        category: dto.category,
         base_unit: dto.base_unit,
         min_stock_level: dto.min_stock_level,
+        ...(dto.usage_type !== undefined && { usage_type: dto.usage_type }),
+        ...(dto.category_id !== undefined && { category_id: dto.category_id }),
       },
     });
   }
@@ -78,7 +82,8 @@ export class IngredientsService {
       where: { id },
       data: {
         ...(dto.name !== undefined && { name: dto.name }),
-        ...(dto.category !== undefined && { category: dto.category }),
+        ...(dto.usage_type !== undefined && { usage_type: dto.usage_type }),
+        ...(dto.category_id !== undefined && { category_id: dto.category_id }),
         ...(dto.base_unit !== undefined && { base_unit: dto.base_unit }),
         ...(dto.min_stock_level !== undefined && { min_stock_level: dto.min_stock_level }),
       },

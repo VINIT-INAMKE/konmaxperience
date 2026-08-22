@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { PurchaseOrderStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { loadConversions } from '../common/utils/unit-conversion';
 
@@ -68,7 +69,7 @@ export class ProcurementService {
       let poSpend = 0;
       for (const line of po.lines) {
         const qty =
-          po.status === 'received' && line.received_quantity
+          po.status === PurchaseOrderStatus.received && line.received_quantity
             ? Number(line.received_quantity)
             : Number(line.quantity);
         poSpend += qty * Number(line.unit_cost);

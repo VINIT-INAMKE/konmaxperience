@@ -1,5 +1,5 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { MovementType, PrepBatchStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreatePrepBatchDto } from './dto/create-prep-batch.dto';
 import { PreviewDeductionsDto } from './dto/preview-deductions.dto';
@@ -18,7 +18,7 @@ const RECIPE_INCLUDE = {
 function activeBatchWhere(recipeId: string, zoneId?: string) {
   const where: Record<string, unknown> = {
     recipe_id: recipeId,
-    status: 'active',
+    status: PrepBatchStatus.active,
     OR: [{ expires_at: null }, { expires_at: { gt: new Date() } }],
   };
   if (zoneId) {
@@ -120,7 +120,7 @@ export class PrepBatchesService {
             where: {
               recipe_id: { in: sourceRecipeIds },
               zone_id: dto.zone_id,
-              status: 'active',
+              status: PrepBatchStatus.active,
               OR: [{ expires_at: null }, { expires_at: { gt: new Date() } }],
             },
           })
@@ -234,7 +234,7 @@ export class PrepBatchesService {
           expires_at: recipe.shelf_life_hours
             ? new Date(Date.now() + recipe.shelf_life_hours * 3600000)
             : null,
-          status: 'active',
+          status: PrepBatchStatus.active,
         },
         include: {
           recipe: { select: { name: true } },
@@ -332,7 +332,7 @@ export class PrepBatchesService {
       data: {
         ingredient_id: params.ingredientId,
         zone_id: params.zoneId,
-        movement_type: 'prep_deducted',
+        movement_type: MovementType.prep_deducted,
         quantity: -neededBase,
         original_quantity: params.needed,
         unit: params.lineUnit,
@@ -387,7 +387,7 @@ export class PrepBatchesService {
         where: { id: batch.id },
         data: {
           quantity_remaining: { decrement: deduct },
-          ...(newRemaining <= 0 ? { status: 'depleted' } : {}),
+          ...(newRemaining <= 0 ? { status: PrepBatchStatus.depleted } : {}),
         },
       });
 

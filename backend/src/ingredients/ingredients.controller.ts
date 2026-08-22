@@ -21,10 +21,10 @@ export class IngredientsController {
 
   @Get()
   async findAll(
-    @Query('category') category?: string,
+    @Query('category_id') categoryId?: string,
     @Query('usage_type') usageType?: string,
   ) {
-    return this.ingredientsService.findAll(category, usageType);
+    return this.ingredientsService.findAll(categoryId, usageType);
   }
 
   @Get(':id')

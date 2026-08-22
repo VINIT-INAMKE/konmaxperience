@@ -1,7 +1,11 @@
+import { PurchaseOrderStatus } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import type { CellError, ImportRow } from '../import-types';
 
-const VALID_STATUSES = ['draft', 'ordered'];
+const VALID_STATUSES: string[] = [
+  PurchaseOrderStatus.draft,
+  PurchaseOrderStatus.ordered,
+];
 
 export async function validatePurchaseOrderRow(
   raw: Record<string, string>,

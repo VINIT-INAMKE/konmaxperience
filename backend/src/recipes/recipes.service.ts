@@ -4,6 +4,7 @@ import {
   BadRequestException,
   ForbiddenException,
 } from '@nestjs/common';
+import { RecipeStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateRecipeDto } from './dto/create-recipe.dto';
 import { UpdateRecipeDto } from './dto/update-recipe.dto';
@@ -17,7 +18,7 @@ const RECIPE_INCLUDE = {
   RecipeLines: {
     include: {
       ingredient: {
-        select: { id: true, name: true, base_unit: true, category: true },
+        select: { id: true, name: true, base_unit: true },
       },
       source_recipe: {
         select: {
@@ -29,7 +30,7 @@ const RECIPE_INCLUDE = {
           RecipeLines: {
             include: {
               ingredient: {
-                select: { id: true, name: true, base_unit: true, category: true },
+                select: { id: true, name: true, base_unit: true },
               },
               source_recipe: {
                 select: {
@@ -139,6 +140,9 @@ export class RecipesService {
           ...(dto.brand_id !== undefined && { brand_id: dto.brand_id }),
           ...(dto.zone_id !== undefined && { zone_id: dto.zone_id }),
           ...(dto.image_url !== undefined && { image_url: dto.image_url }),
+          ...(dto.preparation_type !== undefined && {
+            preparation_type: dto.preparation_type,
+          }),
           created_by: userId,
         },
       });
@@ -195,11 +199,11 @@ export class RecipesService {
 
     // Status transition validation
     if (dto.status !== undefined && dto.status !== existing.status) {
-      const ALLOWED_TRANSITIONS: Record<string, string[]> = {
-        draft: ['pending'],
-        pending: ['approved', 'draft'],
-        approved: ['archived'],
-        archived: [],
+      const ALLOWED_TRANSITIONS: Record<RecipeStatus, RecipeStatus[]> = {
+        [RecipeStatus.draft]: [RecipeStatus.pending],
+        [RecipeStatus.pending]: [RecipeStatus.approved, RecipeStatus.draft],
+        [RecipeStatus.approved]: [RecipeStatus.archived],
+        [RecipeStatus.archived]: [],
       };
       const allowed = ALLOWED_TRANSITIONS[existing.status] ?? [];
       if (!allowed.includes(dto.status)) {
@@ -233,6 +237,9 @@ export class RecipesService {
           ...(dto.zone_id !== undefined && { zone_id: dto.zone_id }),
           ...(dto.image_url !== undefined && { image_url: dto.image_url }),
           ...(dto.status !== undefined && { status: dto.status }),
+          ...(dto.preparation_type !== undefined && {
+            preparation_type: dto.preparation_type,
+          }),
         },
       });
 
@@ -297,7 +304,7 @@ export class RecipesService {
         where: { id },
         include: { RecipeLines: true },
       });
-      if (current.status !== 'approved') {
+      if (current.status !== RecipeStatus.approved) {
         throw new BadRequestException(
           'Only approved recipes can create a new version.',
         );
@@ -305,7 +312,7 @@ export class RecipesService {
       // Archive the current version
       await tx.recipe.update({
         where: { id },
-        data: { status: 'archived' },
+        data: { status: RecipeStatus.archived },
       });
       // Create draft clone
       const clone = await tx.recipe.create({
@@ -321,8 +328,11 @@ export class RecipesService {
           brand_id: current.brand_id,
           zone_id: current.zone_id,
           image_url: current.image_url,
+          preparation_type: current.preparation_type,
           created_by: userId,
-          status: 'draft',
+          parent_recipe_id: current.parent_recipe_id ?? current.id,
+          version: current.version + 1,
+          status: RecipeStatus.draft,
         },
       });
       // Clone BOM lines

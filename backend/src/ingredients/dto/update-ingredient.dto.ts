@@ -1,4 +1,13 @@
-import { IsString, IsOptional, IsIn, IsNumber, Min } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsIn,
+  IsNumber,
+  Min,
+  IsEnum,
+  IsUUID,
+} from 'class-validator';
+import { UsageType } from '@prisma/client';
 
 export class UpdateIngredientDto {
   @IsOptional()
@@ -6,9 +15,12 @@ export class UpdateIngredientDto {
   name?: string;
 
   @IsOptional()
-  @IsString()
-  @IsIn(['dairy', 'vegetable', 'spice', 'grain', 'meat', 'oil'])
-  category?: string;
+  @IsEnum(UsageType)
+  usage_type?: UsageType;
+
+  @IsOptional()
+  @IsUUID()
+  category_id?: string;
 
   @IsOptional()
   @IsString()

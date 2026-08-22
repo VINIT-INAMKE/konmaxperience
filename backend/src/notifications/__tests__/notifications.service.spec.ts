@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { NotificationType } from '@prisma/client';
 import { NotificationsService } from '../notifications.service';
 import { PrismaService } from '../../prisma/prisma.service';
 
@@ -47,7 +48,7 @@ describe('NotificationsService', () => {
     it('creates a notification record with correct fields', async () => {
       const data = {
         user_id: 'user-1',
-        type: 'task_due',
+        type: NotificationType.task_due,
         title: 'Task due',
         body: 'Your task is due soon',
         link_url: '/tasks/123',

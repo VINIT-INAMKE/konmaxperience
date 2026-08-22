@@ -2,10 +2,6 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { sanitizeNumber } from '../import-types';
 import type { CellError, ImportRow } from '../import-types';
 
-const VALID_CATEGORIES = [
-  'dairy', 'vegetable', 'spice', 'grain', 'meat', 'oil', 'fruit', 'bakery',
-  'beverage', 'seafood', 'condiment', 'sweetener', 'nut', 'herb', 'other',
-];
 const VALID_BASE_UNITS = [
   'g', 'kg', 'ml', 'L', 'pieces', 'dozen', 'oz', 'lb',
 ];
@@ -26,17 +22,25 @@ export async function validateIngredientRow(
     validated.name = name;
   }
 
-  // category -- required enum (D-29)
-  const category = (raw.category ?? '').trim().toLowerCase();
+  // category -- required, resolved by name to an IngredientCategory row (D-29).
+  // The legacy free-string Ingredient.category column no longer exists; the
+  // spreadsheet column now names a row in IngredientCategory.
+  const category = (raw.category ?? '').trim();
   if (!category) {
     errors.push({ field: 'category', message: 'Required' });
-  } else if (!VALID_CATEGORIES.includes(category)) {
-    errors.push({
-      field: 'category',
-      message: `Invalid category '${category}'. Valid values: ${VALID_CATEGORIES.join(', ')}`,
-    });
   } else {
-    validated.category = category;
+    const match = await prisma.ingredientCategory.findFirst({
+      where: { name: { equals: category, mode: 'insensitive' } },
+      select: { id: true },
+    });
+    if (!match) {
+      errors.push({
+        field: 'category',
+        message: `Unknown category '${category}'. It must match an existing ingredient category name.`,
+      });
+    } else {
+      validated.category_id = match.id;
+    }
   }
 
   // base_unit -- required enum (D-29)

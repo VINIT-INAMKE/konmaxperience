@@ -1,5 +1,6 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { MovementType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateStockAdjustmentDto } from './dto/create-stock-adjustment.dto';
 import { convertUnit } from '../common/utils/unit-conversion';
@@ -21,7 +22,8 @@ export class InventoryService {
           select: {
             id: true,
             name: true,
-            category: true,
+            category_id: true,
+            category_obj: { select: { id: true, name: true } },
             base_unit: true,
             min_stock_level: true,
           },
@@ -113,7 +115,7 @@ export class InventoryService {
         data: {
           ingredient_id: dto.ingredient_id,
           zone_id: dto.zone_id,
-          movement_type: 'adjustment',
+          movement_type: MovementType.adjustment,
           quantity: convertedQty,
           original_quantity: Math.abs(dto.quantity),
           unit: dto.unit,
@@ -136,7 +138,8 @@ export class InventoryService {
             select: {
               id: true,
               name: true,
-              category: true,
+              category_id: true,
+              category_obj: { select: { id: true, name: true } },
               base_unit: true,
               min_stock_level: true,
             },
@@ -173,7 +176,7 @@ export class InventoryService {
         ingredient: {
           select: {
             name: true,
-            category: true,
+            category_obj: { select: { name: true } },
             base_unit: true,
             min_stock_level: true,
           },
@@ -233,7 +236,8 @@ export class InventoryService {
           select: {
             id: true,
             name: true,
-            category: true,
+            category_id: true,
+            category_obj: { select: { id: true, name: true } },
             base_unit: true,
             min_stock_level: true,
           },

@@ -1,4 +1,5 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
+import { MovementType, PrepBatchStatus } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateWasteLogDto } from './dto/create-waste-log.dto';
 import { convertUnit } from '../../common/utils/unit-conversion';
@@ -156,7 +157,7 @@ export class WasteService {
           data: {
             ingredient_id: dto.ingredient_id!,
             zone_id: dto.zone_id,
-            movement_type: 'waste',
+            movement_type: MovementType.waste,
             quantity: -convertedQtyInBaseUnit,
             original_quantity: dto.quantity,
             unit: dto.unit,
@@ -251,7 +252,7 @@ export class WasteService {
           where: { id: dto.prep_batch_id },
           data: {
             quantity_remaining: { decrement: wasteQtyInBatchUnit },
-            ...(newRemaining <= 0 ? { status: 'depleted' } : {}),
+            ...(newRemaining <= 0 ? { status: PrepBatchStatus.depleted } : {}),
           },
         });
 

@@ -87,12 +87,3 @@ export const INGREDIENT_CATEGORIES = [
   { name: 'Packaging', sort_order: 24 },
   { name: 'Equipment', sort_order: 25 },
 ];
-
-export const CATEGORY_MAPPING: Record<string, string> = {
-  dairy: 'Dairy',
-  vegetable: 'Vegetables',
-  spice: 'Spices (dried)',
-  grain: 'Grains & Cereals',
-  meat: 'Proteins (meat)',
-  oil: 'Oils & Fats',
-};

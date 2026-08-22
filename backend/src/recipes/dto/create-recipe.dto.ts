@@ -8,8 +8,10 @@ import {
   IsUUID,
   IsArray,
   ValidateNested,
+  IsEnum,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+import { PreparationType } from '@prisma/client';
 import { BomLineDto } from './upsert-bom-lines.dto';
 
 export class CreateRecipeDto {
@@ -52,6 +54,10 @@ export class CreateRecipeDto {
   @IsOptional()
   @IsString()
   image_url?: string;
+
+  @IsOptional()
+  @IsEnum(PreparationType)
+  preparation_type?: PreparationType;
 
   @IsOptional()
   @IsArray()

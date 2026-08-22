@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
+import { PrepBatchStatus } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 
 @Injectable()
@@ -16,7 +17,7 @@ export class KitchenExpiryCron {
     const expired = await this.prisma.withReconnect(() =>
       this.prisma.prepBatch.findMany({
         where: {
-          status: 'active',
+          status: PrepBatchStatus.active,
           expires_at: { not: null, lt: new Date() },
         },
         include: { recipe: { select: { computed_cost: true } } },
@@ -32,7 +33,7 @@ export class KitchenExpiryCron {
       const expiredIds = expired.map((b) => b.id);
       await tx.prepBatch.updateMany({
         where: { id: { in: expiredIds } },
-        data: { status: 'expired' },
+        data: { status: PrepBatchStatus.expired },
       });
 
       // Batch create waste logs for batches with remaining quantity

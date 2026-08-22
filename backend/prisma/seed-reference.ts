@@ -7,7 +7,6 @@ import {
   CHANNELS,
   UNIT_CONVERSIONS,
   INGREDIENT_CATEGORIES,
-  CATEGORY_MAPPING,
 } from './seed-data/reference';
 import { guideSections, computeReadTime } from './seed-data/guide-content';
 
@@ -119,28 +118,6 @@ export async function seedReference(prisma: PrismaClient): Promise<void> {
           update: { sort_order: cat.sort_order },
           create: { ...cat, is_default: true },
         });
-      }
-
-      // Backfill legacy string categories (unchanged from the original seed)
-      const allCategories = await tx.ingredientCategory.findMany();
-      const catNameToId = new Map(
-        allCategories.map((c: { name: string; id: string }) => [c.name, c.id]),
-      );
-      const ingredientsToUpdate = await tx.ingredient.findMany({
-        where: { category_id: null, category: { not: null } },
-        select: { id: true, category: true },
-      });
-      for (const ing of ingredientsToUpdate) {
-        const mapped = CATEGORY_MAPPING[ing.category ?? ''];
-        const catId = mapped
-          ? catNameToId.get(mapped)
-          : catNameToId.get('Dairy');
-        if (catId) {
-          await tx.ingredient.update({
-            where: { id: ing.id },
-            data: { category_id: catId },
-          });
-        }
       }
 
       await tx.systemSetting.upsert({

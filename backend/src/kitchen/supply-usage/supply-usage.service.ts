@@ -1,4 +1,5 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
+import { MovementType } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateSupplyUsageDto } from './dto/create-supply-usage.dto';
 
@@ -42,7 +43,7 @@ export class SupplyUsageService {
         data: {
           ingredient_id: dto.ingredient_id,
           zone_id: dto.zone_id,
-          movement_type: 'supply_usage',
+          movement_type: MovementType.supply_usage,
           quantity: -baseQty, // negative = outgoing
           original_quantity: dto.quantity,
           unit: dto.unit,
