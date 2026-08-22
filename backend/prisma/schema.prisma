@@ -416,6 +416,7 @@ model User {
   reset_tokens         PasswordResetToken[]
   owned_tasks          Task[]                    @relation("TaskOwner")
   created_tasks        Task[]                    @relation("TaskCreator")
+  updated_tasks        Task[]                    @relation("TaskUpdater")
   evidence             Evidence[]
   reviewed_evidence    Evidence[]                @relation("EvidenceReviewer")
   approved_approvals   Approval[]                @relation("ApprovalApprover")
@@ -473,41 +474,41 @@ model PasswordResetToken {
 }
 
 model Mission {
-  id               String     @id @default(uuid())
+  id               String        @id @default(uuid())
   title            String
   description      String
-  phase            String     @default("setup")
-  scope            String     @default("food")
-  status           String     @default("planned")
+  phase            MissionPhase  @default(setup)
+  scope            MissionScope  @default(food)
+  status           MissionStatus @default(planned)
   start_date       DateTime?
   end_date         DateTime?
-  progress_percent Float      @default(0)
+  progress_percent Float         @default(0)
   created_by       String
-  created_at       DateTime   @default(now())
-  updated_at       DateTime   @updatedAt
+  created_at       DateTime      @default(now())
+  updated_at       DateTime      @updatedAt
   quests           Quest[]
   tasks            Task[]
-  decisions        Decision[] @relation("DecisionMission")
+  decisions        Decision[]    @relation("DecisionMission")
 }
 
 model Quest {
-  id                     String    @id @default(uuid())
+  id                     String      @id @default(uuid())
   mission_id             String
-  mission                Mission   @relation(fields: [mission_id], references: [id])
+  mission                Mission     @relation(fields: [mission_id], references: [id])
   title                  String
   description            String
   week_number            Int
   owner_user_id          String
-  owner                  User      @relation(fields: [owner_user_id], references: [id])
-  status                 String    @default("planned")
-  baseline_task_count    Int       @default(0)
-  core_progress_percent  Float     @default(0)
-  adhoc_progress_percent Float     @default(0)
-  progress_percent       Float     @default(0)
+  owner                  User        @relation(fields: [owner_user_id], references: [id])
+  status                 QuestStatus @default(planned)
+  baseline_task_count    Int         @default(0)
+  core_progress_percent  Float       @default(0)
+  adhoc_progress_percent Float       @default(0)
+  progress_percent       Float       @default(0)
   start_date             DateTime?
   end_date               DateTime?
-  created_at             DateTime  @default(now())
-  updated_at             DateTime  @updatedAt
+  created_at             DateTime    @default(now())
+  updated_at             DateTime    @updatedAt
   tasks                  Task[]
 }
 
@@ -519,14 +520,18 @@ model Task {
   quest                  Quest?               @relation(fields: [quest_id], references: [id])
   title                  String
   description            String
-  task_type              String               @default("core")
-  domain                 String
+  task_type              TaskType             @default(core)
+  domain                 TaskDomain
   owner_user_id          String
   owner                  User                 @relation("TaskOwner", fields: [owner_user_id], references: [id])
   created_by             String
   creator                User                 @relation("TaskCreator", fields: [created_by], references: [id])
-  status                 String               @default("todo")
-  priority               String               @default("medium")
+  updated_by             String?
+  updater                User?                @relation("TaskUpdater", fields: [updated_by], references: [id])
+  status                 TaskStatus           @default(todo)
+  priority               TaskPriority         @default(medium)
+  subject_type           TaskSubjectType?
+  subject_id             String?
   xp                     Int                  @default(25)
   valid_xp               Int                  @default(0)
   verified               Boolean              @default(false)
@@ -560,22 +565,28 @@ model Task {
   @@index([due_date, status])
   // Optimizes: analytics getWins (valid + completed_at cursor pagination)
   @@index([valid, completed_at(sort: Desc)])
+  // Optimizes: bridge lookups of the tasks attached to a domain record
+  @@index([subject_type, subject_id])
+  // Optimizes: status-first board queries ordered by due date
+  @@index([status, due_date])
 }
 
 model Evidence {
-  id              String    @id @default(uuid())
+  id              String         @id @default(uuid())
   task_id         String
-  task            Task      @relation(fields: [task_id], references: [id])
+  task            Task           @relation(fields: [task_id], references: [id])
   uploaded_by     String
-  uploader        User      @relation(fields: [uploaded_by], references: [id])
-  type            String
+  uploader        User           @relation(fields: [uploaded_by], references: [id])
+  type            EvidenceType
+  source          EvidenceSource @default(manual)
+  bridge_event    String?
   url             String
   notes           String?
-  approval_status String    @default("pending")
+  approval_status ApprovalStatus @default(pending)
   reviewed_by     String?
-  reviewer        User?     @relation("EvidenceReviewer", fields: [reviewed_by], references: [id])
+  reviewer        User?          @relation("EvidenceReviewer", fields: [reviewed_by], references: [id])
   reviewed_at     DateTime?
-  created_at      DateTime  @default(now())
+  created_at      DateTime       @default(now())
 
   // Optimizes: findByTask (evidence by task_id)
   @@index([task_id])
@@ -584,26 +595,26 @@ model Evidence {
 }
 
 model Approval {
-  id                     String          @id @default(uuid())
-  entity_type            String
+  id                     String             @id @default(uuid())
+  entity_type            ApprovalEntityType
   entity_id              String
-  task                   Task?           @relation("TaskApprovals", fields: [entity_id], references: [id])
-  approval_scope         String
+  task                   Task?              @relation("TaskApprovals", fields: [entity_id], references: [id])
+  approval_scope         ApprovalScope
   required_role_code     String
   approved_by            String?
-  approver               User?           @relation("ApprovalApprover", fields: [approved_by], references: [id])
-  status                 String          @default("pending")
+  approver               User?              @relation("ApprovalApprover", fields: [approved_by], references: [id])
+  status                 ApprovalStatus     @default(pending)
   notes                  String?
   override_by            String?
-  overrider              User?           @relation("ApprovalOverrider", fields: [override_by], references: [id])
+  overrider              User?              @relation("ApprovalOverrider", fields: [override_by], references: [id])
   override_reason        String?
   override_at            DateTime?
   delegated_from_user_id String?
-  delegated_from_user    User?           @relation("ApprovalDelegate", fields: [delegated_from_user_id], references: [id])
+  delegated_from_user    User?              @relation("ApprovalDelegate", fields: [delegated_from_user_id], references: [id])
   policy_id              String?
-  policy                 ApprovalPolicy? @relation(fields: [policy_id], references: [id], onDelete: SetNull)
-  created_at             DateTime        @default(now())
-  updated_at             DateTime        @updatedAt
+  policy                 ApprovalPolicy?    @relation(fields: [policy_id], references: [id], onDelete: SetNull)
+  created_at             DateTime           @default(now())
+  updated_at             DateTime           @updatedAt
 
   // Optimizes: findPending, notifications.cron scanApprovalsPending (status + created_at)
   @@index([status, created_at])
@@ -612,22 +623,26 @@ model Approval {
 }
 
 model Decision {
-  id                String         @id @default(uuid())
-  title             String
-  decision_type     String
-  context           String
-  proposed_by       String
-  proposer          User           @relation("DecisionProposer", fields: [proposed_by], references: [id])
-  impact_scope      String
-  final_decision    String?
-  status            String         @default("proposed")
-  linked_task_id    String?
-  linked_task       Task?          @relation("DecisionTask", fields: [linked_task_id], references: [id])
-  linked_mission_id String?
-  linked_mission    Mission?       @relation("DecisionMission", fields: [linked_mission_id], references: [id])
-  created_at        DateTime       @default(now())
-  updated_at        DateTime       @updatedAt
-  votes             DecisionVote[]
+  id                  String         @id @default(uuid())
+  title               String
+  decision_type       String
+  context             String
+  proposed_by         String
+  proposer            User           @relation("DecisionProposer", fields: [proposed_by], references: [id])
+  impact_scope        String
+  final_decision      String?
+  status              DecisionStatus @default(proposed)
+  tier                GovernanceTier @default(tier_1)
+  required_role_codes String[]       @default([])
+  resolved_by         String?
+  resolved_at         DateTime?
+  linked_task_id      String?
+  linked_task         Task?          @relation("DecisionTask", fields: [linked_task_id], references: [id])
+  linked_mission_id   String?
+  linked_mission      Mission?       @relation("DecisionMission", fields: [linked_mission_id], references: [id])
+  created_at          DateTime       @default(now())
+  updated_at          DateTime       @updatedAt
+  votes               DecisionVote[]
 }
 
 model ApprovalPolicy {

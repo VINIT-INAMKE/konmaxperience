@@ -3,7 +3,7 @@ import {
   NotFoundException,
   ForbiddenException,
 } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { ApprovalStatus, Prisma, TaskStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { getPermissionsForRole } from '../permissions/permissions.cache';
 import { Permission } from '../types/permissions';
@@ -131,7 +131,7 @@ export class EvidenceService {
         type: dto.type,
         url: dto.url,
         notes: dto.notes,
-        approval_status: 'pending',
+        approval_status: ApprovalStatus.pending,
       },
       include: {
         uploader: { select: { id: true, name: true } },
@@ -284,7 +284,7 @@ export class EvidenceService {
         // Use _count with filters instead of loading full relations
         _count: {
           select: {
-            evidence: { where: { approval_status: 'approved' } },
+            evidence: { where: { approval_status: ApprovalStatus.approved } },
             approvals: true,
           },
         },
@@ -301,13 +301,15 @@ export class EvidenceService {
     let approvalsSatisfied = true;
     if (task.requires_approval && task._count.approvals > 0) {
       const nonApprovedCount = await tx.approval.count({
-        where: { entity_id: taskId, status: { not: 'approved' } },
+        where: { entity_id: taskId, status: { not: ApprovalStatus.approved } },
       });
       approvalsSatisfied = nonApprovedCount === 0;
     }
 
     const isValid =
-      task.status === 'done' && hasApprovedEvidence && approvalsSatisfied;
+      task.status === TaskStatus.done &&
+      hasApprovedEvidence &&
+      approvalsSatisfied;
 
     const validXp = isValid ? this.calculateEffectiveXp(task) : 0;
 
@@ -367,7 +369,7 @@ export class EvidenceService {
       await tx.evidence.update({
         where: { id: evidenceId },
         data: {
-          approval_status: 'approved',
+          approval_status: ApprovalStatus.approved,
           reviewed_by: reviewerId,
           reviewed_at: new Date(),
         },
@@ -406,7 +408,7 @@ export class EvidenceService {
       await tx.evidence.update({
         where: { id: evidenceId },
         data: {
-          approval_status: 'rejected',
+          approval_status: ApprovalStatus.rejected,
           reviewed_by: reviewerId,
           reviewed_at: new Date(),
           notes,

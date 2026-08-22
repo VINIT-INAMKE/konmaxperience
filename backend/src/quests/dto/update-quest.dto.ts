@@ -1,11 +1,5 @@
 import { IsDateString, IsEnum, IsInt, IsOptional, IsString, IsUUID, Min, MinLength } from 'class-validator';
-
-export enum QuestStatus {
-  PLANNED = 'planned',
-  ACTIVE = 'active',
-  COMPLETED = 'completed',
-  BLOCKED = 'blocked',
-}
+import { QuestStatus } from '@prisma/client';
 
 export class UpdateQuestDto {
   @IsOptional()
@@ -28,7 +22,7 @@ export class UpdateQuestDto {
 
   @IsOptional()
   @IsEnum(QuestStatus)
-  status?: string;
+  status?: QuestStatus;
 
   @IsOptional()
   @IsDateString()

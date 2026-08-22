@@ -4,14 +4,7 @@ import {
   IsNotEmpty,
   IsOptional,
 } from 'class-validator';
-
-export enum EvidenceType {
-  PHOTO = 'photo',
-  DOC = 'doc',
-  VIDEO = 'video',
-  LINK = 'link',
-  NOTE = 'note',
-}
+import { EvidenceType } from '@prisma/client';
 
 export class CreateEvidenceDto {
   @IsEnum(EvidenceType)

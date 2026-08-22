@@ -6,14 +6,7 @@ import {
   IsUUID,
   MinLength,
 } from 'class-validator';
-
-export enum TaskStatus {
-  TODO = 'todo',
-  DOING = 'doing',
-  DONE = 'done',
-  BLOCKED = 'blocked',
-  CANCELLED = 'cancelled',
-}
+import { TaskPriority, TaskStatus } from '@prisma/client';
 
 export class UpdateTaskDto {
   @IsOptional()
@@ -27,11 +20,11 @@ export class UpdateTaskDto {
 
   @IsOptional()
   @IsEnum(TaskStatus)
-  status?: string;
+  status?: TaskStatus;
 
   @IsOptional()
-  @IsEnum({ LOW: 'low', MEDIUM: 'medium', HIGH: 'high', CRITICAL: 'critical' })
-  priority?: string;
+  @IsEnum(TaskPriority)
+  priority?: TaskPriority;
 
   @IsOptional()
   @IsUUID()

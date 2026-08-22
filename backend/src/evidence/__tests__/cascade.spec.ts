@@ -20,7 +20,7 @@ describe('EvidenceService - Validation Cascade', () => {
     id: 'evidence-1',
     task_id: 'task-1',
     uploaded_by: uploaderId,
-    type: 'photo',
+    type: 'image',
     url: 'https://example.com/photo.jpg',
     notes: null,
     approval_status: 'pending',
