@@ -8,6 +8,386 @@ generator client {
   provider = "prisma-client-js"
 }
 
+// ─── Platform ────────────────────────────────────────────────────────────────
+enum NodeStatus {
+  setup
+  active
+  paused
+  closed
+}
+
+enum ActorType {
+  user
+  customer
+  system
+}
+
+// ─── Mission layer ───────────────────────────────────────────────────────────
+enum MissionPhase {
+  setup
+  foundation
+  activation
+  scale
+}
+
+enum MissionScope {
+  food
+  art
+  lifestyle
+  system
+  mixed
+}
+
+enum MissionStatus {
+  planned
+  active
+  completed
+  paused
+}
+
+enum QuestStatus {
+  planned
+  active
+  completed
+  blocked
+}
+
+enum TaskStatus {
+  todo
+  doing
+  done
+  blocked
+  cancelled
+}
+
+enum TaskType {
+  core
+  adhoc
+  improvement
+}
+
+enum TaskDomain {
+  food
+  art
+  lifestyle
+  ops
+  procurement
+  bi
+  talent
+  tech
+  design
+}
+
+enum TaskPriority {
+  low
+  medium
+  high
+  critical
+}
+
+enum TaskSubjectType {
+  recipe
+  product
+  event
+  vendor
+  purchase_order
+  prep_batch
+  order
+  decision
+}
+
+enum EvidenceType {
+  image
+  document
+  video
+  link
+  note
+  system
+}
+
+enum EvidenceSource {
+  manual
+  bridge
+}
+
+enum ApprovalStatus {
+  pending
+  approved
+  rejected
+}
+
+enum ApprovalEntityType {
+  task
+  evidence
+  decision
+  recipe
+}
+
+enum ApprovalScope {
+  task
+  decision
+  recipe
+  pricing
+  vendor
+  experience
+  tech
+  hiring
+  review
+}
+
+enum ApprovalMode {
+  all
+  n_of
+}
+
+enum DecisionStatus {
+  proposed
+  aligned
+  approved
+  rejected
+  reopened
+}
+
+enum GovernanceTier {
+  tier_1
+  tier_2
+  tier_3
+}
+
+enum VoteValue {
+  approve
+  reject
+  abstain
+}
+
+enum MeterMode {
+  task_driven
+  derived
+  hybrid
+}
+
+// ─── Catalog ─────────────────────────────────────────────────────────────────
+enum ProductType {
+  prepared_food
+  packaged
+  experience
+  merchandise
+}
+
+enum FulfilmentType {
+  local
+  shipped
+  booking
+}
+
+enum StockMode {
+  derived_from_recipe
+  tracked
+  capacity
+}
+
+enum ProductStatus {
+  draft
+  active
+  archived
+}
+
+enum MediaKind {
+  image
+  video
+}
+
+// ─── Commerce ────────────────────────────────────────────────────────────────
+enum OrderChannel {
+  dine_in
+  takeaway
+  delivery
+  marketplace
+}
+
+enum OrderStatus {
+  placed
+  confirmed
+  preparing
+  ready
+  served
+  dispatched
+  shipped
+  delivered
+  completed
+  cancelled
+  refunded
+}
+
+enum OrderItemStatus {
+  pending
+  preparing
+  ready
+  packed
+  shipped
+  delivered
+  attended
+  cancelled
+}
+
+enum OrderSource {
+  pos
+  storefront
+  webhook_fallback
+}
+
+enum DeliveryStatus {
+  picked_up
+  in_transit
+  delivered
+}
+
+enum PaymentMethod {
+  cash
+  card
+  upi
+  razorpay
+}
+
+enum PaymentStatus {
+  pending
+  paid
+  failed
+  refunded
+  partially_refunded
+}
+
+enum EventType {
+  dining
+  workshop
+  pop_up
+  tasting
+  other
+}
+
+enum EventStatus {
+  draft
+  upcoming
+  live
+  past
+  cancelled
+}
+
+enum BookingStatus {
+  held
+  confirmed
+  cancelled
+  attended
+  no_show
+}
+
+// ─── Declared for P5 (no model uses them yet — SPEC §3.3) ────────────────────
+enum ShippingProvider {
+  shiprocket
+  manual
+}
+
+enum ShipmentStatus {
+  pending
+  awb_assigned
+  pickup_scheduled
+  picked_up
+  in_transit
+  out_for_delivery
+  delivered
+  rto
+  cancelled
+  failed
+}
+
+enum CouponType {
+  percent
+  fixed
+  free_shipping
+}
+
+enum LoyaltyTier {
+  member
+  regular
+  insider
+}
+
+enum LoyaltyReason {
+  earn
+  redeem
+  adjust
+  expire
+}
+
+enum ReviewStatus {
+  pending
+  published
+  hidden
+}
+
+// ─── Operations ──────────────────────────────────────────────────────────────
+enum RecipeStatus {
+  draft
+  pending
+  approved
+  archived
+}
+
+enum PreparationType {
+  scratch
+  batch_prepared
+  ready_to_sell
+  assemble
+}
+
+enum UsageType {
+  recipe_input
+  supply
+  equipment
+}
+
+enum MovementType {
+  purchase_received
+  prep_deducted
+  order_deducted
+  waste
+  adjustment
+  supply_usage
+  import
+  shipment_packed
+  return
+}
+
+enum PurchaseOrderStatus {
+  draft
+  ordered
+  received
+  cancelled
+}
+
+enum PrepBatchStatus {
+  active
+  depleted
+  expired
+}
+
+enum NotificationType {
+  task_due
+  task_blocked
+  approval_pending
+  low_stock
+  new_order
+  order_ready
+  delivery_update
+  admin_notice
+}
+
+enum NotificationChannel {
+  in_app
+  email
+  whatsapp
+}
+
 model Role {
   id          String   @id @default(uuid())
   code        String   @unique
@@ -19,46 +399,46 @@ model Role {
 }
 
 model User {
-  id                      String               @id @default(uuid())
-  name                    String
-  email                   String               @unique
-  password_hash           String
-  role_id                 String
-  role                    Role                 @relation(fields: [role_id], references: [id])
-  function                String
-  status                  String               @default("active")
-  xp_total                Int                  @default(0)
-  level                   Int                  @default(1)
-  streak_days             Int                  @default(0)
-  created_at              DateTime             @default(now())
-  updated_at              DateTime             @updatedAt
-  refresh_tokens          RefreshToken[]
-  reset_tokens            PasswordResetToken[]
-  owned_tasks             Task[]               @relation("TaskOwner")
-  created_tasks           Task[]               @relation("TaskCreator")
-  evidence                Evidence[]
-  reviewed_evidence       Evidence[]           @relation("EvidenceReviewer")
-  approved_approvals      Approval[]           @relation("ApprovalApprover")
-  overridden_approvals    Approval[]           @relation("ApprovalOverrider")
-  delegated_approvals     Approval[]           @relation("ApprovalDelegate")
-  proposed_decisions      Decision[]           @relation("DecisionProposer")
-  owned_quests            Quest[]
-  owned_zones             Zone[]
-  owned_brands            Brand[]
-  created_assets          Asset[]
-  delegations_from        ApprovalDelegation[] @relation("DelegationFrom")
-  delegations_to          ApprovalDelegation[] @relation("DelegationTo")
-  delegations_created     ApprovalDelegation[] @relation("DelegationCreator")
-  created_recipes         Recipe[]             @relation("RecipeCreator")
-  stockMovements          StockMovement[]      @relation("StockMovementCreator")
-  purchaseOrders          PurchaseOrder[]      @relation("PurchaseOrderer")
-  prepBatches             PrepBatch[]          @relation("PrepBatchCreator")
-  wasteLogs               WasteLog[]           @relation("WasteLogCreator")
-  orders                  Order[]              @relation("OrderCreator")
-  notifications           Notification[]
-  export_records          ExportRecord[]
-  chat_participations     ConversationParticipant[]
-  sent_messages           Message[]
+  id                   String                    @id @default(uuid())
+  name                 String
+  email                String                    @unique
+  password_hash        String
+  role_id              String
+  role                 Role                      @relation(fields: [role_id], references: [id])
+  function             String
+  status               String                    @default("active")
+  xp_total             Int                       @default(0)
+  level                Int                       @default(1)
+  streak_days          Int                       @default(0)
+  created_at           DateTime                  @default(now())
+  updated_at           DateTime                  @updatedAt
+  refresh_tokens       RefreshToken[]
+  reset_tokens         PasswordResetToken[]
+  owned_tasks          Task[]                    @relation("TaskOwner")
+  created_tasks        Task[]                    @relation("TaskCreator")
+  evidence             Evidence[]
+  reviewed_evidence    Evidence[]                @relation("EvidenceReviewer")
+  approved_approvals   Approval[]                @relation("ApprovalApprover")
+  overridden_approvals Approval[]                @relation("ApprovalOverrider")
+  delegated_approvals  Approval[]                @relation("ApprovalDelegate")
+  proposed_decisions   Decision[]                @relation("DecisionProposer")
+  owned_quests         Quest[]
+  owned_zones          Zone[]
+  owned_brands         Brand[]
+  created_assets       Asset[]
+  delegations_from     ApprovalDelegation[]      @relation("DelegationFrom")
+  delegations_to       ApprovalDelegation[]      @relation("DelegationTo")
+  delegations_created  ApprovalDelegation[]      @relation("DelegationCreator")
+  created_recipes      Recipe[]                  @relation("RecipeCreator")
+  stockMovements       StockMovement[]           @relation("StockMovementCreator")
+  purchaseOrders       PurchaseOrder[]           @relation("PurchaseOrderer")
+  prepBatches          PrepBatch[]               @relation("PrepBatchCreator")
+  wasteLogs            WasteLog[]                @relation("WasteLogCreator")
+  orders               Order[]                   @relation("OrderCreator")
+  notifications        Notification[]
+  export_records       ExportRecord[]
+  chat_participations  ConversationParticipant[]
+  sent_messages        Message[]
 
   // Optimizes: leaderboard query (active users sorted by xp_total desc)
   @@index([status, xp_total(sort: Desc)])
@@ -131,46 +511,46 @@ model Quest {
 }
 
 model Task {
-  id                   String               @id @default(uuid())
-  mission_id           String
-  mission              Mission              @relation(fields: [mission_id], references: [id])
-  quest_id             String?
-  quest                Quest?               @relation(fields: [quest_id], references: [id])
-  title                String
-  description          String
-  task_type            String               @default("core")
-  domain               String
-  owner_user_id        String
-  owner                User                 @relation("TaskOwner", fields: [owner_user_id], references: [id])
-  created_by           String
-  creator              User                 @relation("TaskCreator", fields: [created_by], references: [id])
-  status               String               @default("todo")
-  priority             String               @default("medium")
-  xp                   Int                  @default(25)
-  valid_xp             Int                  @default(0)
-  verified             Boolean              @default(false)
-  valid                Boolean              @default(false)
-  requires_approval    Boolean              @default(true)
-  blocked              Boolean              @default(false)
-  blocked_reason       String?
-  depends_on_task_id   String?
-  depends_on           Task?                @relation("TaskDependency", fields: [depends_on_task_id], references: [id])
-  dependents           Task[]               @relation("TaskDependency")
-  readiness_meter_id   String?
-  readiness_meter      ReadinessMeter?      @relation(fields: [readiness_meter_id], references: [id])
-  readiness_value      Int                  @default(0)
-  kpi_id               String?
-  kpi                  Kpi?                 @relation(fields: [kpi_id], references: [id])
-  due_date             DateTime?
-  completed_at         DateTime?
-  created_at           DateTime             @default(now())
-  updated_at           DateTime             @updatedAt
-  evidence             Evidence[]
-  approvals            Approval[]           @relation("TaskApprovals")
-  readiness_events     TaskReadinessEvent[]
-  linked_assets            Asset[]
-  linked_purchase_orders   PurchaseOrder[]
-  linked_decisions         Decision[]           @relation("DecisionTask")
+  id                     String               @id @default(uuid())
+  mission_id             String
+  mission                Mission              @relation(fields: [mission_id], references: [id])
+  quest_id               String?
+  quest                  Quest?               @relation(fields: [quest_id], references: [id])
+  title                  String
+  description            String
+  task_type              String               @default("core")
+  domain                 String
+  owner_user_id          String
+  owner                  User                 @relation("TaskOwner", fields: [owner_user_id], references: [id])
+  created_by             String
+  creator                User                 @relation("TaskCreator", fields: [created_by], references: [id])
+  status                 String               @default("todo")
+  priority               String               @default("medium")
+  xp                     Int                  @default(25)
+  valid_xp               Int                  @default(0)
+  verified               Boolean              @default(false)
+  valid                  Boolean              @default(false)
+  requires_approval      Boolean              @default(true)
+  blocked                Boolean              @default(false)
+  blocked_reason         String?
+  depends_on_task_id     String?
+  depends_on             Task?                @relation("TaskDependency", fields: [depends_on_task_id], references: [id])
+  dependents             Task[]               @relation("TaskDependency")
+  readiness_meter_id     String?
+  readiness_meter        ReadinessMeter?      @relation(fields: [readiness_meter_id], references: [id])
+  readiness_value        Int                  @default(0)
+  kpi_id                 String?
+  kpi                    Kpi?                 @relation(fields: [kpi_id], references: [id])
+  due_date               DateTime?
+  completed_at           DateTime?
+  created_at             DateTime             @default(now())
+  updated_at             DateTime             @updatedAt
+  evidence               Evidence[]
+  approvals              Approval[]           @relation("TaskApprovals")
+  readiness_events       TaskReadinessEvent[]
+  linked_assets          Asset[]
+  linked_purchase_orders PurchaseOrder[]
+  linked_decisions       Decision[]           @relation("DecisionTask")
 
   @@index([owner_user_id, status])
   @@index([quest_id, valid])
@@ -329,17 +709,17 @@ model Zone {
 }
 
 model Brand {
-  id               String         @id @default(uuid())
-  name             String
-  brand_type       String
-  status           String         @default("idea")
-  owner_user_id    String?
-  owner            User?          @relation(fields: [owner_user_id], references: [id])
-  notes            String?
-  assets           Asset[]
-  recipes          Recipe[]
-  menu_categories  MenuCategory[]
-  events           Event[]
+  id              String         @id @default(uuid())
+  name            String
+  brand_type      String
+  status          String         @default("idea")
+  owner_user_id   String?
+  owner           User?          @relation(fields: [owner_user_id], references: [id])
+  notes           String?
+  assets          Asset[]
+  recipes         Recipe[]
+  menu_categories MenuCategory[]
+  events          Event[]
 }
 
 model Channel {
@@ -367,32 +747,32 @@ model Asset {
 }
 
 model Recipe {
-  id                String       @id @default(uuid())
-  name              String
-  description       String
-  prep_steps        String?
-  cooking_method    String?
-  yield_qty         Decimal
-  yield_unit        String
-  portion_size      String
-  shelf_life_hours  Int?
-  brand_id          String?
-  zone_id           String?
-  image_url         String?
-  computed_cost     Decimal?
-  status            String       @default("draft")
-  preparation_type  String       @default("scratch")
-  created_by        String
-  created_at        DateTime     @default(now())
-  updated_at        DateTime     @updatedAt
-  brand             Brand?       @relation(fields: [brand_id], references: [id])
-  zone              Zone?        @relation(fields: [zone_id], references: [id])
-  creator           User         @relation("RecipeCreator", fields: [created_by], references: [id])
-  RecipeLines       RecipeLine[] @relation("RecipeLines")
-  SourceLines       RecipeLine[] @relation("SourceRecipeLines")
-  MenuItems         MenuItem[]
-  linked_assets     Asset[]
-  prepBatches       PrepBatch[]
+  id               String       @id @default(uuid())
+  name             String
+  description      String
+  prep_steps       String?
+  cooking_method   String?
+  yield_qty        Decimal
+  yield_unit       String
+  portion_size     String
+  shelf_life_hours Int?
+  brand_id         String?
+  zone_id          String?
+  image_url        String?
+  computed_cost    Decimal?
+  status           String       @default("draft")
+  preparation_type String       @default("scratch")
+  created_by       String
+  created_at       DateTime     @default(now())
+  updated_at       DateTime     @updatedAt
+  brand            Brand?       @relation(fields: [brand_id], references: [id])
+  zone             Zone?        @relation(fields: [zone_id], references: [id])
+  creator          User         @relation("RecipeCreator", fields: [created_by], references: [id])
+  RecipeLines      RecipeLine[] @relation("RecipeLines")
+  SourceLines      RecipeLine[] @relation("SourceRecipeLines")
+  MenuItems        MenuItem[]
+  linked_assets    Asset[]
+  prepBatches      PrepBatch[]
 }
 
 model RecipeLine {
@@ -422,22 +802,22 @@ model IngredientCategory {
 }
 
 model Ingredient {
-  id              String              @id @default(uuid())
-  name            String
-  category        String?
-  usage_type      String              @default("recipe_input")
-  category_id     String?
-  base_unit       String
-  min_stock_level Decimal
-  created_at      DateTime            @default(now())
-  updated_at      DateTime            @updatedAt
-  category_obj    IngredientCategory? @relation(fields: [category_id], references: [id])
-  RecipeLines     RecipeLine[]
-  VendorPrices    VendorPrice[]
-  IngredientStocks    IngredientStock[]
-  StockMovements      StockMovement[]
-  PurchaseOrderLines  PurchaseOrderLine[]
-  wasteLogs           WasteLog[]
+  id                 String              @id @default(uuid())
+  name               String
+  category           String?
+  usage_type         String              @default("recipe_input")
+  category_id        String?
+  base_unit          String
+  min_stock_level    Decimal
+  created_at         DateTime            @default(now())
+  updated_at         DateTime            @updatedAt
+  category_obj       IngredientCategory? @relation(fields: [category_id], references: [id])
+  RecipeLines        RecipeLine[]
+  VendorPrices       VendorPrice[]
+  IngredientStocks   IngredientStock[]
+  StockMovements     StockMovement[]
+  PurchaseOrderLines PurchaseOrderLine[]
+  wasteLogs          WasteLog[]
 }
 
 model UnitConversion {
@@ -539,12 +919,12 @@ model StockMovement {
   id                String     @id @default(uuid())
   ingredient_id     String
   zone_id           String
-  movement_type     String     // "received" | "prep_deducted" | "order_deducted" | "waste" | "adjustment"
-  quantity          Decimal    // in base_unit, signed (+/-)
-  original_quantity Decimal    // in original unit for display
-  unit              String     // original unit for display
+  movement_type     String // "received" | "prep_deducted" | "order_deducted" | "waste" | "adjustment"
+  quantity          Decimal // in base_unit, signed (+/-)
+  original_quantity Decimal // in original unit for display
+  unit              String // original unit for display
   reason            String?
-  reference_type    String?    // "purchase_order" | "prep_batch" | "order" | "waste_log"
+  reference_type    String? // "purchase_order" | "prep_batch" | "order" | "waste_log"
   reference_id      String?
   created_by        String?
   actor_type        String     @default("user") // user | customer | system
@@ -563,8 +943,8 @@ model StockMovement {
 model PurchaseOrder {
   id              String              @id @default(uuid())
   vendor_id       String
-  zone_id         String              // receiving needs a zone for IngredientStock upsert
-  status          String              @default("draft")  // draft | ordered | received | cancelled
+  zone_id         String // receiving needs a zone for IngredientStock upsert
+  status          String              @default("draft") // draft | ordered | received | cancelled
   total_amount    Decimal             @default(0)
   notes           String?
   ordered_by      String
@@ -605,7 +985,7 @@ model PurchaseOrderLine {
 }
 
 model PrepBatch {
-  id                 String    @id @default(uuid())
+  id                 String     @id @default(uuid())
   recipe_id          String
   zone_id            String
   quantity_produced  Decimal
@@ -613,11 +993,11 @@ model PrepBatch {
   unit               String
   prepared_by        String
   expires_at         DateTime?
-  status             String    @default("active") // active | depleted | expired
-  created_at         DateTime  @default(now())
-  recipe             Recipe    @relation(fields: [recipe_id], references: [id])
-  zone               Zone      @relation(fields: [zone_id], references: [id])
-  creator            User      @relation("PrepBatchCreator", fields: [prepared_by], references: [id])
+  status             String     @default("active") // active | depleted | expired
+  created_at         DateTime   @default(now())
+  recipe             Recipe     @relation(fields: [recipe_id], references: [id])
+  zone               Zone       @relation(fields: [zone_id], references: [id])
+  creator            User       @relation("PrepBatchCreator", fields: [prepared_by], references: [id])
   wasteLogs          WasteLog[]
 
   // Optimizes: FIFO batch lookup by recipe+zone+status (prep-batches, KDS deductions, menu availability)
@@ -629,22 +1009,22 @@ model PrepBatch {
 }
 
 model WasteLog {
-  id             String      @id @default(uuid())
-  waste_type     String      // "ingredient" | "prep_batch"
-  ingredient_id  String?
-  prep_batch_id  String?
-  quantity       Decimal
-  unit           String
-  reason         String      // "spoilage" | "over_prep" | "cooking_error" | "expired" | "other"
-  reason_notes   String?
-  cost_impact    Decimal
-  logged_by      String?     // nullable for system-generated expiry entries
-  zone_id        String
-  created_at     DateTime    @default(now())
-  ingredient     Ingredient? @relation(fields: [ingredient_id], references: [id])
-  prep_batch     PrepBatch?  @relation(fields: [prep_batch_id], references: [id])
-  zone           Zone        @relation(fields: [zone_id], references: [id])
-  creator        User?       @relation("WasteLogCreator", fields: [logged_by], references: [id])
+  id            String      @id @default(uuid())
+  waste_type    String // "ingredient" | "prep_batch"
+  ingredient_id String?
+  prep_batch_id String?
+  quantity      Decimal
+  unit          String
+  reason        String // "spoilage" | "over_prep" | "cooking_error" | "expired" | "other"
+  reason_notes  String?
+  cost_impact   Decimal
+  logged_by     String? // nullable for system-generated expiry entries
+  zone_id       String
+  created_at    DateTime    @default(now())
+  ingredient    Ingredient? @relation(fields: [ingredient_id], references: [id])
+  prep_batch    PrepBatch?  @relation(fields: [prep_batch_id], references: [id])
+  zone          Zone        @relation(fields: [zone_id], references: [id])
+  creator       User?       @relation("WasteLogCreator", fields: [logged_by], references: [id])
 
   // Optimizes: kitchen-metrics waste today aggregate (created_at filter)
   @@index([created_at])
@@ -672,7 +1052,7 @@ model CustomerAddress {
   id          String   @id @default(uuid())
   customer_id String
   customer    Customer @relation(fields: [customer_id], references: [id], onDelete: Cascade)
-  label       String   // "Home" | "Work" | "Other"
+  label       String // "Home" | "Work" | "Other"
   address     String
   landmark    String?
   pincode     String
@@ -687,8 +1067,8 @@ model CustomerAddress {
 
 model Order {
   id                      String      @id @default(uuid())
-  order_number            Int         @default(autoincrement()) @unique
-  channel                 String      // "dine_in" | "takeaway" | "delivery"
+  order_number            Int         @unique @default(autoincrement())
+  channel                 String // "dine_in" | "takeaway" | "delivery"
   status                  String      @default("placed") // placed | preparing | ready | served | dispatched | cancelled
   table_number            String?
   customer_name           String?
@@ -746,7 +1126,7 @@ model OrderItem {
 model Payment {
   id                  String   @id @default(uuid())
   order_id            String   @unique
-  method              String   // "cash" | "card" | "upi" | "razorpay"
+  method              String // "cash" | "card" | "upi" | "razorpay"
   amount              Decimal
   status              String   @default("pending") // pending | paid | refunded
   notes               String?
@@ -760,12 +1140,12 @@ model Notification {
   id             String   @id @default(uuid())
   user_id        String
   user           User     @relation(fields: [user_id], references: [id])
-  type           String   // task_due | task_blocked | approval_pending | low_stock | new_order | order_ready | delivery_update
+  type           String // task_due | task_blocked | approval_pending | low_stock | new_order | order_ready | delivery_update
   title          String
   body           String
   link_url       String?
-  reference_id   String?  // ID of related entity (task_id, order_id, ingredient_id, approval_id)
-  reference_type String?  // "task" | "order" | "ingredient" | "approval"
+  reference_id   String? // ID of related entity (task_id, order_id, ingredient_id, approval_id)
+  reference_type String? // "task" | "order" | "ingredient" | "approval"
   is_read        Boolean  @default(false)
   is_email_sent  Boolean  @default(false)
   created_at     DateTime @default(now())
@@ -778,7 +1158,7 @@ model Feedback {
   id             String    @id @default(uuid())
   order_id       String?
   order          Order?    @relation(fields: [order_id], references: [id])
-  rating         Int       // 1-5
+  rating         Int // 1-5
   comment        String?
   customer_name  String?
   customer_phone String?
@@ -799,7 +1179,7 @@ model Feedback {
 model Event {
   id          String         @id @default(uuid())
   title       String
-  event_type  String         // "dining" | "workshop" | "pop_up" | "tasting" | "other"
+  event_type  String // "dining" | "workshop" | "pop_up" | "tasting" | "other"
   date        DateTime
   capacity    Int
   price       Decimal
@@ -876,7 +1256,7 @@ model GuidePage {
 model ExportRecord {
   id              String   @id @default(uuid())
   report_type     String
-  format          String   // "csv" | "xlsx"
+  format          String // "csv" | "xlsx"
   filters_applied String?  @db.Text
   file_size_bytes Int
   r2_key          String
@@ -893,10 +1273,10 @@ model ExportRecord {
 
 model Conversation {
   id           String                    @id @default(uuid())
-  type         String                    // "direct" | "group"
-  name         String?                   // null for 1-1 chats, required for groups
-  avatar_key   String?                   // R2 key for group avatar (optional)
-  created_by   String                    // user_id of creator
+  type         String // "direct" | "group"
+  name         String? // null for 1-1 chats, required for groups
+  avatar_key   String? // R2 key for group avatar (optional)
+  created_by   String // user_id of creator
   created_at   DateTime                  @default(now())
   updated_at   DateTime                  @updatedAt
   participants ConversationParticipant[]
@@ -930,7 +1310,7 @@ model Message {
   attachment_key  String?
   attachment_url  String?
   attachment_name String?
-  attachment_type String?      // "image" | "file"
+  attachment_type String? // "image" | "file"
   created_at      DateTime     @default(now())
 
   @@index([conversation_id, created_at(sort: Desc)])
