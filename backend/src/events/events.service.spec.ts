@@ -1,9 +1,6 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { EventsService } from './events.service';
 
-/** Mock Prisma Decimal -- supports Number() via valueOf() */
-const dec = (n: number) => ({ valueOf: () => n, toNumber: () => n });
-
 const mockTx = {
   event: {
     findUniqueOrThrow: jest.fn(),

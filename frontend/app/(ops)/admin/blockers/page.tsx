@@ -26,24 +26,6 @@ export default function AdminBlockersPage() {
   const user = useAuthStore((s) => s.user);
   const isAdmin = user?.roleCode === RoleCode.FOUNDER_ADMIN;
 
-  // Redirect non-admin users
-  if (!isAdmin) {
-    return (
-      <div className="flex flex-col items-center justify-center py-12 space-y-2 text-center">
-        <AlertCircle className="size-6 text-destructive" />
-        <p className="text-sm text-muted-foreground">
-          You don&apos;t have access to this page.
-        </p>
-        <Link
-          href="/dashboard"
-          className="text-sm text-primary hover:underline"
-        >
-          Return to dashboard
-        </Link>
-      </div>
-    );
-  }
-
   const {
     data: blockedTasks = [],
     isLoading,
@@ -60,6 +42,25 @@ export default function AdminBlockersPage() {
       void queryClient.invalidateQueries({ queryKey: ['tasks', 'blocked'] });
     },
   });
+
+  // Non-admin users get an access-denied panel. Checked after the hooks above so that
+  // every render calls the same hooks in the same order; the query is gated by `enabled`.
+  if (!isAdmin) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 space-y-2 text-center">
+        <AlertCircle className="size-6 text-destructive" />
+        <p className="text-sm text-muted-foreground">
+          You don&apos;t have access to this page.
+        </p>
+        <Link
+          href="/dashboard"
+          className="text-sm text-primary hover:underline"
+        >
+          Return to dashboard
+        </Link>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (

@@ -13,6 +13,20 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
   ]),
+  {
+    rules: {
+      // React Compiler diagnostics: tracked as warnings until each component is refactored (P4).
+      "react-hooks/set-state-in-effect": "warn",
+      "react-hooks/refs": "warn",
+      "react-hooks/purity": "warn",
+      "react-hooks/incompatible-library": "warn",
+      "@typescript-eslint/no-explicit-any": "warn",
+      "react/no-unescaped-entities": "warn",
+      // Hard correctness rules stay errors:
+      "react-hooks/rules-of-hooks": "error",
+      "prefer-const": "error",
+    },
+  },
 ]);
 
 export default eslintConfig;

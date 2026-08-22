@@ -226,11 +226,7 @@ describe('TasksService', () => {
       mockGroupBy([], []);
       txMock.mission.update.mockResolvedValue({});
 
-      const result = await service.block(
-        'task-1',
-        'Waiting for design assets',
-        regularUser,
-      );
+      await service.block('task-1', 'Waiting for design assets', regularUser);
 
       expect(txMock.task.update).toHaveBeenCalledWith(
         expect.objectContaining({

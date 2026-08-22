@@ -298,7 +298,7 @@ export class EventsService {
     });
 
     // Step 2: Short serializable tx — re-check capacity + insert booking (no external calls)
-    const booking = await this.prisma.$transaction(async (tx) => {
+    await this.prisma.$transaction(async (tx) => {
       const txAgg = await tx.eventBooking.aggregate({
         where: { event_id: eventId },
         _sum: { guests: true },

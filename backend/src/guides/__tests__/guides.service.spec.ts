@@ -337,7 +337,7 @@ describe('GuidesService', () => {
       prisma.guideSection.findUnique.mockResolvedValue(null);
       prisma.guideSection.create.mockImplementation((args) => args.data);
 
-      const result = await service.createSection({
+      await service.createSection({
         title: 'Kitchen Operations',
       });
 

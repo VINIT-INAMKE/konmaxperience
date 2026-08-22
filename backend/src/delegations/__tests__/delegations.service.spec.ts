@@ -122,7 +122,7 @@ describe('DelegationsService', () => {
       };
       prisma.approvalDelegation.create.mockResolvedValue(activeDelegation);
 
-      const result = await service.create(dto as any, 'admin-1');
+      await service.create(dto as any, 'admin-1');
 
       expect(prisma.approvalDelegation.create).toHaveBeenCalledWith(
         expect.objectContaining({

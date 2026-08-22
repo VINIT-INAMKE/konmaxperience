@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useCallback, Fragment } from 'react';
+import { useState, useRef, useCallback, useEffect, Fragment } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -121,11 +121,13 @@ export default function ImportTypePage() {
   const [isCommitting, setIsCommitting] = useState(false);
   const [expandedRecipes, setExpandedRecipes] = useState<Set<string>>(new Set());
 
-  // Redirect if invalid type
-  if (!isValidType) {
-    router.replace('/admin/import');
-    return null;
-  }
+  // Redirect if invalid type. Must be an effect (not an early return) so that every
+  // hook below still runs in the same order on every render.
+  useEffect(() => {
+    if (!isValidType) {
+      router.replace('/admin/import');
+    }
+  }, [isValidType, router]);
 
   const config = IMPORT_TYPE_CONFIG[importType];
 
@@ -458,6 +460,11 @@ export default function ImportTypePage() {
   const handleDownloadXlsxTemplate = () => {
     window.open(`${API_BASE_URL}/imports/template/${importType}`, '_blank');
   };
+
+  // Render nothing while the effect above redirects away from an unknown import type.
+  if (!isValidType) {
+    return null;
+  }
 
   return (
     <div className="space-y-6">

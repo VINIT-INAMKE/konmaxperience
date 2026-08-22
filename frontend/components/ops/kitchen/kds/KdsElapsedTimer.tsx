@@ -7,7 +7,7 @@ interface KdsElapsedTimerProps {
 }
 
 // Shared tick: all timer instances subscribe to a single interval
-let tickListeners = new Set<() => void>();
+const tickListeners = new Set<() => void>();
 let tickInterval: ReturnType<typeof setInterval> | null = null;
 
 function subscribeTick(listener: () => void) {
