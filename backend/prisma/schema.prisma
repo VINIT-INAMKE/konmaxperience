@@ -422,6 +422,7 @@ model User {
   overridden_approvals Approval[]                @relation("ApprovalOverrider")
   delegated_approvals  Approval[]                @relation("ApprovalDelegate")
   proposed_decisions   Decision[]                @relation("DecisionProposer")
+  decision_votes       DecisionVote[]            @relation("DecisionVoter")
   owned_quests         Quest[]
   owned_zones          Zone[]
   owned_brands         Brand[]
@@ -583,24 +584,26 @@ model Evidence {
 }
 
 model Approval {
-  id                     String    @id @default(uuid())
+  id                     String          @id @default(uuid())
   entity_type            String
   entity_id              String
-  task                   Task?     @relation("TaskApprovals", fields: [entity_id], references: [id])
+  task                   Task?           @relation("TaskApprovals", fields: [entity_id], references: [id])
   approval_scope         String
   required_role_code     String
   approved_by            String?
-  approver               User?     @relation("ApprovalApprover", fields: [approved_by], references: [id])
-  status                 String    @default("pending")
+  approver               User?           @relation("ApprovalApprover", fields: [approved_by], references: [id])
+  status                 String          @default("pending")
   notes                  String?
   override_by            String?
-  overrider              User?     @relation("ApprovalOverrider", fields: [override_by], references: [id])
+  overrider              User?           @relation("ApprovalOverrider", fields: [override_by], references: [id])
   override_reason        String?
   override_at            DateTime?
   delegated_from_user_id String?
-  delegated_from_user    User?     @relation("ApprovalDelegate", fields: [delegated_from_user_id], references: [id])
-  created_at             DateTime  @default(now())
-  updated_at             DateTime  @updatedAt
+  delegated_from_user    User?           @relation("ApprovalDelegate", fields: [delegated_from_user_id], references: [id])
+  policy_id              String?
+  policy                 ApprovalPolicy? @relation(fields: [policy_id], references: [id], onDelete: SetNull)
+  created_at             DateTime        @default(now())
+  updated_at             DateTime        @updatedAt
 
   // Optimizes: findPending, notifications.cron scanApprovalsPending (status + created_at)
   @@index([status, created_at])
@@ -609,21 +612,87 @@ model Approval {
 }
 
 model Decision {
-  id                String   @id @default(uuid())
+  id                String         @id @default(uuid())
   title             String
   decision_type     String
   context           String
   proposed_by       String
-  proposer          User     @relation("DecisionProposer", fields: [proposed_by], references: [id])
+  proposer          User           @relation("DecisionProposer", fields: [proposed_by], references: [id])
   impact_scope      String
   final_decision    String?
-  status            String   @default("proposed")
+  status            String         @default("proposed")
   linked_task_id    String?
-  linked_task       Task?    @relation("DecisionTask", fields: [linked_task_id], references: [id])
+  linked_task       Task?          @relation("DecisionTask", fields: [linked_task_id], references: [id])
   linked_mission_id String?
-  linked_mission    Mission? @relation("DecisionMission", fields: [linked_mission_id], references: [id])
-  created_at        DateTime @default(now())
-  updated_at        DateTime @updatedAt
+  linked_mission    Mission?       @relation("DecisionMission", fields: [linked_mission_id], references: [id])
+  created_at        DateTime       @default(now())
+  updated_at        DateTime       @updatedAt
+  votes             DecisionVote[]
+}
+
+model ApprovalPolicy {
+  id                  String        @id @default(uuid())
+  // TODO(p2-05): add `node Node @relation(fields: [node_id], references: [id], onDelete: Restrict)`
+  // and the `approval_policies ApprovalPolicy[]` back-relation once Task 5 introduces `Node`.
+  node_id             String        @default("11111111-1111-4111-8111-111111111111")
+  scope               ApprovalScope
+  domain              TaskDomain?
+  required_role_codes String[]
+  min_approvals       Int           @default(1)
+  mode                ApprovalMode  @default(all)
+  is_default          Boolean       @default(false)
+  created_at          DateTime      @default(now()) @db.Timestamptz(3)
+  updated_at          DateTime      @updatedAt @db.Timestamptz(3)
+  approvals           Approval[]
+
+  @@unique([node_id, scope, domain])
+  @@index([node_id, is_default])
+}
+
+model DecisionVote {
+  id          String    @id @default(uuid())
+  decision_id String
+  decision    Decision  @relation(fields: [decision_id], references: [id], onDelete: Cascade)
+  user_id     String
+  user        User      @relation("DecisionVoter", fields: [user_id], references: [id])
+  role_code   String
+  vote        VoteValue
+  notes       String?
+  created_at  DateTime  @default(now()) @db.Timestamptz(3)
+
+  @@unique([decision_id, user_id])
+  @@index([decision_id])
+}
+
+model ReadinessSignal {
+  id           String         @id @default(uuid())
+  // TODO(p2-05): add `node Node @relation(fields: [node_id], references: [id], onDelete: Restrict)`
+  // and the `readiness_signals ReadinessSignal[]` back-relation once Task 5 introduces `Node`.
+  node_id      String         @default("11111111-1111-4111-8111-111111111111")
+  meter_id     String
+  meter        ReadinessMeter @relation(fields: [meter_id], references: [id], onDelete: Cascade)
+  source_event String
+  source_type  String
+  source_id    String
+  value        Decimal        @db.Decimal(14, 4)
+  created_at   DateTime       @default(now()) @db.Timestamptz(3)
+
+  @@index([meter_id, created_at(sort: Desc)])
+  @@index([source_type, source_id])
+}
+
+model ReadinessSnapshot {
+  id       String         @id @default(uuid())
+  // TODO(p2-05): add `node Node @relation(fields: [node_id], references: [id], onDelete: Restrict)`
+  // and the `readiness_snapshots ReadinessSnapshot[]` back-relation once Task 5 introduces `Node`.
+  node_id  String         @default("11111111-1111-4111-8111-111111111111")
+  meter_id String
+  meter    ReadinessMeter @relation(fields: [meter_id], references: [id], onDelete: Cascade)
+  date     DateTime       @db.Date
+  value    Decimal        @db.Decimal(6, 2)
+
+  @@unique([meter_id, date])
+  @@index([node_id, date])
 }
 
 model ApprovalDelegation {
@@ -654,9 +723,13 @@ model ReadinessMeter {
   current_value Float                @default(0)
   target_value  Float                @default(100)
   weight        Float                @default(1.0)
+  mode          MeterMode            @default(task_driven)
+  formula_key   String?
   updated_at    DateTime             @updatedAt
   tasks         Task[]
   events        TaskReadinessEvent[]
+  signals       ReadinessSignal[]
+  snapshots     ReadinessSnapshot[]
 }
 
 model TaskReadinessEvent {
