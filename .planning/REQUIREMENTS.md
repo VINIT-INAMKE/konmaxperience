@@ -307,6 +307,173 @@ Which phases cover which requirements. Updated during roadmap creation.
 - Mapped to phases: 32
 - Unmapped: 0
 
+## v2.0 Requirements
+
+Requirements for milestone v2.0 — Mission OS + Marketplace. Source of truth is `/SPEC.md` (v2.0, 2026-08-22); section references are to that file. Each requirement maps to one roadmap phase (29–35). Phase 25 (third-party delivery) and Phase 26 (order detail page) were never built in v1.1; their intent is covered here by SHIP-* and OPS-05.
+
+### Stop the Bleeding — Critical/High defects (Phase 29)
+
+- [ ] **FIX-01**: Marketplace orders require `fulfilment_zone_id`; stock for a marketplace order is deducted exactly once against that zone (regression test) (Phase 29)
+- [ ] **FIX-02**: Named throttlers `default/short/long` are registered and every `@Throttle` references an existing name; public auth/OTP/feedback routes carry explicit per-route limits keyed by `cf-connecting-ip` when present (Phase 29)
+- [ ] **FIX-03**: Refresh JWT carries `token_use: refresh`, is signed with a separate `JWT_REFRESH_SECRET`, and `JwtStrategy` rejects refresh tokens on API routes (Phase 29)
+- [ ] **FIX-04**: `POST /customer/orders/confirm` is idempotent — pending key consumed with `GETDEL` under a lock, `Payment.razorpay_payment_id @unique`, P2002 returns the existing order; replay test proves no duplicate Order/Payment (Phase 29)
+- [ ] **FIX-05**: `/confirm` and the `payment.captured` webhook both call one `FulfilmentService.confirmPaidOrder`; the duplicated webhook fulfilment code is deleted (Phase 29)
+- [ ] **FIX-06**: Batch-prepared deduction fails the transaction (409) when `quantity_remaining` is insufficient instead of warning — the last item cannot be sold twice (Phase 29)
+- [ ] **FIX-07**: POS and customer order paths are guard-isolated — customer JWTs cannot reach staff order endpoints, staff JWTs cannot reach `customer/*`, and POS orders always carry `zone_id` (regression tests) (Phase 29)
+- [ ] **FIX-08**: Assemble deduction converts each component's unit via `UnitConversion` before deducting (regression test with mismatched units) (Phase 29)
+- [ ] **FIX-09**: QStash webhook endpoint verifies the signature on every call and returns 403 when no receiver keys are configured (Phase 29)
+- [ ] **FIX-10**: `ConfigModule` validation schema — production boot fails listing missing `DATABASE_URL, DIRECT_DATABASE_URL, JWT_SECRET, JWT_REFRESH_SECRET, JWT_PUBLIC_KEY, R2_*, UPSTASH_REDIS_URL, RAZORPAY_*, WHATSAPP_*`; `.env.example` generated from the schema (Phase 29)
+- [ ] **FIX-11**: Route-level `error.tsx` and `global-error.tsx` exist for the ops, public and account segments and render a recoverable state (Phase 29)
+- [ ] **FIX-12**: `seed:demo` refuses to run when `NODE_ENV=production`, prints random passwords once and never hard-codes them; `seed:reference` is idempotent (Phase 29)
+- [ ] **FIX-13**: All 43 backend jest suites pass under `jest --ci` with no skipped suites (Phase 29)
+- [ ] **FIX-14**: `.github/workflows/ci.yml` runs backend `npm ci → lint → tsc --noEmit → jest --ci → prisma validate → build` and frontend `npm ci → lint → tsc --noEmit → build` on every push/PR; Railway and Vercel deploy only on green `master` (Phase 29)
+
+### Platform foundation (Phase 30)
+
+- [ ] **PLAT-01**: Single fresh migration baseline replaces all v1 migrations; migrations run in a release step, not the build; CI gains an integration job with a Postgres service running `jest --config test/jest-integration.json` against the new schema (Phase 30)
+- [ ] **PLAT-02**: `Node` model exists, one node is seeded, and every aggregate in SPEC §3.1 has a required `node_id` with node-scoped uniques for `ReadinessMeter.code`, `ChannelModifier.channel`, `Product.slug` (Phase 30)
+- [ ] **PLAT-03**: Every enum-like field (mission/quest/task/order/payment/shipment/recipe/PO/batch/notification statuses and types) is a Prisma enum — no free-text status strings remain (Phase 30)
+- [ ] **PLAT-04**: `AuditEvent` row written inside every mutating transaction with `actor_type` (user|customer|system), `actor_id`, before/after JSON; `GET /audit?entity_type=&entity_id=` lists them (Phase 30)
+- [ ] **PLAT-05**: All `DateTime` columns are `@db.Timestamptz(3)`, money `Decimal(12,2)`, quantities `Decimal(14,4)`; CHECK constraints on `RecipeLine` (input XOR), `IngredientStock.current_quantity >= 0`, `WasteLog` XOR; `RecipeLine → Recipe` cascade, `ingredient_id` restrict (Phase 30)
+- [ ] **PLAT-06**: `Product`, `ProductCategory`, `ProductVariant`, `ProductMedia` replace `MenuItem`/`MenuCategory`; POS, KDS, Pick & Pack, exports, imports and analytics read products (Phase 30)
+- [ ] **PLAT-07**: `SystemSetting.value` is JSON with an allowlist of keys (`xp_rules`, `delivery_pincodes`, `shipping`, `loyalty`); `ModuleAccess` table seeded with the SPEC §6.3 defaults (Phase 30)
+- [ ] **PLAT-08**: Schema carries `Task.subject_type/subject_id`, `ApprovalPolicy`, `Approval.entity_type/entity_id` (task FK removed), `DecisionVote`, `ReadinessSignal`, `ReadinessSnapshot`, `Shipment`/`ShipmentEvent`, `Coupon`/`CouponRedemption`, `LoyaltyAccount`/`LoyaltyTransaction`, `Review`, `Refund`, `UsageEvent`; `StockMovement.movement_type` enum with `actor_type/actor_id` (Phase 30)
+- [ ] **PLAT-09**: SPEC §3.5 removals done (`Ingredient.category` string, BullMQ remnants, `Approval.task` relation, `spectrumui/`, `p-combobox-3`, duplicate `MissionCard`/`GuideSectionCard`, `framer-motion`, `shadcn` runtime dep) and `seed:reference` + `seed:demo` run clean on an empty DB (Phase 30)
+
+### Mission bridge (Phase 31)
+
+- [ ] **BRIDGE-01**: `backend/src/common/events/domain-events.ts` declares every event in SPEC §4.1 with a typed payload `{ node_id, actor, occurred_at, … }`; emitters fire only after commit inside try/catch (Phase 31)
+- [ ] **BRIDGE-02**: `MissionBridgeService` subscribes to ops events with rules in `mission-bridge.rules.ts`; each rule declares evidence, signal and optional task-spawn behaviour (Phase 31)
+- [ ] **BRIDGE-03**: When a source entity resolves to a task (`Task.subject`, `PurchaseOrder.linked_task_id`, `Decision.linked_task_id`) the bridge creates `Evidence{ type: system, source: bridge, bridge_event, url: deep link, approval_status: pending }` uploaded by the system user — never auto-approved (Phase 31)
+- [ ] **BRIDGE-04**: `feedback.received` with rating ≤ 2 spawns one `Task{ task_type: improvement, domain: food, owner: FRONTEND_LEAD, subject: order }` per order (Phase 31)
+
+### Derived readiness (Phase 31)
+
+- [ ] **READY-01**: `ReadinessMeter.mode` (task_driven|derived|hybrid) with `STANDARDIZATION`, `PROCUREMENT`, `SALES`, `QUALITY` computed by the SPEC §4.3 formulas from ops state; `ReadinessSignal` ledger records each contribution (Phase 31)
+- [ ] **READY-02**: Hybrid meters (`BACKEND`, `FRONTEND`) = 0.5 × task-driven + 0.5 × mapped derived meter; remaining meters stay task-driven; XP rules read from `SystemSetting['xp_rules']` (Phase 31)
+- [ ] **READY-03**: Recompute on relevant events and nightly; `ReadinessSnapshot` written daily; `GET /readiness-meters/:code/history?days=90` returns the series (Phase 31)
+
+### Governance (Phase 31)
+
+- [ ] **GOV-01**: `ApprovalPolicy` seeded from the blueprint gates (food, pricing, vendor, experience, tech, hiring, default = owner's domain lead) with CRUD at `approval-policies` (Phase 31)
+- [ ] **GOV-02**: Task create/update with `requires_approval` resolves the policy by `(scope=task, domain)` and creates one pending `Approval` per required role; validation cascade requires all approved or a `FOUNDER_ADMIN` override with reason; self-approval blocked; delegation honoured (Phase 31)
+- [ ] **GOV-03**: Recipe draft → pending → approved is driven by `Approval{ entity_type: recipe }` rows from the `food` policy; the legacy direct status flip is removed (Phase 31)
+- [ ] **GOV-04**: Decisions run tier 1 (auto-approved when created by the domain lead), tier 2 (`DecisionVote` 2+1 → `aligned` → `approved`; any reject → `rejected`), tier 3 (`FOUNDER_ADMIN` resolves); founder may `reopen`; votes via `decisions/:id/votes`; `GET /approvals` returns pending task, decision and recipe approvals for the caller's roles (Phase 31)
+
+### Information architecture (Phase 32)
+
+- [ ] **IA-01**: Persistent header on every ops page — mission › phase › this week's quest › node readiness % › approvals-waiting and my-blockers badges › XP/level › ⌘K search (tasks, products, recipes, guides) › notifications › theme › user; never null (start-a-mission CTA or "ask the founder" note) (Phase 32)
+- [ ] **IA-02**: Navigation spine in the fixed SPEC §6.2 order (Mission Control, My Tasks, My Quests, Evidence, Approvals, Decisions, Readiness, Team) then collapsible Kitchen · Procurement · Commerce · Catalog & Experiences · Intelligence · Admin; Guide and Chat move to the header; no label appears twice (Phase 32)
+- [ ] **IA-03**: Items render only when the role's `ModuleAccess` allows; `/admin/modules` lets `MANAGE_SYSTEM` edit `role_codes`/`enabled`/`sort_order`; `GET /modules`, `PATCH /modules/:key` (Phase 32)
+- [ ] **IA-04**: `/tasks` is server-filtered and paginated (`tasks?mine=1&status=&quest_id=`, cursor/limit) with kanban + list views; `/quests?mine=1`; `/team` merges wins, contribution, activity and leaderboard (Phase 32)
+- [ ] **IA-05**: Task and Quest create/edit are Sheets; evidence upload from the task row and task page; approve/reject inline with a required note on reject; every ops card with a task link shows a "Quest › Task" chip and the meter it feeds; quest pages list linked POs, recipes, products, batches and events (Phase 32)
+- [ ] **IA-06**: Mission Control (admin) shows Action Required / Status (with 30-day readiness sparkline) / Intelligence; My Day (everyone else) shows Today's Focus, quest progress, evidence awaiting review, meter contributions, nudges (Phase 32)
+- [ ] **IA-07**: Pusher private channels drive KDS, Pick & Pack, Shipments, Approvals count and Notifications; polling only as a ≥ 30 s fallback; `UsageEvent` records page views per role and key actions (Phase 32)
+
+### Design system (Phase 32)
+
+- [ ] **DESIGN-01**: One token file promotes the `--public-*` palette (stone ground, ink `#1c1917`, terracotta `#c2410c`, olive `#365314`, amber `#a16207`) to `:root` light with the designed dark set (`#141210`, `#f5f0e8`, `#e8663a`, `#8fae4a`, `#d9a441`); status colours are separate from brand (Phase 32)
+- [ ] **DESIGN-02**: Light and dark both pass contrast validation; a lint rule rejects arbitrary colour values in components; Plus Jakarta Sans (UI) and Geist Mono (data); the homepage keeps its scoped styles untouched (Phase 32)
+- [ ] **DESIGN-03**: Every form uses `react-hook-form + zod`; `<Button>` is the only button and `<Card>` the only card; every list has loading, empty and error states (Phase 32)
+- [ ] **DESIGN-04**: Motion allowlist enforced — BorderBeam for new KDS/Pick & Pack orders, NumberTicker for XP/readiness, confetti on level-up and task validation only, `motion-reduce` respected; everything else removed (Phase 32)
+
+### Catalog (Phase 33)
+
+- [ ] **CAT-01**: Staff `catalog/products|variants|categories|media` CRUD + publish with `ProductType` (prepared_food|packaged|experience|merchandise), `FulfilmentType`, `StockMode`, GST-inclusive `tax_rate`, `hsn_code`, weight/dimensions for shipped goods, node-scoped slug (Phase 33)
+- [ ] **CAT-02**: Availability per type preserved from Phase 28 — `prepared_food` by `preparation_type` fork, `packaged` by `ready_to_sell`/`batch_prepared` recipe, `merchandise` by `variant.stock_on_hand` (with `low_stock_threshold` → `stock.low`), `experience` by `event.capacity − confirmed guests` (Phase 33)
+- [ ] **CAT-03**: Public `catalog/*` endpoints are `@Public()`, cached 60 s, and never return cost, yield, BOM or margin fields (test asserts field absence) (Phase 33)
+- [ ] **CAT-04**: Experiences are products linked to `Event` (`product_id` on Event); `EventBooking` remains the capacity record with `held|confirmed|cancelled|attended|no_show` and `hold_expires_at` (Phase 33)
+
+### Cart and checkout (Phase 33)
+
+- [ ] **CHK-01**: Redis cart lines carry `productId, variantId?, quantity, fulfilment`; the server re-prices (base + variant delta + channel modifier) and re-checks availability on every sync, rejecting unavailable lines; a cart may mix fulfilment types (Phase 33)
+- [ ] **CHK-02**: `POST /customer/checkout/quote` — local lines need `pincode ∈ SystemSetting['delivery_pincodes']` or pickup; shipped lines need Shiprocket serviceability + rate for `(pickup_pincode, dest_pincode, weight)`; booking lines create a 15-minute hold; response itemises subtotal, discount, shipping, tax breakup, loyalty redeemable, total (Phase 33)
+- [ ] **CHK-03**: `POST /customer/orders` creates a Razorpay order for the quoted total and stores `pending_order:{rzp_order_id}` for 30 minutes (Phase 33)
+- [ ] **CHK-04**: `POST /customer/orders/confirm` creates `Order` + `Payment` in one Serializable transaction and routes each line — local prepared food → KDS/Pick & Pack by `preparation_type`, shipped → `packed` queue, booking → `EventBooking.confirmed` — writing `CouponRedemption` and `LoyaltyTransaction` in the same transaction (Phase 33)
+- [ ] **CHK-05**: `POST /orders/:id/refund` (full/partial, staff) calls Razorpay, writes a `Refund` row, and `refund.processed` webhook reconciles `Payment.status` (refunded|partially_refunded) (Phase 33)
+
+### Shipping (Phase 33)
+
+- [ ] **SHIP-01**: `ShippingProvider` interface (`checkServiceability`, `createShipment`, `assignAwb`, `schedulePickup`, `getLabel`, `track`, `cancel`) with `ShiprocketAdapter` against `apiv2.shiprocket.in/v1/external` and a login token cached ~9 days in Redis (Phase 33)
+- [ ] **SHIP-02**: `ManualProvider` lets staff paste an AWB/tracking URL; provider choice, pickup location code and default package dimensions live in `SystemSetting['shipping']` (Phase 33)
+- [ ] **SHIP-03**: Staff `shipments` API — list, pack (creates `Shipment` from packed lines), assign-awb, pickup, label, cancel — each transition appended as `ShipmentEvent` (Phase 33)
+- [ ] **SHIP-04**: `POST /webhooks/shiprocket` verifies a shared-secret header, is idempotent on `(awb, status, occurred_at)`, updates `Shipment.status` and `Order.status` (`shipped` → `delivered`), and emits `shipment.status_changed`/`shipment.delivered` (Phase 33)
+- [ ] **SHIP-05**: `GET /customer/orders/:id/shipment` returns AWB, courier, tracking URL and events; status changes push a customer Pusher event and a WhatsApp template (Phase 33)
+
+### Promotions (Phase 33)
+
+- [ ] **PROMO-01**: `Coupon` CRUD at `promotions/coupons` — percent|fixed|free_shipping, `min_order`, `max_discount`, `applies_to` product types, validity window, usage and per-customer limits (Phase 33)
+- [ ] **PROMO-02**: Coupons are validated only server-side in the quote (`customer/coupons/validate` + quote), stacking is disallowed, `free_shipping` applies to shipped lines only, and `CouponRedemption` is unique per `(coupon_id, order_id)` with a `coupon.redeemed` event (Phase 33)
+
+### Loyalty (Phase 33)
+
+- [ ] **LOYAL-01**: `LoyaltyAccount` per customer (global, not per node) with tiers member|regular|insider; `SystemSetting['loyalty']` holds `earn_rate_per_100`, `redeem_value_per_point`, tiers; `GET /customer/loyalty` and staff `customers/:id` loyalty adjust with `AuditEvent` (Phase 33)
+- [ ] **LOYAL-02**: Points earn on `order.delivered`/`booking.attended`, redeem in quote/confirm (`loyalty_points_redeemed` on the order), and expire after 365 days via a nightly job (Phase 33)
+
+### Reviews (Phase 33)
+
+- [ ] **REV-01**: One `Review` per `order_item` after `delivered`/`attended`; auto-published at rating ≥ 4, otherwise `pending`; `Product.rating_avg/rating_count` maintained by trigger; `review.published` event (Phase 33)
+- [ ] **REV-02**: Staff `reviews` moderation endpoint (publish|hide) restricted to `FRONTEND_LEAD`/admins; review invitation sent by WhatsApp + email after delivery or attendance (Phase 33)
+
+### Search (Phase 33)
+
+- [ ] **SRCH-01**: `Product.search_text` tsvector (`name || description || story || category || brand`) with GIN index and trigger; `GET /catalog/search?q=` with type and category facets (Phase 33)
+
+### Storefront (Phase 34)
+
+- [ ] **STORE-01**: `/shop`, `/shop/[category]`, `/p/[slug]`, `/experiences`, `/experiences/[slug]`, `/search?q=` are server components exporting `generateMetadata`, with JSON-LD (`Product`/`Event`) on detail pages, generated sitemap and robots, and `next/image` with the R2 remote pattern; `/menu` redirects to `/shop?type=prepared_food` (Phase 34)
+- [ ] **STORE-02**: `/cart` and `/checkout` (client) run the single mixed-fulfilment flow — pickup or local address, shipped address with live rate, booking hold timer, coupon entry, loyalty redemption, Razorpay pay → confirm (Phase 34)
+- [ ] **STORE-03**: `/orders/[id]/track` shows the order timeline for local lines and shipment tracking (AWB, courier, events) for shipped lines via Pusher; `/login` uses the existing OTP flow (Phase 34)
+- [ ] **STORE-04**: Desktop layouts are designed (not stretched mobile) and mobile stays responsive; the homepage `/` is visually untouched with only performance and metadata changes allowed (Phase 34)
+
+### Customer account (Phase 34)
+
+- [ ] **ACCT-01**: `/account`, `/account/orders` (history, re-order, receipts across all channels and fulfilment types), `/account/addresses` (CRUD, default) and `/account/loyalty` (balance, tier, transactions) (Phase 34)
+- [ ] **ACCT-02**: `/account/reviews` and `/feedback/[orderId]` let a customer review delivered/attended items once each; customer session is 7-day sliding with `jti` revocation on logout; edge proxy verifies with the EdDSA public key (Phase 34)
+
+### Staff commerce screens (Phase 34)
+
+- [ ] **OPS-01**: Catalog admin — products, variants, media upload (R2), categories, publish/archive — gated by `ModuleAccess` for `DESIGN_OUTREACH_LEAD`, `FRONTEND_LEAD`, admins (Phase 34)
+- [ ] **OPS-02**: Promotions screen (coupon CRUD, usage counts) and Reviews moderation screen (pending queue, publish/hide) (Phase 34)
+- [ ] **OPS-03**: Shipments queue — pack → assign AWB → schedule pickup → print label → track — updated live via Pusher; failed shipments surface in Mission Control Action Required (Phase 34)
+- [ ] **OPS-04**: Experiences admin (events + attendance marking `attended`/`no_show` on the day) and Customers screen (profile, orders, loyalty adjustments) (Phase 34)
+- [ ] **OPS-05**: Orders screen covers all channels with a full `/orders/[id]` detail page (timeline, payment, refund action, shipment status, receipt) replacing `OrderDetailSheet` — closes the Phase 26 intent; POS sells `prepared_food` products only and is otherwise unchanged (Phase 34)
+
+### Quality gates (Phases 29–34)
+
+- [ ] **QA-01**: `nestjs-pino` with request ids, Sentry on both sides, `/health` runs `SELECT 1` and checks Redis (Phase 29)
+- [ ] **QA-02**: Integration tests cover PO receive, prep batch, evidence cascade, policy approvals and derived-meter recompute (Phase 31)
+- [ ] **QA-03**: Playwright smoke test 1 — `login → create task → upload evidence → approve → meter moves` — runs on a built preview in CI (Phase 31)
+- [ ] **QA-04**: Definition-of-done lint — no new `any`, no `console.*` in services, no arbitrary colour values — enforced in CI (Phase 32)
+- [ ] **QA-05**: Integration tests cover order confirm (idempotency), fulfilment routing, shipment lifecycle, coupon, loyalty and review flows; every webhook is idempotent on the provider event id (Phase 33)
+- [ ] **QA-06**: Playwright smoke test 2 — `browse → add three fulfilment types → coupon → pay (Razorpay test) → confirm → track` — runs in CI (Phase 34)
+
+### Run-it layer (Phase 35)
+
+- [ ] **RUN-01**: WhatsApp staff templates for approvals waiting, blockers, low stock and failed shipments with per-type cooldowns (Phase 35)
+- [ ] **RUN-02**: Daily close screen — orders/revenue by channel, waste logged, batches depleted, stock reconciliation result, open shipments — signed off by `FRONTEND_LEAD`/`FOUNDER_ADMIN` as an `AuditEvent` (Phase 35)
+- [ ] **RUN-03**: Theoretical vs actual food cost report (recipe-derived COGS vs stock movements per period) with variance surfaced to `BI_LEAD` (Phase 35)
+- [ ] **RUN-04**: Admin usage dashboard over `UsageEvent` — page views per role, key actions, last-seen per user (Phase 35)
+- [ ] **RUN-05**: AI evidence-review assist and morning brief on the Claude API, human-in-the-loop — suggestions only, never approving evidence, setting readiness values or prices (Phase 35)
+- [ ] **RUN-06**: Nightly jobs under `pg_try_advisory_lock` — stock reconciliation vs `Σ StockMovement` writing `stock.reconciliation_mismatch` `AuditEvent` on drift, loyalty expiry, readiness snapshots; R2 lifecycle rule on `exports/` (30 days) and weekly orphan sweep (Phase 35)
+
+### v2.0 coverage
+
+| Group | Count | Phase |
+|-------|-------|-------|
+| FIX | 14 | 29 |
+| PLAT | 9 | 30 |
+| BRIDGE / READY / GOV | 4 / 3 / 4 | 31 |
+| IA / DESIGN | 7 / 4 | 32 |
+| CAT / CHK / SHIP / PROMO / LOYAL / REV / SRCH | 4 / 5 / 5 / 2 / 2 / 2 / 1 | 33 |
+| STORE / ACCT / OPS | 4 / 2 / 5 | 34 |
+| QA | 6 | 29–34 |
+| RUN | 6 | 35 |
+
+- v2.0 requirements: 89 total
+- Mapped to phases: 89
+- Unmapped: 0
+
 ---
 *Requirements defined: 2026-03-22*
-*Last updated: 2026-03-26 after Phase 24 planning*
+*Last updated: 2026-08-22 — v2.0 requirements added from SPEC.md (P0 planning sync)*

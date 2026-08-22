@@ -1,30 +1,30 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.1
-milestone_name: User Guide & Data Management
-status: unknown
-stopped_at: Completed 28-04-PLAN.md
-last_updated: "2026-03-27T13:12:52.863Z"
+milestone: v2.0
+milestone_name: Mission OS + Marketplace
+status: "P0 complete — Phase 29 (P1) next"
+stopped_at: P0 planning sync complete (SPEC.md at cd04779; PROJECT/ROADMAP/REQUIREMENTS synced)
+last_updated: "2026-08-22"
 progress:
-  total_phases: 15
-  completed_phases: 12
-  total_plans: 50
-  completed_plans: 49
+  total_phases: 7
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-22)
+See: .planning/PROJECT.md (updated 2026-08-22) and /SPEC.md (canonical v2.0 specification)
 
 **Core value:** Every piece of work must be evidence-backed, approved, and validated before it counts -- turning real execution into measurable readiness and progress.
-**Current focus:** Phase 27 complete. Next: Phase 25, 26, or 28 (unplanned)
 
 ## Current Position
 
-Phase: 27 (mission-flow-assessment-gap-closure) — COMPLETE
-Plan: 5 of 5 (all done)
+Milestone: v2.0 Mission OS + Marketplace (Phases 29–35 on branch `v2-os-marketplace`)
+Phase: 29 (Stop the Bleeding, P1) — NOT STARTED (no plans written yet)
+Previous milestone: v1.1 complete 2026-03-27 (Phases 14–24, 27, 28 shipped; Phases 25 and 26 were never built — see ROADMAP.md notes)
 
 ## Performance Metrics
 
@@ -244,6 +244,8 @@ Recent decisions affecting current work:
 - Phase 26 added: Order Detail Page — /orders/[id] with payment processing (QR + WhatsApp link), receipt download, order timeline
 - Phase 27 added: Mission Flow & Assessment Gap Closure — aggregation API, ops-to-mission linking, dashboard widgets, UX flow improvements
 - Phase 28 added: Recipe preparation_type — multi-fulfillment food product support (scratch, batch_prepared, ready_to_sell, assemble). Forked availability, deduction timing, KDS routing, pick & pack queue. 10 requirements scoped.
+- 2026-08-22 audit: Phases 25 and 26 confirmed never built (no code, no plans). v1.1 closed as-is; their intent moves to v2.0 Phases 33/34.
+- v2.0 opened 2026-08-22 from SPEC.md: Phase 29 Stop the Bleeding (P1), 30 Platform Foundation (P2), 31 Mission Bridge (P3), 32 Role-Aware IA + Identity (P4), 33 Marketplace Backend (P5a), 34 Marketplace Storefront + Staff Commerce (P5b), 35 Run-It Layer (P6). 89 requirements scoped.
 
 ### Pending Todos
 
@@ -251,10 +253,12 @@ None yet.
 
 ### Blockers/Concerns
 
-None yet.
+- Phase 29 must close all 14 Critical/High audit defects (FIX-01..14) before Phase 30 resets the schema; the DB is not deployed, so the reset is safe but nothing from v1 migrations survives.
+- Shiprocket credentials (`SHIPROCKET_*`) are needed before Phase 33 integration tests can run against the sandbox.
 
 ## Session Continuity
 
-Last session: 2026-03-27T13:12:52.851Z
-Stopped at: Completed 28-04-PLAN.md
+Last session: 2026-08-22
+Stopped at: P0 planning sync complete — SPEC.md committed (cd04779), planning docs synced, contextdocs marked historical
 Resume file: None
+Next action: `/gsd:plan-phase 29`

@@ -3,7 +3,8 @@
 ## Milestones
 
 - ✅ **v1.0 MVP** - Phases 1-13 (shipped 2026-03-22)
-- 🚧 **v1.1 User Guide & Data Management** - Phases 14-21 (in progress)
+- ✅ **v1.1 User Guide, Data Management & Commerce Foundations** - Phases 14-28 (complete 2026-03-27; Phases 25 and 26 not built — see notes)
+- 🚧 **v2.0 Mission OS + Marketplace** - Phases 29-35 (P0 spec sync done 2026-08-22; Phase 29 next). Canonical spec: `/SPEC.md`
 
 ## Phases
 
@@ -14,13 +15,14 @@
 
 </details>
 
-### 🚧 v1.1 User Guide & Data Management (In Progress)
+### ✅ v1.1 User Guide, Data Management & Commerce Foundations (Phases 14-28) - COMPLETE 2026-03-27
 
-**Milestone Goal:** In-app user guide CMS with role-based access + bulk data import/export across the entire system.
+**Milestone Goal:** In-app user guide CMS with role-based access + bulk data import/export across the entire system; grew to include chat, recipe builder, Razorpay + customer auth, customer marketplace v1, mission-flow gap closure and recipe preparation types.
 
-**Phase Numbering:**
-- Integer phases (14-20): Planned milestone work
-- Decimal phases (14.1, 15.1): Urgent insertions (marked with INSERTED)
+**Honest status notes (from the 2026-08-22 audit):**
+- **Phase 25 (Third-Party Delivery Integration): NOT BUILT.** No code exists for Porter or Shiprocket and no plans were ever written, despite this file previously reporting "4/4 plans complete". Superseded by v2.0 Phase 33 (P5 Shiprocket shipments).
+- **Phase 26 (Order Detail Page): NOT BUILT.** Phase directory is empty; no `/orders/[id]` staff page exists. Folded into v2.0 Phase 34 (staff Orders screen with refunds).
+- All other phases (14-24, 27, 28) shipped with code and summaries. Phase 28-05 code landed in commit `49086da`.
 
 - [x] **Phase 14: Foundation** - Schema, backend API, role filtering, and security hardening (completed 2026-03-22)
 - [x] **Phase 15: Reader View** - Staff-facing guide experience with role-gated content (completed 2026-03-22)
@@ -30,6 +32,31 @@
 - [x] **Phase 19: Master Data Import + Export Gaps + Timezone** - Bulk import, missing exports (missions/quests), IST timezone (completed 2026-03-23)
 - [x] **Phase 20: Operations Import** - Bulk import for stock, recipes, menu, events, tasks, quests, KPIs (completed 2026-03-23)
 - [x] **Phase 21: In-App Chat** - Real-time 1-1 and group messaging with Pusher.js, role-scoped visibility (completed 2026-03-23)
+- [x] **Phase 22: Recipe Page Redesign** - Full-page recipe builder, dnd-kit BOM, live cost, approval workflow, versioning (completed 2026-03-24)
+- [x] **Phase 23: Razorpay Payments + Customer Auth** - WhatsApp OTP customer identity, Razorpay for events and POS, webhooks (completed 2026-03-25)
+- [x] **Phase 24: Customer Marketplace** - Redis cart, /menu ordering, Razorpay checkout, Pusher tracking, addresses, receipts (completed 2026-03-26)
+- [ ] **Phase 25: Third-Party Delivery Integration** - NOT BUILT; superseded by v2.0 Phase 33
+- [ ] **Phase 26: Order Detail Page** - NOT BUILT; folded into v2.0 Phase 34
+- [x] **Phase 27: Mission Flow & Assessment Gap Closure** - Mission-control API, PO→Task linking, activity feed, team contribution, Today's Focus (completed 2026-03-27)
+- [x] **Phase 28: Recipe preparation_type** - scratch/batch_prepared/ready_to_sell/assemble routing, Pick & Pack, supply usage, DB ingredient categories (completed 2026-03-27)
+
+### 🚧 v2.0 Mission OS + Marketplace (Phases 29–35)
+
+**Milestone Goal (SPEC.md §1.1):** One system, not two — operational events produce mission evidence and readiness signals automatically, approval gates execute, four meters are derived from ops state. Every role lands on "what I must move today". A full Konma-only storefront (prepared food, packaged products shipped via Shiprocket, experiences, merchandise) with one catalog, cart, checkout, accounts, reviews, coupons, loyalty, search, desktop + SEO. No money or account at risk from a known defect; CI gates every change; `Node` and enums from day one.
+
+**Phase Numbering:**
+- **P0 (Canonical spec + planning sync) is already done** — `SPEC.md` committed 2026-08-22; this roadmap, PROJECT.md and REQUIREMENTS.md synced; `contextdocs*/` marked historical. No phase number.
+- Integer phases 29-35 map to SPEC.md §11 sub-projects P1-P6 (P5 split into backend and frontend phases).
+- Decimal phases (29.1, 30.1): urgent insertions (marked with INSERTED).
+- Branch: `v2-os-marketplace`. Each phase: plan → parallel subagents by module → CI green → walk-through → summary.
+
+- [ ] **Phase 29: Stop the Bleeding (P1)** - 14 Critical/High defects fixed with regression tests, config validation, safe seeds, error boundaries, test suite green, CI enforcing
+- [ ] **Phase 30: Platform Foundation (P2)** - Fresh migration baseline: Node, Prisma enums, AuditEvent, Task.subject, ApprovalPolicy, timestamptz, CHECKs, Product replacing MenuItem, new seeds
+- [ ] **Phase 31: Mission Bridge (P3)** - Domain events, MissionBridgeService, derived meters + snapshots + history, policy-generated approvals, recipe approval via policy, decision votes
+- [ ] **Phase 32: Role-Aware IA + Identity (P4)** - Persistent header, spine nav, ModuleAccess, /tasks, My Quests, sheets, chips, motion allowlist, brand tokens light + dark, Pusher on kitchen screens, usage events
+- [ ] **Phase 33: Marketplace Backend (P5a)** - Catalog, mixed-fulfilment quote/checkout/confirm, FulfilmentService, Shiprocket + shipments, coupons, loyalty, reviews, search, refunds
+- [ ] **Phase 34: Marketplace Storefront + Staff Commerce (P5b)** - Storefront routes (desktop + SEO), cart/checkout UI, account, staff Catalog/Promotions/Reviews/Shipments/Orders/Experiences/Customers screens
+- [ ] **Phase 35: Run-It Layer (P6)** - WhatsApp nudges, daily close, theoretical vs actual food cost, usage dashboard, AI evidence-review assist + morning brief (human-in-the-loop)
 
 ## Phase Details
 
@@ -98,7 +125,8 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 14 -> 14.x -> 15 -> 15.x -> 16 -> 16.x -> 17 -> 17.x -> 18 -> 18.x -> 19 -> 19.x -> 20 -> 20.x -> 21 -> 22 -> 23 -> 24 -> 25 -> 26 -> 27 -> 28
+v1.1 (done): 14 -> 15 -> 16 -> 17 -> 18 -> 19 -> 20 -> 21 -> 22 -> 23 -> 24 -> 27 -> 28 (25, 26 never executed).
+v2.0: 29 -> 30 -> 31 -> 32 -> 33 -> 34 -> 35. Phase 33 may run in parallel with Phase 32 once Phase 31 is complete; Phase 34 needs both.
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -111,9 +139,19 @@ Phases execute in numeric order: 14 -> 14.x -> 15 -> 15.x -> 16 -> 16.x -> 17 ->
 | 20. Operations Import | v1.1 | 5/5 | Complete    | 2026-03-23 |
 | 21. In-App Chat | v1.1 | 4/4 | Complete    | 2026-03-23 |
 | 22. Recipe Page Redesign | v1.1 | 4/4 | Complete    | 2026-03-24 |
-| 23. Razorpay Payments + Customer Auth | v1.2 | 4/4 | Complete    | 2026-03-25 |
-| 24. Customer Marketplace | v1.2 | 4/4 | Complete   | 2026-03-26 |
-| 28. Recipe preparation_type | v1.2 | 4/5 | In Progress|  |
+| 23. Razorpay Payments + Customer Auth | v1.1 | 4/4 | Complete    | 2026-03-25 |
+| 24. Customer Marketplace | v1.1 | 4/4 | Complete    | 2026-03-26 |
+| 25. Third-Party Delivery Integration | v1.1 | 0/0 | Not built (superseded by Phase 33) | — |
+| 26. Order Detail Page | v1.1 | 0/0 | Not built (folded into Phase 34) | — |
+| 27. Mission Flow & Assessment Gap Closure | v1.1 | 5/5 | Complete    | 2026-03-27 |
+| 28. Recipe preparation_type | v1.1 | 5/5 | Complete    | 2026-03-27 |
+| 29. Stop the Bleeding (P1) | v2.0 | 0/? | Not started | — |
+| 30. Platform Foundation (P2) | v2.0 | 0/? | Not started | — |
+| 31. Mission Bridge (P3) | v2.0 | 0/? | Not started | — |
+| 32. Role-Aware IA + Identity (P4) | v2.0 | 0/? | Not started | — |
+| 33. Marketplace Backend (P5a) | v2.0 | 0/? | Not started | — |
+| 34. Marketplace Storefront + Staff Commerce (P5b) | v2.0 | 0/? | Not started | — |
+| 35. Run-It Layer (P6) | v2.0 | 0/? | Not started | — |
 
 ### Phase 18: Data Export
 **Goal**: CSV/XLSX export for all 22 report types with server-side file generation, R2 storage, export history, and export buttons on 13 data pages
@@ -262,20 +300,16 @@ Plans:
 
 **Goal:** Porter API for local overflow delivery (when own team can't deliver) and Shiprocket API for interstate shipping of non-food items (art, merchandise) — with courier selection, AWB generation, tracking webhooks, and delivery status synced to order tracking
 **Depends on:** Phase 24 — marketplace ordering and order tracking infrastructure
-**Plans:** 4/4 plans complete
-
-Plans:
-- [ ] TBD (run /gsd:plan-phase 25 to break down)
+**Status:** **NOT BUILT.** No plans were written and no code exists (no Porter/Shiprocket adapter, no Shipment model, no tracking webhook). The earlier "4/4 plans complete" entry was wrong. Superseded by v2.0 Phase 33 (Shiprocket via `ShippingProvider` interface, SPEC.md §5.3); Porter is dropped.
+**Plans:** 0 plans (none)
 
 ### Phase 26: Order Detail Page
 
 **Goal:** Dedicated /orders/[id] detail page for staff — order timeline, payment processing (Razorpay UPI QR display + WhatsApp payment link), delivery status tracking, KDS status, receipt generation and download. Replaces the current OrderDetailSheet slide-out with a full page.
 **Requirements**: TBD
 **Depends on:** Phase 23 — Razorpay payment infrastructure
-**Plans:** 0 plans
-
-Plans:
-- [ ] TBD (run /gsd:plan-phase 26 to break down)
+**Status:** **NOT BUILT.** Phase directory is empty and no staff `/orders/[id]` page exists (orders still use `OrderDetailSheet`). Folded into v2.0 Phase 34 staff Orders screen (all channels, refunds, shipment status — SPEC.md §5.5).
+**Plans:** 0 plans (none)
 
 ### Phase 27: Mission Flow & Assessment Gap Closure
 
@@ -369,4 +403,108 @@ Plans:
 - [x] 28-02-PLAN.md -- Backend logic fork: computeServings availability by preparation_type, non-scratch deduction at order creation, KDS scratch-only filter
 - [x] 28-03-PLAN.md -- New backend modules: Pick & Pack queue endpoint, Supply Usage logging endpoint, ingredients usage_type filtering
 - [x] 28-04-PLAN.md -- Frontend forms: RadioGroup install, types update, RecipeMetaGrid preparation_type selector, IngredientForm usage_type + DB categories, IngredientCategoriesSection
-- [ ] 28-05-PLAN.md -- Frontend pages: Pick & Pack page, Supply Usage page, sidebar entries, visual verification checkpoint
+- [x] 28-05-PLAN.md -- Frontend pages: Pick & Pack page, Supply Usage page, sidebar entries, visual verification checkpoint (commit `49086da`)
+
+---
+
+## v2.0 Phase Details (Phases 29–35)
+
+P0 (canonical spec + planning sync) has no phase number: `SPEC.md` was committed at `cd04779` on 2026-08-22 and this roadmap, `PROJECT.md`, `REQUIREMENTS.md` and the `contextdocs*/README.md` markers were synced in the same pass. Requirement IDs below are defined in `.planning/REQUIREMENTS.md` ("v2.0 Requirements").
+
+### Phase 29: Stop the Bleeding (P1)
+**Goal**: Every Critical/High defect from the 2026-08-22 audit is fixed with a regression test, and a CI pipeline blocks deploys while any test is red.
+**Depends on**: Phase 28 (v1.1 complete) and P0 (`SPEC.md` committed)
+**Requirements**: FIX-01 … FIX-14, QA-01
+**Success Criteria** (what must be TRUE):
+  1. Marketplace orders carry a `fulfilment_zone_id` and deduct stock exactly once; `POST /customer/orders/confirm` and the `payment.captured` webhook both call the same `FulfilmentService.confirmPaidOrder` (integration test proves no divergence)
+  2. Replaying the same Razorpay payment to `/confirm` returns the existing order — no duplicate `Order`/`Payment` rows (`razorpay_payment_id @unique`, P2002 path tested)
+  3. Refresh tokens carry `token_use: refresh`, are signed with `JWT_REFRESH_SECRET` and are rejected by `JwtStrategy` on API routes; named throttlers `default/short/long` are registered and every public auth/OTP/feedback route has an explicit limit
+  4. Batch-prepared items cannot oversell (insufficient `quantity_remaining` fails the transaction), assemble deduction converts component units first, and POS and customer order paths are guard-isolated (customer JWT cannot reach staff order endpoints)
+  5. Production boot fails on missing required env vars (`ConfigModule` schema); QStash webhook returns 403 without a configured receiver; `seed:demo` refuses to run when `NODE_ENV=production` and prints random passwords once
+  6. Route-level `error.tsx` + `global-error.tsx` exist; all 43 backend jest suites are green; `.github/workflows/ci.yml` runs lint → tsc → jest → prisma validate → build on every push/PR and Railway/Vercel deploy only on green `master`
+**Spec sections**: §1.1 (goals 4–5), §5.2 step 4, §8, §10, §11 P1
+**Plans**: TBD
+
+### Phase 30: Platform Foundation (P2)
+**Goal**: The schema is reset to one fresh migration baseline — `Node`, Prisma enums, `AuditEvent`, `Task.subject`, `ApprovalPolicy`, timestamptz, CHECK constraints and `Product` replacing `MenuItem` — with every v1 flow green against it.
+**Depends on**: Phase 29
+**Requirements**: PLAT-01 … PLAT-09
+**Success Criteria** (what must be TRUE):
+  1. `prisma/migrations` contains a single baseline migration; `Node` is seeded with one node and every aggregate listed in SPEC §3.1 has a required `node_id` with the node-scoped unique constraints (`ReadinessMeter (node_id, code)`, `ChannelModifier (node_id, channel)`, `Product (node_id, slug)`)
+  2. Every enum-like field is a Prisma enum, every `DateTime` is `@db.Timestamptz(3)`, money is `Decimal(12,2)`, quantities `Decimal(14,4)`; CHECKs exist on `RecipeLine` (input XOR), `IngredientStock` (`current_quantity >= 0`) and `WasteLog`
+  3. `MenuItem`/`MenuCategory` are gone; `Product`, `ProductCategory`, `ProductVariant`, `ProductMedia` exist and POS, KDS, Pick & Pack, exports, imports and analytics read products
+  4. Every mutating transaction writes an `AuditEvent`; `SystemSetting.value` is JSON with allowlisted keys; `ModuleAccess` exists with the §6.3 defaults; `Task.subject_type/subject_id`, `ApprovalPolicy`, `Approval.entity_type/entity_id`, `DecisionVote`, `ReadinessSignal/Snapshot`, `Shipment*`, `Coupon*`, `Loyalty*`, `Review`, `Refund` are in the schema
+  5. `seed:reference` (idempotent, prod-safe) and `seed:demo` (guarded) both run clean on an empty database; migrations run in a release step, not the build
+  6. All v1 flows (login → task → evidence → approve; PO receive; prep batch; POS → KDS → deduction; marketplace order) pass integration tests against the new schema, and every item in SPEC §3.5 is removed from the codebase
+**Spec sections**: §3.1–§3.5, §8 (data safety), §11 P2, §12
+**Plans**: TBD
+
+### Phase 31: Mission Bridge (P3)
+**Goal**: Operational events automatically become bridge evidence and readiness signals, four meters are derived from ops state with daily snapshots and a history API, and approval gates and decision votes execute from policy tables.
+**Depends on**: Phase 30
+**Requirements**: BRIDGE-01 … BRIDGE-04, READY-01 … READY-03, GOV-01 … GOV-04, QA-02, QA-03
+**Success Criteria** (what must be TRUE):
+  1. `backend/src/common/events/domain-events.ts` defines every event in SPEC §4.1; each emitter fires after commit, inside try/catch, with `{ node_id, actor, occurred_at }`
+  2. `MissionBridgeService` rules (`mission-bridge.rules.ts`) create `Evidence{ type: system, source: bridge, approval_status: pending }` with a deep link whenever the source entity resolves to a task via `Task.subject`, `PurchaseOrder.linked_task_id` or `Decision.linked_task_id`; humans still approve
+  3. `STANDARDIZATION`, `PROCUREMENT`, `SALES`, `QUALITY` are computed per the §4.3 formulas, hybrid meters blend 50/50, `ReadinessSnapshot` is written nightly and `GET /readiness-meters/:code/history?days=90` returns it
+  4. A task with `requires_approval` gets one pending `Approval` per policy role; validation requires all of them (or a `FOUNDER_ADMIN` override with reason); self-approval is blocked and delegation is honoured
+  5. Recipe approval flows through the `food` policy (legacy direct status flip removed); decisions run tier 1 (auto-approve by domain lead), tier 2 (`DecisionVote` 2+1 → `aligned` → `approved`), tier 3 (founder), with reject → `rejected` and founder `reopen`
+  6. Smoke test 1 (`login → create task → upload evidence → approve → meter moves`) passes in CI
+**Spec sections**: §3.2, §4.1–§4.4, §9, §10, §11 P3
+**Plans**: TBD
+
+### Phase 32: Role-Aware IA + Identity (P4)
+**Goal**: Every role lands on "what I must move today" through a persistent mission header, a fixed navigation spine scoped by `ModuleAccess`, a real `/tasks`, and one brand token system validated in light and dark.
+**Depends on**: Phase 31 (header needs approvals count and readiness history); UI groundwork may start after Phase 30
+**Requirements**: IA-01 … IA-07, DESIGN-01 … DESIGN-04, QA-04
+**Success Criteria** (what must be TRUE):
+  1. Every ops page shows the persistent header — mission › phase › this week's quest › node readiness % › approvals/blockers badges › XP/level › ⌘K search › notifications › theme › user — and it is never null (start-a-mission CTA or "ask the founder" note)
+  2. The navigation spine follows the §6.2 order, items appear only when the role's `ModuleAccess` allows, `/admin/modules` is editable by `MANAGE_SYSTEM`, Guide and Chat live in the header, and no label appears twice
+  3. `/tasks` is server-filtered and paginated (`?mine=1&status=&quest_id=`) with kanban + list; `/quests?mine=1` and `/team` (wins, contribution, activity, leaderboard) exist; Mission Control (admin) and My Day (everyone else) match §6.5
+  4. Task and Quest create/edit are Sheets; evidence upload works from the task row and task page; approve/reject is inline with a required note on reject; ops cards with a task link show the "Quest › Task" chip and meter
+  5. One token file promotes the `--public-*` palette to `:root` with a designed dark set, light and dark pass contrast checks, a lint rule rejects arbitrary colour values, the motion allowlist is enforced (framer-motion and spectrumui removed), and the homepage is visually untouched
+  6. Pusher private channels drive KDS, Pick & Pack, Shipments, Approvals count and Notifications (polling ≥ 30 s only as fallback); `UsageEvent` records page views per role and key actions
+**Spec sections**: §2, §3.5, §6.1–§6.5, §7, §8 (observability), §11 P4
+**Plans**: TBD
+
+### Phase 33: Marketplace Backend (P5a)
+**Goal**: The backend sells all four product types through one catalog and one mixed-fulfilment quote → pay → confirm pipeline, with Shiprocket shipments, coupons, loyalty, reviews, search and refunds.
+**Depends on**: Phase 31 (bridge events) and Phase 30 (`Product` model); may run in parallel with Phase 32
+**Requirements**: CAT-01 … CAT-04, CHK-01 … CHK-05, SHIP-01 … SHIP-05, PROMO-01, PROMO-02, LOYAL-01, LOYAL-02, REV-01, REV-02, SRCH-01, QA-05
+**Success Criteria** (what must be TRUE):
+  1. Staff `catalog/products|variants|categories|media` CRUD + publish works; public `catalog/*` is cached 60 s and never returns cost, yield, BOM or margin; `GET /catalog/search?q=` runs on a `tsvector` + GIN index with type/category facets
+  2. The Redis cart is server-priced on every sync (base + variant delta + channel modifier) with availability per type (§3.3), and `POST /customer/checkout/quote` returns itemised subtotal, coupon discount, shipping (Shiprocket rate), tax breakup, loyalty redeemable and total, creating 15-minute booking holds
+  3. `POST /customer/orders/confirm` creates `Order` + `Payment` in one Serializable transaction, routes each line (KDS/Pick & Pack by `preparation_type`, shipped → `packed` queue, booking → `EventBooking.confirmed`), writes coupon redemption and loyalty in the same transaction, and is idempotent; the webhook uses the same `FulfilmentService`
+  4. `ShippingProvider` interface is implemented by `ShiprocketAdapter` (token cached ~9 days, create/AWB/pickup/label/track/cancel) and `ManualProvider`; `POST /webhooks/shiprocket` is shared-secret protected and idempotent on `(awb, status, occurred_at)`; shipment status drives `Order.status` `shipped → delivered` with customer Pusher event and WhatsApp template
+  5. Coupons are validated only server-side in the quote (no stacking, `free_shipping` on shipped lines only); loyalty earns on `delivered`/`attended` and expires after 365 days; reviews are one per `order_item`, auto-published at rating ≥ 4, with `rating_avg/count` maintained by trigger; `POST /orders/:id/refund` (full/partial) creates a `Refund` reconciled by the `refund.processed` webhook
+  6. Integration tests cover order confirm, fulfilment, shipment lifecycle, coupon, loyalty and review flows; the smoke-test-2 API path is green
+**Spec sections**: §3.3, §5.2–§5.4, §8, §9, §10, §11 P5
+**Plans**: TBD
+
+### Phase 34: Marketplace Storefront + Staff Commerce (P5b)
+**Goal**: Customers shop all four product types on a desktop-designed, SEO-ready storefront with account, tracking and reviews, and staff run catalog, promotions, reviews, shipments, orders, experiences and customers from the ops app.
+**Depends on**: Phase 32 and Phase 33
+**Requirements**: STORE-01 … STORE-04, ACCT-01, ACCT-02, OPS-01 … OPS-05, QA-06
+**Success Criteria** (what must be TRUE):
+  1. Every route in SPEC §5.1 exists as a server component with `generateMetadata`; product and event pages emit JSON-LD; sitemap and robots are generated; `/menu` redirects to `/shop?type=prepared_food`; images use `next/image` with the R2 remote pattern; the homepage is untouched
+  2. `/cart` and `/checkout` handle mixed fulfilment in one flow (local pincode or pickup, shipped address with live rate, booking hold), coupon entry, loyalty redemption and Razorpay pay → confirm → `/orders/[id]/track` with shipment tracking
+  3. `/account`, `/account/orders`, `/account/addresses`, `/account/loyalty`, `/account/reviews` and `/feedback/[orderId]` work on a 7-day sliding customer session with `jti` revocation on logout
+  4. Staff screens exist for Catalog (products, variants, media, categories, publish), Promotions, Reviews moderation, Shipments queue (pack → AWB → pickup → label → track, Pusher-driven), Orders (all channels, refunds, full order detail — closes the Phase 26 intent), Experiences (events + attendance) and Customers (profile, orders, loyalty adjust)
+  5. POS sells `prepared_food` products only and is otherwise unchanged; Pick & Pack shows the shipped `packed` queue alongside local non-scratch items
+  6. Playwright smoke test 2 (`browse → add three fulfilment types → coupon → pay (Razorpay test) → confirm → track`) passes in CI; desktop and mobile layouts pass a recorded walk-through
+**Spec sections**: §5.1, §5.2, §5.5, §6.4, §7, §8 (auth), §10, §11 P5
+**Plans**: TBD
+
+### Phase 35: Run-It Layer (P6)
+**Goal**: The node runs day-to-day on the system — staff get WhatsApp nudges, a daily close screen, theoretical vs actual food cost, a usage dashboard, and human-in-the-loop AI assists.
+**Depends on**: Phase 34
+**Requirements**: RUN-01 … RUN-06
+**Success Criteria** (what must be TRUE):
+  1. WhatsApp staff templates fire for approvals waiting, blockers, low stock and failed shipments through the existing Cloud API with per-type cooldowns
+  2. A daily close screen shows orders and revenue by channel, waste logged, batches depleted, stock reconciliation result and open shipments, and is signed off by `FRONTEND_LEAD` or `FOUNDER_ADMIN` as an `AuditEvent`
+  3. A theoretical vs actual food cost report compares recipe-derived COGS with stock movements per period and surfaces variance to `BI_LEAD`
+  4. An admin usage dashboard reads `UsageEvent` (page views per role, key actions)
+  5. AI evidence-review assist and a morning brief run on the Claude API as suggestions only — no evidence is approved, readiness value set or price changed by AI
+  6. Nightly jobs (stock reconciliation with drift `AuditEvent`, loyalty expiry, readiness snapshots) run under `pg_try_advisory_lock`; R2 has a 30-day lifecycle rule on `exports/` and a weekly orphan sweep
+**Spec sections**: §1.2 (AI limits), §3.4, §6.5, §8, §11 P6
+**Plans**: TBD
