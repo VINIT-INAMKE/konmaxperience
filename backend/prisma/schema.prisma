@@ -782,17 +782,19 @@ model Zone {
 }
 
 model Brand {
-  id              String         @id @default(uuid())
-  name            String
-  brand_type      String
-  status          String         @default("idea")
-  owner_user_id   String?
-  owner           User?          @relation(fields: [owner_user_id], references: [id])
-  notes           String?
-  assets          Asset[]
-  recipes         Recipe[]
-  menu_categories MenuCategory[]
-  events          Event[]
+  id                 String            @id @default(uuid())
+  name               String
+  brand_type         String
+  status             String            @default("idea")
+  owner_user_id      String?
+  owner              User?             @relation(fields: [owner_user_id], references: [id])
+  notes              String?
+  assets             Asset[]
+  recipes            Recipe[]
+  menu_categories    MenuCategory[]
+  events             Event[]
+  products           Product[]
+  product_categories ProductCategory[]
 }
 
 model Channel {
@@ -844,6 +846,7 @@ model Recipe {
   RecipeLines      RecipeLine[] @relation("RecipeLines")
   SourceLines      RecipeLine[] @relation("SourceRecipeLines")
   MenuItems        MenuItem[]
+  products         Product[]
   linked_assets    Asset[]
   prepBatches      PrepBatch[]
 }
@@ -964,6 +967,101 @@ model MenuItem {
   @@index([category_id])
   // Optimizes: getAllServingsAvailable (active items), findItems filtered by status
   @@index([status])
+}
+
+model ProductCategory {
+  id            String        @id @default(uuid())
+  // TODO(p2-05): add `node Node @relation(fields: [node_id], references: [id], onDelete: Restrict)`
+  // and the `product_categories ProductCategory[]` back-relation once Task 5 introduces `Node`.
+  node_id       String        @default("11111111-1111-4111-8111-111111111111")
+  brand_id      String
+  brand         Brand         @relation(fields: [brand_id], references: [id])
+  name          String
+  slug          String
+  sort_order    Int           @default(0)
+  product_types ProductType[] @default([])
+  status        ProductStatus @default(active)
+  created_at    DateTime      @default(now()) @db.Timestamptz(3)
+  updated_at    DateTime      @updatedAt @db.Timestamptz(3)
+  products      Product[]
+
+  @@unique([node_id, slug])
+  @@index([brand_id])
+}
+
+model Product {
+  id              String           @id @default(uuid())
+  // TODO(p2-05): add `node Node @relation(fields: [node_id], references: [id], onDelete: Restrict)`
+  // and the `products Product[]` back-relation once Task 5 introduces `Node`.
+  node_id         String           @default("11111111-1111-4111-8111-111111111111")
+  brand_id        String
+  brand           Brand            @relation(fields: [brand_id], references: [id])
+  category_id     String
+  category        ProductCategory  @relation(fields: [category_id], references: [id])
+  type            ProductType
+  name            String
+  slug            String
+  description     String           @default("")
+  story           String?
+  base_price      Decimal          @db.Decimal(12, 2)
+  tax_rate        Decimal          @default(0) @db.Decimal(5, 2)
+  hsn_code        String?
+  fulfilment      FulfilmentType   @default(local)
+  stock_mode      StockMode        @default(derived_from_recipe)
+  recipe_id       String?
+  recipe          Recipe?          @relation(fields: [recipe_id], references: [id], onDelete: Restrict)
+  event_id        String?
+  event           Event?           @relation(fields: [event_id], references: [id], onDelete: Restrict)
+  weight_grams    Int?
+  dimensions_cm   Json?
+  shelf_life_days Int?
+  is_featured     Boolean          @default(false)
+  rating_avg      Decimal?         @db.Decimal(3, 2)
+  rating_count    Int              @default(0)
+  status          ProductStatus    @default(draft)
+  search_text     String           @default("")
+  created_by      String?
+  updated_by      String?
+  created_at      DateTime         @default(now()) @db.Timestamptz(3)
+  updated_at      DateTime         @updatedAt @db.Timestamptz(3)
+  variants        ProductVariant[]
+  media           ProductMedia[]
+  orderItems      OrderItem[]
+
+  @@unique([node_id, slug])
+  @@index([node_id, type, status])
+  @@index([category_id])
+  @@index([recipe_id])
+}
+
+model ProductVariant {
+  id                  String        @id @default(uuid())
+  product_id          String
+  product             Product       @relation(fields: [product_id], references: [id], onDelete: Cascade)
+  name                String
+  sku                 String        @unique
+  price_delta         Decimal       @default(0) @db.Decimal(12, 2)
+  stock_on_hand       Decimal       @default(0) @db.Decimal(14, 4)
+  low_stock_threshold Decimal?      @db.Decimal(14, 4)
+  is_default          Boolean       @default(false)
+  status              ProductStatus @default(active)
+  created_at          DateTime      @default(now()) @db.Timestamptz(3)
+  updated_at          DateTime      @updatedAt @db.Timestamptz(3)
+  orderItems          OrderItem[]
+
+  @@index([product_id])
+}
+
+model ProductMedia {
+  id         String    @id @default(uuid())
+  product_id String
+  product    Product   @relation(fields: [product_id], references: [id], onDelete: Cascade)
+  url        String
+  alt        String    @default("")
+  sort_order Int       @default(0)
+  kind       MediaKind @default(image)
+
+  @@index([product_id, sort_order])
 }
 
 model ChannelModifier {
@@ -1176,17 +1274,23 @@ model Order {
 }
 
 model OrderItem {
-  id           String    @id @default(uuid())
+  id           String          @id @default(uuid())
   order_id     String
   menu_item_id String
   quantity     Int
   unit_price   Decimal
   item_notes   String?
-  status       String    @default("pending") // pending | preparing | ready
+  status       String          @default("pending") // pending | preparing | ready
   ready_at     DateTime?
-  created_at   DateTime  @default(now())
-  order        Order     @relation(fields: [order_id], references: [id], onDelete: Cascade)
-  menu_item    MenuItem  @relation(fields: [menu_item_id], references: [id])
+  created_at   DateTime        @default(now())
+  order        Order           @relation(fields: [order_id], references: [id], onDelete: Cascade)
+  menu_item    MenuItem        @relation(fields: [menu_item_id], references: [id])
+  // Nullable while MenuItem is still the source of truth; Task 11 makes product_id
+  // required and drops menu_item_id.
+  product_id   String?
+  product      Product?        @relation(fields: [product_id], references: [id])
+  variant_id   String?
+  variant      ProductVariant? @relation(fields: [variant_id], references: [id])
 
   // Optimizes: KDS findMany by order_id, all-items-ready check
   @@index([order_id])
@@ -1194,6 +1298,8 @@ model OrderItem {
   @@index([status, ready_at])
   // Optimizes: analytics getTopItems groupBy menu_item_id
   @@index([menu_item_id])
+  // Optimizes: analytics getTopItems groupBy product_id (Task 11 onward)
+  @@index([product_id])
 }
 
 model Payment {
@@ -1266,6 +1372,7 @@ model Event {
   zone        Zone?          @relation(fields: [zone_id], references: [id])
   brand       Brand?         @relation(fields: [brand_id], references: [id])
   bookings    EventBooking[]
+  products    Product[]
 }
 
 model EventBooking {
