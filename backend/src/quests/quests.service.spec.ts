@@ -1,6 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { QuestsService } from './quests.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { Permission } from '../types/permissions';
+
+jest.mock('../permissions/permissions.cache', () => ({ getPermissionsForRole: jest.fn() }));
+import { getPermissionsForRole } from '../permissions/permissions.cache';
+const mockGetPermissions = getPermissionsForRole as jest.MockedFunction<typeof getPermissionsForRole>;
+
+const adminUser = { id: 'user-1', roleCode: 'FOUNDER_ADMIN' };
 
 describe('QuestsService', () => {
   let service: QuestsService;
@@ -55,13 +62,15 @@ describe('QuestsService', () => {
     }).compile();
 
     service = module.get<QuestsService>(QuestsService);
+
+    mockGetPermissions.mockResolvedValue([Permission.VIEW_ALL]);
   });
 
   describe('findAll', () => {
     it('returns quests filtered by missionId when provided', async () => {
       prisma.quest.findMany.mockResolvedValue([mockQuest]);
 
-      await service.findAll({ missionId: 'mission-1' });
+      await service.findAll(adminUser, { missionId: 'mission-1' });
 
       expect(prisma.quest.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -75,10 +84,23 @@ describe('QuestsService', () => {
     it('returns all quests when no missionId provided', async () => {
       prisma.quest.findMany.mockResolvedValue([mockQuest]);
 
-      await service.findAll({});
+      await service.findAll(adminUser, {});
 
       const callArgs = prisma.quest.findMany.mock.calls[0][0];
       expect(callArgs.where).toEqual({});
+    });
+
+    it('scopes non-admin users to quests they own or have tasks in', async () => {
+      mockGetPermissions.mockResolvedValue([]);
+      prisma.quest.findMany.mockResolvedValue([]);
+
+      await service.findAll({ id: 'user-9', roleCode: 'BACKEND_LEAD' }, {});
+
+      const callArgs = prisma.quest.findMany.mock.calls[0][0];
+      expect(callArgs.where.OR).toEqual([
+        { owner_user_id: 'user-9' },
+        { tasks: { some: { owner_user_id: 'user-9' } } },
+      ]);
     });
   });
 

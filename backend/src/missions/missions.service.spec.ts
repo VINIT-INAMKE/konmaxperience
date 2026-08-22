@@ -1,6 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { MissionsService } from './missions.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { Permission } from '../types/permissions';
+
+jest.mock('../permissions/permissions.cache', () => ({ getPermissionsForRole: jest.fn() }));
+import { getPermissionsForRole } from '../permissions/permissions.cache';
+const mockGetPermissions = getPermissionsForRole as jest.MockedFunction<typeof getPermissionsForRole>;
+
+const adminUser = { id: 'user-1', roleCode: 'FOUNDER_ADMIN' };
 
 describe('MissionsService', () => {
   let service: MissionsService;
@@ -35,6 +42,7 @@ describe('MissionsService', () => {
         create: jest.fn(),
         update: jest.fn(),
       },
+      task: { findMany: jest.fn().mockResolvedValue([]) },
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -45,25 +53,33 @@ describe('MissionsService', () => {
     }).compile();
 
     service = module.get<MissionsService>(MissionsService);
+
+    mockGetPermissions.mockResolvedValue([Permission.VIEW_ALL]);
   });
 
   describe('findAll', () => {
-    it('returns all missions with quest summaries (shared board, no scope filter)', async () => {
+    it('returns all missions with quest counts and readiness impact for admins', async () => {
       prisma.mission.findMany.mockResolvedValue([mockMission]);
 
-      const result = await service.findAll();
+      const result = await service.findAll(adminUser);
 
-      expect(result).toEqual([mockMission]);
+      expect(result).toEqual([{ ...mockMission, readiness_impact: [] }]);
       expect(prisma.mission.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          include: expect.objectContaining({
-            quests: expect.any(Object),
+          where: {},
+          include: expect.objectContaining({ _count: { select: { quests: true } } }),
+          take: 50,
+          skip: 0,
+        }),
+      );
+      expect(prisma.task.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            mission_id: { in: ['mission-1'] },
+            valid: true,
           }),
         }),
       );
-      // No scope filter -- shared board
-      const callArgs = prisma.mission.findMany.mock.calls[0][0];
-      expect(callArgs.where).toBeUndefined();
     });
   });
 

@@ -148,6 +148,7 @@ describe('KpisService', () => {
       };
 
       prisma.kpi.create.mockResolvedValue({ ...dto, id: 'kpi-new', status: 'on_track' });
+      prisma.kpi.findUnique.mockResolvedValue({ ...dto, id: 'kpi-new', status: 'on_track', tasks: [] });
 
       const result = await service.create(dto as any);
 
@@ -158,7 +159,7 @@ describe('KpisService', () => {
           }),
         }),
       );
-      expect(result.status).toBe('on_track');
+      expect(result!.status).toBe('on_track');
     });
 
     it('uses provided status when specified', async () => {
@@ -225,7 +226,9 @@ describe('KpisService', () => {
 
   describe('update', () => {
     it('updates KPI fields', async () => {
-      prisma.kpi.findUnique.mockResolvedValue(mockKpi);
+      prisma.kpi.findUnique
+        .mockResolvedValueOnce({ id: 'kpi-1' }) // existence check
+        .mockResolvedValueOnce({ ...mockKpi, current_value: 97.0 }); // re-fetch after tx
       prisma.kpi.update.mockResolvedValue({ ...mockKpi, current_value: 97.0 });
 
       const result = await service.update('kpi-1', { current_value: 97.0 } as any);
@@ -236,7 +239,7 @@ describe('KpisService', () => {
           data: expect.objectContaining({ current_value: 97.0 }),
         }),
       );
-      expect(result.current_value).toBe(97.0);
+      expect(result!.current_value).toBe(97.0);
     });
 
     it('throws NotFoundException when KPI does not exist', async () => {
