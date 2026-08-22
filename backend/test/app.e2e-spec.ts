@@ -16,10 +16,20 @@ describe('AppController (e2e)', () => {
     await app.init();
   });
 
-  it('/ (GET)', () => {
+  afterEach(async () => {
+    await app.close();
+  });
+
+  it('/ (GET) returns the health payload', () => {
     return request(app.getHttpServer())
       .get('/')
       .expect(200)
-      .expect('Hello World!');
+      .expect((res) => {
+        expect(res.body).toEqual({
+          status: 'ok',
+          timestamp: expect.any(String),
+        });
+        expect(Number.isNaN(Date.parse(res.body.timestamp))).toBe(false);
+      });
   });
 });
