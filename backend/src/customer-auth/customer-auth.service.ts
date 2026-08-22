@@ -128,7 +128,7 @@ export class CustomerAuthService {
 
     // Sign JWT
     const token = this.jwtService.sign(
-      { customerId: customer.id, type: 'customer' },
+      { customerId: customer.id, type: 'customer', token_use: 'access' },
       { expiresIn: '30d' },
     );
 

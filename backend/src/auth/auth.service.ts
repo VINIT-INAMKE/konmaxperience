@@ -1,5 +1,6 @@
 import {
   Injectable,
+  Logger,
   UnauthorizedException,
   BadRequestException,
 } from '@nestjs/common';
@@ -9,14 +10,41 @@ import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { JwtPayload } from '../types/auth';
+import { EmailService } from '../email/email.service';
+import { resolveRefreshSecret } from './refresh-secret';
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+  private readonly refreshSecret: string;
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
-  ) {}
+    private readonly emailService: EmailService,
+  ) {
+    this.refreshSecret = resolveRefreshSecret(
+      (key) => this.configService.get<string>(key),
+      this.logger,
+    );
+  }
+
+  /** Access tokens are the only kind JwtStrategy accepts on API routes. */
+  private signAccess(payload: JwtPayload): string {
+    return this.jwtService.sign(
+      { ...payload, token_use: 'access' },
+      { expiresIn: '15m' },
+    );
+  }
+
+  /** Refresh tokens are signed with a DIFFERENT secret so they cannot be replayed as access tokens. */
+  private signRefresh(payload: JwtPayload): string {
+    return this.jwtService.sign(
+      { ...payload, token_use: 'refresh' },
+      { expiresIn: '7d', secret: this.refreshSecret },
+    );
+  }
 
   async validateUser(email: string, password: string) {
     const user = await this.prisma.user.findUnique({
@@ -40,8 +68,8 @@ export class AuthService {
       type: 'staff',
     };
 
-    const accessToken = this.jwtService.sign(payload, { expiresIn: '15m' });
-    const refreshToken = this.jwtService.sign(payload, { expiresIn: '7d' });
+    const accessToken = this.signAccess(payload);
+    const refreshToken = this.signRefresh(payload);
 
     // Hash refresh token with SHA-256 before storing
     const tokenHash = crypto
@@ -74,6 +102,20 @@ export class AuthService {
   }
 
   async refreshToken(refreshTokenValue: string) {
+    // Verify signature + type BEFORE touching the database: a token signed with
+    // JWT_SECRET (i.e. an access token) must never be redeemable here.
+    let decoded: JwtPayload;
+    try {
+      decoded = this.jwtService.verify<JwtPayload>(refreshTokenValue, {
+        secret: this.refreshSecret,
+      });
+    } catch {
+      throw new UnauthorizedException('Invalid or expired refresh token');
+    }
+    if (decoded.token_use !== 'refresh' || decoded.type !== 'staff') {
+      throw new UnauthorizedException('Invalid or expired refresh token');
+    }
+
     const tokenHash = crypto
       .createHash('sha256')
       .update(refreshTokenValue)
@@ -96,6 +138,10 @@ export class AuthService {
       throw new UnauthorizedException('Invalid or expired refresh token');
     }
 
+    if (storedToken.user_id !== decoded.userId) {
+      throw new UnauthorizedException('Invalid or expired refresh token');
+    }
+
     const user = storedToken.user;
 
     if (!user || user.status !== 'active') {
@@ -114,10 +160,10 @@ export class AuthService {
       type: 'staff',
     };
 
-    const accessToken = this.jwtService.sign(payload, { expiresIn: '15m' });
+    const accessToken = this.signAccess(payload);
 
     // Issue a new refresh token (rotation)
-    const newRefreshToken = this.jwtService.sign(payload, { expiresIn: '7d' });
+    const newRefreshToken = this.signRefresh(payload);
     const newTokenHash = crypto
       .createHash('sha256')
       .update(newRefreshToken)

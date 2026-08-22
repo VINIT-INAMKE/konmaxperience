@@ -6,11 +6,13 @@ import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 import { AuthService } from './auth.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { EmailService } from '../email/email.service';
 
 describe('AuthService', () => {
   let authService: AuthService;
   let prismaService: any;
   let jwtService: any;
+  let emailService: any;
 
   const mockUser = {
     id: 'user-1',
@@ -50,6 +52,16 @@ describe('AuthService', () => {
 
     jwtService = {
       sign: jest.fn().mockReturnValue('mock-access-token'),
+      verify: jest.fn().mockReturnValue({
+        userId: 'user-1',
+        roleCode: 'FRONTEND_LEAD',
+        type: 'staff',
+        token_use: 'refresh',
+      }),
+    };
+
+    emailService = {
+      sendPasswordReset: jest.fn().mockResolvedValue(undefined),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -61,6 +73,7 @@ describe('AuthService', () => {
           provide: ConfigService,
           useValue: { get: jest.fn().mockReturnValue('test-secret') },
         },
+        { provide: EmailService, useValue: emailService },
       ],
     }).compile();
 
@@ -170,6 +183,58 @@ describe('AuthService', () => {
       await expect(
         authService.refreshToken('expired-token'),
       ).rejects.toThrow(UnauthorizedException);
+    });
+  });
+
+  describe('token typing', () => {
+    it('signs access and refresh tokens with distinct token_use and secrets', async () => {
+      prismaService.refreshToken.create.mockResolvedValue({});
+      await authService.login(mockUser as any);
+
+      expect(jwtService.sign).toHaveBeenNthCalledWith(
+        1,
+        expect.objectContaining({ userId: 'user-1', token_use: 'access' }),
+        { expiresIn: '15m' },
+      );
+      expect(jwtService.sign).toHaveBeenNthCalledWith(
+        2,
+        expect.objectContaining({ userId: 'user-1', token_use: 'refresh' }),
+        expect.objectContaining({ expiresIn: '7d', secret: expect.any(String) }),
+      );
+    });
+
+    it('rejects an access token sent to the refresh endpoint', async () => {
+      jwtService.verify.mockReturnValue({
+        userId: 'user-1',
+        type: 'staff',
+        token_use: 'access',
+      });
+      await expect(authService.refreshToken('an-access-token')).rejects.toThrow(
+        UnauthorizedException,
+      );
+      expect(prismaService.refreshToken.findFirst).not.toHaveBeenCalled();
+    });
+
+    it('rejects a refresh token that fails signature verification', async () => {
+      jwtService.verify.mockImplementation(() => {
+        throw new Error('invalid signature');
+      });
+      await expect(authService.refreshToken('tampered')).rejects.toThrow(
+        UnauthorizedException,
+      );
+    });
+
+    it('rejects a refresh token whose DB row belongs to a different user', async () => {
+      prismaService.refreshToken.findFirst.mockResolvedValue({
+        id: 'rt-1',
+        user_id: 'someone-else',
+        revoked_at: null,
+        expires_at: new Date(Date.now() + 86400000),
+        user: { ...mockUser, id: 'someone-else' },
+      });
+      await expect(authService.refreshToken('valid')).rejects.toThrow(
+        UnauthorizedException,
+      );
     });
   });
 

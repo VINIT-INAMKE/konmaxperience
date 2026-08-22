@@ -53,6 +53,7 @@ describe('JwtStrategy.validate', () => {
     const result = await strategy.validate({
       customerId: 'cust-abc',
       type: 'customer',
+      token_use: 'access',
     });
     expect(result).toEqual({ customerId: 'cust-abc', type: 'customer' });
   });
@@ -62,6 +63,7 @@ describe('JwtStrategy.validate', () => {
       userId: 'user-xyz',
       roleCode: 'TECH_LEAD',
       type: 'staff',
+      token_use: 'access',
     });
     expect(result).toEqual({ id: 'user-xyz', roleCode: 'TECH_LEAD', type: 'staff' });
   });

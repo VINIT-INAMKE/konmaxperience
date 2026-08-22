@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
@@ -33,6 +33,11 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(payload: JwtPayload) {
+    // Only access tokens are valid bearer credentials. Refresh tokens (and any
+    // legacy token issued before token_use existed) are rejected outright.
+    if (payload.token_use !== 'access') {
+      throw new UnauthorizedException('Invalid token type');
+    }
     if (payload.type === 'customer') {
       return { customerId: payload.customerId, type: 'customer' };
     }

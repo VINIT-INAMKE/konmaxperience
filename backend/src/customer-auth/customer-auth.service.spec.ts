@@ -158,7 +158,7 @@ describe('CustomerAuthService', () => {
       expect(result.customer.phone).toBe('9876543210');
       expect(mockRedisClient.del).toHaveBeenCalledWith('otp:9876543210');
       expect(jwtService.sign).toHaveBeenCalledWith(
-        { customerId: 'cust-1', type: 'customer' },
+        { customerId: 'cust-1', type: 'customer', token_use: 'access' },
         { expiresIn: '30d' },
       );
       expect(mockRes.cookie).toHaveBeenCalledWith(

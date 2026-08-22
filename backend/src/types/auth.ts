@@ -6,6 +6,8 @@ export interface JwtPayload {
   customerId?: string;
   // Discriminator (always present)
   type: 'staff' | 'customer';
+  // Token kind — access tokens are the only ones accepted by JwtStrategy
+  token_use?: 'access' | 'refresh';
   iat?: number;
   exp?: number;
 }
