@@ -14,16 +14,19 @@ import {
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { apiClient } from '@/lib/api-client';
-import type { ChannelModifier, ModifierType } from '@/lib/types/catalog';
+import type { ChannelModifier, ModifierType, OrderChannelValue } from '@/lib/types/catalog';
+import { ORDER_CHANNEL_LABELS } from '@/lib/types/kds';
 
-const CHANNEL_TYPES = ['dine_in', 'takeaway', 'delivery'] as const;
-type ChannelType = (typeof CHANNEL_TYPES)[number];
+/** Prisma `OrderChannel` — ChannelModifier is unique on one row per channel. */
+const CHANNEL_TYPES: readonly OrderChannelValue[] = [
+  'dine_in',
+  'takeaway',
+  'delivery',
+  'marketplace',
+];
+type ChannelType = OrderChannelValue;
 
-const CHANNEL_LABELS: Record<ChannelType, string> = {
-  dine_in: 'Dine-in',
-  takeaway: 'Takeaway',
-  delivery: 'Delivery',
-};
+const CHANNEL_LABELS: Record<ChannelType, string> = ORDER_CHANNEL_LABELS;
 
 interface EditingState {
   channelType: ChannelType;

@@ -32,7 +32,7 @@ import { IngredientsModule } from './ingredients/ingredients.module';
 import { IngredientCategoriesModule } from './ingredient-categories/ingredient-categories.module';
 import { VendorsModule } from './vendors/vendors.module';
 import { RecipesModule } from './recipes/recipes.module';
-import { MenuModule } from './menu/menu.module';
+import { CatalogModule } from './catalog/catalog.module';
 import { InventoryModule } from './inventory/inventory.module';
 import { PurchaseOrdersModule } from './purchase-orders/purchase-orders.module';
 import { ProcurementModule } from './procurement/procurement.module';
@@ -91,7 +91,7 @@ import { UserAwareThrottlerGuard } from './common/guards/user-aware-throttler.gu
     AssetsModule,
     IngredientsModule,
     IngredientCategoriesModule,
-    MenuModule,
+    CatalogModule,
     RecipesModule,
     VendorsModule,
     InventoryModule,

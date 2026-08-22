@@ -1,3 +1,6 @@
+import type { TaskPriority, TaskStatus, TaskType } from './tasks';
+
+/** Prisma `QuestStatus`. */
 export type QuestStatus = 'planned' | 'active' | 'completed' | 'blocked';
 
 export const QUEST_STATUS_LABELS: Record<QuestStatus, string> = {
@@ -32,10 +35,10 @@ export interface Quest {
 export interface TaskSummary {
   id: string;
   title: string;
-  status: string;
-  task_type: string;
+  status: TaskStatus;
+  task_type: TaskType;
   owner_user_id: string;
-  priority: string;
+  priority: TaskPriority;
   due_date: string | null;
   blocked: boolean;
   depends_on_task_id: string | null;

@@ -1,4 +1,10 @@
-import type { OrderStatus } from './kds';
+import type {
+  OrderChannel,
+  OrderStatus,
+  PaymentMethod,
+  PaymentStatus,
+} from './kds';
+import type { DeliveryStatus } from './orders';
 
 export interface CartItem {
   productId: string;
@@ -40,9 +46,9 @@ export interface OrderTrackingStep {
 export interface CustomerOrder {
   id: string;
   order_number: number;
-  channel: string;
-  status: string;
-  delivery_status: string | null;
+  channel: OrderChannel;
+  status: OrderStatus;
+  delivery_status: DeliveryStatus | null;
   subtotal: number;
   channel_modifier_amount: number;
   total: number;
@@ -57,8 +63,9 @@ export interface CustomerOrder {
     product: { name: string };
   }>;
   payment: {
-    method: string;
-    payment_status: string;
-    razorpay_payment_id: string | null;
+    method: PaymentMethod;
+    /** Prisma column is `status`; there is no `payment_status` on Payment. */
+    status: PaymentStatus;
+    razorpay_payment_id?: string | null;
   } | null;
 }

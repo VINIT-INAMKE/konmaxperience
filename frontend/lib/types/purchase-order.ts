@@ -1,3 +1,4 @@
+/** Prisma `PurchaseOrderStatus`. */
 export type PurchaseOrderStatus = 'draft' | 'ordered' | 'received' | 'cancelled';
 
 export const PO_STATUS_LABELS: Record<PurchaseOrderStatus, string> = {

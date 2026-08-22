@@ -1,4 +1,6 @@
 export type EvidenceType = 'image' | 'document' | 'video' | 'link' | 'note' | 'system';
+export type EvidenceSource = 'manual' | 'bridge';
+/** Prisma `ApprovalStatus` — shared by Evidence.approval_status and Approval.status. */
 export type EvidenceApprovalStatus = 'pending' | 'approved' | 'rejected';
 
 export interface Evidence {
@@ -7,6 +9,8 @@ export interface Evidence {
   uploaded_by: string;
   uploader?: { id: string; name: string };
   type: EvidenceType;
+  source: EvidenceSource;
+  bridge_event: string | null;
   url: string;
   notes: string | null;
   approval_status: EvidenceApprovalStatus;
@@ -23,6 +27,17 @@ export const EVIDENCE_TYPE_LABELS: Record<EvidenceType, string> = {
   link: 'Link',
   note: 'Note',
   system: 'System',
+};
+
+export const EVIDENCE_SOURCE_LABELS: Record<EvidenceSource, string> = {
+  manual: 'Manual upload',
+  bridge: 'Auto-captured',
+};
+
+export const EVIDENCE_APPROVAL_STATUS_LABELS: Record<EvidenceApprovalStatus, string> = {
+  pending: 'Pending',
+  approved: 'Approved',
+  rejected: 'Rejected',
 };
 
 export const ALLOWED_MIME_TYPES = new Set([

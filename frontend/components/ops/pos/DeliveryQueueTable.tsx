@@ -23,6 +23,7 @@ import {
 import { apiClient } from '@/lib/api-client';
 import type { Order, UpdateDeliveryPayload } from '@/lib/types/orders';
 import { DELIVERY_STATUS_LABELS } from '@/lib/types/orders';
+import type { DeliveryStatus } from '@/lib/types/orders';
 
 interface DeliveryQueueTableProps {
   orders: Order[];
@@ -31,29 +32,29 @@ interface DeliveryQueueTableProps {
 }
 
 function getNextDeliveryStatus(
-  current: string | null,
-): 'picked_up' | 'in_transit' | 'delivered' | null {
+  current: DeliveryStatus | null,
+): DeliveryStatus | null {
   if (!current) return 'picked_up';
   if (current === 'picked_up') return 'in_transit';
   if (current === 'in_transit') return 'delivered';
   return null;
 }
 
-function getNextStatusLabel(current: string | null): string {
+function getNextStatusLabel(current: DeliveryStatus | null): string {
   if (!current) return 'Mark Picked Up';
   if (current === 'picked_up') return 'Mark In Transit';
   if (current === 'in_transit') return 'Mark Delivered';
   return '';
 }
 
-function DeliveryStatusBadge({ status }: { status: string | null }) {
+function DeliveryStatusBadge({ status }: { status: DeliveryStatus | null }) {
   if (!status) {
     return (
       <span className="text-sm text-muted-foreground">Awaiting pickup</span>
     );
   }
 
-  const label = DELIVERY_STATUS_LABELS[status] || status;
+  const label = DELIVERY_STATUS_LABELS[status];
 
   const variant =
     status === 'delivered'

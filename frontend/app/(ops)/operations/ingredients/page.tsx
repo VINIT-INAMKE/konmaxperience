@@ -21,12 +21,12 @@ import { IngredientCategoriesSection } from '@/components/ops/operations/ingredi
 import { apiClient } from '@/lib/api-client';
 import { useAuthStore } from '@/lib/stores/auth-store';
 import { RoleCode } from '@/lib/types/roles';
-import type { Ingredient, IngredientCategory } from '@/lib/types/ingredient';
-import { INGREDIENT_CATEGORIES, INGREDIENT_CATEGORY_LABELS } from '@/lib/types/ingredient';
+import type { Ingredient, IngredientCategoryItem } from '@/lib/types/ingredient';
 import { ExportButton } from '@/components/ops/exports/ExportButton';
 import type { IngredientStock } from '@/lib/types/inventory';
 
-type CategoryFilter = 'all' | IngredientCategory;
+/** `all` or an IngredientCategory row id — the API filters on `?category_id=`. */
+type CategoryFilter = string;
 
 export default function IngredientsPage() {
   const queryClient = useQueryClient();
@@ -54,6 +54,11 @@ export default function IngredientsPage() {
     queryFn: () => apiClient.get<IngredientStock[]>('/inventory'),
   });
 
+  const { data: categories } = useQuery({
+    queryKey: ['ingredient-categories'],
+    queryFn: () => apiClient.get<IngredientCategoryItem[]>('/ingredient-categories'),
+  });
+
   const stockByIngredient = useMemo(() => {
     if (!stocks) return {} as Record<string, IngredientStock>;
     return stocks.reduce<Record<string, IngredientStock>>((acc, s) => {
@@ -69,7 +74,7 @@ export default function IngredientsPage() {
     if (!ingredients) return [];
     let result = ingredients;
     if (categoryFilter !== 'all') {
-      result = result.filter((i) => i.category === categoryFilter);
+      result = result.filter((i) => i.category_id === categoryFilter);
     }
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
@@ -128,9 +133,9 @@ export default function IngredientsPage() {
           >
             <TabsList className="overflow-x-auto">
               <TabsTrigger value="all">All</TabsTrigger>
-              {INGREDIENT_CATEGORIES.map((cat) => (
-                <TabsTrigger key={cat} value={cat}>
-                  {INGREDIENT_CATEGORY_LABELS[cat]}
+              {(categories ?? []).map((cat) => (
+                <TabsTrigger key={cat.id} value={cat.id}>
+                  {cat.name}
                 </TabsTrigger>
               ))}
             </TabsList>

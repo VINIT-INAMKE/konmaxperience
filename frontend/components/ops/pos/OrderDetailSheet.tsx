@@ -27,8 +27,9 @@ import { ORDER_CHANNEL_LABELS } from '@/lib/types/kds';
 import {
   PAYMENT_METHOD_LABELS,
   DELIVERY_STATUS_LABELS,
+  DELIVERY_STATUSES,
 } from '@/lib/types/orders';
-import type { Order, OrderStatus } from '@/lib/types/orders';
+import type { DeliveryStatus, Order, OrderStatus } from '@/lib/types/orders';
 
 interface OrderDetailSheetProps {
   order: Order | null;
@@ -38,7 +39,7 @@ interface OrderDetailSheetProps {
 }
 
 const STATUS_STEPS: OrderStatus[] = ['placed', 'preparing', 'ready', 'served'];
-const DELIVERY_STATUS_STEPS = ['picked_up', 'in_transit', 'delivered'];
+const DELIVERY_STATUS_STEPS: DeliveryStatus[] = DELIVERY_STATUSES;
 const TERMINAL_STATUSES: OrderStatus[] = ['served', 'dispatched', 'cancelled'];
 
 function formatINR(value: number): string {
@@ -152,7 +153,7 @@ export function OrderDetailSheet({
   });
 
   const deliveryMutation = useMutation({
-    mutationFn: (nextStatus: string) =>
+    mutationFn: (nextStatus: DeliveryStatus) =>
       apiClient.patch('/orders/' + order!.id + '/delivery', {
         delivery_status: nextStatus,
       }),
@@ -385,7 +386,7 @@ export function OrderDetailSheet({
                   {order.delivery_status && (
                     <div className="flex justify-between text-sm items-center">
                       <span className="text-muted-foreground">Delivery Status</span>
-                      <span>{DELIVERY_STATUS_LABELS[order.delivery_status] ?? order.delivery_status}</span>
+                      <span>{DELIVERY_STATUS_LABELS[order.delivery_status]}</span>
                     </div>
                   )}
                   {nextDeliveryStatus && (

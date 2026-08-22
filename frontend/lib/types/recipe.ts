@@ -1,5 +1,7 @@
+/** Prisma `RecipeStatus`. */
 export type RecipeStatus = 'draft' | 'pending' | 'approved' | 'archived';
 
+/** Prisma `PreparationType`. */
 export type PreparationType = 'scratch' | 'batch_prepared' | 'ready_to_sell' | 'assemble';
 
 export const PREPARATION_TYPES: PreparationType[] = ['scratch', 'batch_prepared', 'ready_to_sell', 'assemble'];
@@ -24,7 +26,7 @@ export interface RecipeLine {
   input_type: 'ingredient' | 'recipe';
   ingredient_id: string | null;
   source_recipe_id: string | null;
-  ingredient?: { id: string; name: string; base_unit: string; category: string } | null;
+  ingredient?: { id: string; name: string; base_unit?: string } | null;
   source_recipe?: Recipe | null;
   quantity: number;
   unit: string;
@@ -50,6 +52,9 @@ export interface Recipe {
   computed_cost: number | null;
   status: RecipeStatus;
   preparation_type: PreparationType;
+  /** Set on a versioned copy; points at the recipe this one was branched from. */
+  parent_recipe_id: string | null;
+  version: number;
   created_by: string;
   creator?: { id: string; name: string } | null;
   created_at: string;

@@ -1,9 +1,18 @@
+import type { PreparationType } from './recipe';
+
+/** Prisma `ProductType`. */
 export type ProductType = 'prepared_food' | 'packaged' | 'experience' | 'merchandise';
+/** Prisma `FulfilmentType`. */
 export type FulfilmentType = 'local' | 'shipped' | 'booking';
+/** Prisma `StockMode`. */
 export type StockMode = 'derived_from_recipe' | 'tracked' | 'capacity';
+/** Prisma `ProductStatus`. */
 export type ProductStatus = 'draft' | 'active' | 'archived';
+/** Prisma `MediaKind`. */
 export type MediaKind = 'image' | 'video';
+/** ChannelModifier.modifier_type is still a free string on the backend. */
 export type ModifierType = 'fixed' | 'percentage';
+/** Prisma `OrderChannel`. */
 export type OrderChannelValue = 'dine_in' | 'takeaway' | 'delivery' | 'marketplace';
 
 export const PRODUCT_TYPE_LABELS: Record<ProductType, string> = {
@@ -92,7 +101,7 @@ export interface Product {
     name?: string;
     computed_cost: number | null;
     yield_qty?: number;
-    preparation_type: string;
+    preparation_type: PreparationType;
   } | null;
   category?: { id: string; name: string; slug: string; brand_id: string } | null;
   event?: { id: string; date: string; capacity: number } | null;

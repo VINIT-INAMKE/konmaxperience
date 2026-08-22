@@ -1,3 +1,7 @@
+import type { OrderChannel, OrderItemStatus } from './kds';
+import type { PreparationType } from './recipe';
+
+/** Prisma `PrepBatchStatus`. */
 export type PrepBatchStatus = 'active' | 'depleted' | 'expired';
 export type WasteType = 'ingredient' | 'prep_batch';
 export type WasteReason = 'spoilage' | 'over_prep' | 'cooking_error' | 'expired' | 'other';
@@ -90,18 +94,18 @@ export interface PickAndPackOrder {
   order_number: number;
   customer_name: string | null;
   created_at: string;
-  channel: string;
+  channel: OrderChannel;
   items: PickAndPackItem[];
 }
 
 export interface PickAndPackItem {
   id: string;
-  status: string;
+  status: OrderItemStatus;
   product_id: string;
   product_name: string;
   quantity: number;
   item_notes: string | null;
-  preparation_type: string;
+  preparation_type: PreparationType;
   components?: AssembleComponent[];
 }
 

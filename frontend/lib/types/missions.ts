@@ -1,5 +1,10 @@
+import type { QuestStatus } from './quests';
+
+/** Prisma `MissionPhase`. */
 export type MissionPhase = 'setup' | 'foundation' | 'activation' | 'scale';
+/** Prisma `MissionScope`. */
 export type MissionScope = 'food' | 'art' | 'lifestyle' | 'system' | 'mixed';
+/** Prisma `MissionStatus`. */
 export type MissionStatus = 'planned' | 'active' | 'completed' | 'paused';
 
 export const MISSION_PHASE_LABELS: Record<MissionPhase, string> = {
@@ -50,7 +55,7 @@ export interface Mission {
 export interface QuestSummary {
   id: string;
   title: string;
-  status: string;
+  status: QuestStatus;
   progress_percent: number;
 }
 

@@ -22,7 +22,7 @@ export const REPORT_TYPES = [
   'ingredients',
   'vendors',
   'recipes',
-  'menu_items',
+  'products',
   'feedback',
   'events',
   'event_guest_lists',
@@ -121,11 +121,11 @@ export const EXPORT_TYPE_CONFIG: Record<ReportType, ExportTypeConfig> = {
     isTimeSeries: false,
     description: 'recipes with BOM lines',
   },
-  menu_items: {
-    label: 'Menu Items',
+  products: {
+    label: 'Products',
     permission: Permission.MANAGE_OPS,
     isTimeSeries: false,
-    description: 'menu items with pricing',
+    description: 'products with pricing and variants',
   },
   feedback: {
     label: 'Feedback',

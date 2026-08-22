@@ -9,25 +9,10 @@ import {
   TooltipContent,
 } from '@/components/ui/tooltip';
 import type { IngredientStock } from '@/lib/types/inventory';
-import type { IngredientCategory } from '@/lib/types/ingredient';
-
-const CATEGORY_COLORS: Record<IngredientCategory, string> = {
-  dairy: 'bg-blue-500/15 text-blue-400',
-  vegetable: 'bg-green-500/15 text-green-400',
-  spice: 'bg-orange-500/15 text-orange-400',
-  grain: 'bg-yellow-500/15 text-yellow-600',
-  meat: 'bg-red-500/15 text-red-400',
-  oil: 'bg-purple-500/15 text-purple-400',
-};
-
-const CATEGORY_LABELS: Record<IngredientCategory, string> = {
-  dairy: 'Dairy',
-  vegetable: 'Vegetable',
-  spice: 'Spice',
-  grain: 'Grain',
-  meat: 'Meat',
-  oil: 'Oil',
-};
+import {
+  ingredientCategoryBadgeClass,
+  ingredientCategoryName,
+} from '@/lib/types/ingredient';
 
 interface InventoryRowProps {
   stock: IngredientStock;
@@ -37,7 +22,7 @@ export function InventoryRow({ stock }: InventoryRowProps) {
   const currentQty = Number(stock.current_quantity);
   const minLevel = Number(stock.ingredient?.min_stock_level ?? 0);
   const isLowStock = currentQty < minLevel;
-  const category = stock.ingredient?.category as IngredientCategory | undefined;
+  const category = stock.ingredient?.category_obj ?? null;
 
   return (
     <tr className="border-b last:border-b-0 hover:bg-muted/30 transition-colors">
@@ -48,11 +33,9 @@ export function InventoryRow({ stock }: InventoryRowProps) {
 
       {/* Category */}
       <td className="px-4 py-3">
-        {category && (
-          <Badge className={`text-xs border-0 ${CATEGORY_COLORS[category]}`}>
-            {CATEGORY_LABELS[category]}
-          </Badge>
-        )}
+        <Badge className={`text-xs border-0 ${ingredientCategoryBadgeClass(category)}`}>
+          {ingredientCategoryName(category)}
+        </Badge>
       </td>
 
       {/* Zone */}

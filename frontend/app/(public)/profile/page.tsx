@@ -34,6 +34,8 @@ import { GooglePlacesInput } from '@/components/public/GooglePlacesInput';
 import { apiClient } from '@/lib/api-client';
 import type { Customer } from '@/lib/types/customer-auth';
 import type { CustomerOrder, CustomerAddress } from '@/lib/types/marketplace';
+import type { BookingStatus, BookingPaymentStatus } from '@/lib/types/events';
+import { BOOKING_STATUS_LABELS } from '@/lib/types/events';
 import { productImage } from '@/lib/types/catalog';
 import type { Product } from '@/lib/types/catalog';
 
@@ -47,8 +49,11 @@ interface CustomerBooking {
   event_id: string;
   customer_id: string;
   guests: number;
-  total_amount: number;
-  payment_status: string;
+  /** EventBooking.payment_amount — the API has no `total_amount` column. */
+  payment_amount: number | null;
+  status: BookingStatus;
+  payment_status: BookingPaymentStatus;
+  hold_expires_at: string | null;
   customer_name: string | null;
   created_at: string;
   event: {
@@ -757,14 +762,14 @@ export default function CustomerProfilePage() {
                     </span>
                     <span
                       className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                        booking.payment_status === 'captured'
+                        booking.status === 'confirmed' || booking.status === 'attended'
                           ? 'bg-green-50 text-green-700'
-                          : 'bg-amber-50 text-amber-700'
+                          : booking.status === 'cancelled' || booking.status === 'no_show'
+                            ? 'bg-red-50 text-red-700'
+                            : 'bg-amber-50 text-amber-700'
                       }`}
                     >
-                      {booking.payment_status === 'captured'
-                        ? 'Confirmed'
-                        : booking.payment_status}
+                      {BOOKING_STATUS_LABELS[booking.status] ?? booking.status}
                     </span>
                   </div>
                   <p className="text-xs text-[var(--public-muted)]">
@@ -778,7 +783,7 @@ export default function CustomerProfilePage() {
                   </p>
                   <p className="text-base font-semibold text-[var(--public-fg)]">
                     {'\u20B9'}
-                    {booking.total_amount.toFixed(2)}
+                    {Number(booking.payment_amount ?? 0).toFixed(2)}
                   </p>
                   <button
                     type="button"

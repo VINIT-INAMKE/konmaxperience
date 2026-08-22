@@ -2,20 +2,26 @@ import { sanitizeRow } from '../../common/utils/csv-sanitize';
 import { Injectable } from '@nestjs/common';
 import ExcelJS from 'exceljs';
 import { writeToBuffer } from '@fast-csv/format';
-import { MenuService } from '../../menu/menu.service';
+import { CatalogService } from '../../catalog/catalog.service';
 import { FeedbackService } from '../../feedback/feedback.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ExportBuilder } from '../exports.service';
 
+/** `Variants` is a flattened `name (sku) x stock` list — one cell per product. */
+const variantSummary = (item: any): string =>
+  (item.variants ?? [])
+    .map((v: any) => `${v.name} (${v.sku}) x ${Number(v.stock_on_hand)}`)
+    .join('; ');
+
 @Injectable()
-export class MenuItemsExportBuilder implements ExportBuilder {
+export class ProductsExportBuilder implements ExportBuilder {
   constructor(
-    private readonly menuService: MenuService,
+    private readonly catalogService: CatalogService,
     private readonly prisma: PrismaService,
   ) {}
 
   async fetchData(): Promise<unknown[]> {
-    return this.menuService.findAllForExport();
+    return this.catalogService.findAllForExport();
   }
 
   async buildXlsx(data: unknown[]): Promise<Buffer> {
@@ -25,15 +31,23 @@ export class MenuItemsExportBuilder implements ExportBuilder {
     });
 
     const workbook = new ExcelJS.Workbook();
-    const sheet = workbook.addWorksheet('Menu Items');
+    const sheet = workbook.addWorksheet('Products');
 
     sheet.columns = [
       { header: 'Name', key: 'name', width: 24 },
+      { header: 'Slug', key: 'slug', width: 24 },
+      { header: 'Type', key: 'type', width: 16 },
       { header: 'Category', key: 'category', width: 16 },
       {
         header: 'Base Price',
         key: 'base_price',
         width: 14,
+        style: { numFmt: '#,##0.00' },
+      },
+      {
+        header: 'Tax %',
+        key: 'tax_rate',
+        width: 10,
         style: { numFmt: '#,##0.00' },
       },
       { header: 'Status', key: 'status', width: 12 },
@@ -44,6 +58,7 @@ export class MenuItemsExportBuilder implements ExportBuilder {
         width: 14,
         style: { numFmt: '#,##0.00' },
       },
+      { header: 'Variants', key: 'variants', width: 36 },
       { header: 'Channel Modifiers', key: 'channel_modifiers', width: 30 },
     ];
 
@@ -57,13 +72,17 @@ export class MenuItemsExportBuilder implements ExportBuilder {
     for (const item of items) {
       sheet.addRow({
         name: item.name,
+        slug: item.slug,
+        type: item.type,
         category: item.category?.name || '',
         base_price: Number(item.base_price),
+        tax_rate: Number(item.tax_rate ?? 0),
         status: item.status,
         recipe_name: item.recipe?.name || '',
         recipe_cost: item.recipe?.computed_cost
           ? Number(item.recipe.computed_cost)
           : 0,
+        variants: variantSummary(item),
         channel_modifiers: modifierStr,
       });
     }
@@ -86,13 +105,17 @@ export class MenuItemsExportBuilder implements ExportBuilder {
 
     const rows = items.map((item) => ({
       Name: item.name,
+      Slug: item.slug,
+      Type: item.type,
       Category: item.category?.name || '',
       'Base Price': Number(item.base_price),
+      'Tax %': Number(item.tax_rate ?? 0),
       Status: item.status,
       'Recipe Name': item.recipe?.name || '',
       'Recipe Cost': item.recipe?.computed_cost
         ? Number(item.recipe.computed_cost)
         : 0,
+      Variants: variantSummary(item),
       'Channel Modifiers': modifierStr,
     }));
     return writeToBuffer(rows.map(sanitizeRow), { headers: true });

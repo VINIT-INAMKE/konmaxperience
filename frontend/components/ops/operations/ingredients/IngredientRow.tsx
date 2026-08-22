@@ -5,26 +5,12 @@ import Link from 'next/link';
 import { Pencil, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
-import type { Ingredient, IngredientCategory } from '@/lib/types/ingredient';
+import type { Ingredient } from '@/lib/types/ingredient';
+import {
+  ingredientCategoryBadgeClass,
+  ingredientCategoryName,
+} from '@/lib/types/ingredient';
 import type { IngredientStock } from '@/lib/types/inventory';
-
-const CATEGORY_COLORS: Record<IngredientCategory, string> = {
-  dairy: 'bg-blue-500/15 text-blue-400',
-  vegetable: 'bg-green-500/15 text-green-400',
-  spice: 'bg-orange-500/15 text-orange-400',
-  grain: 'bg-yellow-500/15 text-yellow-600',
-  meat: 'bg-red-500/15 text-red-400',
-  oil: 'bg-purple-500/15 text-purple-400',
-};
-
-const CATEGORY_LABELS: Record<IngredientCategory, string> = {
-  dairy: 'Dairy',
-  vegetable: 'Vegetable',
-  spice: 'Spice',
-  grain: 'Grain',
-  meat: 'Meat',
-  oil: 'Oil',
-};
 
 interface IngredientRowProps {
   ingredient: Ingredient;
@@ -64,21 +50,11 @@ export function IngredientRow({ ingredient, stock, onEdit, onDelete, isAdmin }: 
         </span>
       </td>
       <td className="px-4 py-3">
-        {(() => {
-          const catKey = ingredient.category as IngredientCategory | null;
-          const catName = ingredient.category_obj?.name
-            ?? (catKey && CATEGORY_LABELS[catKey])
-            ?? ingredient.category
-            ?? 'Uncategorized';
-          const catColor = catKey && CATEGORY_COLORS[catKey]
-            ? CATEGORY_COLORS[catKey]
-            : 'bg-muted text-muted-foreground';
-          return (
-            <Badge className={`text-xs border-0 ${catColor}`}>
-              {catName}
-            </Badge>
-          );
-        })()}
+        <Badge
+          className={`text-xs border-0 ${ingredientCategoryBadgeClass(ingredient.category_obj)}`}
+        >
+          {ingredientCategoryName(ingredient.category_obj)}
+        </Badge>
       </td>
       <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
         {ingredient.base_unit}

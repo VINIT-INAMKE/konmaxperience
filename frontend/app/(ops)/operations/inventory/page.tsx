@@ -17,8 +17,7 @@ import { InventoryRow } from '@/components/ops/operations/inventory/InventoryRow
 import { StockAdjustmentSheet } from '@/components/ops/operations/inventory/StockAdjustmentSheet';
 import { apiClient } from '@/lib/api-client';
 import type { IngredientStock } from '@/lib/types/inventory';
-import type { IngredientCategory } from '@/lib/types/ingredient';
-import { INGREDIENT_CATEGORIES, INGREDIENT_CATEGORY_LABELS } from '@/lib/types/ingredient';
+import type { IngredientCategoryItem } from '@/lib/types/ingredient';
 import { ExportButton } from '@/components/ops/exports/ExportButton';
 
 interface Zone {
@@ -27,7 +26,8 @@ interface Zone {
 }
 
 export default function InventoryPage() {
-  const [categoryFilter, setCategoryFilter] = useState<IngredientCategory | 'all'>('all');
+  // 'all' or an IngredientCategory row id — categories are DB rows, not a fixed enum.
+  const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [zoneFilter, setZoneFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [adjustOpen, setAdjustOpen] = useState(false);
@@ -42,12 +42,17 @@ export default function InventoryPage() {
     queryFn: () => apiClient.get<Zone[]>('/zones'),
   });
 
+  const { data: categories } = useQuery({
+    queryKey: ['ingredient-categories'],
+    queryFn: () => apiClient.get<IngredientCategoryItem[]>('/ingredient-categories'),
+  });
+
   const filteredStocks = useMemo(() => {
     if (!stocks) return [];
     let result = stocks;
 
     if (categoryFilter !== 'all') {
-      result = result.filter((s) => s.ingredient?.category === categoryFilter);
+      result = result.filter((s) => s.ingredient?.category_id === categoryFilter);
     }
     if (zoneFilter !== 'all') {
       result = result.filter((s) => s.zone_id === zoneFilter);
@@ -92,16 +97,21 @@ export default function InventoryPage() {
         <div className="flex items-center gap-3 flex-wrap">
           <Select
             value={categoryFilter}
-            onValueChange={(v) => setCategoryFilter((v ?? 'all') as IngredientCategory | 'all')}
+            onValueChange={(v) => setCategoryFilter(v ?? 'all')}
           >
             <SelectTrigger className="w-40">
-              <SelectValue placeholder="Category" />
+              <SelectValue placeholder="Category">
+                {(value: string) => {
+                  if (!value || value === 'all') return 'All Categories';
+                  return categories?.find((c) => c.id === value)?.name ?? 'All Categories';
+                }}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Categories</SelectItem>
-              {INGREDIENT_CATEGORIES.map((cat) => (
-                <SelectItem key={cat} value={cat}>
-                  {INGREDIENT_CATEGORY_LABELS[cat]}
+              {(categories ?? []).map((cat) => (
+                <SelectItem key={cat.id} value={cat.id}>
+                  {cat.name}
                 </SelectItem>
               ))}
             </SelectContent>

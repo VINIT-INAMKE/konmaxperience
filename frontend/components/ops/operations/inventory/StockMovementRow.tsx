@@ -1,7 +1,7 @@
 'use client';
 
 import { Badge } from '@/components/ui/badge';
-import type { StockMovement, StockMovementType } from '@/lib/types/inventory';
+import type { StockMovement } from '@/lib/types/inventory';
 import { MOVEMENT_TYPE_LABELS, MOVEMENT_TYPE_BADGE_CLASSES } from '@/lib/types/inventory';
 
 const REFERENCE_TYPE_LABELS: Record<string, string> = {
@@ -19,7 +19,7 @@ interface StockMovementRowProps {
 export function StockMovementRow({ movement, baseUnit }: StockMovementRowProps) {
   const qty = Number(movement.quantity);
   const isPositive = qty >= 0;
-  const movementType = movement.movement_type as StockMovementType;
+  const movementType = movement.movement_type;
   const dateStr = new Date(movement.created_at).toLocaleDateString('en-IN', {
     day: 'numeric',
     month: 'short',

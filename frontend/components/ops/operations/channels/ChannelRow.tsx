@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ChannelStatusToggle } from './ChannelStatusToggle';
 import type { Channel, ChannelStatus } from '@/lib/types/channel';
-import { CHANNEL_TYPE_LABELS } from '@/lib/types/channel';
+import { channelTypeLabel } from '@/lib/types/channel';
 
 interface ChannelRowProps {
   channel: Channel;
@@ -23,7 +23,7 @@ export function ChannelRow({ channel, isAdmin, onToggle, onEdit }: ChannelRowPro
       </TableCell>
       <TableCell>
         <Badge variant="outline" className="text-xs">
-          {CHANNEL_TYPE_LABELS[channel.channel_type]}
+          {channelTypeLabel(channel.channel_type)}
         </Badge>
       </TableCell>
       <TableCell>

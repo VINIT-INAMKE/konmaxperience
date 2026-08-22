@@ -76,7 +76,8 @@ export interface PrerequisiteData {
 export const IMPORT_TYPE_CONFIG: Record<ImportType, ImportTypeConfig> = {
   ingredients: {
     label: 'Ingredients',
-    description: 'Bulk import ingredient catalog with category, unit, and stock levels',
+    description:
+      'Bulk import ingredient catalog. The category column takes an existing ingredient category name (e.g. Vegetables, Dairy, Spices (dried)), not a code.',
     columns: ['name', 'category', 'base_unit', 'min_stock_level'],
     icon: 'Package',
   },

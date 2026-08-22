@@ -1,6 +1,12 @@
+import type { PurchaseOrderStatus } from './purchase-order';
+
+/** Prisma `TaskType`. */
 export type TaskType = 'core' | 'adhoc' | 'improvement';
+/** Prisma `TaskStatus`. */
 export type TaskStatus = 'todo' | 'doing' | 'done' | 'blocked' | 'cancelled';
+/** Prisma `TaskPriority`. */
 export type TaskPriority = 'low' | 'medium' | 'high' | 'critical';
+/** Prisma `TaskDomain`. */
 export type TaskDomain =
   | 'food'
   | 'art'
@@ -11,6 +17,28 @@ export type TaskDomain =
   | 'talent'
   | 'tech'
   | 'design';
+
+/** Prisma `TaskSubjectType` — the domain record a task is attached to, if any. */
+export type TaskSubjectType =
+  | 'recipe'
+  | 'product'
+  | 'event'
+  | 'vendor'
+  | 'purchase_order'
+  | 'prep_batch'
+  | 'order'
+  | 'decision';
+
+export const TASK_SUBJECT_TYPE_LABELS: Record<TaskSubjectType, string> = {
+  recipe: 'Recipe',
+  product: 'Product',
+  event: 'Event',
+  vendor: 'Vendor',
+  purchase_order: 'Purchase Order',
+  prep_batch: 'Prep Batch',
+  order: 'Order',
+  decision: 'Decision',
+};
 
 export const TASK_TYPE_LABELS: Record<TaskType, string> = {
   core: 'Core',
@@ -65,8 +93,13 @@ export interface Task {
   owner?: { id: string; name: string };
   created_by: string;
   creator?: { id: string; name: string };
+  updated_by: string | null;
+  updater?: { id: string; name: string } | null;
   status: TaskStatus;
   priority: TaskPriority;
+  /** Domain record this task is attached to (bridge layer); null for plain mission work. */
+  subject_type: TaskSubjectType | null;
+  subject_id: string | null;
   xp: number;
   valid_xp: number;
   verified: boolean;
@@ -75,7 +108,7 @@ export interface Task {
   blocked: boolean;
   blocked_reason: string | null;
   depends_on_task_id: string | null;
-  depends_on?: { id: string; title: string; status: string } | null;
+  depends_on?: { id: string; title: string; status: TaskStatus } | null;
   readiness_meter_id: string | null;
   readiness_value: number;
   kpi_id: string | null;
@@ -94,7 +127,7 @@ export interface Task {
   linked_assets?: { id: string; name: string; asset_type: string }[];
   linked_purchase_orders?: {
     id: string;
-    status: string;
+    status: PurchaseOrderStatus;
     total_amount: number;
     vendor: { id: string; name: string };
   }[];
