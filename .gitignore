@@ -32,3 +32,6 @@ contextdocsv2
 
 # Prisma
 prisma/migrations/**/migration_lock.toml
+
+# Claude agent worktrees
+.claude/worktrees/
