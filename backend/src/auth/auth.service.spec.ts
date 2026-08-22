@@ -147,6 +147,7 @@ describe('AuthService', () => {
         token_hash: tokenHash,
         revoked_at: null,
         expires_at: new Date(Date.now() + 86400000),
+        user: mockUser,
       });
       prismaService.user.findUnique.mockResolvedValue(mockUser);
       jwtService.sign.mockReturnValue('new-access-token');

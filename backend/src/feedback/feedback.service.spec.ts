@@ -77,6 +77,8 @@ describe('FeedbackService', () => {
         where: {},
         include: { order: { select: { id: true } } },
         orderBy: { created_at: 'desc' },
+        take: 50,
+        skip: 0,
       });
     });
 

@@ -186,6 +186,7 @@ describe('CustomerAuthService', () => {
         email: null,
         created_at: now, // just created (first-time)
       };
+      prisma.customer.findUnique.mockResolvedValue(null);
       prisma.customer.upsert.mockResolvedValue(customer);
 
       await service.verifyOtp('9876543210', otp, mockRes);
@@ -217,6 +218,7 @@ describe('CustomerAuthService', () => {
         email: null,
         created_at: new Date(now.getTime() - 86400000), // created yesterday
       };
+      prisma.customer.findUnique.mockResolvedValue(customer);
       prisma.customer.upsert.mockResolvedValue(customer);
 
       await service.verifyOtp('9876543210', otp, mockRes);

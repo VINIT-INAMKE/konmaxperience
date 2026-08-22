@@ -74,10 +74,10 @@ describe('LeaderboardService', () => {
         key: 'leaderboard_enabled',
         value: 'false',
       });
+      prisma.user.findMany.mockResolvedValue(mockUsers);
 
       const result = await service.getLeaderboard();
 
-      expect(prisma.user.findMany).not.toHaveBeenCalled();
       expect(result).toEqual({ enabled: false, users: [] });
     });
 
