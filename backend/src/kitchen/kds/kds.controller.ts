@@ -6,14 +6,15 @@ import {
   Body,
   ParseUUIDPipe,
 } from '@nestjs/common';
-import { IsIn } from 'class-validator';
+import { IsEnum } from 'class-validator';
+import { OrderItemStatus } from '@prisma/client';
 import { KdsService } from './kds.service';
 import { RequiresPermission } from '../../common/decorators/permissions.decorator';
 import { Permission } from '../../types/permissions';
 
 export class UpdateKdsItemStatusDto {
-  @IsIn(['pending', 'preparing', 'ready'])
-  status: string;
+  @IsEnum(OrderItemStatus)
+  status: OrderItemStatus;
 }
 
 @Controller('kitchen/kds')

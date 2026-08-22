@@ -4,6 +4,12 @@ import {
   UnauthorizedException,
   ServiceUnavailableException,
 } from '@nestjs/common';
+import {
+  OrderSource,
+  OrderStatus,
+  PaymentMethod,
+  PaymentStatus,
+} from '@prisma/client';
 import { RazorpayService } from '../razorpay/razorpay.service';
 import { RedisService } from '../customer-auth/redis.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -120,13 +126,13 @@ export class WebhooksService {
     const existing = await this.prisma.payment.findFirst({
       where: { razorpay_order_id: payment.order_id },
     });
-    if (existing && existing.status === 'paid') return; // idempotent
+    if (existing && existing.status === PaymentStatus.paid) return; // idempotent
 
     if (existing) {
       await this.prisma.payment.update({
         where: { id: existing.id },
         data: {
-          status: 'paid',
+          status: PaymentStatus.paid,
           razorpay_payment_id: payment.id,
         },
       });
@@ -135,9 +141,9 @@ export class WebhooksService {
       await this.prisma.payment.create({
         data: {
           order_id: orderId,
-          method: 'razorpay',
+          method: PaymentMethod.razorpay,
           amount: payment.amount / 100, // paise to rupees
-          status: 'paid',
+          status: PaymentStatus.paid,
           razorpay_order_id: payment.order_id,
           razorpay_payment_id: payment.id,
         },
@@ -146,8 +152,8 @@ export class WebhooksService {
 
     // Update order status to paid if still placed
     await this.prisma.order.updateMany({
-      where: { id: orderId, status: 'placed' },
-      data: { status: 'preparing' },
+      where: { id: orderId, status: OrderStatus.placed },
+      data: { status: OrderStatus.preparing },
     });
   }
 
@@ -187,6 +193,7 @@ export class WebhooksService {
         razorpayOrderId: payment.order_id,
         razorpayPaymentId: payment.id,
         pending,
+        placedVia: OrderSource.webhook_fallback,
       });
     } catch (err) {
       await redis.set(pendingKey, pendingRaw, 'EX', 1800, 'NX');
@@ -201,7 +208,7 @@ export class WebhooksService {
       .trigger(`private-customer-${customerId}`, 'order.placed', {
         orderId: order.id,
         orderNumber: order.order_number,
-        status: 'placed',
+        status: OrderStatus.placed,
       })
       .catch((err) =>
         console.error('[Pusher] Webhook order trigger error:', err),
@@ -230,7 +237,7 @@ export class WebhooksService {
     if (paymentRecord) {
       await this.prisma.payment.update({
         where: { id: paymentRecord.id },
-        data: { status: 'refunded' },
+        data: { status: PaymentStatus.refunded },
       });
     }
   }

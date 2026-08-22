@@ -1,8 +1,9 @@
-import { IsIn, IsNumber, IsOptional, IsString, Min } from 'class-validator';
+import { IsEnum, IsNumber, IsOptional, IsString, Min } from 'class-validator';
+import { PaymentMethod } from '@prisma/client';
 
 export class RecordPaymentDto {
-  @IsIn(['cash', 'card', 'upi', 'razorpay'])
-  method: string;
+  @IsEnum(PaymentMethod)
+  method: PaymentMethod;
 
   @IsNumber()
   @Min(0.01)

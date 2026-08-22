@@ -1083,13 +1083,13 @@ model ProductMedia {
 }
 
 model ChannelModifier {
-  id             String  @id @default(uuid())
-  channel_type   String
+  id             String       @id @default(uuid())
+  channel        OrderChannel
   modifier_type  String
   modifier_value Decimal
-  status         String  @default("active")
+  status         String       @default("active")
 
-  @@unique([channel_type])
+  @@unique([channel])
 }
 
 model IngredientStock {
@@ -1255,28 +1255,37 @@ model CustomerAddress {
 }
 
 model Order {
-  id                      String      @id @default(uuid())
-  order_number            Int         @unique @default(autoincrement())
-  channel                 String // "dine_in" | "takeaway" | "delivery"
-  status                  String      @default("placed") // placed | preparing | ready | served | dispatched | cancelled
+  id                      String          @id @default(uuid())
+  order_number            Int             @unique @default(autoincrement())
+  channel                 OrderChannel
+  status                  OrderStatus     @default(placed)
   table_number            String?
   customer_name           String?
   customer_phone          String?
   delivery_address        String?
   delivery_assigned_to    String?
-  delivery_status         String?
+  delivery_status         DeliveryStatus?
+  placed_via              OrderSource     @default(pos)
   customer_id             String?
-  customer                Customer?   @relation(fields: [customer_id], references: [id])
+  customer                Customer?       @relation(fields: [customer_id], references: [id])
   subtotal                Decimal
-  channel_modifier_amount Decimal     @default(0)
+  channel_modifier_amount Decimal         @default(0)
+  discount_amount         Decimal         @default(0)
+  shipping_amount         Decimal         @default(0)
+  tax_amount              Decimal         @default(0)
   total                   Decimal
+  loyalty_points_earned   Int             @default(0)
+  loyalty_points_redeemed Int             @default(0)
+  idempotency_key         String?         @unique
+  address_snapshot        Json?
   notes                   String?
   created_by              String?
+  updated_by              String?
   zone_id                 String?
-  created_at              DateTime    @default(now())
-  updated_at              DateTime    @updatedAt
-  creator                 User?       @relation("OrderCreator", fields: [created_by], references: [id])
-  zone                    Zone?       @relation(fields: [zone_id], references: [id])
+  created_at              DateTime        @default(now())
+  updated_at              DateTime        @updatedAt
+  creator                 User?           @relation("OrderCreator", fields: [created_by], references: [id])
+  zone                    Zone?           @relation(fields: [zone_id], references: [id])
   items                   OrderItem[]
   payment                 Payment?
   feedbacks               Feedback[]
@@ -1298,7 +1307,9 @@ model OrderItem {
   quantity     Int
   unit_price   Decimal
   item_notes   String?
-  status       String          @default("pending") // pending | preparing | ready
+  status       OrderItemStatus @default(pending)
+  fulfilment   FulfilmentType  @default(local)
+  tax_rate     Decimal         @default(0)
   ready_at     DateTime?
   created_at   DateTime        @default(now())
   order        Order           @relation(fields: [order_id], references: [id], onDelete: Cascade)
@@ -1321,16 +1332,17 @@ model OrderItem {
 }
 
 model Payment {
-  id                  String   @id @default(uuid())
-  order_id            String   @unique
-  method              String // "cash" | "card" | "upi" | "razorpay"
+  id                  String        @id @default(uuid())
+  order_id            String        @unique
+  method              PaymentMethod
   amount              Decimal
-  status              String   @default("pending") // pending | paid | refunded
+  status              PaymentStatus @default(pending)
+  refunded_amount     Decimal       @default(0)
   notes               String?
-  razorpay_order_id   String?  @unique
-  razorpay_payment_id String?  @unique
-  created_at          DateTime @default(now())
-  order               Order    @relation(fields: [order_id], references: [id])
+  razorpay_order_id   String?       @unique
+  razorpay_payment_id String?       @unique
+  created_at          DateTime      @default(now())
+  order               Order         @relation(fields: [order_id], references: [id])
 }
 
 model Notification {
@@ -1377,7 +1389,7 @@ model Feedback {
 model Event {
   id          String         @id @default(uuid())
   title       String
-  event_type  String // "dining" | "workshop" | "pop_up" | "tasting" | "other"
+  event_type  EventType
   date        DateTime
   capacity    Int
   price       Decimal
@@ -1385,7 +1397,7 @@ model Event {
   brand_id    String?
   description String?
   image_url   String?
-  status      String         @default("upcoming") // upcoming | past | cancelled
+  status      EventStatus    @default(upcoming)
   created_at  DateTime       @default(now())
   updated_at  DateTime       @updatedAt
   zone        Zone?          @relation(fields: [zone_id], references: [id])
@@ -1395,19 +1407,21 @@ model Event {
 }
 
 model EventBooking {
-  id                  String    @id @default(uuid())
+  id                  String        @id @default(uuid())
   event_id            String
-  event               Event     @relation(fields: [event_id], references: [id], onDelete: Cascade)
+  event               Event         @relation(fields: [event_id], references: [id], onDelete: Cascade)
   customer_name       String
   customer_phone      String
   guests              Int
   customer_id         String?
-  customer            Customer? @relation(fields: [customer_id], references: [id])
-  razorpay_order_id   String?   @unique
-  razorpay_payment_id String?   @unique
-  payment_status      String    @default("pending") // pending | paid | refunded | free
+  customer            Customer?     @relation(fields: [customer_id], references: [id])
+  razorpay_order_id   String?       @unique
+  razorpay_payment_id String?       @unique
+  payment_status      String        @default("pending") // pending | paid | refunded | free
+  status              BookingStatus @default(confirmed)
+  hold_expires_at     DateTime?
   payment_amount      Decimal?
-  created_at          DateTime  @default(now())
+  created_at          DateTime      @default(now())
 
   @@unique([event_id, customer_phone])
   @@index([customer_id])

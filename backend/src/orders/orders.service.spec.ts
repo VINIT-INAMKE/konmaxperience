@@ -96,7 +96,7 @@ describe('OrdersService', () => {
 
       mockTx.channelModifier.findFirst.mockResolvedValue({
         id: 'cm-1',
-        channel_type: 'dine_in',
+        channel: 'dine_in',
         modifier_type: 'fixed',
         modifier_value: dec(50),
         status: 'active',
@@ -118,7 +118,7 @@ describe('OrdersService', () => {
       const result = await service.createOrder(baseDto, userId);
 
       expect(mockTx.channelModifier.findFirst).toHaveBeenCalledWith({
-        where: { channel_type: 'dine_in', status: 'active' },
+        where: { channel: 'dine_in', status: 'active' },
       });
 
       expect(mockTx.order.create).toHaveBeenCalledWith(
@@ -209,7 +209,7 @@ describe('OrdersService', () => {
 
       mockTx.channelModifier.findFirst.mockResolvedValue({
         id: 'cm-2',
-        channel_type: 'delivery',
+        channel: 'delivery',
         modifier_type: 'percentage',
         modifier_value: dec(10),
         status: 'active',
@@ -313,11 +313,11 @@ describe('OrdersService', () => {
         .mockResolvedValueOnce({ id: 'o-1', status: 'preparing' });
       mockPrisma.order.updateMany.mockResolvedValue({ count: 1 });
 
-      const result = await service.updateOrderStatus('o-1', 'preparing');
+      const result = await service.updateOrderStatus('o-1', 'preparing', 'u-1');
 
       expect(mockPrisma.order.updateMany).toHaveBeenCalledWith({
         where: { id: 'o-1', status: 'placed' },
-        data: { status: 'preparing' },
+        data: { status: 'preparing', updated_by: 'u-1' },
       });
       expect(result!.status).toBe('preparing');
     });
@@ -331,7 +331,7 @@ describe('OrdersService', () => {
       mockPrisma.order.updateMany.mockResolvedValue({ count: 0 });
 
       await expect(
-        service.updateOrderStatus('o-1', 'preparing'),
+        service.updateOrderStatus('o-1', 'preparing', 'u-1'),
       ).rejects.toThrow(ConflictException);
     });
 
@@ -341,9 +341,9 @@ describe('OrdersService', () => {
         status: 'placed',
       });
 
-      await expect(service.updateOrderStatus('o-1', 'ready')).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(
+        service.updateOrderStatus('o-1', 'ready', 'u-1'),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('allows cancellation from non-terminal status', async () => {
@@ -356,7 +356,7 @@ describe('OrdersService', () => {
         .mockResolvedValueOnce({ id: 'o-1', status: 'cancelled' });
       mockPrisma.order.updateMany.mockResolvedValue({ count: 1 });
 
-      const result = await service.updateOrderStatus('o-1', 'cancelled');
+      const result = await service.updateOrderStatus('o-1', 'cancelled', 'u-1');
       expect(result!.status).toBe('cancelled');
     });
 
@@ -367,7 +367,7 @@ describe('OrdersService', () => {
       });
 
       await expect(
-        service.updateOrderStatus('o-1', 'cancelled'),
+        service.updateOrderStatus('o-1', 'cancelled', 'u-1'),
       ).rejects.toThrow(BadRequestException);
     });
   });

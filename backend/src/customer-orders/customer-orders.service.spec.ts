@@ -493,6 +493,7 @@ describe('CustomerOrdersService', () => {
         razorpayOrderId: 'order_rzp123',
         razorpayPaymentId: 'pay_123',
         pending: pendingData,
+        placedVia: 'storefront',
       });
       expect(prisma.$transaction).not.toHaveBeenCalled();
       expect(redisClient.del).toHaveBeenCalledWith(`cart:${customerId}`);

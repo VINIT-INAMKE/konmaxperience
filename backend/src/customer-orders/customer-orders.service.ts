@@ -6,6 +6,7 @@ import {
   ConflictException,
   ServiceUnavailableException,
 } from '@nestjs/common';
+import { OrderChannel, OrderSource, OrderStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../customer-auth/redis.service';
 import { RazorpayService } from '../razorpay/razorpay.service';
@@ -31,10 +32,16 @@ export interface CartData {
     unitPrice: number;
     imageUrl: string | null;
   }>;
-  channel: 'takeaway' | 'delivery' | null;
+  channel: OrderChannel | null;
   deliveryAddressId: string | null;
   updatedAt: string;
 }
+
+/** The only channels a marketplace (customer app) cart may check out on — D-04. */
+const CHECKOUT_CHANNELS: OrderChannel[] = [
+  OrderChannel.takeaway,
+  OrderChannel.delivery,
+];
 
 const CART_TTL = 604800; // 7 days in seconds
 const PENDING_ORDER_TTL = 1800; // 30 minutes
@@ -170,14 +177,14 @@ export class CustomerOrdersService {
     }
 
     // 2. Validate channel is set (D-04: takeaway or delivery only)
-    if (!cart.channel || !['takeaway', 'delivery'].includes(cart.channel)) {
+    if (!cart.channel || !CHECKOUT_CHANNELS.includes(cart.channel)) {
       throw new BadRequestException(
         'Please select a channel (takeaway or delivery)',
       );
     }
 
     // 3. If delivery, validate pincode serviceability
-    if (cart.channel === 'delivery') {
+    if (cart.channel === OrderChannel.delivery) {
       if (!cart.deliveryAddressId) {
         throw new BadRequestException('Please select a delivery address');
       }
@@ -226,7 +233,7 @@ export class CustomerOrdersService {
 
     // 6. Look up channel modifier
     const modifier = await this.prisma.channelModifier.findFirst({
-      where: { channel_type: cart.channel, status: 'active' },
+      where: { channel: cart.channel, status: 'active' },
     });
 
     let modifierAmount = 0;
@@ -366,6 +373,7 @@ export class CustomerOrdersService {
         razorpayOrderId: dto.razorpay_order_id,
         razorpayPaymentId: dto.razorpay_payment_id,
         pending,
+        placedVia: OrderSource.storefront,
       });
     } catch (err) {
       // Restore the session so the webhook fallback or a retry can still create the order
@@ -381,7 +389,7 @@ export class CustomerOrdersService {
       .trigger(`private-customer-${customerId}`, 'order.placed', {
         orderId: order.id,
         orderNumber: order.order_number,
-        status: 'placed',
+        status: OrderStatus.placed,
       })
       .catch((err) =>
         console.error('[Pusher] Order placed trigger error:', err),

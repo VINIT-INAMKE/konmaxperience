@@ -1,9 +1,9 @@
-import { IsString, IsIn, IsNumber, Min, Max } from 'class-validator';
+import { IsEnum, IsIn, IsNumber, Min, Max } from 'class-validator';
+import { OrderChannel } from '@prisma/client';
 
 export class UpsertChannelModifierDto {
-  @IsString()
-  @IsIn(['dine_in', 'takeaway', 'delivery', 'retail', 'event', 'workshop', 'online'])
-  channel_type!: string;
+  @IsEnum(OrderChannel)
+  channel!: OrderChannel;
 
   @IsIn(['fixed', 'percentage'])
   modifier_type!: string;

@@ -9,7 +9,8 @@ import {
   ParseUUIDPipe,
   Req,
 } from '@nestjs/common';
-import { IsIn } from 'class-validator';
+import { IsEnum } from 'class-validator';
+import { OrderStatus } from '@prisma/client';
 import { Throttle } from '@nestjs/throttler';
 import { OrdersService } from './orders.service';
 import { RequiresPermission } from '../common/decorators/permissions.decorator';
@@ -21,8 +22,8 @@ import { OrderFiltersDto } from './dto/order-filters.dto';
 import { ConfirmRazorpayPaymentDto } from './dto/create-razorpay-order.dto';
 
 export class UpdateOrderStatusDto {
-  @IsIn(['placed', 'preparing', 'ready', 'served', 'dispatched', 'cancelled'])
-  status: string;
+  @IsEnum(OrderStatus)
+  status: OrderStatus;
 }
 
 @Controller('orders')
@@ -67,8 +68,13 @@ export class OrdersController {
   async updateOrderStatus(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateOrderStatusDto,
+    @Req() req: any,
   ) {
-    return this.ordersService.updateOrderStatus(id, dto.status);
+    return this.ordersService.updateOrderStatus(
+      id,
+      dto.status,
+      req.user?.id ?? null,
+    );
   }
 
   @Post(':id/payment')

@@ -3,7 +3,7 @@ import {
   BadRequestException,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { EventStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { RazorpayService } from '../razorpay/razorpay.service';
 import { CreateEventDto } from './dto/create-event.dto';
@@ -45,7 +45,7 @@ export class EventsService {
     const events = await this.prisma.event.findMany({
       where: {
         date: { gte: new Date() },
-        status: { not: 'cancelled' },
+        status: { not: EventStatus.cancelled },
       },
       include: {
         zone: { select: { id: true, name: true } },
@@ -185,7 +185,7 @@ export class EventsService {
       }
 
       // 3. Check event is not cancelled
-      if (event.status === 'cancelled') {
+      if (event.status === EventStatus.cancelled) {
         throw new BadRequestException(
           'Cannot book a cancelled event.',
         );

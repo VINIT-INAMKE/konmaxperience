@@ -270,15 +270,15 @@ export class MenuService {
 
   async findModifiers() {
     return this.prisma.channelModifier.findMany({
-      orderBy: { channel_type: 'asc' },
+      orderBy: { channel: 'asc' },
     });
   }
 
   async upsertModifier(dto: UpsertChannelModifierDto) {
     return this.prisma.channelModifier.upsert({
-      where: { channel_type: dto.channel_type },
+      where: { channel: dto.channel },
       create: {
-        channel_type: dto.channel_type,
+        channel: dto.channel,
         modifier_type: dto.modifier_type,
         modifier_value: dto.modifier_value,
       },

@@ -21,7 +21,7 @@ export class MenuItemsExportBuilder implements ExportBuilder {
   async buildXlsx(data: unknown[]): Promise<Buffer> {
     const items = data as any[];
     const modifiers = await this.prisma.channelModifier.findMany({
-      orderBy: { channel_type: 'asc' },
+      orderBy: { channel: 'asc' },
     });
 
     const workbook = new ExcelJS.Workbook();
@@ -50,7 +50,7 @@ export class MenuItemsExportBuilder implements ExportBuilder {
     const modifierStr = modifiers
       .map(
         (m) =>
-          `${m.channel_type}: ${Number(m.modifier_value) >= 0 ? '+' : ''}${Number(m.modifier_value)}`,
+          `${m.channel}: ${Number(m.modifier_value) >= 0 ? '+' : ''}${Number(m.modifier_value)}`,
       )
       .join('; ');
 
@@ -74,13 +74,13 @@ export class MenuItemsExportBuilder implements ExportBuilder {
   async buildCsv(data: unknown[]): Promise<Buffer> {
     const items = data as any[];
     const modifiers = await this.prisma.channelModifier.findMany({
-      orderBy: { channel_type: 'asc' },
+      orderBy: { channel: 'asc' },
     });
 
     const modifierStr = modifiers
       .map(
         (m) =>
-          `${m.channel_type}: ${Number(m.modifier_value) >= 0 ? '+' : ''}${Number(m.modifier_value)}`,
+          `${m.channel}: ${Number(m.modifier_value) >= 0 ? '+' : ''}${Number(m.modifier_value)}`,
       )
       .join('; ');
 

@@ -1,7 +1,7 @@
 import {
   IsString,
   IsDateString,
-  IsIn,
+  IsEnum,
   IsInt,
   IsNumber,
   IsOptional,
@@ -11,6 +11,7 @@ import {
   Min,
   MinLength,
 } from 'class-validator';
+import { EventStatus, EventType } from '@prisma/client';
 
 export class UpdateEventDto {
   @IsOptional()
@@ -20,8 +21,8 @@ export class UpdateEventDto {
   title?: string;
 
   @IsOptional()
-  @IsIn(['dining', 'workshop', 'pop_up', 'tasting', 'other'])
-  event_type?: string;
+  @IsEnum(EventType)
+  event_type?: EventType;
 
   @IsOptional()
   @IsDateString()
@@ -54,6 +55,6 @@ export class UpdateEventDto {
   image_url?: string;
 
   @IsOptional()
-  @IsIn(['upcoming', 'past', 'cancelled'])
-  status?: string;
+  @IsEnum(EventStatus)
+  status?: EventStatus;
 }
