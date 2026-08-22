@@ -5,7 +5,7 @@ import { AnimatedListItem } from '@/components/ui/animated-list';
 import { Button } from '@/components/ui/button';
 
 interface CartItem {
-  menu_item_id: string;
+  product_id: string;
   name: string;
   unit_price: number;
   quantity: number;

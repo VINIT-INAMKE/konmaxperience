@@ -8,6 +8,11 @@ const STATUS_CLASSES: Record<OrderItemStatus, string> = {
   pending: 'text-muted-foreground bg-muted',
   preparing: 'text-amber-600 bg-amber-50 dark:text-amber-400 dark:bg-amber-950',
   ready: 'text-green-600 bg-green-50 dark:text-green-400 dark:bg-green-950',
+  packed: 'text-green-600 bg-green-50 dark:text-green-400 dark:bg-green-950',
+  shipped: 'text-muted-foreground bg-muted',
+  delivered: 'text-muted-foreground bg-muted',
+  attended: 'text-muted-foreground bg-muted',
+  cancelled: 'text-destructive bg-destructive/10',
 };
 
 interface KdsItemStatusBadgeProps {

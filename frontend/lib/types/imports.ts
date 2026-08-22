@@ -9,8 +9,8 @@ export const IMPORT_TYPES = [
   'kpis',
   'events',
   'recipes',
-  'menu_categories',
-  'menu_items',
+  'product_categories',
+  'products',
 ] as const;
 export type ImportType = (typeof IMPORT_TYPES)[number];
 
@@ -70,7 +70,7 @@ export interface PrerequisiteData {
   missions: number;
   quests: number;
   approved_recipes: number;
-  menu_categories: number;
+  product_categories: number;
 }
 
 export const IMPORT_TYPE_CONFIG: Record<ImportType, ImportTypeConfig> = {
@@ -134,16 +134,16 @@ export const IMPORT_TYPE_CONFIG: Record<ImportType, ImportTypeConfig> = {
     columns: ['name', 'description', 'prep_steps', 'cooking_method', 'yield_qty', 'yield_unit', 'portion_size', 'shelf_life_hours', 'brand', 'zone'],
     icon: 'ChefHat',
   },
-  menu_categories: {
-    label: 'Menu Categories',
-    description: 'Menu category structure linked to brands',
+  product_categories: {
+    label: 'Product Categories',
+    description: 'Product category structure linked to brands',
     columns: ['name', 'brand', 'sort_order'],
     icon: 'LayoutGrid',
   },
-  menu_items: {
-    label: 'Menu Items',
-    description: 'Menu items linked to approved recipes and categories',
-    columns: ['name', 'recipe', 'category', 'brand', 'base_price', 'available'],
+  products: {
+    label: 'Products',
+    description: 'Products linked to approved recipes and categories',
+    columns: ['name', 'slug', 'type', 'recipe', 'category', 'brand', 'base_price', 'status'],
     icon: 'UtensilsCrossed',
   },
 };

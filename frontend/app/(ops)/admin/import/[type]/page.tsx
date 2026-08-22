@@ -70,8 +70,8 @@ const ICON_MAP: Record<ImportType, React.ReactNode> = {
   kpis: <TrendingUp className="size-6 text-muted-foreground" />,
   events: <Calendar className="size-6 text-muted-foreground" />,
   recipes: <ChefHat className="size-6 text-muted-foreground" />,
-  menu_categories: <LayoutGrid className="size-6 text-muted-foreground" />,
-  menu_items: <UtensilsCrossed className="size-6 text-muted-foreground" />,
+  product_categories: <LayoutGrid className="size-6 text-muted-foreground" />,
+  products: <UtensilsCrossed className="size-6 text-muted-foreground" />,
 };
 
 function formatFileSize(bytes: number): string {
@@ -503,7 +503,7 @@ export default function ImportTypePage() {
         <div className="flex items-start gap-3 rounded-lg border border-blue-300 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-950/20">
           <Info className="size-4 text-blue-600 shrink-0 mt-0.5" />
           <p className="text-sm text-blue-800 dark:text-blue-200">
-            Recipes import as drafts. Approve them in the app before linking to menu items.
+            Recipes import as drafts. Approve them in the app before linking to products.
           </p>
         </div>
       )}

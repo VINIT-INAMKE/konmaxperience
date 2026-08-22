@@ -40,7 +40,7 @@ export type ReportType =
   | 'ingredients'
   | 'vendors'
   | 'recipes'
-  | 'menu_items'
+  | 'products'
   | 'feedback'
   | 'events'
   | 'event_guest_lists'
@@ -69,7 +69,7 @@ export const EXPORT_TYPE_CONFIG: Record<
   ingredients: { label: 'Ingredients', isTimeSeries: false, description: 'ingredient master data' },
   vendors: { label: 'Vendors', isTimeSeries: false, description: 'vendor directory' },
   recipes: { label: 'Recipes', isTimeSeries: false, description: 'recipes with BOM lines' },
-  menu_items: { label: 'Menu Items', isTimeSeries: false, description: 'menu items with pricing' },
+  products: { label: 'Products', isTimeSeries: false, description: 'products with pricing and variants' },
   feedback: { label: 'Feedback', isTimeSeries: true, description: 'customer feedback' },
   events: { label: 'Events', isTimeSeries: false, description: 'events list' },
   event_guest_lists: { label: 'Event Guest Lists', isTimeSeries: false, description: 'event bookings and guests' },

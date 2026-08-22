@@ -1,5 +1,5 @@
 export type EventType = 'dining' | 'workshop' | 'pop_up' | 'tasting' | 'other';
-export type EventStatus = 'upcoming' | 'past' | 'cancelled';
+export type EventStatus = 'draft' | 'upcoming' | 'live' | 'past' | 'cancelled';
 
 export interface EventBooking {
   id: string;
@@ -62,7 +62,9 @@ export const EVENT_TYPE_LABELS: Record<EventType, string> = {
 };
 
 export const EVENT_STATUS_LABELS: Record<EventStatus, string> = {
+  draft: 'Draft',
   upcoming: 'Upcoming',
+  live: 'Live',
   past: 'Past',
   cancelled: 'Cancelled',
 };

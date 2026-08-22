@@ -152,7 +152,7 @@ function ItemRow({
       >
         <div className="flex items-center gap-3 flex-1 min-w-0">
           {isPicked && <CheckCircle2 className="size-4 text-[var(--success)] shrink-0" />}
-          <span className="text-xl font-semibold">{item.menu_item_name}</span>
+          <span className="text-xl font-semibold">{item.product_name}</span>
           <Badge variant="secondary" className="text-xs shrink-0">
             x{item.quantity}
           </Badge>

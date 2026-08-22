@@ -232,7 +232,7 @@ export function OrderDetailSheet({
                   <tbody>
                     {(order.items ?? []).map((item) => (
                       <tr key={item.id} className="border-b last:border-0">
-                        <td className="px-3 py-2">{item.menu_item?.name ?? 'Unknown item'}</td>
+                        <td className="px-3 py-2">{item.product?.name ?? 'Unknown item'}</td>
                         <td className="px-3 py-2 text-right">{item.quantity}</td>
                         <td className="px-3 py-2 text-right font-mono font-bold">{formatINR(item.unit_price)}</td>
                         <td className="px-3 py-2 text-right font-mono font-bold">{formatINR(item.unit_price * item.quantity)}</td>

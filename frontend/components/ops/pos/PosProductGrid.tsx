@@ -2,22 +2,22 @@
 
 import { useMemo } from 'react';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { PosMenuItemCard } from '@/components/ops/pos/PosMenuItemCard';
+import { PosProductCard } from '@/components/ops/pos/PosProductCard';
 import type { Brand } from '@/lib/types/brand';
-import type { MenuCategory, MenuItem } from '@/lib/types/menu';
+import type { ProductCategory, Product } from '@/lib/types/catalog';
 import type { AvailabilityMap } from '@/lib/types/orders';
 
-interface PosMenuGridProps {
+interface PosProductGridProps {
   brands: Brand[];
-  categories: MenuCategory[];
-  items: MenuItem[];
+  categories: ProductCategory[];
+  items: Product[];
   selectedBrandId: string;
   onBrandChange: (brandId: string) => void;
   availability: AvailabilityMap;
-  onAddItem: (item: MenuItem) => void;
+  onAddItem: (item: Product) => void;
 }
 
-export function PosMenuGrid({
+export function PosProductGrid({
   brands,
   categories,
   items,
@@ -25,10 +25,10 @@ export function PosMenuGrid({
   onBrandChange,
   availability,
   onAddItem,
-}: PosMenuGridProps) {
+}: PosProductGridProps) {
   // Group items by category_id
   const itemsByCategory = useMemo(() => {
-    const map = new Map<string, MenuItem[]>();
+    const map = new Map<string, Product[]>();
     for (const item of items) {
       const existing = map.get(item.category_id) ?? [];
       map.set(item.category_id, [...existing, item]);
@@ -74,9 +74,9 @@ export function PosMenuGrid({
               </h2>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                 {categoryItems.map((item) => (
-                  <PosMenuItemCard
+                  <PosProductCard
                     key={item.id}
-                    menuItem={item}
+                    product={item}
                     availability={availability[item.id]}
                     onAdd={() => onAddItem(item)}
                   />
@@ -90,9 +90,9 @@ export function PosMenuGrid({
           <h2 className="text-xl font-bold leading-tight">All Items</h2>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
             {items.map((item) => (
-              <PosMenuItemCard
+              <PosProductCard
                 key={item.id}
-                menuItem={item}
+                product={item}
                 availability={availability[item.id]}
                 onAdd={() => onAddItem(item)}
               />
@@ -107,9 +107,9 @@ export function PosMenuGrid({
           <h2 className="text-xl font-bold leading-tight">Other</h2>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
             {uncategorizedItems.map((item) => (
-              <PosMenuItemCard
+              <PosProductCard
                 key={item.id}
-                menuItem={item}
+                product={item}
                 availability={availability[item.id]}
                 onAdd={() => onAddItem(item)}
               />
@@ -121,7 +121,7 @@ export function PosMenuGrid({
       {/* Empty state */}
       {items.length === 0 && (
         <div className="py-16 text-center space-y-2">
-          <h2 className="text-base font-semibold">No menu items</h2>
+          <h2 className="text-base font-semibold">No products</h2>
           <p className="text-sm text-muted-foreground">
             Menu items for this brand will appear here.
           </p>

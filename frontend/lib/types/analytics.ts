@@ -11,7 +11,7 @@ export interface RevenuePoint {
 }
 
 export interface TopItem {
-  menu_item_id: string;
+  product_id: string;
   name: string;
   quantity_sold: number;
   revenue: number;
@@ -45,7 +45,7 @@ export interface EvidenceFeedEntry {
   id: string;
   task_id: string;
   uploaded_by: string;
-  type: 'photo' | 'doc' | 'video' | 'link' | 'note';
+  type: 'image' | 'document' | 'video' | 'link' | 'note' | 'system';
   url: string;
   notes: string | null;
   approval_status: 'pending' | 'approved' | 'rejected';

@@ -38,8 +38,8 @@ const ICON_MAP: Record<ImportType, React.ReactNode> = {
   kpis: <TrendingUp className="size-5" />,
   events: <Calendar className="size-5" />,
   recipes: <ChefHat className="size-5" />,
-  menu_categories: <LayoutGrid className="size-5" />,
-  menu_items: <UtensilsCrossed className="size-5" />,
+  product_categories: <LayoutGrid className="size-5" />,
+  products: <UtensilsCrossed className="size-5" />,
 };
 
 const TIERS: Array<{
@@ -70,10 +70,10 @@ const TIERS: Array<{
   {
     label: 'Menu',
     accentColor: 'border-l-purple-500',
-    types: ['recipes', 'menu_categories', 'menu_items'],
+    types: ['recipes', 'product_categories', 'products'],
     prerequisites: {
-      menu_categories: { check: (p) => p.brands > 0, label: 'Needs: Brands' },
-      menu_items: { check: (p) => p.approved_recipes > 0 && p.menu_categories > 0, label: 'Needs: Recipes + Categories' },
+      product_categories: { check: (p) => p.brands > 0, label: 'Needs: Brands' },
+      products: { check: (p) => p.approved_recipes > 0 && p.product_categories > 0, label: 'Needs: Recipes + Categories' },
     } as Record<ImportType, { check: (p: PrerequisiteData) => boolean; label: string }>,
   },
 ];
@@ -117,7 +117,7 @@ export default function AdminImportPage() {
               { label: 'Missions', value: prereqs.missions },
               { label: 'Quests', value: prereqs.quests },
               { label: 'Recipes (approved)', value: prereqs.approved_recipes },
-              { label: 'Menu Categories', value: prereqs.menu_categories },
+              { label: 'Product Categories', value: prereqs.product_categories },
             ].map(({ label, value }) => (
               <span
                 key={label}

@@ -8,10 +8,17 @@ interface KdsOrderItemProps {
   onStatusAdvance: (itemId: string, newStatus: OrderItemStatus) => void;
 }
 
+// The KDS only advances the kitchen leg of the item lifecycle; the fulfilment
+// statuses (packed/shipped/delivered/attended) are terminal for this board.
 const NEXT_STATUS: Record<OrderItemStatus, OrderItemStatus | null> = {
   pending: 'preparing',
   preparing: 'ready',
   ready: null,
+  packed: null,
+  shipped: null,
+  delivered: null,
+  attended: null,
+  cancelled: null,
 };
 
 export function KdsOrderItem({ item, onStatusAdvance }: KdsOrderItemProps) {
@@ -42,7 +49,7 @@ export function KdsOrderItem({ item, onStatusAdvance }: KdsOrderItemProps) {
       }`}
     >
       <div className="flex items-center gap-3 flex-1 min-w-0">
-        <span className="text-[18px] text-white/90">{item.menu_item_name}</span>
+        <span className="text-[18px] text-white/90">{item.product_name}</span>
         <span className="text-sm text-white/50 shrink-0">x{item.quantity}</span>
       </div>
       <div className="flex items-center gap-2 shrink-0">

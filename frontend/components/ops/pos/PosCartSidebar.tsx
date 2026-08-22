@@ -13,7 +13,7 @@ import { PosChannelFields } from '@/components/ops/pos/PosChannelFields';
 import type { OrderChannel } from '@/lib/types/orders';
 
 interface CartItem {
-  menu_item_id: string;
+  product_id: string;
   name: string;
   unit_price: number;
   quantity: number;
@@ -36,7 +36,7 @@ interface PosCartSidebarProps {
   notes: string;
   onNotesChange: (notes: string) => void;
   subtotal: number;
-  onUpdateQuantity: (menuItemId: string, delta: number) => void;
+  onUpdateQuantity: (productId: string, delta: number) => void;
   onPlaceOrder: () => void;
   isPlacing: boolean;
   showBorderBeam: boolean;
@@ -81,17 +81,17 @@ export function PosCartSidebar({
           <div className="py-8 text-center space-y-1">
             <h3 className="text-base font-semibold">No items yet</h3>
             <p className="text-sm text-muted-foreground">
-              Tap any menu item to add it to the order.
+              Tap any product to add it to the order.
             </p>
           </div>
         ) : (
           <AnimatePresence mode="popLayout">
             {cartItems.map((item) => (
               <PosCartItemRow
-                key={item.menu_item_id}
+                key={item.product_id}
                 item={item}
                 onUpdateQuantity={(delta) =>
-                  onUpdateQuantity(item.menu_item_id, delta)
+                  onUpdateQuantity(item.product_id, delta)
                 }
               />
             ))}

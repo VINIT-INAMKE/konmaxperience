@@ -1,5 +1,7 @@
+import type { OrderStatus } from './kds';
+
 export interface CartItem {
-  menuItemId: string;
+  productId: string;
   name: string;
   quantity: number;
   unitPrice: number;
@@ -26,7 +28,8 @@ export interface CustomerAddress {
   created_at: string;
 }
 
-export type OrderTrackingStatus = 'placed' | 'preparing' | 'ready' | 'dispatched' | 'served' | 'delivered';
+/** Tracking uses the same vocabulary as the order itself — kept as an alias so the two cannot drift. */
+export type OrderTrackingStatus = OrderStatus;
 
 export interface OrderTrackingStep {
   label: string;
@@ -48,10 +51,10 @@ export interface CustomerOrder {
   created_at: string;
   items: Array<{
     id: string;
-    menu_item_id: string;
+    product_id: string;
     quantity: number;
     unit_price: number;
-    menu_item: { name: string };
+    product: { name: string };
   }>;
   payment: {
     method: string;

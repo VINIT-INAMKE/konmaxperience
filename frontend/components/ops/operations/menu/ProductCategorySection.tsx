@@ -4,22 +4,22 @@ import { useState } from 'react';
 import { ChevronDown, Pencil, Plus, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { MenuItemCard } from './MenuItemCard';
-import type { MenuCategory, MenuItem } from '@/lib/types/menu';
+import { ProductCard } from './ProductCard';
+import type { ProductCategory, Product } from '@/lib/types/catalog';
 
-interface MenuCategorySectionProps {
-  category: MenuCategory;
-  items: MenuItem[];
+interface ProductCategorySectionProps {
+  category: ProductCategory;
+  items: Product[];
   isAdmin: boolean;
   onAddItem: (categoryId: string) => void;
-  onEditItem: (item: MenuItem) => void;
-  onRemoveItem: (item: MenuItem) => void;
-  onToggleAvailability: (item: MenuItem, available: boolean) => Promise<void>;
-  onEditCategory: (category: MenuCategory) => void;
-  onDeleteCategory: (category: MenuCategory) => void;
+  onEditItem: (item: Product) => void;
+  onRemoveItem: (item: Product) => void;
+  onToggleAvailability: (item: Product, available: boolean) => Promise<void>;
+  onEditCategory: (category: ProductCategory) => void;
+  onDeleteCategory: (category: ProductCategory) => void;
 }
 
-export function MenuCategorySection({
+export function ProductCategorySection({
   category,
   items,
   isAdmin,
@@ -29,7 +29,7 @@ export function MenuCategorySection({
   onToggleAvailability,
   onEditCategory,
   onDeleteCategory,
-}: MenuCategorySectionProps) {
+}: ProductCategorySectionProps) {
   const [isExpanded, setIsExpanded] = useState(true);
 
   return (
@@ -97,13 +97,13 @@ export function MenuCategorySection({
                 onClick={() => onAddItem(category.id)}
               >
                 <Plus className="size-3 mr-1" />
-                Add Menu Item
+                Add Product
               </Button>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {items.map((item) => (
-                <MenuItemCard
+                <ProductCard
                   key={item.id}
                   item={item}
                   isAdmin={isAdmin}

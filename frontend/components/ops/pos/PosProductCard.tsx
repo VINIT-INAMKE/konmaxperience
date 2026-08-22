@@ -3,16 +3,16 @@
 import { MagicCard } from '@/components/ui/magic-card';
 import { GRADIENT_OVERLAY } from '@/lib/brand-colors';
 import { Button } from '@/components/ui/button';
-import type { MenuItem } from '@/lib/types/menu';
-import type { MenuItemAvailability } from '@/lib/types/orders';
+import type { Product } from '@/lib/types/catalog';
+import type { ProductAvailability } from '@/lib/types/orders';
 
-interface PosMenuItemCardProps {
-  menuItem: MenuItem;
-  availability: MenuItemAvailability | undefined;
+interface PosProductCardProps {
+  product: Product;
+  availability: ProductAvailability | undefined;
   onAdd: () => void;
 }
 
-function getServingsBadge(availability: MenuItemAvailability | undefined) {
+function getServingsBadge(availability: ProductAvailability | undefined) {
   if (!availability) return null;
 
   const { available, servings_remaining } = availability;
@@ -41,11 +41,11 @@ function getServingsBadge(availability: MenuItemAvailability | undefined) {
   );
 }
 
-export function PosMenuItemCard({
-  menuItem,
+export function PosProductCard({
+  product,
   availability,
   onAdd,
-}: PosMenuItemCardProps) {
+}: PosProductCardProps) {
   const isSoldOut =
     availability !== undefined &&
     (!availability.available || availability.servings_remaining <= 0);
@@ -61,14 +61,14 @@ export function PosMenuItemCard({
           {/* Top: Name + badge */}
           <div className="flex items-start justify-between gap-1">
             <span className="text-sm font-normal leading-snug line-clamp-2">
-              {menuItem.name}
+              {product.name}
             </span>
             <div className="shrink-0">{getServingsBadge(availability)}</div>
           </div>
 
           {/* Price */}
           <span className="font-mono text-sm font-bold">
-            ₹{menuItem.base_price}
+            ₹{product.base_price}
           </span>
 
           {/* Separator */}

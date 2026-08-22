@@ -1,5 +1,5 @@
 export type DecisionType = 'individual' | 'cross_function' | 'strategic';
-export type DecisionStatus = 'proposed' | 'approved' | 'rejected';
+export type DecisionStatus = 'proposed' | 'aligned' | 'approved' | 'rejected' | 'reopened';
 
 export interface Decision {
   id: string;
@@ -27,6 +27,8 @@ export const DECISION_TYPE_LABELS: Record<DecisionType, string> = {
 
 export const DECISION_STATUS_LABELS: Record<DecisionStatus, string> = {
   proposed: 'Proposed',
+  aligned: 'Aligned',
   approved: 'Approved',
   rejected: 'Rejected',
+  reopened: 'Reopened',
 };

@@ -97,8 +97,8 @@ export interface PickAndPackOrder {
 export interface PickAndPackItem {
   id: string;
   status: string;
-  menu_item_id: string;
-  menu_item_name: string;
+  product_id: string;
+  product_name: string;
   quantity: number;
   item_notes: string | null;
   preparation_type: string;

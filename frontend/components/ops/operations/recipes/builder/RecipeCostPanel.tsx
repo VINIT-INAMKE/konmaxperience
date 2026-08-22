@@ -11,7 +11,7 @@ interface RecipeCostPanelProps {
   missingPrices: string[];
   yieldQty: number;
   portionSize: string;
-  menuItemPrice: number | null;
+  productPrice: number | null;
 }
 
 export function RecipeCostPanel({
@@ -21,7 +21,7 @@ export function RecipeCostPanel({
   missingPrices,
   yieldQty,
   portionSize,
-  menuItemPrice,
+  productPrice,
 }: RecipeCostPanelProps) {
   return (
     <div className="rounded-lg border border-border p-4 space-y-4 max-h-[calc(100vh-96px)] overflow-y-auto">
@@ -62,14 +62,14 @@ export function RecipeCostPanel({
           )}
 
           {/* Food cost % */}
-          {menuItemPrice !== null && menuItemPrice > 0 && (
+          {productPrice !== null && productPrice > 0 && (
             <div className="space-y-1">
               <p className="text-xs text-muted-foreground uppercase tracking-wide">
                 Food Cost %
               </p>
               <div className="flex items-baseline">
                 <AnimatedCost
-                  value={(batchCost / (yieldQty || 1) / menuItemPrice) * 100}
+                  value={(batchCost / (yieldQty || 1) / productPrice) * 100}
                   prefix=""
                   className="text-lg font-semibold"
                 />

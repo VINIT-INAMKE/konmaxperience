@@ -539,7 +539,7 @@ export function RecipeBuilderPage({ recipeId }: RecipeBuilderPageProps) {
             missingPrices={displayedCost.missingPrices}
             yieldQty={parseFloat(yieldQty) || 0}
             portionSize={portionSize}
-            menuItemPrice={null}
+            productPrice={null}
           />
         </details>
       </div>
@@ -628,7 +628,7 @@ export function RecipeBuilderPage({ recipeId }: RecipeBuilderPageProps) {
               missingPrices={displayedCost.missingPrices}
               yieldQty={parseFloat(yieldQty) || 0}
               portionSize={portionSize}
-              menuItemPrice={null}
+              productPrice={null}
             />
           </div>
         </div>

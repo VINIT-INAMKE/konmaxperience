@@ -23,14 +23,15 @@ import {
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { MenuCategorySection } from '@/components/ops/operations/menu/MenuCategorySection';
-import { MenuItemForm } from '@/components/ops/operations/menu/MenuItemForm';
+import { ProductCategorySection } from '@/components/ops/operations/menu/ProductCategorySection';
+import { ProductForm } from '@/components/ops/operations/menu/ProductForm';
 import { ChannelModifierTable } from '@/components/ops/operations/menu/ChannelModifierTable';
 import { apiClient } from '@/lib/api-client';
 import { useAuthStore } from '@/lib/stores/auth-store';
 import { RoleCode } from '@/lib/types/roles';
 import type { Brand } from '@/lib/types/brand';
-import type { MenuCategory, MenuItem, ChannelModifier } from '@/lib/types/menu';
+import { slugify } from '@/lib/types/catalog';
+import type { ProductCategory, Product, ChannelModifier } from '@/lib/types/catalog';
 import { ExportButton } from '@/components/ops/exports/ExportButton';
 
 export default function MenuPage() {
@@ -43,22 +44,22 @@ export default function MenuPage() {
 
   // Menu item form state
   const [itemFormOpen, setItemFormOpen] = useState(false);
-  const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
+  const [editingItem, setEditingItem] = useState<Product | null>(null);
   const [itemFormCategoryId, setItemFormCategoryId] = useState<string>('');
 
   // Delete item dialog state
-  const [deletingItem, setDeletingItem] = useState<MenuItem | null>(null);
+  const [deletingItem, setDeletingItem] = useState<Product | null>(null);
   const [isDeletingItem, setIsDeletingItem] = useState(false);
 
   // Category form state
   const [categoryFormOpen, setCategoryFormOpen] = useState(false);
-  const [editingCategory, setEditingCategory] = useState<MenuCategory | null>(null);
+  const [editingCategory, setEditingCategory] = useState<ProductCategory | null>(null);
   const [categoryName, setCategoryName] = useState('');
   const [categorySortOrder, setCategorySortOrder] = useState('');
   const [isSavingCategory, setIsSavingCategory] = useState(false);
 
   // Delete category dialog state
-  const [deletingCategory, setDeletingCategory] = useState<MenuCategory | null>(null);
+  const [deletingCategory, setDeletingCategory] = useState<ProductCategory | null>(null);
   const [isDeletingCategory, setIsDeletingCategory] = useState(false);
 
   // Queries
@@ -75,38 +76,42 @@ export default function MenuPage() {
   const { data: categories = [], isLoading: categoriesLoading } = useQuery({
     queryKey: ['menu-categories', effectiveBrandId],
     queryFn: () =>
-      apiClient.get<MenuCategory[]>(`/menu/categories?brand_id=${effectiveBrandId}`),
+      apiClient.get<ProductCategory[]>(`/catalog/categories?brand_id=${effectiveBrandId}`),
     enabled: !!effectiveBrandId,
   });
 
-  const { data: menuItems = [], isLoading: itemsLoading } = useQuery({
+  const { data: products = [], isLoading: itemsLoading } = useQuery({
     queryKey: ['menu-items', effectiveBrandId],
     queryFn: () =>
-      apiClient.get<MenuItem[]>(`/menu/items/staff?brand_id=${effectiveBrandId}`),
+      apiClient.get<Product[]>(`/catalog/products/staff?brand_id=${effectiveBrandId}`),
     enabled: !!effectiveBrandId,
   });
 
   const { data: channelModifiers = [] } = useQuery({
     queryKey: ['channel-modifiers'],
-    queryFn: () => apiClient.get<ChannelModifier[]>('/menu/channel-modifiers'),
+    queryFn: () => apiClient.get<ChannelModifier[]>('/catalog/channel-modifiers'),
   });
 
   // Group items by category_id
   const itemsByCategory = useMemo(() => {
-    const map = new Map<string, MenuItem[]>();
-    for (const item of menuItems) {
+    const map = new Map<string, Product[]>();
+    for (const item of products) {
       const existing = map.get(item.category_id) ?? [];
       map.set(item.category_id, [...existing, item]);
     }
     return map;
-  }, [menuItems]);
+  }, [products]);
 
   // --- Handlers ---
 
-  const handleToggleAvailability = async (item: MenuItem, available: boolean) => {
+  // `Product` has no `available` flag — publishing is the status transition
+  // draft <-> active (SPEC 3.3), so the card's switch drives `status`.
+  const handleToggleAvailability = async (item: Product, available: boolean) => {
     try {
-      await apiClient.patch(`/menu/items/${item.id}`, { available });
-      const msg = available ? 'Item marked as available.' : 'Item marked as unavailable.';
+      await apiClient.patch(`/catalog/products/${item.id}`, {
+        status: available ? 'active' : 'draft',
+      });
+      const msg = available ? 'Product published.' : 'Product unpublished.';
       toast.success(msg);
       void queryClient.invalidateQueries({ queryKey: ['menu-items', effectiveBrandId] });
     } catch {
@@ -122,7 +127,7 @@ export default function MenuPage() {
     setItemFormOpen(true);
   };
 
-  const handleEditItem = (item: MenuItem) => {
+  const handleEditItem = (item: Product) => {
     setEditingItem(item);
     setItemFormCategoryId(item.category_id);
     setItemFormOpen(true);
@@ -137,7 +142,7 @@ export default function MenuPage() {
     if (!deletingItem) return;
     setIsDeletingItem(true);
     try {
-      await apiClient.delete(`/menu/items/${deletingItem.id}`);
+      await apiClient.delete(`/catalog/products/${deletingItem.id}`);
       toast.success(`${deletingItem.name} removed from menu.`);
       void queryClient.invalidateQueries({ queryKey: ['menu-items', effectiveBrandId] });
       setDeletingItem(null);
@@ -149,7 +154,7 @@ export default function MenuPage() {
   };
 
   // Category form handlers
-  const handleOpenCategoryForm = (category?: MenuCategory) => {
+  const handleOpenCategoryForm = (category?: ProductCategory) => {
     setEditingCategory(category ?? null);
     setCategoryName(category?.name ?? '');
     setCategorySortOrder(category ? String(category.sort_order) : '');
@@ -169,14 +174,16 @@ export default function MenuPage() {
     setIsSavingCategory(true);
     try {
       if (editingCategory) {
-        await apiClient.patch(`/menu/categories/${editingCategory.id}`, {
+        await apiClient.patch(`/catalog/categories/${editingCategory.id}`, {
           name: categoryName.trim(),
+          slug: slugify(categoryName),
           sort_order: categorySortOrder ? parseInt(categorySortOrder) : undefined,
         });
         toast.success('Category updated.');
       } else {
-        await apiClient.post('/menu/categories', {
+        await apiClient.post('/catalog/categories', {
           name: categoryName.trim(),
+          slug: slugify(categoryName),
           brand_id: effectiveBrandId,
           sort_order: categorySortOrder ? parseInt(categorySortOrder) : undefined,
         });
@@ -196,7 +203,7 @@ export default function MenuPage() {
     if (!deletingCategory) return;
     setIsDeletingCategory(true);
     try {
-      await apiClient.delete(`/menu/categories/${deletingCategory.id}`);
+      await apiClient.delete(`/catalog/categories/${deletingCategory.id}`);
       toast.success(`Category "${deletingCategory.name}" deleted.`);
       void queryClient.invalidateQueries({ queryKey: ['menu-categories', effectiveBrandId] });
       void queryClient.invalidateQueries({ queryKey: ['menu-items', effectiveBrandId] });
@@ -217,8 +224,8 @@ export default function MenuPage() {
           <h1 className="text-2xl font-bold">Menu</h1>
           <div className="flex items-center gap-2">
             <ExportButton
-              reportType="menu_items"
-              reportName="Menu Items"
+              reportType="products"
+              reportName="Products"
               isTimeSeries={false}
             />
             {effectiveBrandId && (
@@ -274,7 +281,7 @@ export default function MenuPage() {
                 <LayoutList className="size-12 text-muted-foreground/30" />
                 <h2 className="text-lg font-semibold">No Categories Yet</h2>
                 <p className="text-sm text-muted-foreground max-w-md">
-                  Create a category for this brand to start organising menu items.
+                  Create a category for this brand to start organising products.
                 </p>
                 <Button
                   variant="outline"
@@ -287,7 +294,7 @@ export default function MenuPage() {
             ) : (
               <div className="space-y-8">
                 {categories.map((category) => (
-                  <MenuCategorySection
+                  <ProductCategorySection
                     key={category.id}
                     category={category}
                     items={itemsByCategory.get(category.id) ?? []}
@@ -308,8 +315,8 @@ export default function MenuPage() {
           </div>
         )}
 
-        {/* Menu Item Form Sheet */}
-        <MenuItemForm
+        {/* Product Form Sheet */}
+        <ProductForm
           open={itemFormOpen}
           onOpenChange={handleItemFormOpenChange}
           categoryId={itemFormCategoryId}
@@ -392,7 +399,7 @@ export default function MenuPage() {
         >
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Remove menu item</DialogTitle>
+              <DialogTitle>Remove product</DialogTitle>
               <DialogDescription>
                 Remove{' '}
                 <span className="font-medium">{deletingItem?.name}</span> from

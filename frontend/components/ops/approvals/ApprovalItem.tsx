@@ -30,8 +30,9 @@ import { RoleCode } from '@/lib/types/roles';
 import type { Evidence, EvidenceType } from '@/lib/types/evidence';
 
 const TYPE_ICONS: Record<EvidenceType, typeof Image> = {
-  photo: Image,
-  doc: FileText,
+  image: Image,
+  document: FileText,
+  system: FileEdit,
   video: Video,
   link: LinkIcon,
   note: FileEdit,

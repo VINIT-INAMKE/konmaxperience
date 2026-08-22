@@ -12,14 +12,14 @@ export type { OrderStatus, OrderChannel, OrderItemStatus, PaymentMethod, Payment
 export interface OrderItem {
   id: string;
   order_id: string;
-  menu_item_id: string;
+  product_id: string;
   quantity: number;
   unit_price: number;
   item_notes: string | null;
   status: OrderItemStatus;
   ready_at: string | null;
   created_at: string;
-  menu_item?: { id: string; name: string };
+  product?: { id: string; name: string };
 }
 
 export interface Payment {
@@ -57,7 +57,7 @@ export interface Order {
 }
 
 export interface CreateOrderItemPayload {
-  menu_item_id: string;
+  product_id: string;
   quantity: number;
   item_notes?: string;
 }
@@ -91,12 +91,12 @@ export interface DailySummary {
   average_order_value: number;
 }
 
-export interface MenuItemAvailability {
+export interface ProductAvailability {
   available: boolean;
   servings_remaining: number;
 }
 
-export type AvailabilityMap = Record<string, MenuItemAvailability>;
+export type AvailabilityMap = Record<string, ProductAvailability>;
 
 export const DELIVERY_STATUS_LABELS: Record<string, string> = {
   picked_up: 'Picked Up',
@@ -114,5 +114,7 @@ export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
 export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {
   pending: 'Pending',
   paid: 'Paid',
+  failed: 'Failed',
   refunded: 'Refunded',
+  partially_refunded: 'Partially Refunded',
 };

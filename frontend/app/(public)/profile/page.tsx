@@ -34,7 +34,8 @@ import { GooglePlacesInput } from '@/components/public/GooglePlacesInput';
 import { apiClient } from '@/lib/api-client';
 import type { Customer } from '@/lib/types/customer-auth';
 import type { CustomerOrder, CustomerAddress } from '@/lib/types/marketplace';
-import type { MenuItem } from '@/lib/types/menu';
+import { productImage } from '@/lib/types/catalog';
+import type { Product } from '@/lib/types/catalog';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
@@ -246,20 +247,20 @@ export default function CustomerProfilePage() {
   // ---------------------------------------------------------------------------
   const handleReorder = useCallback(
     async (order: CustomerOrder) => {
-      // Fetch current menu items to check availability
-      let menuItems: MenuItem[] = [];
+      // Fetch current products to check availability
+      let products: Product[] = [];
       try {
-        menuItems = await apiClient.get<MenuItem[]>('/menu/items');
+        products = await apiClient.get<Product[]>('/catalog/products');
       } catch {
         toast.error('Could not check item availability');
         return;
       }
 
-      const menuMap = new Map(menuItems.map((m) => [m.id, m]));
+      const menuMap = new Map(products.map((m) => [m.id, m]));
 
       // Build list of available items from the order
       const availableItems: Array<{
-        menuItemId: string;
+        productId: string;
         name: string;
         unitPrice: number;
         imageUrl: string | null;
@@ -267,16 +268,16 @@ export default function CustomerProfilePage() {
       const skippedNames: string[] = [];
 
       for (const item of order.items) {
-        const mi = menuMap.get(item.menu_item_id);
-        if (mi && mi.available && mi.status === 'active') {
+        const mi = menuMap.get(item.product_id);
+        if (mi && mi.status === 'active') {
           availableItems.push({
-            menuItemId: mi.id,
+            productId: mi.id,
             name: mi.name,
             unitPrice: mi.base_price,
-            imageUrl: mi.image_url,
+            imageUrl: productImage(mi),
           });
         } else {
-          skippedNames.push(item.menu_item.name);
+          skippedNames.push(item.product.name);
         }
       }
 
@@ -303,7 +304,7 @@ export default function CustomerProfilePage() {
   const addReorderItems = useCallback(
     (
       items: Array<{
-        menuItemId: string;
+        productId: string;
         name: string;
         unitPrice: number;
         imageUrl: string | null;
@@ -335,17 +336,17 @@ export default function CustomerProfilePage() {
       }
 
       // Re-fetch availability
-      let menuItems: MenuItem[] = [];
+      let products: Product[] = [];
       try {
-        menuItems = await apiClient.get<MenuItem[]>('/menu/items');
+        products = await apiClient.get<Product[]>('/catalog/products');
       } catch {
         toast.error('Could not check item availability');
         return;
       }
 
-      const menuMap = new Map(menuItems.map((m) => [m.id, m]));
+      const menuMap = new Map(products.map((m) => [m.id, m]));
       const availableItems: Array<{
-        menuItemId: string;
+        productId: string;
         name: string;
         unitPrice: number;
         imageUrl: string | null;
@@ -353,16 +354,16 @@ export default function CustomerProfilePage() {
       const skippedNames: string[] = [];
 
       for (const item of pendingReorder.items) {
-        const mi = menuMap.get(item.menu_item_id);
-        if (mi && mi.available && mi.status === 'active') {
+        const mi = menuMap.get(item.product_id);
+        if (mi && mi.status === 'active') {
           availableItems.push({
-            menuItemId: mi.id,
+            productId: mi.id,
             name: mi.name,
             unitPrice: mi.base_price,
-            imageUrl: mi.image_url,
+            imageUrl: productImage(mi),
           });
         } else {
-          skippedNames.push(item.menu_item.name);
+          skippedNames.push(item.product.name);
         }
       }
 

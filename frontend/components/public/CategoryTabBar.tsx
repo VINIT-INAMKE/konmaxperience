@@ -1,10 +1,10 @@
 'use client';
 
 import { useRef, useEffect, useCallback } from 'react';
-import type { MenuCategory } from '@/lib/types/menu';
+import type { ProductCategory } from '@/lib/types/catalog';
 
 interface CategoryTabBarProps {
-  categories: MenuCategory[];
+  categories: ProductCategory[];
   activeCategoryId: string;
   onCategoryClick: (id: string) => void;
 }

@@ -3,20 +3,23 @@
 import Image from 'next/image';
 import { MagicCard } from '@/components/ui/magic-card';
 import { AvailabilityBadge } from '@/components/public/AvailabilityBadge';
-import type { MenuItem } from '@/lib/types/menu';
+import { productImage } from '@/lib/types/catalog';
+import type { Product } from '@/lib/types/catalog';
 
-interface MenuItemPublicCardProps {
-  item: MenuItem;
+interface ProductPublicCardProps {
+  item: Product;
   available: boolean;
 }
 
-export function MenuItemPublicCard({ item, available }: MenuItemPublicCardProps) {
+export function ProductPublicCard({ item, available }: ProductPublicCardProps) {
+  const imageUrl = productImage(item);
+
   return (
     <MagicCard className="rounded-xl overflow-hidden">
       <div className="relative aspect-square bg-muted">
-        {item.image_url ? (
+        {imageUrl ? (
           <Image
-            src={item.image_url}
+            src={imageUrl}
             alt={item.name}
             fill
             className="object-cover"

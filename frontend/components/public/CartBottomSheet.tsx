@@ -72,7 +72,7 @@ export function CartBottomSheet({ open, onOpenChange }: CartBottomSheetProps) {
       return;
     }
     apiClient
-      .get<{ modifier_value: number; modifier_type: string }[]>('/menu/channel-modifiers')
+      .get<{ modifier_value: number; modifier_type: string }[]>('/catalog/channel-modifiers')
       .then((modifiers) => {
         const delivery = modifiers.find((m) => m.modifier_type === 'fixed' || m);
         if (delivery) {
@@ -181,7 +181,7 @@ export function CartBottomSheet({ open, onOpenChange }: CartBottomSheetProps) {
           <div>
             {items.map((item) => (
               <div
-                key={item.menuItemId}
+                key={item.productId}
                 className="flex items-center justify-between py-3 border-b border-[var(--public-border-light)]"
               >
                 <span className="text-sm font-medium text-[var(--public-fg)] flex-1 truncate mr-3">
@@ -191,7 +191,7 @@ export function CartBottomSheet({ open, onOpenChange }: CartBottomSheetProps) {
                   <button
                     type="button"
                     onClick={() =>
-                      useCartStore.getState().updateQuantity(item.menuItemId, item.quantity - 1)
+                      useCartStore.getState().updateQuantity(item.productId, item.quantity - 1)
                     }
                     aria-label={`Decrease quantity of ${item.name}`}
                     className="min-w-[24px] min-h-[24px] flex items-center justify-center cursor-pointer"
@@ -204,7 +204,7 @@ export function CartBottomSheet({ open, onOpenChange }: CartBottomSheetProps) {
                   <button
                     type="button"
                     onClick={() =>
-                      useCartStore.getState().updateQuantity(item.menuItemId, item.quantity + 1)
+                      useCartStore.getState().updateQuantity(item.productId, item.quantity + 1)
                     }
                     aria-label={`Increase quantity of ${item.name}`}
                     className="min-w-[24px] min-h-[24px] flex items-center justify-center cursor-pointer"

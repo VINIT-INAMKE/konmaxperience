@@ -8,11 +8,11 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { MenuBrandTabs } from '@/components/public/MenuBrandTabs';
 import { CategoryTabBar } from '@/components/public/CategoryTabBar';
-import { MenuItemOrderCard } from '@/components/public/MenuItemOrderCard';
+import { ProductOrderCard } from '@/components/public/ProductOrderCard';
 import { FloatingCartBar } from '@/components/public/FloatingCartBar';
 import { CartBottomSheet } from '@/components/public/CartBottomSheet';
 import { apiClient } from '@/lib/api-client';
-import type { MenuCategory, MenuItem } from '@/lib/types/menu';
+import type { ProductCategory, Product } from '@/lib/types/catalog';
 
 interface AvailabilityMap {
   [itemId: string]: { available: boolean; servings_remaining: number };
@@ -42,7 +42,7 @@ export default function MenuPage() {
     refetch: refetchCategories,
   } = useQuery({
     queryKey: ['public-menu-categories'],
-    queryFn: () => apiClient.get<MenuCategory[]>('/menu/categories'),
+    queryFn: () => apiClient.get<ProductCategory[]>('/catalog/categories'),
   });
 
   const {
@@ -52,13 +52,13 @@ export default function MenuPage() {
     refetch: refetchItems,
   } = useQuery({
     queryKey: ['public-menu-items'],
-    queryFn: () => apiClient.get<MenuItem[]>('/menu/items'),
+    queryFn: () => apiClient.get<Product[]>('/catalog/products'),
   });
 
   const { data: availability = {} } = useQuery({
     queryKey: ['public-menu-availability'],
     queryFn: () =>
-      apiClient.get<AvailabilityMap>('/menu/availability'),
+      apiClient.get<AvailabilityMap>('/catalog/availability'),
     refetchInterval: 60_000,
   });
 
@@ -76,7 +76,7 @@ export default function MenuPage() {
 
   // Group items by category
   const itemsByCategory = useMemo(() => {
-    const map = new Map<string, MenuItem[]>();
+    const map = new Map<string, Product[]>();
     for (const item of items) {
       if (
         item.category?.brand_id === effectiveBrandId ||
@@ -245,11 +245,12 @@ export default function MenuPage() {
                     </h2>
                     <div className="flex flex-col gap-2">
                       {categoryItems.map((item) => (
-                        <MenuItemOrderCard
+                        <ProductOrderCard
                           key={item.id}
                           item={item}
                           available={
-                            availability[item.id]?.available ?? item.available
+                            availability[item.id]?.available ??
+                            item.status === 'active'
                           }
                         />
                       ))}

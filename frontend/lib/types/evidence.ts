@@ -1,4 +1,4 @@
-export type EvidenceType = 'photo' | 'doc' | 'video' | 'link' | 'note';
+export type EvidenceType = 'image' | 'document' | 'video' | 'link' | 'note' | 'system';
 export type EvidenceApprovalStatus = 'pending' | 'approved' | 'rejected';
 
 export interface Evidence {
@@ -17,11 +17,12 @@ export interface Evidence {
 }
 
 export const EVIDENCE_TYPE_LABELS: Record<EvidenceType, string> = {
-  photo: 'Photo',
-  doc: 'Document',
+  image: 'Image',
+  document: 'Document',
   video: 'Video',
   link: 'Link',
   note: 'Note',
+  system: 'System',
 };
 
 export const ALLOWED_MIME_TYPES = new Set([
@@ -34,7 +35,7 @@ export const ALLOWED_MIME_TYPES = new Set([
 export const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 
 export function getEvidenceTypeFromMime(mime: string): EvidenceType {
-  if (mime.startsWith('image/')) return 'photo';
+  if (mime.startsWith('image/')) return 'image';
   if (mime.startsWith('video/')) return 'video';
-  return 'doc';
+  return 'document';
 }

@@ -6,25 +6,25 @@ import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { MagicCard } from '@/components/ui/magic-card';
 import { FoodCostBadge } from './FoodCostBadge';
-import { calcFoodCostPercent } from '@/lib/types/menu';
-import type { MenuItem } from '@/lib/types/menu';
+import { calcFoodCostPercent } from '@/lib/types/catalog';
+import type { Product } from '@/lib/types/catalog';
 import { GRADIENT_OVERLAY } from '@/lib/brand-colors';
 
-interface MenuItemCardProps {
-  item: MenuItem;
+interface ProductCardProps {
+  item: Product;
   isAdmin: boolean;
-  onEdit: (item: MenuItem) => void;
-  onRemove: (item: MenuItem) => void;
-  onToggleAvailability: (item: MenuItem, available: boolean) => Promise<void>;
+  onEdit: (item: Product) => void;
+  onRemove: (item: Product) => void;
+  onToggleAvailability: (item: Product, available: boolean) => Promise<void>;
 }
 
-export function MenuItemCard({
+export function ProductCard({
   item,
   isAdmin,
   onEdit,
   onRemove,
   onToggleAvailability,
-}: MenuItemCardProps) {
+}: ProductCardProps) {
   const [isToggling, setIsToggling] = useState(false);
 
   const foodCostPercent = calcFoodCostPercent(
@@ -67,7 +67,7 @@ export function MenuItemCard({
         ) : (
           <Switch
             id={`available-${item.id}`}
-            checked={item.available}
+            checked={item.status === 'active'}
             onCheckedChange={(checked) => void handleToggle(checked)}
             disabled={isToggling}
           />
@@ -76,7 +76,7 @@ export function MenuItemCard({
           htmlFor={`available-${item.id}`}
           className="text-sm text-muted-foreground cursor-pointer select-none"
         >
-          Available
+          Published
         </label>
       </div>
 

@@ -1,14 +1,33 @@
-export type OrderStatus = 'placed' | 'preparing' | 'ready' | 'served' | 'dispatched' | 'cancelled';
-export type OrderItemStatus = 'pending' | 'preparing' | 'ready';
-export type OrderChannel = 'dine_in' | 'takeaway' | 'delivery';
+export type OrderStatus =
+  | 'placed'
+  | 'confirmed'
+  | 'preparing'
+  | 'ready'
+  | 'served'
+  | 'dispatched'
+  | 'shipped'
+  | 'delivered'
+  | 'completed'
+  | 'cancelled'
+  | 'refunded';
+export type OrderItemStatus =
+  | 'pending'
+  | 'preparing'
+  | 'ready'
+  | 'packed'
+  | 'shipped'
+  | 'delivered'
+  | 'attended'
+  | 'cancelled';
+export type OrderChannel = 'dine_in' | 'takeaway' | 'delivery' | 'marketplace';
 export type PaymentMethod = 'cash' | 'card' | 'upi' | 'razorpay';
-export type PaymentStatus = 'pending' | 'paid' | 'refunded';
+export type PaymentStatus = 'pending' | 'paid' | 'failed' | 'refunded' | 'partially_refunded';
 
 export interface KdsOrderItem {
   id: string;
   status: OrderItemStatus;
-  menu_item_id: string;
-  menu_item_name: string;
+  product_id: string;
+  product_name: string;
   quantity: number;
   item_notes: string | null;
 }
@@ -40,21 +59,32 @@ export interface KitchenMetrics {
 
 export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
   placed: 'Placed',
+  confirmed: 'Confirmed',
   preparing: 'Preparing',
   ready: 'Ready',
   served: 'Served',
   dispatched: 'Dispatched',
+  shipped: 'Shipped',
+  delivered: 'Delivered',
+  completed: 'Completed',
   cancelled: 'Cancelled',
+  refunded: 'Refunded',
 };
 
 export const ORDER_ITEM_STATUS_LABELS: Record<OrderItemStatus, string> = {
   pending: 'Pending',
   preparing: 'Preparing',
   ready: 'Ready',
+  packed: 'Packed',
+  shipped: 'Shipped',
+  delivered: 'Delivered',
+  attended: 'Attended',
+  cancelled: 'Cancelled',
 };
 
 export const ORDER_CHANNEL_LABELS: Record<OrderChannel, string> = {
   dine_in: 'Dine-In',
   takeaway: 'Takeaway',
   delivery: 'Delivery',
+  marketplace: 'Marketplace',
 };

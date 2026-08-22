@@ -21,7 +21,7 @@ export function TopItemsList({ data }: TopItemsListProps) {
         ) : (
           <div className="space-y-3">
             {data.slice(0, 10).map((item, i) => (
-              <div key={item.menu_item_id} className="flex items-center gap-3">
+              <div key={item.product_id} className="flex items-center gap-3">
                 <span className="font-mono text-sm text-muted-foreground w-6 text-right">
                   {i + 1}
                 </span>

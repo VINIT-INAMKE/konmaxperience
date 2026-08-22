@@ -9,7 +9,7 @@ export * from './evidence';
 export * from './recipe';
 export * from './ingredient';
 export * from './vendor';
-export * from './menu';
+export * from './catalog';
 export * from './inventory';
 export * from './purchase-order';
 export * from './kitchen';

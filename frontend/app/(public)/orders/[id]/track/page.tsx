@@ -186,7 +186,7 @@ export default function OrderTrackingPage({ params }: OrderTrackingPageProps) {
                 className="flex items-center justify-between text-sm"
               >
                 <span className="text-[var(--public-fg-subtle)]">
-                  {item.menu_item.name} x{item.quantity}
+                  {item.product.name} x{item.quantity}
                 </span>
                 <span className="text-[var(--public-fg)] font-medium">
                   {'\u20B9'}

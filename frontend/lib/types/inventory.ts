@@ -1,19 +1,36 @@
-export type StockMovementType = 'received' | 'prep_deducted' | 'order_deducted' | 'waste' | 'adjustment';
+export type StockMovementType =
+  | 'purchase_received'
+  | 'prep_deducted'
+  | 'order_deducted'
+  | 'waste'
+  | 'adjustment'
+  | 'supply_usage'
+  | 'import'
+  | 'shipment_packed'
+  | 'return';
 
 export const MOVEMENT_TYPE_LABELS: Record<StockMovementType, string> = {
-  received: 'Received',
+  purchase_received: 'Received',
   prep_deducted: 'Prep Deducted',
   order_deducted: 'Order Deducted',
   waste: 'Waste',
   adjustment: 'Adjustment',
+  supply_usage: 'Supply Usage',
+  import: 'Import',
+  shipment_packed: 'Shipment Packed',
+  return: 'Return',
 };
 
 export const MOVEMENT_TYPE_BADGE_CLASSES: Record<StockMovementType, string> = {
-  received: 'bg-green-500/15 text-green-400',
+  purchase_received: 'bg-green-500/15 text-green-400',
   prep_deducted: 'bg-blue-500/15 text-blue-400',
   order_deducted: 'bg-indigo-500/15 text-indigo-400',
   waste: 'bg-red-500/15 text-red-400',
   adjustment: 'bg-muted text-muted-foreground',
+  supply_usage: 'bg-cyan-500/15 text-cyan-400',
+  import: 'bg-violet-500/15 text-violet-400',
+  shipment_packed: 'bg-teal-500/15 text-teal-400',
+  return: 'bg-amber-500/15 text-amber-400',
 };
 
 export interface IngredientStock {

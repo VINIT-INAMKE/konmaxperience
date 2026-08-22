@@ -3,25 +3,27 @@
 import Image from 'next/image';
 import { Plus, Minus } from 'lucide-react';
 import { useCartStore } from '@/lib/stores/cart-store';
-import type { MenuItem } from '@/lib/types/menu';
+import { productImage } from '@/lib/types/catalog';
+import type { Product } from '@/lib/types/catalog';
 
-interface MenuItemOrderCardProps {
-  item: MenuItem;
+interface ProductOrderCardProps {
+  item: Product;
   available: boolean;
 }
 
-export function MenuItemOrderCard({ item, available }: MenuItemOrderCardProps) {
+export function ProductOrderCard({ item, available }: ProductOrderCardProps) {
   const quantity = useCartStore(
-    (s) => s.items.find((i) => i.menuItemId === item.id)?.quantity || 0,
+    (s) => s.items.find((i) => i.productId === item.id)?.quantity || 0,
   );
+  const imageUrl = productImage(item);
 
   const handleAdd = () => {
     if (!available) return;
     useCartStore.getState().addItem({
-      menuItemId: item.id,
+      productId: item.id,
       name: item.name,
       unitPrice: item.base_price,
-      imageUrl: item.image_url,
+      imageUrl,
     });
   };
 
@@ -52,9 +54,9 @@ export function MenuItemOrderCard({ item, available }: MenuItemOrderCardProps) {
       {/* Right: image + add/stepper */}
       <div className="w-24 shrink-0 relative">
         <div className="w-24 h-20 rounded-lg overflow-hidden bg-[var(--public-surface)]">
-          {item.image_url ? (
+          {imageUrl ? (
             <Image
-              src={item.image_url}
+              src={imageUrl}
               alt={item.name}
               width={96}
               height={80}

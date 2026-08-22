@@ -39,7 +39,7 @@ function summarizeItems(
   items: CustomerOrder['items'],
 ): string {
   if (items.length === 0) return '';
-  const names = items.map((i) => i.menu_item.name);
+  const names = items.map((i) => i.product.name);
   if (names.length <= 2) return names.join(', ');
   return `${names.slice(0, 2).join(', ')} and ${names.length - 2} more`;
 }

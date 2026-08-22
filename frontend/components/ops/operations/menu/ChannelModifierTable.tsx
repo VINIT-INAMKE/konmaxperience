@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { apiClient } from '@/lib/api-client';
-import type { ChannelModifier, ModifierType } from '@/lib/types/menu';
+import type { ChannelModifier, ModifierType } from '@/lib/types/catalog';
 
 const CHANNEL_TYPES = ['dine_in', 'takeaway', 'delivery'] as const;
 type ChannelType = (typeof CHANNEL_TYPES)[number];
@@ -43,7 +43,7 @@ export function ChannelModifierTable({ modifiers }: ChannelModifierTableProps) {
   const [isSaving, setIsSaving] = useState(false);
 
   const getModifierForChannel = (channelType: ChannelType) =>
-    modifiers.find((m) => m.channel_type === channelType) ?? null;
+    modifiers.find((m) => m.channel === channelType) ?? null;
 
   const handleEdit = (channelType: ChannelType) => {
     const existing = getModifierForChannel(channelType);
@@ -69,8 +69,8 @@ export function ChannelModifierTable({ modifiers }: ChannelModifierTableProps) {
     }
     setIsSaving(true);
     try {
-      await apiClient.patch('/menu/channel-modifiers', {
-        channel_type: editState.channelType,
+      await apiClient.patch('/catalog/channel-modifiers', {
+        channel: editState.channelType,
         modifier_type: editState.modifierType,
         modifier_value: value,
       });

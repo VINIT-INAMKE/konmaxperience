@@ -32,7 +32,7 @@ function EvidenceThumbnail({
   const wrapperClasses =
     'size-16 rounded-md overflow-hidden flex-shrink-0 bg-muted flex items-center justify-center';
 
-  if (type === 'photo') {
+  if (type === 'image') {
     return (
       <div className="size-16 rounded-md overflow-hidden flex-shrink-0">
         <img
@@ -48,7 +48,7 @@ function EvidenceThumbnail({
   const Icon =
     type === 'video'
       ? Video
-      : type === 'doc'
+      : type === 'document'
         ? FileText
         : type === 'link'
           ? LinkIcon

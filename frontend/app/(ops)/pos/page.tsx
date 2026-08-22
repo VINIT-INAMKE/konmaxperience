@@ -7,11 +7,11 @@ import { X, Loader2, ShoppingCart } from 'lucide-react';
 import { ShimmerButton } from '@/components/ui/shimmer-button';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
-import { PosMenuGrid } from '@/components/ops/pos/PosMenuGrid';
+import { PosProductGrid } from '@/components/ops/pos/PosProductGrid';
 import { PosCartSidebar } from '@/components/ops/pos/PosCartSidebar';
 import { apiClient } from '@/lib/api-client';
 import type { Brand } from '@/lib/types/brand';
-import type { MenuCategory, MenuItem } from '@/lib/types/menu';
+import type { ProductCategory, Product } from '@/lib/types/catalog';
 import type { Zone } from '@/lib/types/zone';
 import type {
   OrderChannel,
@@ -21,7 +21,7 @@ import type {
 } from '@/lib/types/orders';
 
 interface CartItem {
-  menu_item_id: string;
+  product_id: string;
   name: string;
   unit_price: number;
   quantity: number;
@@ -59,22 +59,22 @@ export default function PosPage() {
   const { data: categories = [] } = useQuery({
     queryKey: ['menu-categories', effectiveBrandId],
     queryFn: () =>
-      apiClient.get<MenuCategory[]>(
-        `/menu/categories?brand_id=${effectiveBrandId}`,
+      apiClient.get<ProductCategory[]>(
+        `/catalog/categories?brand_id=${effectiveBrandId}`,
       ),
     enabled: !!effectiveBrandId,
   });
 
-  const { data: menuItems = [] } = useQuery({
+  const { data: products = [] } = useQuery({
     queryKey: ['menu-items', effectiveBrandId],
     queryFn: () =>
-      apiClient.get<MenuItem[]>(`/menu/items/staff?brand_id=${effectiveBrandId}`),
+      apiClient.get<Product[]>(`/catalog/products/staff?brand_id=${effectiveBrandId}`),
     enabled: !!effectiveBrandId,
   });
 
   const { data: availability = {} } = useQuery({
     queryKey: ['menu', 'availability-batch'],
-    queryFn: () => apiClient.get<AvailabilityMap>('/menu/availability'),
+    queryFn: () => apiClient.get<AvailabilityMap>('/catalog/availability'),
     refetchInterval: 10000,
     staleTime: 8000,
   });
@@ -116,12 +116,12 @@ export default function PosPage() {
   });
 
   // Cart helpers
-  const addItem = useCallback((menuItem: MenuItem) => {
+  const addItem = useCallback((product: Product) => {
     setCartItems((prev) => {
-      const existing = prev.find((i) => i.menu_item_id === menuItem.id);
+      const existing = prev.find((i) => i.product_id === product.id);
       if (existing) {
         return prev.map((i) =>
-          i.menu_item_id === menuItem.id
+          i.product_id === product.id
             ? { ...i, quantity: i.quantity + 1 }
             : i,
         );
@@ -129,9 +129,9 @@ export default function PosPage() {
       return [
         ...prev,
         {
-          menu_item_id: menuItem.id,
-          name: menuItem.name,
-          unit_price: menuItem.base_price,
+          product_id: product.id,
+          name: product.name,
+          unit_price: product.base_price,
           quantity: 1,
         },
       ];
@@ -139,16 +139,16 @@ export default function PosPage() {
   }, []);
 
   const updateQuantity = useCallback(
-    (menuItemId: string, delta: number) => {
+    (productId: string, delta: number) => {
       setCartItems((prev) => {
-        const item = prev.find((i) => i.menu_item_id === menuItemId);
+        const item = prev.find((i) => i.product_id === productId);
         if (!item) return prev;
         const newQty = item.quantity + delta;
         if (newQty <= 0) {
-          return prev.filter((i) => i.menu_item_id !== menuItemId);
+          return prev.filter((i) => i.product_id !== productId);
         }
         return prev.map((i) =>
-          i.menu_item_id === menuItemId ? { ...i, quantity: newQty } : i,
+          i.product_id === productId ? { ...i, quantity: newQty } : i,
         );
       });
     },
@@ -167,7 +167,7 @@ export default function PosPage() {
       channel,
       zone_id: defaultZoneId,
       items: cartItems.map((i) => ({
-        menu_item_id: i.menu_item_id,
+        product_id: i.product_id,
         quantity: i.quantity,
       })),
       ...(tableNumber ? { table_number: tableNumber } : {}),
@@ -287,14 +287,14 @@ export default function PosPage() {
             <div className="py-16 text-center space-y-2">
               <h2 className="text-base font-semibold">No menu available</h2>
               <p className="text-sm text-muted-foreground">
-                Add food brands and menu items in Operations to start taking orders.
+                Add food brands and products in Operations to start taking orders.
               </p>
             </div>
           ) : (
-            <PosMenuGrid
+            <PosProductGrid
               brands={brands}
               categories={categories}
-              items={menuItems}
+              items={products}
               selectedBrandId={effectiveBrandId}
               onBrandChange={setSelectedBrandId}
               availability={availability}
