@@ -4,7 +4,7 @@ import {
   ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { Prisma, TaskStatus } from '@prisma/client';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma/prisma.service';
 import { buildScopeFilter } from '../permissions/scope.filter';
@@ -265,7 +265,7 @@ export class TasksService {
       const updated = await tx.task.update({
         where: { id },
         data: {
-          status: 'blocked',
+          status: TaskStatus.blocked,
           blocked: true,
           blocked_reason: reason,
         },
@@ -326,7 +326,7 @@ export class TasksService {
       const updated = await tx.task.update({
         where: { id },
         data: {
-          status: 'todo',
+          status: TaskStatus.todo,
           blocked: false,
           blocked_reason: null,
         },

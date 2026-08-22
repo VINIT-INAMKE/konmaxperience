@@ -1,19 +1,5 @@
 import { IsDateString, IsEnum, IsOptional, IsString, MinLength } from 'class-validator';
-
-export enum MissionPhase {
-  SETUP = 'setup',
-  FOUNDATION = 'foundation',
-  ACTIVATION = 'activation',
-  SCALE = 'scale',
-}
-
-export enum MissionScope {
-  FOOD = 'food',
-  ART = 'art',
-  LIFESTYLE = 'lifestyle',
-  SYSTEM = 'system',
-  MIXED = 'mixed',
-}
+import { MissionPhase, MissionScope } from '@prisma/client';
 
 export class CreateMissionDto {
   @IsString()
@@ -24,10 +10,10 @@ export class CreateMissionDto {
   description!: string;
 
   @IsEnum(MissionPhase)
-  phase!: string;
+  phase!: MissionPhase;
 
   @IsEnum(MissionScope)
-  scope!: string;
+  scope!: MissionScope;
 
   @IsOptional()
   @IsDateString()

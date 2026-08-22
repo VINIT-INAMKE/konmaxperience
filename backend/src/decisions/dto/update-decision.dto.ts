@@ -1,4 +1,5 @@
-import { IsString, IsOptional, IsIn } from 'class-validator';
+import { IsString, IsOptional, IsIn, IsEnum } from 'class-validator';
+import { DecisionStatus } from '@prisma/client';
 
 export class UpdateDecisionDto {
   @IsOptional()
@@ -14,8 +15,8 @@ export class UpdateDecisionDto {
   context?: string;
 
   @IsOptional()
-  @IsIn(['proposed', 'approved', 'rejected'])
-  status?: string;
+  @IsEnum(DecisionStatus)
+  status?: DecisionStatus;
 
   @IsOptional()
   @IsString()

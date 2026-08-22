@@ -1,12 +1,5 @@
 import { IsDateString, IsEnum, IsOptional, IsString, MinLength } from 'class-validator';
-import { MissionPhase, MissionScope } from './create-mission.dto';
-
-export enum MissionStatus {
-  PLANNED = 'planned',
-  ACTIVE = 'active',
-  COMPLETED = 'completed',
-  PAUSED = 'paused',
-}
+import { MissionPhase, MissionScope, MissionStatus } from '@prisma/client';
 
 export class UpdateMissionDto {
   @IsOptional()
@@ -20,15 +13,15 @@ export class UpdateMissionDto {
 
   @IsOptional()
   @IsEnum(MissionPhase)
-  phase?: string;
+  phase?: MissionPhase;
 
   @IsOptional()
   @IsEnum(MissionScope)
-  scope?: string;
+  scope?: MissionScope;
 
   @IsOptional()
   @IsEnum(MissionStatus)
-  status?: string;
+  status?: MissionStatus;
 
   @IsOptional()
   @IsDateString()

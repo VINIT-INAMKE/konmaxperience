@@ -8,31 +8,7 @@ import {
   Min,
   MinLength,
 } from 'class-validator';
-
-export enum TaskType {
-  CORE = 'core',
-  ADHOC = 'adhoc',
-  IMPROVEMENT = 'improvement',
-}
-
-export enum TaskDomain {
-  FOOD = 'food',
-  ART = 'art',
-  LIFESTYLE = 'lifestyle',
-  OPS = 'ops',
-  PROCUREMENT = 'procurement',
-  BI = 'bi',
-  TALENT = 'talent',
-  TECH = 'tech',
-  DESIGN = 'design',
-}
-
-export enum TaskPriority {
-  LOW = 'low',
-  MEDIUM = 'medium',
-  HIGH = 'high',
-  CRITICAL = 'critical',
-}
+import { TaskDomain, TaskPriority, TaskType } from '@prisma/client';
 
 export class CreateTaskDto {
   @IsUUID()
@@ -50,16 +26,16 @@ export class CreateTaskDto {
   description!: string;
 
   @IsEnum(TaskType)
-  task_type!: string;
+  task_type!: TaskType;
 
   @IsEnum(TaskDomain)
-  domain!: string;
+  domain!: TaskDomain;
 
   @IsUUID()
   owner_user_id!: string;
 
   @IsEnum(TaskPriority)
-  priority!: string;
+  priority!: TaskPriority;
 
   @IsOptional()
   @IsInt()
