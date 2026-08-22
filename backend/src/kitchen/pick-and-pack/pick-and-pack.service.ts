@@ -6,11 +6,11 @@ export class PickAndPackService {
   constructor(private readonly prisma: PrismaService) {}
 
   async getActiveOrders() {
-    // Fetch orders that have at least one non-scratch item not yet complete
-    // Order status: NOT in ['ready', 'delivered', 'cancelled']
+    // Fetch orders that have at least one non-scratch item not yet complete.
+    // Order.status values: placed | preparing | ready | served | dispatched | cancelled
     const orders = await this.prisma.order.findMany({
       where: {
-        status: { notIn: ['ready', 'delivered', 'cancelled'] },
+        status: { in: ['placed', 'preparing'] },
         items: {
           some: {
             menu_item: {
@@ -75,8 +75,7 @@ export class PickAndPackService {
         menu_item_name: item.menu_item?.name ?? '',
         quantity: item.quantity,
         item_notes: item.item_notes ?? null,
-        preparation_type:
-          item.menu_item?.recipe?.preparation_type ?? 'scratch',
+        preparation_type: item.menu_item?.recipe?.preparation_type ?? 'scratch',
         // For assemble items, include component checklist
         components:
           item.menu_item?.recipe?.preparation_type === 'assemble'
