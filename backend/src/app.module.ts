@@ -19,6 +19,7 @@ import { ReadinessModule } from './readiness/readiness.module';
 import { LeaderboardModule } from './leaderboard/leaderboard.module';
 import { KpisModule } from './kpis/kpis.module';
 import { SettingsModule } from './settings/settings.module';
+import { ModuleAccessModule } from './module-access/module-access.module';
 import { DecisionsModule } from './decisions/decisions.module';
 import { DelegationsModule } from './delegations/delegations.module';
 import { ApprovalsModule } from './approvals/approvals.module';
@@ -78,6 +79,7 @@ import { UserAwareThrottlerGuard } from './common/guards/user-aware-throttler.gu
     LeaderboardModule,
     KpisModule,
     SettingsModule,
+    ModuleAccessModule,
     DecisionsModule,
     DelegationsModule,
     ApprovalsModule,
