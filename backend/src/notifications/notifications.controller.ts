@@ -11,6 +11,7 @@ import {
   HttpCode,
   ParseUUIDPipe,
   UnauthorizedException,
+  ForbiddenException,
   Logger,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -70,9 +71,19 @@ export class NotificationsController {
     @Body() body: { jobName: string; data: Record<string, any> },
     @Headers('upstash-signature') signature: string,
   ) {
-    // Verify QStash signature if receiver is configured
-    if (this.receiver) {
-      if (!signature) throw new UnauthorizedException('Missing QStash signature');
+    if (!this.receiver) {
+      const allowUnsigned =
+        this.config.get<string>('QSTASH_ALLOW_UNSIGNED') === 'true' &&
+        this.config.get<string>('NODE_ENV') !== 'production';
+      if (!allowUnsigned) {
+        throw new ForbiddenException('QStash signing keys are not configured');
+      }
+      this.logger.warn(
+        'Processing UNSIGNED QStash webhook (QSTASH_ALLOW_UNSIGNED=true)',
+      );
+    } else {
+      if (!signature)
+        throw new UnauthorizedException('Missing QStash signature');
       try {
         await this.receiver.verify({ signature, body: JSON.stringify(body) });
       } catch {
