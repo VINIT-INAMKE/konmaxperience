@@ -110,3 +110,11 @@ P1-B (security, config & safety — plan at `docs(plan): P1-B security, config &
 7. **Forgot-password email** — the forgot-password flow does not actually send mail (MailerSend wiring incomplete).
 8. **Seed split** — the seed script is monolithic; needs splitting into reference data vs. demo data so production seeding is safe.
 9. **Frontend error boundaries** — no route-level error boundaries; a thrown render error blanks the app.
+
+## P1-B closure (2026-08-23)
+
+All nine P1-B items landed: env validation at boot + Redis-down 503 (`bc71672`), named throttlers keyed by user (`986731d`), typed refresh tokens with `JWT_REFRESH_SECRET` (`039b846`), QStash webhook 403 without receiver (`35e920b`), ingredient-category permissions (`5aa9734`), public menu strips cost/yield + `/menu/items/staff` (`c61d0d4`), forgot-password emails the token (`c60854f`), seeds split into prod-safe reference + guarded demo with random passwords (`b3331cc`), frontend error boundaries + not-found (`06769cc`).
+
+Final gate (HEAD): `Test Suites: 52 passed, 52 total` · `Tests: 26 todo, 447 passed, 473 total` · backend/frontend `tsc --noEmit` clean · backend `lint:check` 0 errors · frontend `lint` 0 errors · both builds succeed.
+
+Phase 29 (P1) complete. Still open: applying migration `20260822200501_p1a_payment_unique_actor` needs a reachable database (Neon creds in `backend/.env` fail with P1000; Docker daemon was down).

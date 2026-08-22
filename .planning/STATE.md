@@ -2,7 +2,7 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Mission OS + Marketplace
-status: "P0 complete — Phase 29 (P1) next"
+status: "Phase 29 (P1) complete — Phase 30 (P2 platform foundation) next"
 stopped_at: P0 planning sync complete (SPEC.md at cd04779; PROJECT/ROADMAP/REQUIREMENTS synced)
 last_updated: "2026-08-22"
 progress:
