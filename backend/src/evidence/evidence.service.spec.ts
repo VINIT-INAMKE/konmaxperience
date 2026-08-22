@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ForbiddenException } from '@nestjs/common';
 import { EvidenceService } from './evidence.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { provideTasksService, mockTasksService } from '../test-utils/mock-providers';
 
 jest.mock('../permissions/permissions.cache', () => ({
   getPermissionsForRole: jest.fn(),
@@ -11,6 +12,7 @@ describe('EvidenceService', () => {
   let service: EvidenceService;
   let prisma: any;
   let txMock: any;
+  let tasksService: ReturnType<typeof mockTasksService>;
 
   const reviewerId = 'reviewer-1';
   const uploaderId = 'uploader-1';
@@ -41,6 +43,7 @@ describe('EvidenceService', () => {
     requires_approval: true,
     readiness_meter_id: null,
     readiness_value: 0,
+    _count: { evidence: 1, approvals: 1 },
     evidence: [{ ...mockEvidence, approval_status: 'approved' }],
     approvals: [{ status: 'approved' }],
   };
@@ -77,6 +80,9 @@ describe('EvidenceService', () => {
       mission: {
         update: jest.fn(),
       },
+      approval: {
+        count: jest.fn().mockResolvedValue(0),
+      },
       user: {
         update: jest.fn(),
         findUnique: jest.fn().mockResolvedValue({ id: 'uploader-1', xp_total: 25, level: 1 }),
@@ -107,10 +113,13 @@ describe('EvidenceService', () => {
       $transaction: jest.fn((cb: any) => cb(txMock)),
     };
 
+    tasksService = mockTasksService();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         EvidenceService,
         { provide: PrismaService, useValue: prisma },
+        provideTasksService(tasksService),
       ],
     }).compile();
 
@@ -176,6 +185,8 @@ describe('EvidenceService', () => {
       );
       expect(result).toHaveProperty('valid');
       expect(result).toHaveProperty('valid_xp');
+      expect(tasksService.recalculateQuestProgress).toHaveBeenCalledWith('quest-1', txMock);
+      expect(tasksService.recalculateMissionProgress).toHaveBeenCalledWith('mission-1', txMock);
     });
   });
 
@@ -187,7 +198,7 @@ describe('EvidenceService', () => {
       txMock.evidence.update.mockResolvedValue({});
       txMock.task.findUnique.mockResolvedValue({
         ...mockTask,
-        evidence: [{ ...mockEvidence, approval_status: 'rejected' }],
+        _count: { evidence: 0, approvals: 1 },
       });
       txMock.task.update.mockResolvedValue({
         ...mockTask,
@@ -255,7 +266,7 @@ describe('EvidenceService', () => {
     it('returns valid=false when no approved evidence exists', async () => {
       txMock.task.findUnique.mockResolvedValue({
         ...mockTask,
-        evidence: [{ ...mockEvidence, approval_status: 'pending' }],
+        _count: { evidence: 0, approvals: 1 },
       });
       txMock.task.update.mockResolvedValue({});
       txMock.task.aggregate.mockResolvedValue({ _sum: { valid_xp: 0 } });
@@ -272,8 +283,9 @@ describe('EvidenceService', () => {
     it('returns valid=false when approval is pending', async () => {
       txMock.task.findUnique.mockResolvedValue({
         ...mockTask,
-        approvals: [{ status: 'pending' }],
+        _count: { evidence: 1, approvals: 1 },
       });
+      txMock.approval.count.mockResolvedValueOnce(1);
       txMock.task.update.mockResolvedValue({});
       txMock.task.aggregate.mockResolvedValue({ _sum: { valid_xp: 0 } });
       txMock.user.update.mockResolvedValue({});
@@ -371,108 +383,6 @@ describe('EvidenceService', () => {
             valid: true,
             verified: true,
           }),
-        }),
-      );
-    });
-  });
-
-  // ---- recalculateQuestProgress ----
-
-  describe('recalculateQuestProgress', () => {
-    it('counts only valid=true tasks (not status=done)', async () => {
-      txMock.quest.findUnique.mockResolvedValue({
-        id: 'quest-1',
-        baseline_task_count: 5,
-      });
-
-      // 3 core valid, 0 total adhoc, 0 valid adhoc
-      txMock.task.count
-        .mockResolvedValueOnce(3) // core valid count
-        .mockResolvedValueOnce(0) // total adhoc
-        .mockResolvedValueOnce(0); // valid adhoc
-
-      txMock.quest.update.mockResolvedValue({});
-
-      await (service as any).recalculateQuestProgress('quest-1', txMock);
-
-      // Verify the count query uses valid: true, not status: 'done'
-      expect(txMock.task.count).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: expect.objectContaining({
-            quest_id: 'quest-1',
-            task_type: 'core',
-            valid: true,
-          }),
-        }),
-      );
-
-      // core_progress = Math.round((3 / 5) * 100) = 60
-      expect(txMock.quest.update).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.objectContaining({
-            core_progress_percent: 60,
-          }),
-        }),
-      );
-    });
-
-    it('combined progress uses weighted formula', async () => {
-      txMock.quest.findUnique.mockResolvedValue({
-        id: 'quest-1',
-        baseline_task_count: 5,
-      });
-
-      // 3 core valid, 2 total adhoc, 1 valid adhoc
-      txMock.task.count
-        .mockResolvedValueOnce(3) // core valid
-        .mockResolvedValueOnce(2) // total adhoc
-        .mockResolvedValueOnce(1); // valid adhoc
-
-      txMock.quest.update.mockResolvedValue({});
-
-      await (service as any).recalculateQuestProgress('quest-1', txMock);
-
-      // combined = Math.round(((3 + 1 * 0.7) / (5 + 2 * 0.7)) * 100)
-      //          = Math.round((3.7 / 6.4) * 100) = Math.round(57.8125) = 58
-      expect(txMock.quest.update).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.objectContaining({
-            core_progress_percent: 60,
-            adhoc_progress_percent: 50,
-            progress_percent: 58,
-          }),
-        }),
-      );
-    });
-  });
-
-  // ---- recalculateMissionProgress ----
-
-  describe('recalculateMissionProgress', () => {
-    it('counts only valid=true tasks (not status=done)', async () => {
-      // 10 total, 4 valid
-      txMock.task.count
-        .mockResolvedValueOnce(10) // total
-        .mockResolvedValueOnce(4); // valid
-
-      txMock.mission.update.mockResolvedValue({});
-
-      await (service as any).recalculateMissionProgress('mission-1', txMock);
-
-      // Verify count query uses valid: true
-      expect(txMock.task.count).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: expect.objectContaining({
-            mission_id: 'mission-1',
-            valid: true,
-          }),
-        }),
-      );
-
-      // progress = Math.round((4 / 10) * 100) = 40
-      expect(txMock.mission.update).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: { progress_percent: 40 },
         }),
       );
     });

@@ -146,24 +146,16 @@ describe('NotificationsService', () => {
   });
 
   describe('getUsersByPermission', () => {
-    it('returns users whose role includes the permission', async () => {
-      prisma.user.findMany.mockResolvedValue([
-        {
-          id: 'u1',
-          status: 'active',
-          role: { code: 'KITCHEN_LEAD', permissions: ['MANAGE_KITCHEN'] },
-        },
-        {
-          id: 'u2',
-          status: 'active',
-          role: { code: 'BI_LEAD', permissions: ['VIEW_ANALYTICS'] },
-        },
-      ]);
+    it('queries active users whose role has the permission and returns ids', async () => {
+      prisma.user.findMany.mockResolvedValue([{ id: 'u1' }]);
 
       const result = await service.getUsersByPermission('MANAGE_KITCHEN');
 
-      expect(result).toHaveLength(1);
-      expect(result[0].id).toBe('u1');
+      expect(prisma.user.findMany).toHaveBeenCalledWith({
+        where: { status: 'active', role: { permissions: { has: 'MANAGE_KITCHEN' } } },
+        select: { id: true },
+      });
+      expect(result).toEqual([{ id: 'u1' }]);
     });
   });
 });

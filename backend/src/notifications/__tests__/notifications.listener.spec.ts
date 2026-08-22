@@ -1,120 +1,92 @@
 import { NotificationsListener } from '../notifications.listener';
+import { mockQstash } from '../../test-utils/mock-providers';
 
 describe('NotificationsListener', () => {
   let listener: NotificationsListener;
-  let mockQueue: any;
+  let qstash: ReturnType<typeof mockQstash>;
 
   beforeEach(() => {
-    mockQueue = {
-      add: jest.fn().mockResolvedValue({ id: 'job-1' }),
+    qstash = mockQstash();
+    listener = new NotificationsListener(qstash as any);
+  });
+
+  it('publishes notify-new-order with the event payload', async () => {
+    const payload = {
+      orderId: 'ord-1',
+      channel: 'dine_in',
+      itemCount: 3,
+      total: '250.00',
+      createdBy: 'user-1',
     };
-    listener = new NotificationsListener(mockQueue);
+
+    await listener.handleOrderPlaced(payload);
+
+    expect(qstash.publish).toHaveBeenCalledTimes(1);
+    expect(qstash.publish).toHaveBeenCalledWith('notify-new-order', payload);
   });
 
-  describe('handleOrderPlaced', () => {
-    it('should enqueue notify-new-order with payload', async () => {
-      const payload = {
-        orderId: 'ord-1',
-        channel: 'dine_in',
-        itemCount: 3,
-        total: '250.00',
-        createdBy: 'user-1',
-      };
+  it('publishes notify-order-ready with the event payload', async () => {
+    const payload = { orderId: 'ord-2', channel: 'takeaway', createdBy: 'user-2' };
 
-      await listener.handleOrderPlaced(payload);
+    await listener.handleOrderReady(payload);
 
-      expect(mockQueue.add).toHaveBeenCalledWith(
-        'notify-new-order',
-        payload,
-        expect.objectContaining({
-          attempts: 3,
-          backoff: { type: 'exponential', delay: 5000 },
-        }),
-      );
+    expect(qstash.publish).toHaveBeenCalledTimes(1);
+    expect(qstash.publish).toHaveBeenCalledWith('notify-order-ready', payload);
+  });
+
+  it('publishes notify-delivery-update with the event payload', async () => {
+    const payload = {
+      orderId: 'ord-3',
+      deliveryStatus: 'picked_up',
+      deliveryAddress: '123 Main St',
+      createdBy: 'user-3',
+    };
+
+    await listener.handleDeliveryUpdated(payload);
+
+    expect(qstash.publish).toHaveBeenCalledTimes(1);
+    expect(qstash.publish).toHaveBeenCalledWith('notify-delivery-update', payload);
+  });
+
+  it('publishes notify-low-stock with the event payload', async () => {
+    const payload = {
+      ingredientId: 'ing-1',
+      ingredientName: 'Salt',
+      currentQty: 2,
+      minQty: 10,
+      unit: 'kg',
+      zoneId: 'zone-f',
+    };
+
+    await listener.handleStockLow(payload);
+
+    expect(qstash.publish).toHaveBeenCalledTimes(1);
+    expect(qstash.publish).toHaveBeenCalledWith('notify-low-stock', payload);
+  });
+
+  it('publishes notify-task-blocked with the processor field names', async () => {
+    await listener.handleTaskBlocked({
+      taskId: 'task-1',
+      taskTitle: 'Fix widget',
+      ownerUserId: 'user-1',
+      blockedReason: 'Waiting for vendor',
     });
-  });
 
-  describe('handleOrderReady', () => {
-    it('should enqueue notify-order-ready with payload', async () => {
-      const payload = {
-        orderId: 'ord-2',
-        channel: 'takeaway',
-        createdBy: 'user-2',
-      };
-
-      await listener.handleOrderReady(payload);
-
-      expect(mockQueue.add).toHaveBeenCalledWith(
-        'notify-order-ready',
-        payload,
-        expect.objectContaining({ attempts: 3 }),
-      );
-    });
-  });
-
-  describe('handleDeliveryUpdated', () => {
-    it('should enqueue notify-delivery-update with payload', async () => {
-      const payload = {
-        orderId: 'ord-3',
-        deliveryStatus: 'picked_up',
-        deliveryAddress: '123 Main St',
-        createdBy: 'user-3',
-      };
-
-      await listener.handleDeliveryUpdated(payload);
-
-      expect(mockQueue.add).toHaveBeenCalledWith(
-        'notify-delivery-update',
-        payload,
-        expect.objectContaining({ attempts: 3 }),
-      );
-    });
-  });
-
-  describe('handleStockLow', () => {
-    it('should enqueue notify-low-stock with payload', async () => {
-      const payload = {
-        ingredientId: 'ing-1',
-        ingredientName: 'Salt',
-        currentQty: 2,
-        minQty: 10,
-        unit: 'kg',
-        zoneId: 'zone-f',
-      };
-
-      await listener.handleStockLow(payload);
-
-      expect(mockQueue.add).toHaveBeenCalledWith(
-        'notify-low-stock',
-        payload,
-        expect.objectContaining({ attempts: 3 }),
-      );
-    });
-  });
-
-  describe('handleTaskBlocked', () => {
-    it('should enqueue notify-task-blocked with payload', async () => {
-      const payload = {
-        taskId: 'task-1',
-        taskTitle: 'Fix widget',
-        ownerUserId: 'user-1',
-        blockedReason: 'Waiting for vendor',
-      };
-
-      await listener.handleTaskBlocked(payload);
-
-      expect(mockQueue.add).toHaveBeenCalledWith(
-        'notify-task-blocked',
-        payload,
-        expect.objectContaining({ attempts: 3 }),
-      );
+    expect(qstash.publish).toHaveBeenCalledTimes(1);
+    expect(qstash.publish).toHaveBeenCalledWith('notify-task-blocked', {
+      userId: 'user-1',
+      taskId: 'task-1',
+      taskName: 'Fix widget',
+      reason: 'Waiting for vendor',
     });
   });
 
   describe('failure isolation', () => {
-    it('should not re-throw when queue.add fails', async () => {
-      mockQueue.add.mockRejectedValue(new Error('Redis down'));
+    beforeEach(() => {
+      qstash.publish.mockRejectedValue(new Error('QStash down'));
+    });
 
+    it('does not re-throw for order.placed', async () => {
       await expect(
         listener.handleOrderPlaced({
           orderId: 'ord-fail',
@@ -126,9 +98,24 @@ describe('NotificationsListener', () => {
       ).resolves.toBeUndefined();
     });
 
-    it('should not re-throw when queue.add fails for stock.low', async () => {
-      mockQueue.add.mockRejectedValue(new Error('Redis timeout'));
+    it('does not re-throw for order.ready', async () => {
+      await expect(
+        listener.handleOrderReady({ orderId: 'ord-fail', channel: 'takeaway', createdBy: 'user-x' }),
+      ).resolves.toBeUndefined();
+    });
 
+    it('does not re-throw for delivery.updated', async () => {
+      await expect(
+        listener.handleDeliveryUpdated({
+          orderId: 'ord-fail',
+          deliveryStatus: 'delivered',
+          deliveryAddress: null,
+          createdBy: 'user-x',
+        }),
+      ).resolves.toBeUndefined();
+    });
+
+    it('does not re-throw for stock.low', async () => {
       await expect(
         listener.handleStockLow({
           ingredientId: 'ing-2',
@@ -141,9 +128,7 @@ describe('NotificationsListener', () => {
       ).resolves.toBeUndefined();
     });
 
-    it('should not re-throw when queue.add fails for task.blocked', async () => {
-      mockQueue.add.mockRejectedValue(new Error('Connection refused'));
-
+    it('does not re-throw for task.blocked', async () => {
       await expect(
         listener.handleTaskBlocked({
           taskId: 'task-fail',

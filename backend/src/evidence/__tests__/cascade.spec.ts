@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ForbiddenException } from '@nestjs/common';
 import { EvidenceService } from '../evidence.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import { provideTasksService } from '../../test-utils/mock-providers';
 
 jest.mock('../../permissions/permissions.cache', () => ({
   getPermissionsForRole: jest.fn(),
@@ -41,6 +42,7 @@ describe('EvidenceService - Validation Cascade', () => {
     requires_approval: true,
     readiness_meter_id: null,
     readiness_value: 0,
+    _count: { evidence: 1, approvals: 1 },
     evidence: [{ ...mockEvidence, approval_status: 'approved' }],
     approvals: [{ status: 'approved' }],
   };
@@ -63,6 +65,9 @@ describe('EvidenceService - Validation Cascade', () => {
       },
       mission: {
         update: jest.fn(),
+      },
+      approval: {
+        count: jest.fn().mockResolvedValue(0),
       },
       user: {
         update: jest.fn(),
@@ -98,6 +103,7 @@ describe('EvidenceService - Validation Cascade', () => {
       providers: [
         EvidenceService,
         { provide: PrismaService, useValue: prisma },
+        provideTasksService(),
       ],
     }).compile();
 
@@ -153,7 +159,7 @@ describe('EvidenceService - Validation Cascade', () => {
       });
       txMock.task.findUnique.mockResolvedValue({
         ...mockTask,
-        evidence: [{ ...mockEvidence, approval_status: 'rejected' }],
+        _count: { evidence: 0, approvals: 1 },
       });
       txMock.task.update.mockResolvedValue({ ...mockTask, valid: false, valid_xp: 0 });
       txMock.task.aggregate.mockResolvedValue({ _sum: { valid_xp: 0 } });
@@ -216,7 +222,7 @@ describe('EvidenceService - Validation Cascade', () => {
     it('sets valid=false when no approved evidence', async () => {
       txMock.task.findUnique.mockResolvedValue({
         ...mockTask,
-        evidence: [{ ...mockEvidence, approval_status: 'pending' }],
+        _count: { evidence: 0, approvals: 1 },
       });
       txMock.task.update.mockResolvedValue({ ...mockTask, valid: false, valid_xp: 0 });
       txMock.task.aggregate.mockResolvedValue({ _sum: { valid_xp: 0 } });

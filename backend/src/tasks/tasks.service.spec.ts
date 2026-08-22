@@ -3,6 +3,7 @@ import { ForbiddenException } from '@nestjs/common';
 import { TasksService } from './tasks.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { Permission } from '../types/permissions';
+import { provideEventEmitter } from '../test-utils/mock-providers';
 
 // NOTE: In production, valid=true is set by Phase 3 evidence/approval flow.
 // Tests seed valid=true directly to verify recalculation math.
@@ -56,8 +57,7 @@ describe('TasksService', () => {
     txMock = {
       task: {
         update: jest.fn(),
-        count: jest.fn(),
-        findMany: jest.fn(),
+        groupBy: jest.fn(),
       },
       quest: {
         findUnique: jest.fn(),
@@ -93,12 +93,27 @@ describe('TasksService', () => {
       providers: [
         TasksService,
         { provide: PrismaService, useValue: prisma },
+        provideEventEmitter(),
       ],
     }).compile();
 
     service = module.get<TasksService>(TasksService);
     jest.clearAllMocks();
   });
+
+  /** Dispatch tx.task.groupBy on the where clause so Promise.all ordering does not matter. */
+  const mockGroupBy = (
+    quest: Array<{ task_type: 'core' | 'adhoc'; valid: boolean; count: number }>,
+    mission: Array<{ valid: boolean; count: number }>,
+  ) =>
+    txMock.task.groupBy.mockImplementation(
+      ({ where }: { where: { quest_id?: string; mission_id?: string } }) =>
+        Promise.resolve(
+          where.quest_id
+            ? quest.map((g) => ({ task_type: g.task_type, valid: g.valid, _count: { id: g.count } }))
+            : mission.map((g) => ({ valid: g.valid, _count: { id: g.count } })),
+        ),
+    );
 
   describe('findAll', () => {
     it('returns only tasks where owner_user_id matches for non-admin user', async () => {
@@ -208,7 +223,7 @@ describe('TasksService', () => {
       };
       txMock.task.update.mockResolvedValue(updatedTask);
       txMock.quest.findUnique.mockResolvedValue(null);
-      txMock.task.findMany.mockResolvedValue([]);
+      mockGroupBy([], []);
       txMock.mission.update.mockResolvedValue({});
 
       const result = await service.block(
@@ -252,9 +267,8 @@ describe('TasksService', () => {
         id: 'quest-1',
         baseline_task_count: 5,
       });
-      txMock.task.count.mockResolvedValue(0);
+      mockGroupBy([], []);
       txMock.quest.update.mockResolvedValue({});
-      txMock.task.findMany.mockResolvedValue([]);
       txMock.mission.update.mockResolvedValue({});
 
       await service.update('task-1', { status: 'doing' }, regularUser);
@@ -262,7 +276,7 @@ describe('TasksService', () => {
       // Verify $transaction was called (wraps update + recalculation)
       expect(prisma.$transaction).toHaveBeenCalled();
 
-      // Verify quest progress recalculated (quest.findUnique + task.count + quest.update)
+      // Verify quest progress recalculated (quest.findUnique + task.groupBy + quest.update)
       expect(txMock.quest.findUnique).toHaveBeenCalledWith(
         expect.objectContaining({ where: { id: 'quest-1' } }),
       );
@@ -294,16 +308,10 @@ describe('TasksService', () => {
         baseline_task_count: 5,
       });
 
-      // 3 core valid tasks (seeded with valid=true for test)
-      txMock.task.count
-        .mockResolvedValueOnce(3)  // core valid count
-        .mockResolvedValueOnce(0)  // total adhoc
-        .mockResolvedValueOnce(0); // valid adhoc
+      // 3 core valid tasks (seeded with valid=true for test), no adhoc; mission has no tasks
+      mockGroupBy([{ task_type: 'core', valid: true, count: 3 }], []);
 
       txMock.quest.update.mockResolvedValue({});
-
-      // Mission recalculation
-      txMock.task.findMany.mockResolvedValue([]);
       txMock.mission.update.mockResolvedValue({});
 
       await service.update('task-1', { status: 'done' }, regularUser);
@@ -327,9 +335,8 @@ describe('TasksService', () => {
         id: 'quest-1',
         baseline_task_count: 5,
       });
-      txMock.task.count.mockResolvedValue(0);
+      mockGroupBy([], []);
       txMock.quest.update.mockResolvedValue({});
-      txMock.task.findMany.mockResolvedValue([]);
       txMock.mission.update.mockResolvedValue({});
 
       await service.update('task-1', { status: 'done' }, regularUser);
@@ -358,13 +365,16 @@ describe('TasksService', () => {
       // core_progress = Math.round((3 / 5) * 100) = 60
       // adhoc_progress = Math.round((1 / 2) * 100) = 50
       // combined = Math.round(((3 + 1 * 0.7) / (5 + 2 * 0.7)) * 100) = Math.round((3.7 / 6.4) * 100) = 58
-      txMock.task.count
-        .mockResolvedValueOnce(3)  // core valid count
-        .mockResolvedValueOnce(2)  // total adhoc
-        .mockResolvedValueOnce(1); // valid adhoc
+      mockGroupBy(
+        [
+          { task_type: 'core', valid: true, count: 3 },
+          { task_type: 'adhoc', valid: true, count: 1 },
+          { task_type: 'adhoc', valid: false, count: 1 },
+        ],
+        [],
+      );
 
       txMock.quest.update.mockResolvedValue({});
-      txMock.task.findMany.mockResolvedValue([]);
       txMock.mission.update.mockResolvedValue({});
 
       await service.update('task-1', { status: 'done' }, regularUser);
@@ -385,10 +395,11 @@ describe('TasksService', () => {
       txMock.task.update.mockResolvedValue({ ...mockTask, status: 'done' });
       txMock.quest.findUnique.mockResolvedValue(null); // no quest
 
-      // Mission has 10 tasks, 4 valid — mocked via task.count
-      txMock.task.count
-        .mockResolvedValueOnce(10)  // total tasks in mission
-        .mockResolvedValueOnce(4);  // valid tasks in mission (valid: true)
+      // Mission has 10 tasks, 4 valid — mocked via task.groupBy
+      mockGroupBy([], [
+        { valid: true, count: 4 },
+        { valid: false, count: 6 },
+      ]);
       txMock.mission.update.mockResolvedValue({});
 
       await service.update('task-1', { status: 'done' }, regularUser);
