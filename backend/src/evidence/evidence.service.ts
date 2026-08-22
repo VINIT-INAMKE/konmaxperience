@@ -3,7 +3,12 @@ import {
   NotFoundException,
   ForbiddenException,
 } from '@nestjs/common';
-import { ApprovalStatus, Prisma, TaskStatus } from '@prisma/client';
+import {
+  ApprovalEntityType,
+  ApprovalStatus,
+  Prisma,
+  TaskStatus,
+} from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { getPermissionsForRole } from '../permissions/permissions.cache';
 import { Permission } from '../types/permissions';
@@ -281,11 +286,12 @@ export class EvidenceService {
         mission_id: true,
         readiness_meter_id: true,
         readiness_value: true,
-        // Use _count with filters instead of loading full relations
+        // Use _count with filters instead of loading full relations.
+        // Approvals are NOT a Task relation (`Approval.entity_id` is polymorphic,
+        // SPEC §3.5) — they are counted separately below.
         _count: {
           select: {
             evidence: { where: { approval_status: ApprovalStatus.approved } },
-            approvals: true,
           },
         },
       },
@@ -297,11 +303,16 @@ export class EvidenceService {
 
     const hasApprovedEvidence = task._count.evidence > 0;
 
-    // For approvals, we need to check if ALL are approved (not just count)
+    // For approvals, we need to check if ALL are approved (not just count).
+    // A task with zero approval rows counts as satisfied.
     let approvalsSatisfied = true;
-    if (task.requires_approval && task._count.approvals > 0) {
+    if (task.requires_approval) {
       const nonApprovedCount = await tx.approval.count({
-        where: { entity_id: taskId, status: { not: ApprovalStatus.approved } },
+        where: {
+          entity_type: ApprovalEntityType.task,
+          entity_id: taskId,
+          status: { not: ApprovalStatus.approved },
+        },
       });
       approvalsSatisfied = nonApprovedCount === 0;
     }

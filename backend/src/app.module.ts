@@ -5,6 +5,7 @@ import { ThrottlerModule } from '@nestjs/throttler';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
+import { NodeModule } from './node/node.module';
 import { AuthModule } from './auth/auth.module';
 import { PermissionsModule } from './permissions/permissions.module';
 import { UsersModule } from './users/users.module';
@@ -64,6 +65,7 @@ import { UserAwareThrottlerGuard } from './common/guards/user-aware-throttler.gu
     ScheduleModule.forRoot(),
     EventEmitterModule.forRoot(),
     PrismaModule,
+    NodeModule,
     AuthModule,
     PermissionsModule,
     UsersModule,

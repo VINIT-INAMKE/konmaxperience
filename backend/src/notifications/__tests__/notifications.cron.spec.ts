@@ -150,9 +150,9 @@ describe('NotificationsCron', () => {
           where: { status: 'pending', created_at: { lt: expect.any(Date) } },
           select: expect.objectContaining({
             id: true,
+            entity_type: true,
             entity_id: true,
             created_at: true,
-            task: { select: { id: true, title: true } },
           }),
         }),
       );
@@ -163,10 +163,13 @@ describe('NotificationsCron', () => {
       prisma.approval.findMany.mockResolvedValue([
         {
           id: 'approval-1',
+          entity_type: 'task',
           entity_id: 'task-100',
           created_at: created,
-          task: { id: 'task-100', title: 'Review evidence' },
         },
+      ]);
+      prisma.task.findMany.mockResolvedValue([
+        { id: 'task-100', title: 'Review evidence' },
       ]);
 
       await cron.scanApprovalsPending();
@@ -179,9 +182,14 @@ describe('NotificationsCron', () => {
       });
     });
 
-    it("falls back to 'Unknown Task' when the task relation is null", async () => {
+    it("falls back to 'Unknown Task' for a non-task approval subject", async () => {
       prisma.approval.findMany.mockResolvedValue([
-        { id: 'approval-2', entity_id: 'entity-999', created_at: created, task: null },
+        {
+          id: 'approval-2',
+          entity_type: 'evidence',
+          entity_id: 'entity-999',
+          created_at: created,
+        },
       ]);
 
       await cron.scanApprovalsPending();

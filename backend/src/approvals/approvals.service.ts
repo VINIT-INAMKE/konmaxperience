@@ -3,6 +3,7 @@ import {
   NotFoundException,
   ForbiddenException,
 } from '@nestjs/common';
+import { ApprovalEntityType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { EvidenceService } from '../evidence/evidence.service';
 import { DelegationsService } from '../delegations/delegations.service';
@@ -18,11 +19,24 @@ export class ApprovalsService {
   ) {}
 
   async findPending() {
-    return this.prisma.approval.findMany({
+    const approvals = await this.prisma.approval.findMany({
       where: { status: 'pending' },
       include: {
         approver: { select: { id: true, name: true } },
-        task: {
+      },
+      orderBy: { created_at: 'asc' },
+      take: 100,
+    });
+
+    // `Approval.entity_id` is polymorphic (task | evidence | decision | recipe),
+    // so there is no `task` relation to include (SPEC §3.5). Resolve the task
+    // rows the queue needs with an explicit query.
+    const taskIds = approvals
+      .filter((a) => a.entity_type === ApprovalEntityType.task)
+      .map((a) => a.entity_id);
+    const tasks = taskIds.length
+      ? await this.prisma.task.findMany({
+          where: { id: { in: taskIds } },
           select: {
             id: true,
             title: true,
@@ -30,11 +44,17 @@ export class ApprovalsService {
             owner: { select: { id: true, name: true } },
             _count: { select: { evidence: true } },
           },
-        },
-      },
-      orderBy: { created_at: 'asc' },
-      take: 100,
-    });
+        })
+      : [];
+    const taskById = new Map(tasks.map((task) => [task.id, task]));
+
+    return approvals.map((approval) => ({
+      ...approval,
+      task:
+        approval.entity_type === ApprovalEntityType.task
+          ? (taskById.get(approval.entity_id) ?? null)
+          : null,
+    }));
   }
 
   /**
