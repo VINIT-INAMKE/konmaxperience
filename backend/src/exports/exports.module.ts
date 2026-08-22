@@ -6,7 +6,7 @@ import { OrdersModule } from '../orders/orders.module';
 import { InventoryModule } from '../inventory/inventory.module';
 import { TasksModule } from '../tasks/tasks.module';
 import { KpisModule } from '../kpis/kpis.module';
-import { MenuModule } from '../menu/menu.module';
+import { CatalogModule } from '../catalog/catalog.module';
 import { FeedbackModule } from '../feedback/feedback.module';
 import { KitchenModule } from '../kitchen/kitchen.module';
 import { PurchaseOrdersModule } from '../purchase-orders/purchase-orders.module';
@@ -37,9 +37,9 @@ import {
   LeaderboardExportBuilder,
 } from './builders/operations.builder';
 import {
-  MenuItemsExportBuilder,
+  ProductsExportBuilder,
   FeedbackExportBuilder,
-} from './builders/menu.builder';
+} from './builders/products.builder';
 import {
   WasteLogExportBuilder,
   PrepBatchesExportBuilder,
@@ -69,7 +69,7 @@ import {
     InventoryModule,
     TasksModule,
     KpisModule,
-    MenuModule,
+    CatalogModule,
     FeedbackModule,
     KitchenModule,
     PurchaseOrdersModule,
@@ -95,7 +95,7 @@ import {
     StockMovementsExportBuilder,
     TasksExportBuilder,
     KpisExportBuilder,
-    MenuItemsExportBuilder,
+    ProductsExportBuilder,
     FeedbackExportBuilder,
     WasteLogExportBuilder,
     PrepBatchesExportBuilder,
@@ -125,7 +125,7 @@ export class ExportsModule implements OnModuleInit {
     private readonly stockMovementsExportBuilder: StockMovementsExportBuilder,
     private readonly tasksExportBuilder: TasksExportBuilder,
     private readonly kpisExportBuilder: KpisExportBuilder,
-    private readonly menuItemsExportBuilder: MenuItemsExportBuilder,
+    private readonly productsExportBuilder: ProductsExportBuilder,
     private readonly feedbackExportBuilder: FeedbackExportBuilder,
     private readonly wasteLogExportBuilder: WasteLogExportBuilder,
     private readonly prepBatchesExportBuilder: PrepBatchesExportBuilder,
@@ -170,10 +170,7 @@ export class ExportsModule implements OnModuleInit {
     );
     this.exportsService.registerBuilder('tasks', this.tasksExportBuilder);
     this.exportsService.registerBuilder('kpis', this.kpisExportBuilder);
-    this.exportsService.registerBuilder(
-      'menu_items',
-      this.menuItemsExportBuilder,
-    );
+    this.exportsService.registerBuilder('products', this.productsExportBuilder);
     this.exportsService.registerBuilder(
       'feedback',
       this.feedbackExportBuilder,
