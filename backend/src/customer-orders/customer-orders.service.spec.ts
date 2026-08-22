@@ -470,6 +470,31 @@ describe('CustomerOrdersService', () => {
       );
     });
 
+    it('returns the existing order when another caller consumed the pending key first (GETDEL race)', async () => {
+      redisClient.get.mockResolvedValue(JSON.stringify(pendingData));
+      redisClient.getdel.mockResolvedValue(null);
+      razorpayService.verifyPaymentSignature.mockReturnValue(true);
+      razorpayService.fetchPayment.mockResolvedValue({
+        status: 'captured',
+        amount: 30000,
+      });
+      const existing = { id: 'ord-1', customer_id: customerId };
+      fulfilmentService.findOrderByRazorpayPaymentId.mockResolvedValue(
+        existing,
+      );
+
+      const result = await service.confirmOrder(customerId, dto);
+
+      expect(result).toEqual(existing);
+      expect(redisClient.getdel).toHaveBeenCalledWith(
+        'pending_order:order_rzp123',
+      );
+      expect(
+        fulfilmentService.findOrderByRazorpayPaymentId,
+      ).toHaveBeenCalledWith('pay_123');
+      expect(fulfilmentService.confirmPaidOrder).not.toHaveBeenCalled();
+    });
+
     it('returns the webhook-created order when the pending key is already gone', async () => {
       redisClient.get.mockResolvedValue(null);
       const existing = { id: 'ord-1', customer_id: customerId };
