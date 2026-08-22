@@ -9,6 +9,7 @@ const mockTx = {
     findUniqueOrThrow: jest.fn(),
   },
   eventBooking: {
+    findUnique: jest.fn(),
     aggregate: jest.fn(),
     create: jest.fn(),
   },
@@ -24,6 +25,7 @@ const mockPrisma = {
   },
   eventBooking: {
     findMany: jest.fn(),
+    groupBy: jest.fn().mockResolvedValue([]),
   },
   $transaction: jest.fn((cb: (tx: typeof mockTx) => Promise<any>) =>
     cb(mockTx),
@@ -213,6 +215,9 @@ describe('EventsService', () => {
           status: 'upcoming',
           bookings: [{ guests: 10 }, { guests: 5 }],
         },
+      ]);
+      mockPrisma.eventBooking.groupBy.mockResolvedValue([
+        { event_id: 'e1', _sum: { guests: 15 } },
       ]);
 
       const result = await service.findUpcoming();

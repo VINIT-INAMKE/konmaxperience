@@ -42,6 +42,7 @@ const mockPrisma = {
   },
   ingredientStock: {
     findUnique: jest.fn(),
+    findMany: jest.fn(),
   },
   $transaction: jest.fn(),
 };
@@ -378,12 +379,12 @@ describe('PrepBatchesService', () => {
 
       // Preview uses this.prisma directly, not tx
       mockPrisma.recipe.findUnique.mockResolvedValue(recipe);
-      mockPrisma.ingredientStock.findUnique = jest.fn().mockResolvedValue({
-        current_quantity: dec(300),
-      });
+      mockPrisma.ingredientStock.findMany.mockResolvedValue([
+        { ingredient_id: 'ing-1', current_quantity: dec(300) },
+      ]);
       mockPrisma.prepBatch.findMany.mockResolvedValue([
-        { quantity_remaining: dec(40) },
-        { quantity_remaining: dec(80) },
+        { recipe_id: 'sub-recipe-1', quantity_remaining: dec(40) },
+        { recipe_id: 'sub-recipe-1', quantity_remaining: dec(80) },
       ]);
 
       const result = await service.previewDeductions(dto);

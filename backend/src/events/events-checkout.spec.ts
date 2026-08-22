@@ -147,8 +147,9 @@ describe('EventsService — Checkout & Confirm', () => {
         order_id: 'order_rzp_1',
         amount: 100000,
       });
-      const pendingBooking = { id: 'booking-1', razorpay_order_id: 'order_rzp_1', customer_id: 'cust-1', payment_status: 'pending', customer_name: 'Test' };
+      const pendingBooking = { id: 'booking-1', razorpay_order_id: 'order_rzp_1', customer_id: 'cust-1', payment_status: 'pending', customer_name: 'Test', guests: 2 };
       prisma.eventBooking.findFirst.mockResolvedValue(pendingBooking);
+      // capacity 10 - 2 confirmed = 8 spots remaining >= 2 requested -> no refund
       prisma.eventBooking.aggregate.mockResolvedValue({ _sum: { guests: 2 } });
       prisma.event.findUnique.mockResolvedValue(mockEvent);
       const updatedBooking = { ...pendingBooking, payment_status: 'paid', razorpay_payment_id: 'pay_rzp_1' };
@@ -170,11 +171,11 @@ describe('EventsService — Checkout & Confirm', () => {
       expect(razorpay.fetchPayment).not.toHaveBeenCalled();
     });
 
-    it('should throw BadRequestException when re-fetched payment status is not captured', async () => {
+    it('should throw BadRequestException when payment status is neither captured nor authorized', async () => {
       razorpay.verifyPaymentSignature.mockReturnValue(true);
       razorpay.fetchPayment.mockResolvedValue({
         id: 'pay_rzp_1',
-        status: 'authorized',
+        status: 'failed',
         order_id: 'order_rzp_1',
         amount: 100000,
       });
@@ -221,9 +222,9 @@ describe('EventsService — Checkout & Confirm', () => {
         order_id: 'order_rzp_1',
         amount: 100000,
       });
-      const pendingBooking = { id: 'booking-1', razorpay_order_id: 'order_rzp_1', customer_id: 'cust-1', payment_status: 'pending', customer_name: 'Test' };
+      const pendingBooking = { id: 'booking-1', razorpay_order_id: 'order_rzp_1', customer_id: 'cust-1', payment_status: 'pending', customer_name: 'Test', guests: 2 };
       prisma.eventBooking.findFirst.mockResolvedValue(pendingBooking);
-      // Capacity already full (10 confirmed guests, capacity is 10)
+      // Capacity already full (10 confirmed guests, capacity is 10) -> 0 spots < 2 requested
       prisma.eventBooking.aggregate.mockResolvedValue({ _sum: { guests: 10 } });
       prisma.event.findUnique.mockResolvedValue(mockEvent);
       razorpay.createRefund.mockResolvedValue({ id: 'rfnd_1' });

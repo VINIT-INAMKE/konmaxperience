@@ -6,9 +6,12 @@ const dec = (n: number) => ({ valueOf: () => n, toNumber: () => n });
 const mockPrisma = {
   order: {
     findMany: jest.fn(),
+    count: jest.fn(),
+    aggregate: jest.fn(),
   },
   orderItem: {
     groupBy: jest.fn(),
+    findMany: jest.fn(),
   },
   menuItem: {
     findMany: jest.fn(),
@@ -34,41 +37,20 @@ describe('AnalyticsService', () => {
   // ---------------------------------------------------------------
   describe('getSummary', () => {
     it('returns total_revenue, avg_food_cost_pct, total_orders, avg_order_value', async () => {
-      mockPrisma.order.findMany.mockResolvedValue([
-        {
-          id: 'o1',
-          total: dec(500),
-          status: 'served',
-          payment: { status: 'paid' },
-          items: [
-            { quantity: 2, menu_item: { base_price: dec(250), recipe: { computed_cost: dec(75) } } },
-          ],
-        },
-        {
-          id: 'o2',
-          total: dec(300),
-          status: 'placed',
-          payment: { status: 'paid' },
-          items: [
-            { quantity: 1, menu_item: { base_price: dec(300), recipe: { computed_cost: dec(135) } } },
-          ],
-        },
-        {
-          id: 'o3',
-          total: dec(200),
-          status: 'ready',
-          payment: null,
-          items: [
-            { quantity: 3, menu_item: { base_price: dec(200), recipe: { computed_cost: dec(50) } } },
-          ],
-        },
+      mockPrisma.order.count.mockResolvedValue(3);
+      mockPrisma.order.aggregate.mockResolvedValue({ _sum: { total: dec(800) }, _count: { id: 2 } });
+      mockPrisma.orderItem.findMany.mockResolvedValue([
+        { quantity: 2, menu_item: { base_price: dec(250), recipe: { computed_cost: dec(75) } } },
+        { quantity: 1, menu_item: { base_price: dec(300), recipe: { computed_cost: dec(135) } } },
+        { quantity: 3, menu_item: { base_price: dec(200), recipe: { computed_cost: dec(50) } } },
       ]);
 
       const result = await service.getSummary('2026-03-20', '2026-03-20');
 
       expect(result.total_revenue).toBe(800); // o1 + o2 paid
       expect(result.total_orders).toBe(3);
-      expect(result.avg_order_value).toBeCloseTo(800 / 3);
+      // revenue / paid orders (2), not / all orders
+      expect(result.avg_order_value).toBeCloseTo(400);
       // food_cost_pct per item:
       // o1: (75/250)*100 = 30%, qty=2 -> weighted = 60
       // o2: (135/300)*100 = 45%, qty=1 -> weighted = 45
@@ -78,29 +60,9 @@ describe('AnalyticsService', () => {
     });
 
     it('skips cancelled orders and unpaid orders for revenue', async () => {
-      mockPrisma.order.findMany.mockResolvedValue([
-        {
-          id: 'o1',
-          total: dec(500),
-          status: 'served',
-          payment: { status: 'paid' },
-          items: [],
-        },
-        {
-          id: 'o2',
-          total: dec(300),
-          status: 'ready',
-          payment: { status: 'pending' },
-          items: [],
-        },
-        {
-          id: 'o3',
-          total: dec(200),
-          status: 'ready',
-          payment: null,
-          items: [],
-        },
-      ]);
+      mockPrisma.order.count.mockResolvedValue(3);
+      mockPrisma.order.aggregate.mockResolvedValue({ _sum: { total: dec(500) }, _count: { id: 1 } });
+      mockPrisma.orderItem.findMany.mockResolvedValue([]);
 
       const result = await service.getSummary('2026-03-20', '2026-03-20');
 
@@ -142,10 +104,10 @@ describe('AnalyticsService', () => {
   // ---------------------------------------------------------------
   describe('getTopItems', () => {
     it('returns top 10 items ordered by quantity_sold desc', async () => {
-      mockPrisma.orderItem.groupBy.mockResolvedValue([
-        { menu_item_id: 'mi-1', _sum: { quantity: 50 } },
-        { menu_item_id: 'mi-2', _sum: { quantity: 30 } },
-        { menu_item_id: 'mi-3', _sum: { quantity: 10 } },
+      mockPrisma.orderItem.findMany.mockResolvedValue([
+        { menu_item_id: 'mi-1', quantity: 50, unit_price: dec(350) },
+        { menu_item_id: 'mi-2', quantity: 30, unit_price: dec(250) },
+        { menu_item_id: 'mi-3', quantity: 10, unit_price: dec(50) },
       ]);
 
       mockPrisma.menuItem.findMany.mockResolvedValue([
