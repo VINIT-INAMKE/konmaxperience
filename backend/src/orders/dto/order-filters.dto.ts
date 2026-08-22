@@ -1,13 +1,14 @@
-import { IsOptional, IsString, IsIn } from 'class-validator';
+import { IsOptional, IsString, IsEnum } from 'class-validator';
+import { OrderChannel, OrderStatus } from '@prisma/client';
 
 export class OrderFiltersDto {
   @IsOptional()
-  @IsIn(['dine_in', 'takeaway', 'delivery'])
-  channel?: string;
+  @IsEnum(OrderChannel)
+  channel?: OrderChannel;
 
   @IsOptional()
-  @IsIn(['placed', 'preparing', 'ready', 'served', 'dispatched', 'cancelled'])
-  status?: string;
+  @IsEnum(OrderStatus)
+  status?: OrderStatus;
 
   @IsOptional()
   @IsString()

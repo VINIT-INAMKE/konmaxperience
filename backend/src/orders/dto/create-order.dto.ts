@@ -1,7 +1,7 @@
 import { Type } from 'class-transformer';
 import {
   IsArray,
-  IsIn,
+  IsEnum,
   IsInt,
   IsOptional,
   IsString,
@@ -10,6 +10,7 @@ import {
   ArrayMinSize,
   ValidateNested,
 } from 'class-validator';
+import { OrderChannel } from '@prisma/client';
 
 export class CreateOrderItemDto {
   @IsUUID()
@@ -25,8 +26,8 @@ export class CreateOrderItemDto {
 }
 
 export class CreateOrderDto {
-  @IsIn(['dine_in', 'takeaway', 'delivery'])
-  channel: string;
+  @IsEnum(OrderChannel)
+  channel: OrderChannel;
 
   @IsUUID()
   zone_id: string;

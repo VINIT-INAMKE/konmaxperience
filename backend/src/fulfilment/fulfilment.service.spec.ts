@@ -6,7 +6,7 @@ import {
   BadRequestException,
   ServiceUnavailableException,
 } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { OrderSource, Prisma } from '@prisma/client';
 import { FulfilmentService, actorForOrder } from './fulfilment.service';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -609,6 +609,7 @@ describe('FulfilmentService', () => {
       razorpayOrderId: 'order_rzp1',
       razorpayPaymentId: 'pay_1',
       pending,
+      placedVia: OrderSource.storefront,
     };
 
     it('creates order+payment in one transaction, resolves zone, applies prep types', async () => {

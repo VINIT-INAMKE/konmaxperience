@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { OrderStatus, PaymentStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -24,7 +25,7 @@ export class AnalyticsService {
 
     const dateFilter = {
       created_at: { gte: start, lt: end },
-      status: { not: 'cancelled' as const },
+      status: { not: OrderStatus.cancelled },
     };
 
     // Run all independent queries in parallel instead of fetching full orders with includes
@@ -33,7 +34,7 @@ export class AnalyticsService {
       this.prisma.order.count({ where: dateFilter }),
       // 2. Revenue aggregates (only paid orders)
       this.prisma.order.aggregate({
-        where: { ...dateFilter, payment: { status: 'paid' } },
+        where: { ...dateFilter, payment: { status: PaymentStatus.paid } },
         _sum: { total: true },
         _count: { id: true },
       }),
@@ -83,8 +84,8 @@ export class AnalyticsService {
     const orders = await this.prisma.order.findMany({
       where: {
         created_at: { gte: start, lt: end },
-        status: { not: 'cancelled' },
-        payment: { status: 'paid' },
+        status: { not: OrderStatus.cancelled },
+        payment: { status: PaymentStatus.paid },
       },
       select: {
         total: true,
@@ -116,7 +117,7 @@ export class AnalyticsService {
       where: {
         order: {
           created_at: { gte: start, lt: end },
-          status: { not: 'cancelled' },
+          status: { not: OrderStatus.cancelled },
         },
       },
       select: {
@@ -165,7 +166,7 @@ export class AnalyticsService {
     const orders = await this.prisma.order.findMany({
       where: {
         created_at: { gte: start, lt: end },
-        status: { not: 'cancelled' },
+        status: { not: OrderStatus.cancelled },
       },
       select: {
         channel: true,
@@ -182,7 +183,7 @@ export class AnalyticsService {
         order_count: 0,
       };
       existing.order_count += 1;
-      if (order.payment?.status === 'paid') {
+      if (order.payment?.status === PaymentStatus.paid) {
         existing.revenue += Number(order.total);
       }
       channelMap.set(order.channel, existing);
@@ -206,7 +207,7 @@ export class AnalyticsService {
       where: {
         order: {
           created_at: { gte: start, lt: end },
-          status: { not: 'cancelled' },
+          status: { not: OrderStatus.cancelled },
         },
       },
       _sum: { quantity: true },

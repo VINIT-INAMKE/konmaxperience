@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { OrderItemStatus, OrderStatus } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 
 export interface ZoneUtilization {
@@ -36,12 +37,12 @@ export class KitchenMetricsService {
     ] = await Promise.all([
       // 1. Orders in queue: status IN ('placed', 'preparing')
       this.prisma.order.count({
-        where: { status: { in: ['placed', 'preparing'] } },
+        where: { status: { in: [OrderStatus.placed, OrderStatus.preparing] } },
       }),
       // 2. Items completed today: OrderItems with status='ready' AND ready_at >= today
       this.prisma.orderItem.count({
         where: {
-          status: 'ready',
+          status: OrderItemStatus.ready,
           ready_at: { gte: todayStart },
         },
       }),
@@ -75,7 +76,10 @@ export class KitchenMetricsService {
       // 7. Zone utilization: active orders grouped by zone (exclude customer orders without zone)
       this.prisma.order.groupBy({
         by: ['zone_id'],
-        where: { status: { in: ['placed', 'preparing'] }, zone_id: { not: null } },
+        where: {
+          status: { in: [OrderStatus.placed, OrderStatus.preparing] },
+          zone_id: { not: null },
+        },
         _count: { id: true },
       }),
     ]);

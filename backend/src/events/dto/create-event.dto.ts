@@ -1,7 +1,7 @@
 import {
   IsString,
   IsDateString,
-  IsIn,
+  IsEnum,
   IsInt,
   IsNumber,
   IsOptional,
@@ -11,6 +11,7 @@ import {
   Min,
   MinLength,
 } from 'class-validator';
+import { EventType } from '@prisma/client';
 
 export class CreateEventDto {
   @IsString()
@@ -18,8 +19,8 @@ export class CreateEventDto {
   @MaxLength(200)
   title: string;
 
-  @IsIn(['dining', 'workshop', 'pop_up', 'tasting', 'other'])
-  event_type: string;
+  @IsEnum(EventType)
+  event_type: EventType;
 
   @IsDateString()
   date: string;

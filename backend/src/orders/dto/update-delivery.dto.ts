@@ -1,4 +1,5 @@
-import { IsIn, IsOptional, IsString } from 'class-validator';
+import { IsEnum, IsOptional, IsString } from 'class-validator';
+import { DeliveryStatus } from '@prisma/client';
 
 export class UpdateDeliveryDto {
   @IsOptional()
@@ -6,6 +7,6 @@ export class UpdateDeliveryDto {
   delivery_assigned_to?: string;
 
   @IsOptional()
-  @IsIn(['picked_up', 'in_transit', 'delivered'])
-  delivery_status?: string;
+  @IsEnum(DeliveryStatus)
+  delivery_status?: DeliveryStatus;
 }

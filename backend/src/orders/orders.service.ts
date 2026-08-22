@@ -5,6 +5,16 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import {
+  ActorType,
+  DeliveryStatus,
+  OrderChannel,
+  OrderItemStatus,
+  OrderSource,
+  OrderStatus,
+  PaymentMethod,
+  PaymentStatus,
+} from '@prisma/client';
 import * as QRCode from 'qrcode';
 import { PrismaService } from '../prisma/prisma.service';
 import { RazorpayService } from '../razorpay/razorpay.service';
@@ -20,18 +30,36 @@ import {
   withSerializableRetry,
 } from '../common/utils/transaction-retry';
 
-/** Valid order status transitions (non-cancellation) */
-const STATUS_TRANSITIONS: Record<string, string[]> = {
-  placed: ['preparing'],
-  preparing: ['ready'],
-  ready: ['served', 'dispatched'],
+/**
+ * Valid order status transitions (non-cancellation).
+ * `shipped`/`delivered`/`completed`/`refunded` belong to the shipment and refund
+ * lifecycles and are wired up in P5 — the enum members already exist so that
+ * extension needs no migration.
+ */
+const STATUS_TRANSITIONS: Partial<Record<OrderStatus, OrderStatus[]>> = {
+  [OrderStatus.placed]: [OrderStatus.confirmed, OrderStatus.preparing],
+  [OrderStatus.confirmed]: [OrderStatus.preparing],
+  [OrderStatus.preparing]: [OrderStatus.ready],
+  [OrderStatus.ready]: [OrderStatus.served, OrderStatus.dispatched],
 };
 
 /** Terminal statuses that cannot be cancelled */
-const TERMINAL_STATUSES = ['served', 'dispatched', 'cancelled'];
+const TERMINAL_STATUSES: OrderStatus[] = [
+  OrderStatus.served,
+  OrderStatus.dispatched,
+  OrderStatus.delivered,
+  OrderStatus.completed,
+  OrderStatus.cancelled,
+  OrderStatus.refunded,
+];
 
 /** Valid delivery status progression */
-const DELIVERY_STATUS_ORDER = [null, 'picked_up', 'in_transit', 'delivered'];
+const DELIVERY_STATUS_ORDER: (DeliveryStatus | null)[] = [
+  null,
+  DeliveryStatus.picked_up,
+  DeliveryStatus.in_transit,
+  DeliveryStatus.delivered,
+];
 
 @Injectable()
 export class OrdersService {
@@ -71,7 +99,7 @@ export class OrdersService {
 
         // Look up channel modifier (null-check gracefully per Pitfall 5)
         const modifier = await tx.channelModifier.findFirst({
-          where: { channel_type: dto.channel, status: 'active' },
+          where: { channel: dto.channel, status: 'active' },
         });
 
         // Compute subtotal using server-side prices
@@ -94,7 +122,8 @@ export class OrdersService {
         const created = await tx.order.create({
           data: {
             channel: dto.channel,
-            status: 'placed',
+            status: OrderStatus.placed,
+            placed_via: OrderSource.pos,
             subtotal,
             channel_modifier_amount: modifierAmount,
             total: subtotal + modifierAmount,
@@ -112,7 +141,7 @@ export class OrdersService {
                 quantity: i.quantity,
                 unit_price: priceMap.get(i.menu_item_id)!,
                 item_notes: i.item_notes,
-                status: 'pending',
+                status: OrderItemStatus.pending,
               })),
             },
           },
@@ -124,7 +153,7 @@ export class OrdersService {
           tx,
           { id: created.id, zone_id: created.zone_id },
           created.items,
-          { actor_type: 'user', actor_id: userId },
+          { actor_type: ActorType.user, actor_id: userId },
         );
 
         return created;
@@ -267,7 +296,11 @@ export class OrdersService {
   // ---------------------------------------------------------------
   // Update Order Status
   // ---------------------------------------------------------------
-  async updateOrderStatus(orderId: string, newStatus: string) {
+  async updateOrderStatus(
+    orderId: string,
+    newStatus: OrderStatus,
+    userId: string | null,
+  ) {
     const order = await this.prisma.order.findUnique({
       where: { id: orderId },
       select: { id: true, status: true, customer_id: true, order_number: true },
@@ -278,7 +311,7 @@ export class OrdersService {
     }
 
     // Handle cancellation
-    if (newStatus === 'cancelled') {
+    if (newStatus === OrderStatus.cancelled) {
       if (TERMINAL_STATUSES.includes(order.status)) {
         throw new BadRequestException(
           `Cannot cancel order in "${order.status}" status`,
@@ -286,7 +319,7 @@ export class OrdersService {
       }
       const cancelResult = await this.prisma.order.updateMany({
         where: { id: orderId, status: order.status },
-        data: { status: 'cancelled' },
+        data: { status: OrderStatus.cancelled, updated_by: userId },
       });
       if (cancelResult.count === 0) {
         throw new ConflictException(
@@ -303,7 +336,7 @@ export class OrdersService {
             {
               orderId: order.id,
               orderNumber: order.order_number,
-              status: 'cancelled',
+              status: OrderStatus.cancelled,
               updatedAt: new Date().toISOString(),
             },
           )
@@ -324,7 +357,7 @@ export class OrdersService {
 
     const updateResult = await this.prisma.order.updateMany({
       where: { id: orderId, status: order.status },
-      data: { status: newStatus },
+      data: { status: newStatus, updated_by: userId },
     });
     if (updateResult.count === 0) {
       throw new ConflictException(
@@ -365,7 +398,7 @@ export class OrdersService {
     }
 
     // Reject payment for cancelled orders
-    if (order.status === 'cancelled') {
+    if (order.status === OrderStatus.cancelled) {
       throw new BadRequestException(
         'Cannot record payment for a cancelled order',
       );
@@ -395,7 +428,7 @@ export class OrdersService {
           order_id: orderId,
           method: dto.method,
           amount: dto.amount,
-          status: 'paid',
+          status: PaymentStatus.paid,
           notes: dto.notes,
         },
       });
@@ -442,7 +475,7 @@ export class OrdersService {
       throw new NotFoundException(`Order with ID ${orderId} not found`);
     }
 
-    if (order.channel !== 'delivery') {
+    if (order.channel !== OrderChannel.delivery) {
       throw new BadRequestException(
         'Delivery updates only apply to delivery orders',
       );
@@ -450,9 +483,7 @@ export class OrdersService {
 
     // Validate delivery_status progression if provided
     if (dto.delivery_status) {
-      const currentIdx = DELIVERY_STATUS_ORDER.indexOf(
-        order.delivery_status as string | null,
-      );
+      const currentIdx = DELIVERY_STATUS_ORDER.indexOf(order.delivery_status);
       const newIdx = DELIVERY_STATUS_ORDER.indexOf(dto.delivery_status);
 
       if (newIdx === -1 || newIdx !== currentIdx + 1) {
@@ -512,7 +543,7 @@ export class OrdersService {
 
     const dateFilter = {
       created_at: { gte: start, lt: end },
-      status: { not: 'cancelled' as const },
+      status: { not: OrderStatus.cancelled },
     };
 
     const [totalOrders, paidAgg] = await Promise.all([
@@ -520,7 +551,7 @@ export class OrdersService {
       this.prisma.order.aggregate({
         where: {
           ...dateFilter,
-          payment: { status: 'paid' },
+          payment: { status: PaymentStatus.paid },
         },
         _sum: { total: true },
         _count: { id: true },
@@ -568,7 +599,7 @@ export class OrdersService {
 
     // Check order doesn't already have a paid payment
     const existingPayment = await this.prisma.payment.findFirst({
-      where: { order_id: orderId, status: 'paid' },
+      where: { order_id: orderId, status: PaymentStatus.paid },
     });
     if (existingPayment) {
       throw new BadRequestException('Order already paid');
@@ -589,15 +620,15 @@ export class OrdersService {
       where: { order_id: orderId },
       create: {
         order_id: orderId,
-        method: 'razorpay',
+        method: PaymentMethod.razorpay,
         amount: order.total,
-        status: 'pending',
+        status: PaymentStatus.pending,
         razorpay_order_id: rzpOrder.id,
       },
       update: {
-        method: 'razorpay',
+        method: PaymentMethod.razorpay,
         razorpay_order_id: rzpOrder.id,
-        status: 'pending',
+        status: PaymentStatus.pending,
       },
     });
 
@@ -639,14 +670,14 @@ export class OrdersService {
     if (!paymentRecord) {
       throw new NotFoundException('Payment record not found');
     }
-    if (paymentRecord.status === 'paid') {
+    if (paymentRecord.status === PaymentStatus.paid) {
       return paymentRecord; // idempotent
     }
 
     return this.prisma.payment.update({
       where: { id: paymentRecord.id },
       data: {
-        status: 'paid',
+        status: PaymentStatus.paid,
         razorpay_payment_id: dto.razorpay_payment_id,
       },
     });

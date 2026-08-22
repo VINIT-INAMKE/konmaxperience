@@ -351,6 +351,7 @@ describe('WebhooksService', () => {
       razorpayOrderId: 'order_m1',
       razorpayPaymentId: 'pay_m1',
       pending,
+      placedVia: 'webhook_fallback',
     });
     expect(mockRedisClient.del).toHaveBeenCalledWith('cart:cust-1');
     expect(mockPusher.trigger).toHaveBeenCalledWith(

@@ -3,7 +3,17 @@ import {
   Injectable,
   ServiceUnavailableException,
 } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import {
+  ActorType,
+  OrderChannel,
+  OrderItemStatus,
+  OrderSource,
+  OrderStatus,
+  PaymentMethod,
+  PaymentStatus,
+  Prisma,
+} from '@prisma/client';
+import type { Tx } from '../common/types/transaction';
 import { PrismaService } from '../prisma/prisma.service';
 import { convertUnit } from '../common/utils/unit-conversion';
 import {
@@ -16,12 +26,8 @@ export const MARKETPLACE_ZONE_SETTING_KEY = 'marketplace_fulfilment_zone_id';
 /** Zone.zone_type used by seed.ts for production kitchens ('Main Kitchen', 'Prep Station'). */
 export const PRODUCTION_ZONE_TYPE = 'kitchen';
 
-type Tx = Prisma.TransactionClient;
-
-export type FulfilmentActorType = 'user' | 'customer' | 'system';
-
 export interface FulfilmentActor {
-  actor_type: FulfilmentActorType;
+  actor_type: ActorType;
   actor_id: string | null;
 }
 
@@ -52,7 +58,7 @@ export interface PendingOrderData {
   subtotal: number;
   modifierAmount: number;
   total: number;
-  channel: 'takeaway' | 'delivery';
+  channel: OrderChannel;
   deliveryAddressId: string | null;
 }
 
@@ -61,6 +67,8 @@ export interface ConfirmPaidOrderInput {
   razorpayOrderId: string;
   razorpayPaymentId: string;
   pending: PendingOrderData;
+  /** Which surface produced the order: the storefront confirm endpoint or the webhook fallback. */
+  placedVia: OrderSource;
 }
 
 export const CONFIRMED_ORDER_INCLUDE = {
@@ -73,10 +81,10 @@ export function actorForOrder(order: {
   customer_id: string | null;
 }): FulfilmentActor {
   if (order.created_by)
-    return { actor_type: 'user', actor_id: order.created_by };
+    return { actor_type: ActorType.user, actor_id: order.created_by };
   if (order.customer_id)
-    return { actor_type: 'customer', actor_id: order.customer_id };
-  return { actor_type: 'system', actor_id: null };
+    return { actor_type: ActorType.customer, actor_id: order.customer_id };
+  return { actor_type: ActorType.system, actor_id: null };
 }
 
 @Injectable()
@@ -150,7 +158,7 @@ export class FulfilmentService {
       }
       await tx.orderItem.update({
         where: { id: item.id },
-        data: { status: 'ready', ready_at: readyAt },
+        data: { status: OrderItemStatus.ready, ready_at: readyAt },
       });
     }
   }
@@ -362,7 +370,8 @@ export class FulfilmentService {
               channel_modifier_amount: pending.modifierAmount,
               total: pending.total,
               delivery_address: deliveryAddress,
-              status: 'placed',
+              status: OrderStatus.placed,
+              placed_via: input.placedVia,
               created_by: null,
               zone_id: zoneId,
               items: {
@@ -374,9 +383,9 @@ export class FulfilmentService {
               },
               payment: {
                 create: {
-                  method: 'razorpay',
+                  method: PaymentMethod.razorpay,
                   amount: pending.total,
-                  status: 'paid',
+                  status: PaymentStatus.paid,
                   razorpay_order_id: input.razorpayOrderId,
                   razorpay_payment_id: input.razorpayPaymentId,
                 },
@@ -389,7 +398,7 @@ export class FulfilmentService {
             tx,
             { id: created.id, zone_id: created.zone_id },
             created.items,
-            { actor_type: 'customer', actor_id: customerId },
+            { actor_type: ActorType.customer, actor_id: customerId },
           );
 
           return tx.order.findUniqueOrThrow({
@@ -414,7 +423,7 @@ export class FulfilmentService {
     customerId: string,
     pending: PendingOrderData,
   ): Promise<string | null> {
-    if (pending.channel !== 'delivery' || !pending.deliveryAddressId)
+    if (pending.channel !== OrderChannel.delivery || !pending.deliveryAddressId)
       return null;
     const addr = await this.prisma.customerAddress.findFirst({
       where: { id: pending.deliveryAddressId, customer_id: customerId },

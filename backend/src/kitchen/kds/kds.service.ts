@@ -4,6 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { OrderItemStatus, OrderStatus } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
   FulfilmentService,
@@ -50,7 +51,7 @@ export class KdsService {
   async getActiveOrders(): Promise<KdsZoneData[]> {
     const orders = await this.prisma.order.findMany({
       where: {
-        status: { in: ['placed', 'preparing'] },
+        status: { in: [OrderStatus.placed, OrderStatus.preparing] },
         zone_id: { not: null }, // KDS only shows kitchen (staff) orders with a zone
       },
       include: {
@@ -112,10 +113,14 @@ export class KdsService {
 
   async updateItemStatus(
     itemId: string,
-    newStatus: string,
-  ): Promise<{ id: string; status: string; ready_at: Date | null }> {
-    // Validate newStatus
-    const validStatuses = ['pending', 'preparing', 'ready'];
+    newStatus: OrderItemStatus,
+  ): Promise<{ id: string; status: OrderItemStatus; ready_at: Date | null }> {
+    // The enum carries P5 members (packed/shipped/…) the KDS board cannot set
+    const validStatuses: OrderItemStatus[] = [
+      OrderItemStatus.pending,
+      OrderItemStatus.preparing,
+      OrderItemStatus.ready,
+    ];
     if (!validStatuses.includes(newStatus)) {
       throw new BadRequestException(
         `Invalid status "${newStatus}". Must be one of: ${validStatuses.join(', ')}`,
@@ -123,12 +128,12 @@ export class KdsService {
     }
 
     const updateData: Record<string, unknown> = { status: newStatus };
-    if (newStatus === 'ready') {
+    if (newStatus === OrderItemStatus.ready) {
       updateData.ready_at = new Date();
     }
 
     // When status is 'ready' — wrap in $transaction with deduction and Serializable isolation
-    if (newStatus === 'ready') {
+    if (newStatus === OrderItemStatus.ready) {
       let wasAllReady = false;
       let orderData: {
         id: string;
@@ -201,14 +206,14 @@ export class KdsService {
             where: {
               order_id: item.order_id,
               id: { not: itemId },
-              status: { not: 'ready' },
+              status: { not: OrderItemStatus.ready },
             },
           });
           const allReady = notReadyCount === 0;
           if (allReady) {
             await tx.order.update({
               where: { id: item.order_id },
-              data: { status: 'ready' },
+              data: { status: OrderStatus.ready },
             });
             wasAllReady = true;
             orderData = {

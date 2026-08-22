@@ -87,8 +87,9 @@ describe('KdsService', () => {
     expect(mockFulfilment.deductItemIngredients).not.toHaveBeenCalled();
   });
 
-  it('rejects an invalid status value', async () => {
-    await expect(service.updateItemStatus('oi-1', 'served')).rejects.toThrow(
+  it('rejects a status the KDS board cannot set', async () => {
+    // 'packed' is a valid OrderItemStatus (P5 shipping) but not a KDS transition
+    await expect(service.updateItemStatus('oi-1', 'packed')).rejects.toThrow(
       BadRequestException,
     );
     expect(mockPrisma.$transaction).not.toHaveBeenCalled();

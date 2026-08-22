@@ -2,6 +2,7 @@ import {
   IsArray,
   IsOptional,
   IsString,
+  IsEnum,
   IsIn,
   IsUUID,
   IsInt,
@@ -10,6 +11,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+import { OrderChannel } from '@prisma/client';
 
 export class CartItemDto {
   @IsUUID()
@@ -37,8 +39,9 @@ export class SyncCartDto {
   items: CartItemDto[];
 
   @IsOptional()
-  @IsIn(['takeaway', 'delivery'])
-  channel?: 'takeaway' | 'delivery';
+  @IsEnum(OrderChannel)
+  @IsIn([OrderChannel.takeaway, OrderChannel.delivery])
+  channel?: OrderChannel;
 
   @IsOptional()
   @IsString()
