@@ -15,6 +15,10 @@ import { UpdateDeliveryDto } from './dto/update-delivery.dto';
 import { OrderFiltersDto } from './dto/order-filters.dto';
 import { ConfirmRazorpayPaymentDto } from './dto/create-razorpay-order.dto';
 import { FulfilmentService } from '../fulfilment/fulfilment.service';
+import {
+  SERIALIZABLE_TX_OPTIONS,
+  withSerializableRetry,
+} from '../common/utils/transaction-retry';
 
 /** Valid order status transitions (non-cancellation) */
 const STATUS_TRANSITIONS: Record<string, string[]> = {
@@ -43,87 +47,89 @@ export class OrdersService {
   // Create Order
   // ---------------------------------------------------------------
   async createOrder(dto: CreateOrderDto, userId: string) {
-    const order = await this.prisma.$transaction(async (tx) => {
-      // Look up authoritative prices for each menu item from the database
-      const menuItemIds = dto.items.map((i) => i.menu_item_id);
-      const menuItems = await tx.menuItem.findMany({
-        where: { id: { in: menuItemIds } },
-        select: { id: true, base_price: true },
-      });
+    const order = await withSerializableRetry(() =>
+      this.prisma.$transaction(async (tx) => {
+        // Look up authoritative prices for each menu item from the database
+        const menuItemIds = dto.items.map((i) => i.menu_item_id);
+        const menuItems = await tx.menuItem.findMany({
+          where: { id: { in: menuItemIds } },
+          select: { id: true, base_price: true },
+        });
 
-      const priceMap = new Map(
-        menuItems.map((mi) => [mi.id, Number(mi.base_price)]),
-      );
+        const priceMap = new Map(
+          menuItems.map((mi) => [mi.id, Number(mi.base_price)]),
+        );
 
-      // Validate all menu items exist
-      for (const item of dto.items) {
-        if (!priceMap.has(item.menu_item_id)) {
-          throw new BadRequestException(
-            `Menu item with ID ${item.menu_item_id} not found`,
-          );
+        // Validate all menu items exist
+        for (const item of dto.items) {
+          if (!priceMap.has(item.menu_item_id)) {
+            throw new BadRequestException(
+              `Menu item with ID ${item.menu_item_id} not found`,
+            );
+          }
         }
-      }
 
-      // Look up channel modifier (null-check gracefully per Pitfall 5)
-      const modifier = await tx.channelModifier.findFirst({
-        where: { channel_type: dto.channel, status: 'active' },
-      });
+        // Look up channel modifier (null-check gracefully per Pitfall 5)
+        const modifier = await tx.channelModifier.findFirst({
+          where: { channel_type: dto.channel, status: 'active' },
+        });
 
-      // Compute subtotal using server-side prices
-      const subtotal = dto.items.reduce((sum, item) => {
-        const basePrice = priceMap.get(item.menu_item_id)!;
-        return sum + basePrice * item.quantity;
-      }, 0);
+        // Compute subtotal using server-side prices
+        const subtotal = dto.items.reduce((sum, item) => {
+          const basePrice = priceMap.get(item.menu_item_id)!;
+          return sum + basePrice * item.quantity;
+        }, 0);
 
-      // Compute modifier amount
-      let modifierAmount = 0;
-      if (modifier) {
-        if (modifier.modifier_type === 'fixed') {
-          modifierAmount = Number(modifier.modifier_value);
-        } else if (modifier.modifier_type === 'percentage') {
-          modifierAmount = (subtotal * Number(modifier.modifier_value)) / 100;
+        // Compute modifier amount
+        let modifierAmount = 0;
+        if (modifier) {
+          if (modifier.modifier_type === 'fixed') {
+            modifierAmount = Number(modifier.modifier_value);
+          } else if (modifier.modifier_type === 'percentage') {
+            modifierAmount = (subtotal * Number(modifier.modifier_value)) / 100;
+          }
         }
-      }
 
-      // Create order with items using server-side prices
-      const created = await tx.order.create({
-        data: {
-          channel: dto.channel,
-          status: 'placed',
-          subtotal,
-          channel_modifier_amount: modifierAmount,
-          total: subtotal + modifierAmount,
-          zone_id: dto.zone_id,
-          created_by: userId,
-          table_number: dto.table_number,
-          customer_name: dto.customer_name,
-          customer_phone: dto.customer_phone,
-          delivery_address: dto.delivery_address,
-          delivery_assigned_to: dto.delivery_assigned_to,
-          notes: dto.notes,
-          items: {
-            create: dto.items.map((i) => ({
-              menu_item_id: i.menu_item_id,
-              quantity: i.quantity,
-              unit_price: priceMap.get(i.menu_item_id)!,
-              item_notes: i.item_notes,
-              status: 'pending',
-            })),
+        // Create order with items using server-side prices
+        const created = await tx.order.create({
+          data: {
+            channel: dto.channel,
+            status: 'placed',
+            subtotal,
+            channel_modifier_amount: modifierAmount,
+            total: subtotal + modifierAmount,
+            zone_id: dto.zone_id,
+            created_by: userId,
+            table_number: dto.table_number,
+            customer_name: dto.customer_name,
+            customer_phone: dto.customer_phone,
+            delivery_address: dto.delivery_address,
+            delivery_assigned_to: dto.delivery_assigned_to,
+            notes: dto.notes,
+            items: {
+              create: dto.items.map((i) => ({
+                menu_item_id: i.menu_item_id,
+                quantity: i.quantity,
+                unit_price: priceMap.get(i.menu_item_id)!,
+                item_notes: i.item_notes,
+                status: 'pending',
+              })),
+            },
           },
-        },
-        include: { items: true, payment: true },
-      });
+          include: { items: true, payment: true },
+        });
 
-      // Non-scratch items: auto-set to 'ready' and deduct immediately (D-04, D-05)
-      await this.fulfilmentService.applyPrepTypeOnCreate(
-        tx,
-        { id: created.id, zone_id: created.zone_id },
-        created.items,
-        { actor_type: 'user', actor_id: userId },
-      );
+        // Non-scratch items: auto-set to 'ready' and deduct immediately (D-04, D-05)
+        await this.fulfilmentService.applyPrepTypeOnCreate(
+          tx,
+          { id: created.id, zone_id: created.zone_id },
+          created.items,
+          { actor_type: 'user', actor_id: userId },
+        );
 
-      return created;
-    });
+        return created;
+      }, SERIALIZABLE_TX_OPTIONS),
+    );
 
     // Fire-and-forget AFTER transaction commits (Pitfall 1 compliance)
     try {

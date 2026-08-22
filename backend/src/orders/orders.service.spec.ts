@@ -142,6 +142,10 @@ describe('OrdersService', () => {
         { actor_type: 'user', actor_id: 'user-1' },
       );
       expect(result).toBe(expectedOrder);
+      expect(mockPrisma.$transaction).toHaveBeenCalledWith(
+        expect.any(Function),
+        { isolationLevel: 'Serializable', maxWait: 5000, timeout: 15000 },
+      );
     });
 
     it('sets channel_modifier_amount=0 when no modifier exists', async () => {
@@ -226,6 +230,27 @@ describe('OrdersService', () => {
           }),
         }),
       );
+    });
+
+    it('retries the transaction on serialization failure (P2034)', async () => {
+      const mockTx = createMockTx();
+      mockTx.channelModifier.findFirst.mockResolvedValue(null);
+      mockTx.order.create.mockResolvedValue({
+        id: 'order-3',
+        zone_id: 'zone-1',
+        items: [],
+        total: dec(500),
+      });
+      mockPrisma.$transaction
+        .mockRejectedValueOnce(
+          Object.assign(new Error('serialize'), { code: 'P2034' }),
+        )
+        .mockImplementation(async (cb: any) => cb(mockTx));
+
+      const result = await service.createOrder(baseDto, userId);
+
+      expect(result.id).toBe('order-3');
+      expect(mockPrisma.$transaction).toHaveBeenCalledTimes(2);
     });
   });
 
