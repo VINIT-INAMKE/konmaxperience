@@ -1,10 +1,12 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { LeaderboardService } from './leaderboard.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { SettingsService } from '../settings/settings.service';
 
 describe('LeaderboardService', () => {
   let service: LeaderboardService;
   let prisma: any;
+  let settings: { get: jest.Mock };
 
   const mockUsers = [
     {
@@ -25,31 +27,26 @@ describe('LeaderboardService', () => {
 
   beforeEach(async () => {
     prisma = {
-      systemSetting: {
-        findUnique: jest.fn(),
-      },
       user: {
         findMany: jest.fn(),
       },
     };
+    settings = { get: jest.fn().mockResolvedValue(true) };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         LeaderboardService,
         { provide: PrismaService, useValue: prisma },
+        { provide: SettingsService, useValue: settings },
       ],
     }).compile();
 
     service = module.get<LeaderboardService>(LeaderboardService);
-    jest.clearAllMocks();
   });
 
   describe('getLeaderboard', () => {
     it('returns users ordered by xp_total descending excluding FOUNDER_ADMIN', async () => {
-      prisma.systemSetting.findUnique.mockResolvedValue({
-        key: 'leaderboard_enabled',
-        value: 'true',
-      });
+      settings.get.mockResolvedValue(true);
       prisma.user.findMany.mockResolvedValue(mockUsers);
 
       const result = await service.getLeaderboard();
@@ -70,10 +67,7 @@ describe('LeaderboardService', () => {
     });
 
     it('returns empty array and enabled=false when leaderboard_enabled is false', async () => {
-      prisma.systemSetting.findUnique.mockResolvedValue({
-        key: 'leaderboard_enabled',
-        value: 'false',
-      });
+      settings.get.mockResolvedValue(false);
       prisma.user.findMany.mockResolvedValue(mockUsers);
 
       const result = await service.getLeaderboard();
@@ -81,8 +75,8 @@ describe('LeaderboardService', () => {
       expect(result).toEqual({ enabled: false, users: [] });
     });
 
-    it('returns leaderboard when leaderboard_enabled setting does not exist (default on)', async () => {
-      prisma.systemSetting.findUnique.mockResolvedValue(null);
+    it('returns leaderboard when the setting row is absent (service default on)', async () => {
+      settings.get.mockResolvedValue(true);
       prisma.user.findMany.mockResolvedValue(mockUsers);
 
       const result = await service.getLeaderboard();
@@ -91,15 +85,12 @@ describe('LeaderboardService', () => {
       expect(result.users).toEqual(mockUsers);
     });
 
-    it('checks the leaderboard_enabled system setting key', async () => {
-      prisma.systemSetting.findUnique.mockResolvedValue(null);
+    it('reads the leaderboard_enabled setting through the typed getter', async () => {
       prisma.user.findMany.mockResolvedValue([]);
 
       await service.getLeaderboard();
 
-      expect(prisma.systemSetting.findUnique).toHaveBeenCalledWith({
-        where: { key: 'leaderboard_enabled' },
-      });
+      expect(settings.get).toHaveBeenCalledWith('leaderboard_enabled');
     });
   });
 });

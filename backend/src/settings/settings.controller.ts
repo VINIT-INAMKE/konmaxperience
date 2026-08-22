@@ -1,13 +1,13 @@
-import { Controller, Get, Patch, Param, Body } from '@nestjs/common';
-import { IsString, IsNotEmpty } from 'class-validator';
+import { Body, Controller, Get, Param, Patch } from '@nestjs/common';
+import { IsDefined } from 'class-validator';
+import { Prisma } from '@prisma/client';
 import { SettingsService } from './settings.service';
 import { RequiresPermission } from '../common/decorators/permissions.decorator';
 import { Permission } from '../types/permissions';
 
 export class UpdateSettingDto {
-  @IsString()
-  @IsNotEmpty()
-  value: string;
+  @IsDefined()
+  value!: Prisma.InputJsonValue;
 }
 
 @Controller('settings')
@@ -22,10 +22,7 @@ export class SettingsController {
 
   @Patch(':key')
   @RequiresPermission(Permission.MANAGE_SYSTEM)
-  async updateSetting(
-    @Param('key') key: string,
-    @Body() dto: UpdateSettingDto,
-  ) {
+  async updateSetting(@Param('key') key: string, @Body() dto: UpdateSettingDto) {
     return this.settingsService.updateSetting(key, dto.value);
   }
 }

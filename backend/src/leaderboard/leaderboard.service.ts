@@ -1,16 +1,18 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { SettingsService } from '../settings/settings.service';
 
 @Injectable()
 export class LeaderboardService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly settingsService: SettingsService,
+  ) {}
 
   async getLeaderboard() {
     // Run both queries in parallel — short-circuit if disabled
-    const [setting, users] = await Promise.all([
-      this.prisma.systemSetting.findUnique({
-        where: { key: 'leaderboard_enabled' },
-      }),
+    const [enabled, users] = await Promise.all([
+      this.settingsService.get('leaderboard_enabled'),
       this.prisma.user.findMany({
         where: {
           status: 'active',
@@ -31,7 +33,7 @@ export class LeaderboardService {
       }),
     ]);
 
-    if (setting?.value === 'false') {
+    if (!enabled) {
       return { enabled: false, users: [] };
     }
 

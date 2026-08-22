@@ -103,9 +103,11 @@ export class FulfilmentService {
     const setting = await tx.systemSetting.findUnique({
       where: { key: MARKETPLACE_ZONE_SETTING_KEY },
     });
-    if (setting?.value) {
+    const configuredZoneId =
+      typeof setting?.value === 'string' ? setting.value : null;
+    if (configuredZoneId) {
       const zone = await tx.zone.findUnique({
-        where: { id: setting.value },
+        where: { id: configuredZoneId },
         select: { id: true },
       });
       if (zone) return zone.id;

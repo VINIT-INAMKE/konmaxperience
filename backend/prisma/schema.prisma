@@ -772,10 +772,28 @@ model Kpi {
   tasks         Task[]
 }
 
+/// Platform-wide key/value configuration. `value` is Json (SPEC §3.1) so a key may
+/// hold a scalar, an object or an array; the allow-list and the shape contract live
+/// in `SETTING_DEFAULTS` (backend/src/settings/settings.service.ts). Global, not
+/// node-scoped — SPEC §3.1 keeps SystemSetting out of the `node_id` list.
 model SystemSetting {
   key        String   @id
-  value      String
-  updated_at DateTime @updatedAt
+  value      Json
+  updated_at DateTime @updatedAt @db.Timestamptz(3)
+}
+
+/// Data-driven module visibility (SPEC §6.3). Separate from the permission set:
+/// a role may hold MANAGE_KITCHEN without seeing every kitchen page.
+model ModuleAccess {
+  module_key String   @id
+  // TODO(p2-05): add node Node @relation(fields: [node_id], references: [id], onDelete: Restrict) and back-relation module_access ModuleAccess[] on Node
+  node_id    String   @default("11111111-1111-4111-8111-111111111111")
+  role_codes String[] @default([])
+  enabled    Boolean  @default(true)
+  sort_order Int      @default(0)
+  updated_at DateTime @updatedAt @db.Timestamptz(3)
+
+  @@index([sort_order])
 }
 
 model Zone {
