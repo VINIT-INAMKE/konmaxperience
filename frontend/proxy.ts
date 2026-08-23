@@ -3,7 +3,27 @@ import { NextRequest, NextResponse } from 'next/server';
 
 const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET!);
 const PUBLIC_PATHS = ['/login', '/menu', '/events', '/feedback', '/profile'];
-const STAFF_AUTH_PAGES = ['/team', '/forgot-password', '/set-password', '/reset-password'];
+
+/**
+ * Staff-facing auth pages. `/team` is in the list because the frozen homepage
+ * links to it three times and `lib/auth.ts` / `lib/api-client.ts` still send
+ * logged-out users there — but SPEC §6.2 also gives `/team` to the ops Team hub.
+ * Two routes cannot share a path, so the login form lives at `/sign-in` and a
+ * logged-out `/team` is **rewritten** (URL preserved) onto it. See the `/team`
+ * branch in {@link proxy}.
+ */
+const STAFF_AUTH_PAGES = [
+  '/team',
+  '/sign-in',
+  '/forgot-password',
+  '/set-password',
+  '/reset-password',
+];
+
+/** Segment-aware prefix match — `/team` must not swallow `/team-contribution`. */
+function matchesPath(pathname: string, base: string): boolean {
+  return pathname === base || pathname.startsWith(`${base}/`);
+}
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -19,18 +39,34 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Staff auth pages (/team, /forgot-password, /set-password, /reset-password)
-  if (STAFF_AUTH_PAGES.some((p) => pathname.startsWith(p))) {
+  // Staff auth pages (/team, /sign-in, /forgot-password, /set-password, /reset-password)
+  if (STAFF_AUTH_PAGES.some((p) => matchesPath(pathname, p))) {
+    let isValidStaff = false;
     if (token) {
       try {
         const { payload } = await jwtVerify(token, JWT_SECRET);
-        if (payload.type === 'staff') {
-          return NextResponse.redirect(new URL('/dashboard', request.url));
-        }
-        // Customer token on staff auth page — let them through (they see the staff form)
+        // A customer token on a staff auth page is not staff — they see the form.
+        isValidStaff = payload.type === 'staff';
       } catch {
-        // Token invalid — let them through
+        // Token invalid — treat as logged out.
       }
+    }
+
+    if (matchesPath(pathname, '/team')) {
+      // Authenticated staff fall through to the ops Team hub at app/(ops)/team.
+      if (isValidStaff) return NextResponse.next();
+      // Everyone else gets the login form rendered *under the /team URL*, so the
+      // frozen homepage's three /team links keep working unchanged. Cloning
+      // `nextUrl` preserves `?redirect=` and `?message=`, which the form reads.
+      const signIn = request.nextUrl.clone();
+      signIn.pathname = '/sign-in';
+      return NextResponse.rewrite(signIn);
+    }
+
+    // /sign-in, /forgot-password, /set-password, /reset-password keep the
+    // existing behaviour: signed-in staff are bounced to the dashboard.
+    if (isValidStaff) {
+      return NextResponse.redirect(new URL('/dashboard', request.url));
     }
     return NextResponse.next();
   }
