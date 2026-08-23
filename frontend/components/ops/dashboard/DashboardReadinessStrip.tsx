@@ -34,7 +34,7 @@ export function DashboardReadinessStrip({ meters }: DashboardReadinessStripProps
         <CardTitle className="flex items-center gap-2">
           <span className="text-sm font-semibold">System Readiness</span>
           {criticalCount > 0 && (
-            <span className="flex items-center gap-1 text-xs text-amber-500 font-normal">
+            <span className="flex items-center gap-1 text-xs text-[var(--status-warning)] font-normal">
               <TrendingDown className="size-3" />
               {criticalCount} below 50%
             </span>
@@ -43,7 +43,7 @@ export function DashboardReadinessStrip({ meters }: DashboardReadinessStripProps
         <CardAction>
           <Link
             href="/readiness"
-            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+            className="rounded-sm text-xs text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[var(--focus)]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
           >
             View all
           </Link>

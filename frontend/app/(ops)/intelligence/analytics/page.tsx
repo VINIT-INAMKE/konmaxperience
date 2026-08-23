@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { BlurFade } from '@/components/ui/blur-fade';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -36,7 +36,7 @@ import type {
   ChannelRevenue,
   RecipeCostRow,
 } from '@/lib/types/analytics';
-import { ShieldAlert } from 'lucide-react';
+import { AlertCircle, ShieldAlert } from 'lucide-react';
 import { ExportButton } from '@/components/ops/exports/ExportButton';
 
 type TimeRange = 'today' | '7d' | '30d' | 'custom';
@@ -72,6 +72,7 @@ function computeDateRange(
 export default function AnalyticsPage() {
   const user = useAuthStore((s) => s.user);
   const permissions = useAuthStore((s) => s.permissions);
+  const queryClient = useQueryClient();
 
   const isAuthorized =
     permissions.includes('MANAGE_KPIS') ||
@@ -90,35 +91,46 @@ export default function AnalyticsPage() {
 
   const { from, to } = computeDateRange(timeRange, customFrom, customTo);
 
-  const { data: summary, isLoading: summaryLoading } = useQuery({
+  const { data: summary, isLoading: summaryLoading, isError: summaryError } = useQuery({
     queryKey: ['analytics', 'summary', from, to],
     queryFn: () => apiClient.get<AnalyticsSummary>(`/analytics/summary?from=${from}&to=${to}`),
     enabled: isAuthorized,
   });
 
-  const { data: revenue, isLoading: revenueLoading } = useQuery({
+  const { data: revenue, isLoading: revenueLoading, isError: revenueError } = useQuery({
     queryKey: ['analytics', 'revenue', from, to],
     queryFn: () => apiClient.get<RevenuePoint[]>(`/analytics/revenue?from=${from}&to=${to}`),
     enabled: isAuthorized,
   });
 
-  const { data: topItems } = useQuery({
+  const { data: topItems, isError: topItemsError } = useQuery({
     queryKey: ['analytics', 'top-items', from, to],
     queryFn: () => apiClient.get<TopItem[]>(`/analytics/top-items?from=${from}&to=${to}`),
     enabled: isAuthorized,
   });
 
-  const { data: channels } = useQuery({
+  const { data: channels, isError: channelsError } = useQuery({
     queryKey: ['analytics', 'channels', from, to],
     queryFn: () => apiClient.get<ChannelRevenue[]>(`/analytics/channels?from=${from}&to=${to}`),
     enabled: isAuthorized,
   });
 
-  const { data: recipeCosts } = useQuery({
+  const { data: recipeCosts, isError: recipeCostsError } = useQuery({
     queryKey: ['analytics', 'recipe-costs', from, to],
     queryFn: () => apiClient.get<RecipeCostRow[]>(`/analytics/recipe-costs?from=${from}&to=${to}`),
     enabled: isAuthorized,
   });
+
+  const hasError =
+    summaryError ||
+    revenueError ||
+    topItemsError ||
+    channelsError ||
+    recipeCostsError;
+
+  const retryAll = () => {
+    void queryClient.invalidateQueries({ queryKey: ['analytics'] });
+  };
 
   if (!isAuthorized) {
     return (
@@ -141,7 +153,7 @@ export default function AnalyticsPage() {
         {/* Header: title + time range toggle */}
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <h1 className="text-2xl font-bold">Analytics</h1>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <ExportButton
               reportType="revenue_summary"
               reportName="Analytics"
@@ -160,7 +172,7 @@ export default function AnalyticsPage() {
             ))}
             <Popover>
               <PopoverTrigger
-                className={`inline-flex items-center justify-center rounded-md text-sm font-medium h-8 px-3 border ${
+                className={`inline-flex items-center justify-center rounded-md text-sm font-medium h-8 px-3 border focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[var(--focus)]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)] ${
                   timeRange === 'custom'
                     ? 'bg-primary text-primary-foreground'
                     : 'border-input bg-background hover:bg-accent hover:text-accent-foreground'
@@ -199,6 +211,21 @@ export default function AnalyticsPage() {
             </Popover>
           </div>
         </div>
+
+        {/* Error state */}
+        {hasError && (
+          <div className="space-y-3">
+            <Alert variant="destructive">
+              <AlertCircle className="size-4" />
+              <AlertDescription>
+                Some analytics couldn&apos;t be loaded for this range. Figures below may be incomplete.
+              </AlertDescription>
+            </Alert>
+            <Button variant="outline" size="sm" onClick={retryAll}>
+              Retry
+            </Button>
+          </div>
+        )}
 
         {/* Summary cards */}
         <AnalyticsSummaryCards summary={summary} isLoading={summaryLoading} />

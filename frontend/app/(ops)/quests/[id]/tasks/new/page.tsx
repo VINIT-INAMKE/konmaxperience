@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Loader2, AlertCircle } from 'lucide-react';
-import { BlurFade } from '@/components/ui/blur-fade';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 import { TaskForm, type TaskFormValues } from '@/components/ops/tasks/TaskForm';
 import { apiClient } from '@/lib/api-client';
 import type { Quest } from '@/lib/types/quests';
@@ -28,6 +29,7 @@ export default function NewTaskPage(props: {
     data: quest,
     isLoading,
     isError,
+    refetch,
   } = useQuery({
     queryKey: ['quests', id],
     queryFn: () => apiClient.get<Quest>(`/quests/${id}`),
@@ -72,39 +74,42 @@ export default function NewTaskPage(props: {
 
   if (isError || !quest) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 space-y-2 text-center">
-        <AlertCircle className="size-6 text-destructive" />
-        <p className="text-sm text-muted-foreground">
-          Could not load quest. Try refreshing the page.
-        </p>
+      <div className="max-w-2xl mx-auto space-y-3">
+        <Alert variant="destructive">
+          <AlertCircle className="size-4" />
+          <AlertDescription>
+            Could not load this quest, so the task form is unavailable. Try again in a moment.
+          </AlertDescription>
+        </Alert>
+        <Button variant="outline" size="sm" onClick={() => void refetch()}>
+          Retry
+        </Button>
       </div>
     );
   }
 
   return (
-    <BlurFade>
-      <div className="max-w-2xl mx-auto space-y-6">
-        <div className="space-y-2">
-          <Link
-            href={`/quests/${id}`}
-            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <ArrowLeft className="size-3" />
-            {quest.title}
-          </Link>
-          <h1 className="text-2xl font-bold">
-            {defaultTaskType === 'adhoc' ? 'New ad-hoc task' : 'New task'}
-          </h1>
-        </div>
-
-        <TaskForm
-          questId={id}
-          missionId={quest.mission_id}
-          onSubmit={handleSubmit}
-          isSubmitting={isSubmitting}
-          defaultTaskType={defaultTaskType as TaskType | undefined}
-        />
+    <div className="max-w-2xl mx-auto space-y-6">
+      <div className="space-y-2">
+        <Link
+          href={`/quests/${id}`}
+          className="inline-flex items-center gap-1 rounded-sm text-xs text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[var(--focus)]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
+        >
+          <ArrowLeft className="size-3" />
+          {quest.title}
+        </Link>
+        <h1 className="text-2xl font-bold">
+          {defaultTaskType === 'adhoc' ? 'New ad-hoc task' : 'New task'}
+        </h1>
       </div>
-    </BlurFade>
+
+      <TaskForm
+        questId={id}
+        missionId={quest.mission_id}
+        onSubmit={handleSubmit}
+        isSubmitting={isSubmitting}
+        defaultTaskType={defaultTaskType as TaskType | undefined}
+      />
+    </div>
   );
 }

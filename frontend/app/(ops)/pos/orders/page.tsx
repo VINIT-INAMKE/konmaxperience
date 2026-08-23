@@ -2,8 +2,10 @@
 
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { BlurFade } from '@/components/ui/blur-fade';
+import { AlertTriangle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import {
   Select,
   SelectContent,
@@ -74,7 +76,12 @@ export default function OrderHistoryPage() {
       apiClient.get<DailySummary>('/orders/daily-summary?date=' + dateStr),
   });
 
-  const { data: orders, isLoading: ordersLoading } = useQuery({
+  const {
+    data: orders,
+    isLoading: ordersLoading,
+    isError: ordersError,
+    refetch: refetchOrders,
+  } = useQuery({
     queryKey: ['orders', filters],
     queryFn: () =>
       apiClient.get<Order[]>('/orders?' + buildQueryString(filters)),
@@ -191,11 +198,24 @@ export default function OrderHistoryPage() {
         </div>
 
         {/* Orders table */}
-        <OrderHistoryTable
-          orders={orders ?? []}
-          isLoading={ordersLoading}
-          onSelectOrder={setSelectedOrder}
-        />
+        {ordersError ? (
+          <Alert variant="destructive">
+            <AlertTriangle className="size-4" />
+            <AlertTitle>Could not load orders</AlertTitle>
+            <AlertDescription className="flex flex-col items-start gap-2">
+              The order history failed to load for the selected filters.
+              <Button variant="outline" size="sm" onClick={() => void refetchOrders()}>
+                Try again
+              </Button>
+            </AlertDescription>
+          </Alert>
+        ) : (
+          <OrderHistoryTable
+            orders={orders ?? []}
+            isLoading={ordersLoading}
+            onSelectOrder={setSelectedOrder}
+          />
+        )}
 
         {/* Order detail Sheet */}
         <OrderDetailSheet

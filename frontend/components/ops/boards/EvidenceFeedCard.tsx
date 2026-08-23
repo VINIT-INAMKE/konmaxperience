@@ -4,16 +4,8 @@ import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
 import { FileText, Video, Link as LinkIcon, StickyNote } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { getEvidenceStatusBadge } from '@/lib/status-styles';
 import type { EvidenceFeedEntry } from '@/lib/types/analytics';
-
-const STATUS_STYLES: Record<
-  EvidenceFeedEntry['approval_status'],
-  string
-> = {
-  approved: 'bg-emerald-500/15 text-emerald-700',
-  pending: 'bg-amber-500/15 text-amber-600',
-  rejected: 'bg-destructive/10 text-destructive',
-};
 
 const STATUS_LABELS: Record<EvidenceFeedEntry['approval_status'], string> = {
   approved: 'Approved',
@@ -67,7 +59,10 @@ interface EvidenceFeedCardProps {
 
 export function EvidenceFeedCard({ evidence }: EvidenceFeedCardProps) {
   return (
-    <Link href={`/tasks/${evidence.task_id}`} className="block">
+    <Link
+      href={`/tasks/${evidence.task_id}`}
+      className="block rounded-lg focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[var(--focus)]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
+    >
       <div className="flex gap-4 rounded-lg border bg-card p-4">
         <EvidenceThumbnail type={evidence.type} url={evidence.url} />
 
@@ -78,7 +73,7 @@ export function EvidenceFeedCard({ evidence }: EvidenceFeedCardProps) {
             </p>
             <Badge
               variant="secondary"
-              className={STATUS_STYLES[evidence.approval_status]}
+              className={getEvidenceStatusBadge(evidence.approval_status)}
             >
               {STATUS_LABELS[evidence.approval_status]}
             </Badge>

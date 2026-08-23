@@ -6,7 +6,9 @@ import { useQuery } from '@tanstack/react-query';
 import { TrendingUp, Users } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardAction, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { apiClient } from '@/lib/api-client';
 import type { TeamContributionRow } from '@/lib/types/activity';
 
@@ -15,7 +17,7 @@ type Scope = 'week' | 'month' | 'mission';
 export function TeamContributionWidget() {
   const [scope, setScope] = useState<Scope>('mission');
 
-  const { data, isLoading, isError } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['team-contributions', scope],
     queryFn: () => apiClient.get<TeamContributionRow[]>(`/activity/contributions?scope=${scope}`),
   });
@@ -41,21 +43,30 @@ export function TeamContributionWidget() {
         {isLoading ? (
           <div className="space-y-3">
             {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="flex items-center gap-3 animate-pulse">
+              <div key={i} className="flex items-center gap-3 animate-pulse motion-reduce:animate-none">
                 <div className="h-4 w-24 rounded bg-muted" />
                 <div className="h-4 flex-1 rounded bg-muted" />
               </div>
             ))}
           </div>
         ) : isError ? (
-          <p className="text-sm text-muted-foreground">Could not load Team Contribution. Refresh to try again.</p>
+          <Alert variant="destructive">
+            <AlertTitle>Could not load Team Contribution</AlertTitle>
+            <AlertDescription>The contribution roll-up did not respond.</AlertDescription>
+            <Button variant="outline" size="sm" className="mt-2 w-fit" onClick={() => void refetch()}>
+              Retry
+            </Button>
+          </Alert>
         ) : !data || data.length === 0 ? (
           <div className="flex flex-col items-center gap-2 py-4 text-center">
             <Users className="size-8 text-muted-foreground/30" />
             <p className="text-sm text-muted-foreground">No contributions recorded yet for this period.</p>
+            <Button nativeButton={false} render={<Link href="/tasks" />} variant="outline" size="sm">
+              Go to tasks
+            </Button>
           </div>
         ) : (
-          <div className="space-y-1">
+          <div className="space-y-1 overflow-x-auto">
             {data.map((row) => {
               const totalTasks = row.tasksCompleted + row.blockedCount;
               const validPct = totalTasks > 0 ? Math.round((row.tasksValidated / totalTasks) * 100) : 0;
@@ -75,7 +86,7 @@ export function TeamContributionWidget() {
                       </Badge>
                     )}
                     {row.readinessDelta.length > 0 && (
-                      <span className="flex items-center gap-0.5 text-xs text-blue-500 ml-auto">
+                      <span className="flex items-center gap-0.5 text-xs text-[var(--status-info)] ml-auto">
                         <TrendingUp className="size-2.5" />
                         +{row.readinessDelta.reduce((s, d) => s + d.value, 0)}
                       </span>
@@ -84,7 +95,7 @@ export function TeamContributionWidget() {
                   {totalTasks > 0 && (
                     <div className="h-1 bg-muted rounded-full overflow-hidden mt-1.5">
                       <div
-                        className="h-full bg-emerald-500 rounded-full transition-all duration-300"
+                        className="h-full bg-[var(--status-good)] rounded-full transition-all duration-300 motion-reduce:transition-none"
                         style={{ width: `${validPct}%` }}
                       />
                     </div>
@@ -93,7 +104,10 @@ export function TeamContributionWidget() {
               );
             })}
             <div className="pt-2 text-right">
-              <Link href="/team-contribution" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+              <Link
+                href="/team-contribution"
+                className="rounded-sm text-xs text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[var(--focus)]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
+              >
                 View details
               </Link>
             </div>

@@ -9,7 +9,6 @@ import { ArrowLeft, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { NumberTicker } from '@/components/ui/number-ticker';
-import { BorderBeam } from '@/components/ui/border-beam';
 import {
   Select,
   SelectContent,
@@ -88,10 +87,6 @@ export default function NewPurchaseOrderPage() {
         l.unit &&
         Number(l.unit_cost) > 0,
     );
-  }, [lineItems]);
-
-  const hasIngredientSet = useMemo(() => {
-    return lineItems.some((l) => l.ingredient_id);
   }, [lineItems]);
 
   const canSubmit = vendorId && effectiveZoneId && hasValidLineItem;
@@ -249,8 +244,6 @@ export default function NewPurchaseOrderPage() {
           </div>
 
           <div className="relative rounded-lg border overflow-hidden">
-            {hasIngredientSet && <BorderBeam size={150} duration={8} />}
-
             <div className="p-4 space-y-0">
               {/* Column headers */}
               <div className="grid grid-cols-[2fr_1fr_1fr_1fr_1fr_auto] gap-2 pb-2 border-b border-border">

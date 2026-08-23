@@ -1,10 +1,14 @@
 'use client';
 
 import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { useQuery } from '@tanstack/react-query';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
@@ -21,7 +25,7 @@ import {
   ComboboxItem,
   ComboboxList,
 } from '@/components/ui/combobox';
-import { Loader2 } from 'lucide-react';
+import { AlertCircle, Loader2 } from 'lucide-react';
 import { apiClient } from '@/lib/api-client';
 import type { Task, TaskType } from '@/lib/types/tasks';
 import {
@@ -39,17 +43,29 @@ interface TaskFormProps {
   defaultTaskType?: TaskType;
 }
 
-export interface TaskFormValues {
-  title: string;
-  description: string;
-  task_type: 'core' | 'adhoc' | 'improvement';
-  domain: 'food' | 'art' | 'lifestyle' | 'ops' | 'procurement' | 'bi' | 'talent' | 'tech' | 'design';
-  owner_user_id: string;
-  priority: 'low' | 'medium' | 'high' | 'critical';
-  xp: number;
-  depends_on_task_id?: string;
-  due_date?: string;
-}
+const taskSchema = z.object({
+  title: z.string().min(3, 'Title must be at least 3 characters'),
+  description: z.string().min(1, 'Description is required'),
+  task_type: z.enum(['core', 'adhoc', 'improvement']),
+  domain: z.enum([
+    'food',
+    'art',
+    'lifestyle',
+    'ops',
+    'procurement',
+    'bi',
+    'talent',
+    'tech',
+    'design',
+  ]),
+  owner_user_id: z.string().min(1, 'Select an owner'),
+  priority: z.enum(['low', 'medium', 'high', 'critical']),
+  xp: z.number().int().min(0, 'XP must be 0 or more'),
+  depends_on_task_id: z.string().optional(),
+  due_date: z.string().optional(),
+});
+
+export type TaskFormValues = z.infer<typeof taskSchema>;
 
 export function TaskForm({
   questId,
@@ -65,6 +81,7 @@ export function TaskForm({
     setValue,
     formState: { errors },
   } = useForm<TaskFormValues>({
+    resolver: zodResolver(taskSchema),
     defaultValues: {
       task_type: defaultTaskType || 'core',
       priority: 'medium',
@@ -80,13 +97,23 @@ export function TaskForm({
   const dependsOnTaskId = watch('depends_on_task_id');
 
   // Fetch users for owner assignment
-  const { data: users = [] } = useQuery({
+  const {
+    data: users = [],
+    isLoading: usersLoading,
+    isError: usersError,
+    refetch: refetchUsers,
+  } = useQuery({
     queryKey: ['users'],
     queryFn: () => apiClient.get<UserProfile[]>('/users'),
   });
 
   // Fetch tasks in same mission for dependency picker
-  const { data: missionTasks = [] } = useQuery({
+  const {
+    data: missionTasks = [],
+    isLoading: depsLoading,
+    isError: depsError,
+    refetch: refetchDeps,
+  } = useQuery({
     queryKey: ['tasks', { missionId }],
     queryFn: () => apiClient.get<Task[]>(`/tasks?mission_id=${missionId}`),
     enabled: !!missionId,
@@ -161,12 +188,12 @@ export function TaskForm({
             </SelectContent>
           </Select>
           {taskType === 'adhoc' && (
-            <p className="text-xs text-amber-500">
+            <p className="text-xs text-[var(--status-warning)]">
               Ad-hoc tasks receive 70% XP weight
             </p>
           )}
           {taskType === 'improvement' && (
-            <p className="text-xs text-blue-500">
+            <p className="text-xs text-[var(--status-info)]">
               Improvement tasks receive 80% XP weight
             </p>
           )}
@@ -210,28 +237,54 @@ export function TaskForm({
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-1.5">
           <Label>Assigned to</Label>
-          <Select
-            value={watch('owner_user_id')}
-            onValueChange={(val: unknown) =>
-              setValue('owner_user_id', val as string)
-            }
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Select owner">
-                {(value: string) => {
-                  if (!value) return 'Select owner';
-                  return users.find(u => u.id === value)?.name ?? 'Select owner';
-                }}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              {users.map((u) => (
-                <SelectItem key={u.id} value={u.id}>
-                  {u.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {usersLoading ? (
+            <Skeleton className="h-8 w-full rounded-lg" />
+          ) : usersError ? (
+            <Alert variant="destructive">
+              <AlertCircle />
+              <AlertTitle>Could not load people</AlertTitle>
+              <AlertDescription className="flex items-center gap-2">
+                <span>The owner list is unavailable right now.</span>
+                <Button
+                  type="button"
+                  size="xs"
+                  variant="outline"
+                  onClick={() => void refetchUsers()}
+                >
+                  Retry
+                </Button>
+              </AlertDescription>
+            </Alert>
+          ) : (
+            <Select
+              value={watch('owner_user_id')}
+              onValueChange={(val: unknown) =>
+                setValue('owner_user_id', val as string)
+              }
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select owner">
+                  {(value: string) => {
+                    if (!value) return 'Select owner';
+                    return users.find(u => u.id === value)?.name ?? 'Select owner';
+                  }}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {users.length > 0 ? (
+                  users.map((u) => (
+                    <SelectItem key={u.id} value={u.id}>
+                      {u.name}
+                    </SelectItem>
+                  ))
+                ) : (
+                  <p className="px-2 py-3 text-xs text-muted-foreground">
+                    No people to assign yet.
+                  </p>
+                )}
+              </SelectContent>
+            </Select>
+          )}
           {errors.owner_user_id && (
             <p className="text-xs text-destructive">
               {errors.owner_user_id.message}
@@ -289,35 +342,55 @@ export function TaskForm({
         </div>
       </div>
 
-      {/* Dependency picker using @reui/p-combobox-3 pattern (Combobox from base-ui via shadcn) */}
+      {/* Dependency picker — Combobox from @base-ui/react via components/ui/combobox */}
       <div className="space-y-1.5">
         <Label>Depends on task</Label>
-        <Combobox
-          value={selectedDepLabel ?? null}
-          onValueChange={(val: unknown) => {
-            const label = val as string | null;
-            if (label && depTaskMap.has(label)) {
-              setValue('depends_on_task_id', depTaskMap.get(label));
-            } else {
-              setValue('depends_on_task_id', undefined);
-            }
-          }}
-        >
-          <ComboboxInput
-            placeholder="Search tasks by title..."
-            showClear={!!dependsOnTaskId}
-          />
-          <ComboboxContent>
-            <ComboboxEmpty>No tasks found.</ComboboxEmpty>
-            <ComboboxList>
-              {depItems.map((item) => (
-                <ComboboxItem key={item} value={item}>
-                  {item}
-                </ComboboxItem>
-              ))}
-            </ComboboxList>
-          </ComboboxContent>
-        </Combobox>
+        {depsLoading ? (
+          <Skeleton className="h-8 w-full rounded-lg" />
+        ) : depsError ? (
+          <Alert variant="destructive">
+            <AlertCircle />
+            <AlertTitle>Could not load tasks</AlertTitle>
+            <AlertDescription className="flex items-center gap-2">
+              <span>Dependencies for this mission are unavailable.</span>
+              <Button
+                type="button"
+                size="xs"
+                variant="outline"
+                onClick={() => void refetchDeps()}
+              >
+                Retry
+              </Button>
+            </AlertDescription>
+          </Alert>
+        ) : (
+          <Combobox
+            value={selectedDepLabel ?? null}
+            onValueChange={(val: unknown) => {
+              const label = val as string | null;
+              if (label && depTaskMap.has(label)) {
+                setValue('depends_on_task_id', depTaskMap.get(label));
+              } else {
+                setValue('depends_on_task_id', undefined);
+              }
+            }}
+          >
+            <ComboboxInput
+              placeholder="Search tasks by title..."
+              showClear={!!dependsOnTaskId}
+            />
+            <ComboboxContent>
+              <ComboboxEmpty>No tasks found.</ComboboxEmpty>
+              <ComboboxList>
+                {depItems.map((item) => (
+                  <ComboboxItem key={item} value={item}>
+                    {item}
+                  </ComboboxItem>
+                ))}
+              </ComboboxList>
+            </ComboboxContent>
+          </Combobox>
+        )}
       </div>
 
       {/* Submit */}

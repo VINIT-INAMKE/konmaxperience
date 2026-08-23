@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { Plus, Loader2, UtensilsCrossed, LayoutList } from 'lucide-react';
+import Link from 'next/link';
+import { Plus, Loader2, UtensilsCrossed, LayoutList, AlertTriangle } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { ShimmerButton } from '@/components/ui/shimmer-button';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Dialog,
@@ -63,7 +64,12 @@ export default function MenuPage() {
   const [isDeletingCategory, setIsDeletingCategory] = useState(false);
 
   // Queries
-  const { data: brands = [], isLoading: brandsLoading } = useQuery({
+  const {
+    data: brands = [],
+    isLoading: brandsLoading,
+    isError: brandsError,
+    refetch: refetchBrands,
+  } = useQuery({
     queryKey: ['brands'],
     queryFn: () => apiClient.get<Brand[]>('/brands'),
     select: (data) =>
@@ -73,14 +79,24 @@ export default function MenuPage() {
   // Set default brand on first load
   const effectiveBrandId = selectedBrandId || brands[0]?.id || '';
 
-  const { data: categories = [], isLoading: categoriesLoading } = useQuery({
+  const {
+    data: categories = [],
+    isLoading: categoriesLoading,
+    isError: categoriesError,
+    refetch: refetchCategories,
+  } = useQuery({
     queryKey: ['menu-categories', effectiveBrandId],
     queryFn: () =>
       apiClient.get<ProductCategory[]>(`/catalog/categories?brand_id=${effectiveBrandId}`),
     enabled: !!effectiveBrandId,
   });
 
-  const { data: products = [], isLoading: itemsLoading } = useQuery({
+  const {
+    data: products = [],
+    isLoading: itemsLoading,
+    isError: itemsError,
+    refetch: refetchItems,
+  } = useQuery({
     queryKey: ['menu-items', effectiveBrandId],
     queryFn: () =>
       apiClient.get<Product[]>(`/catalog/products/staff?brand_id=${effectiveBrandId}`),
@@ -216,6 +232,13 @@ export default function MenuPage() {
   };
 
   const isLoading = brandsLoading || (!!effectiveBrandId && (categoriesLoading || itemsLoading));
+  const isError = brandsError || categoriesError || itemsError;
+
+  const retryAll = () => {
+    if (brandsError) void refetchBrands();
+    if (categoriesError) void refetchCategories();
+    if (itemsError) void refetchItems();
+  };
 
   return (
       <div className="space-y-6">
@@ -261,24 +284,45 @@ export default function MenuPage() {
           </div>
         )}
 
+        {/* Error state */}
+        {isError && !isLoading && (
+          <Alert variant="destructive">
+            <AlertTriangle className="size-4" />
+            <AlertTitle>Could not load the menu</AlertTitle>
+            <AlertDescription className="flex flex-col items-start gap-2">
+              Brands, categories or products failed to load.
+              <Button variant="outline" size="sm" onClick={retryAll}>
+                Try again
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
+
         {/* No food brands state */}
-        {!brandsLoading && brands.length === 0 && (
+        {!brandsLoading && !brandsError && brands.length === 0 && (
           <div className="flex flex-col items-center justify-center py-16 text-center space-y-3">
-            <UtensilsCrossed className="size-12 text-muted-foreground/30" />
+            <UtensilsCrossed className="size-12 text-ink-faint" />
             <h2 className="text-lg font-semibold">No Active Food Brands</h2>
             <p className="text-sm text-muted-foreground max-w-md">
               Create an active food brand in the Brands page to manage its menu.
             </p>
+            <Button
+              variant="outline"
+              nativeButton={false}
+              render={<Link href="/operations/brands" />}
+            >
+              Go to Brands
+            </Button>
           </div>
         )}
 
         {/* Menu content */}
-        {!isLoading && effectiveBrandId && (
+        {!isLoading && !isError && effectiveBrandId && (
           <div className="space-y-6">
             {/* No categories state */}
             {categories.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-center space-y-3 border border-dashed rounded-lg">
-                <LayoutList className="size-12 text-muted-foreground/30" />
+                <LayoutList className="size-12 text-ink-faint" />
                 <h2 className="text-lg font-semibold">No Categories Yet</h2>
                 <p className="text-sm text-muted-foreground max-w-md">
                   Create a category for this brand to start organising products.
@@ -362,11 +406,11 @@ export default function MenuPage() {
                 />
               </div>
               <div className="flex items-center gap-3 pt-2">
-                <ShimmerButton
-                  shimmerColor="#4ade80"
+                <Button
+                  variant="default"
+                  size="lg"
                   type="submit"
                   disabled={isSavingCategory || !categoryName.trim()}
-                  className="h-9 text-sm px-4"
                 >
                   {isSavingCategory ? (
                     <span className="flex items-center gap-2">
@@ -378,7 +422,7 @@ export default function MenuPage() {
                   ) : (
                     'Add Category'
                   )}
-                </ShimmerButton>
+                </Button>
                 <Button
                   type="button"
                   variant="ghost"

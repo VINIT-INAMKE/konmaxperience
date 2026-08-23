@@ -3,12 +3,13 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { ArrowLeft, Clock, ArrowUpDown } from 'lucide-react';
+import { ArrowLeft, Clock, ArrowUpDown, AlertTriangle } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
-import { MagicCard } from '@/components/ui/magic-card';
+import { Card } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { AnimatedList } from '@/components/ui/animated-list';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { StockMovementRow } from '@/components/ops/operations/inventory/StockMovementRow';
 import { StockAdjustmentSheet } from '@/components/ops/operations/inventory/StockAdjustmentSheet';
 import { apiClient } from '@/lib/api-client';
@@ -25,7 +26,12 @@ export default function IngredientMovementsPage() {
   });
   const stock = stocks?.find((s) => s.ingredient_id === ingredientId);
 
-  const { data: movements, isLoading: movementsLoading } = useQuery({
+  const {
+    data: movements,
+    isLoading: movementsLoading,
+    isError: movementsError,
+    refetch: refetchMovements,
+  } = useQuery({
     queryKey: ['inventory', ingredientId, 'movements'],
     queryFn: () => apiClient.get<StockMovement[]>(`/inventory/${ingredientId}/movements`),
   });
@@ -58,10 +64,10 @@ export default function IngredientMovementsPage() {
         </div>
 
         {/* Summary card */}
-        <MagicCard gradientColor="#1a1a2e" className="p-6">
+        <Card className="p-6">
           <div className="space-y-3">
             <h1 className="text-2xl font-bold">{ingredientName}</h1>
-            <div className="flex items-center gap-6 text-sm">
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
               <div>
                 <span className="text-muted-foreground">Current Stock: </span>
                 <span className="font-mono font-medium">
@@ -78,7 +84,7 @@ export default function IngredientMovementsPage() {
               </div>
             </div>
           </div>
-        </MagicCard>
+        </Card>
 
         {/* Movements header */}
         <div className="flex items-center justify-between gap-4">
@@ -90,22 +96,50 @@ export default function IngredientMovementsPage() {
 
         {/* Movement list */}
         {movementsLoading && (
-          <div className="text-sm text-muted-foreground">Loading movements...</div>
+          <div className="rounded-lg border divide-y" aria-busy="true">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-4 px-4 py-3">
+                <Skeleton className="h-5 w-24" />
+                <Skeleton className="h-4 w-20" />
+                <Skeleton className="h-4 w-32 ml-auto" />
+              </div>
+            ))}
+          </div>
         )}
 
-        {!movementsLoading && (!movements || movements.length === 0) && (
+        {movementsError && !movementsLoading && (
+          <Alert variant="destructive">
+            <AlertTriangle className="size-4" />
+            <AlertTitle>Could not load stock movements</AlertTitle>
+            <AlertDescription className="flex flex-col items-start gap-2">
+              The movement history for this ingredient failed to load.
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => void refetchMovements()}
+              >
+                Try again
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {!movementsLoading && !movementsError && (!movements || movements.length === 0) && (
           <div className="flex flex-col items-center justify-center py-16 text-center space-y-3">
-            <ArrowUpDown className="size-12 text-muted-foreground/30" />
+            <ArrowUpDown className="size-12 text-ink-faint" />
             <h2 className="text-lg font-semibold">No Movements Yet</h2>
             <p className="text-sm text-muted-foreground max-w-md">
               No stock movements recorded yet. Stock updates automatically when purchase orders are received.
             </p>
+            <Button variant="outline" onClick={() => setAdjustOpen(true)}>
+              Record a manual adjustment
+            </Button>
           </div>
         )}
 
-        {!movementsLoading && movements && movements.length > 0 && (
+        {!movementsLoading && !movementsError && movements && movements.length > 0 && (
           <ScrollArea className="max-h-[600px] rounded-lg border">
-            <AnimatedList delay={150} className="gap-0">
+            <div className="overflow-x-auto">
               {movements.map((movement) => (
                 <StockMovementRow
                   key={movement.id}
@@ -113,7 +147,7 @@ export default function IngredientMovementsPage() {
                   baseUnit={baseUnit}
                 />
               ))}
-            </AnimatedList>
+            </div>
           </ScrollArea>
         )}
 

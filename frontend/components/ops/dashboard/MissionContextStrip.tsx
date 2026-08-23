@@ -1,7 +1,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { AnimatedCircularProgressBar } from '@/components/ui/animated-circular-progress-bar';
+import { ProgressRing } from '@/components/ops/ProgressRing';
 import { Badge } from '@/components/ui/badge';
 import { apiClient } from '@/lib/api-client';
 import type { MissionPhase } from '@/lib/types/missions';
@@ -31,9 +31,9 @@ interface MissionControlResponse {
 
 const PHASE_BADGE_CLASSES: Record<MissionPhase, string> = {
   setup: 'bg-muted text-muted-foreground border-0',
-  foundation: 'bg-blue-500/15 text-blue-500 border-0',
-  activation: 'bg-amber-500/15 text-amber-500 border-0',
-  scale: 'bg-emerald-500/15 text-emerald-500 border-0',
+  foundation: 'bg-[var(--status-info)]/15 text-[var(--status-info)] border-0',
+  activation: 'bg-[var(--status-warning)]/15 text-[var(--status-warning)] border-0',
+  scale: 'bg-[var(--status-good)]/15 text-[var(--status-good)] border-0',
 };
 
 const PHASE_LABELS: Record<MissionPhase, string> = {
@@ -44,7 +44,7 @@ const PHASE_LABELS: Record<MissionPhase, string> = {
 };
 
 function Divider() {
-  return <div className="w-px self-stretch bg-foreground/5" />;
+  return <div className="w-px shrink-0 self-stretch bg-foreground/5" />;
 }
 
 export function MissionContextStrip() {
@@ -55,7 +55,7 @@ export function MissionContextStrip() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center gap-6 rounded-xl bg-gradient-to-r from-muted/50 to-muted/30 ring-1 ring-foreground/5 px-6 py-3 animate-pulse">
+      <div className="flex items-center gap-6 overflow-x-auto rounded-xl bg-gradient-to-r from-muted/50 to-muted/30 ring-1 ring-foreground/5 px-6 py-3 animate-pulse motion-reduce:animate-none">
         <div className="h-4 w-32 rounded bg-muted" />
         <div className="w-px h-6 bg-muted" />
         <div className="h-4 w-24 rounded bg-muted" />
@@ -89,7 +89,7 @@ export function MissionContextStrip() {
       : 0;
 
   return (
-    <div className="flex items-center gap-6 rounded-xl bg-gradient-to-r from-muted/50 to-muted/30 ring-1 ring-foreground/5 px-6 py-3">
+    <div className="flex items-center gap-6 overflow-x-auto rounded-xl bg-gradient-to-r from-muted/50 to-muted/30 ring-1 ring-foreground/5 px-6 py-3">
       {/* Mission Name */}
       <div className="flex flex-col gap-0.5 min-w-0">
         <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
@@ -137,11 +137,9 @@ export function MissionContextStrip() {
           </span>
           <span className="text-sm font-bold tabular-nums">{overallReadiness}%</span>
         </div>
-        <AnimatedCircularProgressBar
+        <ProgressRing
           value={overallReadiness}
           max={100}
-          gaugePrimaryColor="var(--primary)"
-          gaugeSecondaryColor="var(--muted)"
           className="size-8 text-[8px]"
           showValue={false}
         />

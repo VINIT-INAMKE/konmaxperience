@@ -8,7 +8,7 @@ interface WinsTimelineProps {
 }
 
 const DOT_COLORS: Record<WinsEntry['type'], string> = {
-  quest_completed: 'bg-emerald-500',
+  quest_completed: 'bg-[var(--status-good)]',
   task_validated: 'bg-primary',
 };
 
@@ -18,7 +18,13 @@ const TYPE_LABELS: Record<WinsEntry['type'], string> = {
 };
 
 export function WinsTimeline({ entries }: WinsTimelineProps) {
-  if (entries.length === 0) return null;
+  if (entries.length === 0) {
+    return (
+      <p className="py-6 text-center text-sm text-muted-foreground">
+        No milestones yet.
+      </p>
+    );
+  }
 
   return (
     <div className="relative">

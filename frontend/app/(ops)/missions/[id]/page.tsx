@@ -10,13 +10,15 @@ import {
   AlertCircle,
   Loader2,
   Calendar,
+  Target,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AnimatedCircularProgressBar } from '@/components/ui/animated-circular-progress-bar';
+import { ProgressRing } from '@/components/ops/ProgressRing';
 import { NumberTicker } from '@/components/ui/number-ticker';
 import { apiClient } from '@/lib/api-client';
+import { STATUS_BADGE } from '@/lib/status-styles';
 import { useAuthStore } from '@/lib/stores/auth-store';
 import { RoleCode } from '@/lib/types/roles';
 import {
@@ -32,17 +34,17 @@ import { TASK_TYPE_XP_WEIGHT } from '@/lib/types/tasks';
 import { QuestCard } from '@/components/ops/quests/QuestCard';
 
 const PHASE_COLORS: Record<MissionPhase, string> = {
-  setup: 'text-muted-foreground bg-muted',
-  foundation: 'text-blue-400 bg-blue-950',
-  activation: 'text-amber-400 bg-amber-950',
-  scale: 'text-green-400 bg-green-950',
+  setup: STATUS_BADGE.neutral,
+  foundation: STATUS_BADGE.info,
+  activation: STATUS_BADGE.warning,
+  scale: STATUS_BADGE.good,
 };
 
 const STATUS_COLORS: Record<MissionStatus, string> = {
   planned: '',
-  active: 'text-green-400 bg-green-950',
-  completed: 'text-blue-400 bg-blue-950',
-  paused: 'text-amber-400 bg-amber-950',
+  active: STATUS_BADGE.good,
+  completed: STATUS_BADGE.info,
+  paused: STATUS_BADGE.warning,
 };
 
 export default function MissionDetailPage({
@@ -58,6 +60,7 @@ export default function MissionDetailPage({
     data: mission,
     isLoading: missionLoading,
     isError: missionError,
+    refetch: refetchMission,
   } = useQuery({
     queryKey: ['missions', id],
     queryFn: () => apiClient.get<Mission>(`/missions/${id}`),
@@ -67,6 +70,7 @@ export default function MissionDetailPage({
     data: quests,
     isLoading: questsLoading,
     isError: questsError,
+    refetch: refetchQuests,
   } = useQuery({
     queryKey: ['quests', { missionId: id }],
     queryFn: () => apiClient.get<Quest[]>(`/quests?mission_id=${id}`),
@@ -101,12 +105,17 @@ export default function MissionDetailPage({
 
   if (missionError || !mission) {
     return (
-      <Alert variant="destructive">
-        <AlertCircle className="size-4" />
-        <AlertDescription>
-          Could not load mission. Try refreshing the page.
-        </AlertDescription>
-      </Alert>
+      <div className="space-y-3">
+        <Alert variant="destructive">
+          <AlertCircle className="size-4" />
+          <AlertDescription>
+            Could not load this mission. Try again in a moment.
+          </AlertDescription>
+        </Alert>
+        <Button variant="outline" size="sm" onClick={() => void refetchMission()}>
+          Retry
+        </Button>
+      </div>
     );
   }
 
@@ -115,7 +124,7 @@ export default function MissionDetailPage({
         {/* Back link */}
         <Link
           href="/missions"
-          className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          className="inline-flex items-center gap-1 rounded-sm text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[var(--focus)]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
         >
           <ArrowLeft className="size-4" />
           Missions
@@ -147,11 +156,12 @@ export default function MissionDetailPage({
             </div>
 
             {/* Progress ring */}
-            <AnimatedCircularProgressBar
+            <ProgressRing
               value={mission.progress_percent}
-              gaugePrimaryColor="hsl(var(--primary))"
-              gaugeSecondaryColor="hsl(var(--muted))"
+              max={100}
+              showValue
               className="size-16 text-sm shrink-0"
+              label={`Mission ${mission.progress_percent}% complete`}
             />
           </div>
 
@@ -166,12 +176,12 @@ export default function MissionDetailPage({
 
           {/* XP earned summary */}
           {missionTasksLoading ? (
-            <div className="h-4 w-32 rounded bg-muted/50 animate-pulse" />
+            <div className="h-4 w-32 rounded bg-muted/50 animate-pulse motion-reduce:animate-none" />
           ) : (
             <div className="flex items-baseline gap-1">
               <NumberTicker
                 value={totalXpEarned}
-                className="text-sm font-semibold text-green-500 tabular-nums"
+                className="text-sm font-semibold text-[var(--status-good)] tabular-nums"
               />
               <span className="text-sm text-muted-foreground">
                 / {potentialXp} XP earned
@@ -220,18 +230,45 @@ export default function MissionDetailPage({
           )}
 
           {questsError && (
-            <Alert variant="destructive">
-              <AlertCircle className="size-4" />
-              <AlertDescription>
-                Could not load quests. Try refreshing the page.
-              </AlertDescription>
-            </Alert>
+            <div className="space-y-3">
+              <Alert variant="destructive">
+                <AlertCircle className="size-4" />
+                <AlertDescription>
+                  Could not load quests for this mission. Try again in a moment.
+                </AlertDescription>
+              </Alert>
+              <Button variant="outline" size="sm" onClick={() => void refetchQuests()}>
+                Retry
+              </Button>
+            </div>
           )}
 
-          {!questsLoading && sortedQuests.length === 0 && (
-            <p className="text-sm text-muted-foreground py-4">
-              No quests yet. Add the first quest to get started.
-            </p>
+          {!questsLoading && !questsError && sortedQuests.length === 0 && (
+            <div className="flex flex-col items-center justify-center gap-3 py-10 text-center">
+              <Target className="size-10 text-muted-foreground/30" />
+              <p className="text-sm text-muted-foreground">
+                No quests yet. Break this mission into weekly quests to get moving.
+              </p>
+              {isAdmin ? (
+                <Button
+                  nativeButton={false}
+                  render={<Link href={`/missions/${id}/quests/new`} />}
+                  size="sm"
+                >
+                  <Plus className="size-4" />
+                  Add quest
+                </Button>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  nativeButton={false}
+                  render={<Link href="/missions" />}
+                >
+                  Browse missions
+                </Button>
+              )}
+            </div>
           )}
 
           {sortedQuests.length > 0 && (

@@ -5,12 +5,12 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, AlertTriangle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { MagicCard } from '@/components/ui/magic-card';
-import { ShineBorder } from '@/components/ui/shine-border';
-import { BorderBeam } from '@/components/ui/border-beam';
+import { Card } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import {
   Dialog,
   DialogContent,
@@ -51,6 +51,7 @@ export default function PurchaseOrderDetailPage() {
     data: po,
     isLoading,
     isError,
+    refetch,
   } = useQuery({
     queryKey: ['purchase-orders', id],
     queryFn: () => apiClient.get<PurchaseOrder>(`/purchase-orders/${id}`),
@@ -67,12 +68,6 @@ export default function PurchaseOrderDetailPage() {
       setReceivedQuantities(initial);
     }
   }, [po?.lines, receivedQuantities]);
-
-  const isNew = useMemo(() => {
-    if (!po) return false;
-    const created = new Date(po.created_at).getTime();
-    return Date.now() - created < 10000;
-  }, [po]);
 
   const canCancel = po?.status === 'draft' || po?.status === 'ordered';
   const isOrdered = po?.status === 'ordered';
@@ -136,22 +131,48 @@ export default function PurchaseOrderDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="text-sm text-muted-foreground p-6">
-        Loading purchase order...
+      <div className="space-y-6 max-w-4xl p-6" aria-busy="true">
+        <Skeleton className="h-4 w-48" />
+        <Skeleton className="h-32 w-full rounded-xl" />
+        <div className="space-y-2">
+          <Skeleton className="h-5 w-32" />
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-10 w-full" />
+          ))}
+        </div>
       </div>
     );
   }
 
   if (isError || !po) {
     return (
-      <div className="text-sm text-destructive p-6">
-        Purchase order not found or failed to load.
+      <div className="max-w-4xl p-6">
+        <Alert variant="destructive">
+          <AlertTriangle className="size-4" />
+          <AlertTitle>Purchase order unavailable</AlertTitle>
+          <AlertDescription className="flex flex-col items-start gap-2">
+            This purchase order could not be found or failed to load.
+            <div className="flex flex-wrap items-center gap-2">
+              <Button variant="outline" size="sm" onClick={() => void refetch()}>
+                Try again
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                nativeButton={false}
+                render={<Link href="/operations/purchase-orders" />}
+              >
+                Back to Purchase Orders
+              </Button>
+            </div>
+          </AlertDescription>
+        </Alert>
       </div>
     );
   }
 
   const headerCard = (
-    <MagicCard gradientColor="#1a1a2e" className="p-6">
+    <Card className="p-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-1">
           <h2 className="text-lg font-semibold">
@@ -196,7 +217,7 @@ export default function PurchaseOrderDetailPage() {
           {po.notes}
         </p>
       )}
-    </MagicCard>
+    </Card>
   );
 
   return (
@@ -215,23 +236,13 @@ export default function PurchaseOrderDetailPage() {
         </div>
 
         {/* PO header card */}
-        {isNew ? (
-          <div className="relative rounded-xl">
-            <ShineBorder
-              shineColor={['#4ade80', '#22d3ee']}
-              borderWidth={1}
-            />
-            {headerCard}
-          </div>
-        ) : (
-          headerCard
-        )}
+        {headerCard}
 
         {/* Read-only line items table */}
         <div className="space-y-3">
           <h3 className="text-base font-semibold">Line Items</h3>
-          <div className="rounded-lg border overflow-hidden">
-            <table className="w-full">
+          <div className="rounded-lg border overflow-x-auto">
+            <table className="w-full min-w-[640px]">
               <thead>
                 <tr className="border-b bg-muted/40">
                   <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
@@ -254,6 +265,16 @@ export default function PurchaseOrderDetailPage() {
                 </tr>
               </thead>
               <tbody>
+                {(!po.lines || po.lines.length === 0) && (
+                  <tr>
+                    <td
+                      colSpan={isReceived ? 5 : 4}
+                      className="px-4 py-8 text-center text-sm text-muted-foreground"
+                    >
+                      This purchase order has no line items yet.
+                    </td>
+                  </tr>
+                )}
                 {po.lines?.map((line) => (
                   <tr
                     key={line.id}
@@ -276,7 +297,7 @@ export default function PurchaseOrderDetailPage() {
                       ).toLocaleString('en-IN')}
                     </td>
                     {isReceived && (
-                      <td className="px-4 py-2 font-mono text-sm text-green-400">
+                      <td className="px-4 py-2 font-mono text-sm text-[var(--status-good)]">
                         {line.received_quantity ?? '\u2014'} {line.unit}
                       </td>
                     )}
@@ -305,9 +326,8 @@ export default function PurchaseOrderDetailPage() {
         {isOrdered && po.lines && po.lines.length > 0 && (
           <div className="space-y-3">
             <h3 className="text-base font-semibold">Receive Items</h3>
-            <div className="relative rounded-lg border overflow-hidden">
-              <BorderBeam size={150} duration={8} />
-              <table className="w-full">
+            <div className="relative rounded-lg border overflow-x-auto">
+              <table className="w-full min-w-[720px]">
                 <thead>
                   <tr className="border-b bg-muted/40">
                     <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">

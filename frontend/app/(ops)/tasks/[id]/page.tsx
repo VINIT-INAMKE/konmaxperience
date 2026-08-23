@@ -12,6 +12,7 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import { format, parseISO, isPast, formatDistanceToNow } from 'date-fns';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
@@ -22,10 +23,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { AvatarCircles } from '@/components/ui/avatar-circles';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { BlockerDialog } from '@/components/ops/tasks/BlockerDialog';
 import { EvidenceSection } from '@/components/ops/evidence/EvidenceSection';
 import { apiClient } from '@/lib/api-client';
+import {
+  STATUS_BADGE,
+  getPriorityBadge,
+  getTaskStatusBadge,
+  getTaskTypeBadge,
+} from '@/lib/status-styles';
 import { useAuthStore } from '@/lib/stores/auth-store';
 import { RoleCode } from '@/lib/types/roles';
 import type { Task, TaskStatus } from '@/lib/types/tasks';
@@ -38,47 +45,17 @@ import {
 } from '@/lib/types/tasks';
 import { ExportButton } from '@/components/ops/exports/ExportButton';
 
-function getTypeBadgeClass(type: string) {
-  switch (type) {
-    case 'adhoc':
-      return 'text-amber-400 bg-amber-950 border-amber-500/20';
-    case 'improvement':
-      return 'text-blue-400 bg-blue-950 border-blue-500/20';
-    default:
-      return '';
-  }
-}
-
-/** Prisma `TaskStatus` — `todo` is the neutral default and gets no badge tint. */
-function getStatusBadgeClass(status: string) {
-  switch (status) {
-    case 'doing':
-      return 'text-blue-400 bg-blue-950 border-blue-500/20';
-    case 'done':
-      return 'text-green-400 bg-green-950 border-green-500/20';
-    case 'blocked':
-      return 'text-red-400 bg-red-950 border-red-500/20';
-    case 'cancelled':
-      return 'text-muted-foreground bg-muted border-transparent line-through';
-    default:
-      return '';
-  }
-}
-
-function getPriorityBadgeClass(priority: string) {
-  switch (priority) {
-    case 'critical':
-      return 'text-red-400 bg-red-950 border-red-500/20';
-    case 'high':
-      return 'text-orange-400 bg-orange-950 border-orange-500/20';
-    case 'low':
-      return 'text-muted-foreground bg-muted';
-    default:
-      return '';
-  }
-}
-
 const selectableStatuses: TaskStatus[] = ['todo', 'doing', 'done'];
+
+/** Two-letter monogram for the avatar fallback. */
+function initials(name: string): string {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? '')
+    .join('');
+}
 
 export default function TaskDetailPage(props: {
   params: Promise<{ id: string }>;
@@ -94,6 +71,7 @@ export default function TaskDetailPage(props: {
     data: task,
     isLoading,
     isError,
+    refetch,
   } = useQuery({
     queryKey: ['tasks', id],
     queryFn: () => apiClient.get<Task>(`/tasks/${id}`),
@@ -136,17 +114,26 @@ export default function TaskDetailPage(props: {
 
   if (isError || !task) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 space-y-2 text-center">
-        <AlertCircle className="size-6 text-destructive" />
-        <p className="text-sm text-muted-foreground">
-          Task not found.
-        </p>
-        <Link
-          href={'/dashboard'}
-          className="text-sm text-primary hover:underline"
-        >
-          Return to dashboard
-        </Link>
+      <div className="space-y-3">
+        <Alert variant="destructive">
+          <AlertCircle className="size-4" />
+          <AlertDescription>
+            Could not load this task. It may have been removed, or the request failed.
+          </AlertDescription>
+        </Alert>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => void refetch()}>
+            Retry
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            nativeButton={false}
+            render={<Link href="/dashboard" />}
+          >
+            Return to dashboard
+          </Button>
+        </div>
       </div>
     );
   }
@@ -158,47 +145,49 @@ export default function TaskDetailPage(props: {
       ? Math.round(task.xp * TASK_TYPE_XP_WEIGHT[task.task_type])
       : task.xp;
 
-  // Build avatar for owner display
-  const ownerAvatar = task.owner
+  // Owner avatars — a stacked row so extra collaborators can slot in later.
+  const ownerAvatars = task.owner
     ? [
         {
+          name: task.owner.name,
           imageUrl: `https://api.dicebear.com/8.x/initials/svg?seed=${encodeURIComponent(task.owner.name)}`,
-          profileUrl: '#',
         },
       ]
     : [];
+  const visibleAvatars = ownerAvatars.slice(0, 3);
+  const overflowAvatars = ownerAvatars.length - visibleAvatars.length;
 
   return (
       <div className="space-y-6">
         {/* Breadcrumb / Back link */}
         {task.quest_id && task.quest?.mission ? (
           <nav aria-label="Breadcrumb">
-            <ol className="flex items-center gap-1 text-sm text-muted-foreground">
-              <li>
+            <ol className="flex flex-wrap items-center gap-1 text-sm text-muted-foreground">
+              <li className="min-w-0">
                 <Link
                   href={`/missions/${task.quest.mission.id}`}
-                  className="hover:text-foreground transition-colors"
+                  className="rounded-sm transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[var(--focus)]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
                 >
                   {task.quest.mission.title}
                 </Link>
               </li>
               <li><ChevronRight className="size-3" /></li>
-              <li>
+              <li className="min-w-0">
                 <Link
                   href={`/quests/${task.quest_id}`}
-                  className="hover:text-foreground transition-colors"
+                  className="rounded-sm transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[var(--focus)]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
                 >
                   {task.quest.title}
                 </Link>
               </li>
               <li><ChevronRight className="size-3" /></li>
-              <li className="text-foreground font-medium">{task.title}</li>
+              <li className="min-w-0 text-foreground font-medium">{task.title}</li>
             </ol>
           </nav>
         ) : (
           <Link
             href={task.quest_id ? `/quests/${task.quest_id}` : `/missions/${task.mission_id}`}
-            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+            className="inline-flex items-center gap-1 rounded-sm text-xs text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[var(--focus)]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
           >
             <ArrowLeft className="size-3" />
             Back to {task.quest_id ? 'quest' : 'mission'}
@@ -216,27 +205,24 @@ export default function TaskDetailPage(props: {
             />
             <Badge
               variant="secondary"
-              className={getStatusBadgeClass(task.status)}
+              className={getTaskStatusBadge(task.status)}
             >
               {TASK_STATUS_LABELS[task.status]}
             </Badge>
             <Badge
               variant="secondary"
-              className={getTypeBadgeClass(task.task_type)}
+              className={getTaskTypeBadge(task.task_type)}
             >
               {TASK_TYPE_LABELS[task.task_type]}
             </Badge>
             <Badge
               variant="secondary"
-              className={getPriorityBadgeClass(task.priority)}
+              className={getPriorityBadge(task.priority)}
             >
               {TASK_PRIORITY_LABELS[task.priority]}
             </Badge>
             {task.valid && (
-              <Badge
-                variant="secondary"
-                className="text-green-400 bg-green-950 border-green-500/20"
-              >
+              <Badge variant="secondary" className={STATUS_BADGE.good}>
                 Valid
               </Badge>
             )}
@@ -297,7 +283,19 @@ export default function TaskDetailPage(props: {
               <CardContent className="p-4 space-y-3">
                 <h3 className="text-sm font-semibold">People</h3>
                 <div className="flex items-center gap-3">
-                  <AvatarCircles avatarUrls={ownerAvatar} />
+                  <div className="flex -space-x-2">
+                    {visibleAvatars.map((a) => (
+                      <Avatar key={a.name} size="sm">
+                        <AvatarImage src={a.imageUrl} alt="" />
+                        <AvatarFallback>{initials(a.name)}</AvatarFallback>
+                      </Avatar>
+                    ))}
+                    {overflowAvatars > 0 && (
+                      <span className="flex size-6 items-center justify-center rounded-full bg-muted text-xs text-muted-foreground">
+                        +{overflowAvatars}
+                      </span>
+                    )}
+                  </div>
                   <div>
                     <p className="text-sm font-medium">
                       {task.owner?.name || 'Unassigned'}
@@ -339,7 +337,7 @@ export default function TaskDetailPage(props: {
                   ) : (
                     <Badge
                       variant="secondary"
-                      className={getStatusBadgeClass(task.status)}
+                      className={getTaskStatusBadge(task.status)}
                     >
                       {TASK_STATUS_LABELS[task.status]}
                     </Badge>
@@ -391,13 +389,13 @@ export default function TaskDetailPage(props: {
                     <LinkIcon className="size-4 text-muted-foreground" />
                     <Link
                       href={`/tasks/${task.depends_on.id}`}
-                      className="text-sm text-primary hover:underline"
+                      className="rounded-sm text-sm text-primary hover:underline focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[var(--focus)]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
                     >
                       {task.depends_on.title}
                     </Link>
                     <Badge
                       variant="secondary"
-                      className={getStatusBadgeClass(task.depends_on.status)}
+                      className={getTaskStatusBadge(task.depends_on.status)}
                     >
                       {task.depends_on.status}
                     </Badge>
@@ -433,7 +431,7 @@ export default function TaskDetailPage(props: {
                         <Link
                           key={po.id}
                           href={`/procurement/purchase-orders/${po.id}`}
-                          className="flex items-center gap-2 text-sm rounded-md px-2 py-1.5 hover:bg-muted transition-colors"
+                          className="flex items-center gap-2 text-sm rounded-md px-2 py-1.5 transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[var(--focus)]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
                         >
                           <Badge variant="outline" className="text-[10px]">PO</Badge>
                           <span className="flex-1 truncate">{po.vendor.name}</span>
@@ -472,7 +470,7 @@ export default function TaskDetailPage(props: {
                     <p className="text-xs text-muted-foreground">Quest</p>
                     <Link
                       href={`/quests/${task.quest_id}`}
-                      className="text-sm text-primary hover:underline"
+                      className="rounded-sm text-sm text-primary hover:underline focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[var(--focus)]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
                     >
                       View quest
                     </Link>
@@ -482,7 +480,7 @@ export default function TaskDetailPage(props: {
                   <p className="text-xs text-muted-foreground">Mission</p>
                   <Link
                     href={`/missions/${task.mission_id}`}
-                    className="text-sm text-primary hover:underline"
+                    className="rounded-sm text-sm text-primary hover:underline focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[var(--focus)]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
                   >
                     View mission
                   </Link>
@@ -523,7 +521,7 @@ export default function TaskDetailPage(props: {
                   <p className="text-xs text-muted-foreground">Status</p>
                   <Badge
                     variant="secondary"
-                    className={getStatusBadgeClass(task.status)}
+                    className={getTaskStatusBadge(task.status)}
                   >
                     {TASK_STATUS_LABELS[task.status]}
                   </Badge>

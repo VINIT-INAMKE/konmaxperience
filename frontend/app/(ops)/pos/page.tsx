@@ -3,9 +3,10 @@
 import { useState, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { X, Loader2, ShoppingCart } from 'lucide-react';
-import { ShimmerButton } from '@/components/ui/shimmer-button';
+import Link from 'next/link';
+import { X, Loader2, ShoppingCart, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { PosProductGrid } from '@/components/ops/pos/PosProductGrid';
 import { PosCartSidebar } from '@/components/ops/pos/PosCartSidebar';
@@ -47,7 +48,12 @@ export default function PosPage() {
   const [notes, setNotes] = useState('');
 
   // Queries
-  const { data: brands = [], isLoading: brandsLoading } = useQuery({
+  const {
+    data: brands = [],
+    isLoading: brandsLoading,
+    isError: brandsError,
+    refetch: refetchBrands,
+  } = useQuery({
     queryKey: ['brands'],
     queryFn: () => apiClient.get<Brand[]>('/brands'),
     select: (data) =>
@@ -246,7 +252,7 @@ export default function PosPage() {
   return (
     <div className={fullScreenClass}>
       {/* Page header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b">
+      <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 border-b">
         <h1 className="text-2xl font-bold leading-tight">
           {isFullScreen ? 'Terminal Mode' : 'Take Order'}
         </h1>
@@ -262,12 +268,13 @@ export default function PosPage() {
               Exit Terminal
             </Button>
           ) : (
-            <ShimmerButton
-              className="h-9 text-sm px-4"
+            <Button
+              variant="default"
+              size="lg"
               onClick={() => setIsFullScreen(true)}
             >
               Terminal Mode
-            </ShimmerButton>
+            </Button>
           )}
         </div>
       </div>
@@ -283,12 +290,31 @@ export default function PosPage() {
               <Loader2 className="size-4 animate-spin motion-reduce:animate-none" />
               Loading menu...
             </div>
+          ) : brandsError ? (
+            <Alert variant="destructive">
+              <AlertTriangle className="size-4" />
+              <AlertTitle>Could not load the menu</AlertTitle>
+              <AlertDescription className="flex flex-col items-start gap-2">
+                Brands failed to load, so no products can be shown.
+                <Button variant="outline" size="sm" onClick={() => void refetchBrands()}>
+                  Try again
+                </Button>
+              </AlertDescription>
+            </Alert>
           ) : !effectiveBrandId ? (
             <div className="py-16 text-center space-y-2">
+              <ShoppingCart className="size-12 text-ink-faint mx-auto" />
               <h2 className="text-base font-semibold">No menu available</h2>
               <p className="text-sm text-muted-foreground">
                 Add food brands and products in Operations to start taking orders.
               </p>
+              <Button
+                variant="outline"
+                nativeButton={false}
+                render={<Link href="/operations/menu" />}
+              >
+                Set up the menu
+              </Button>
             </div>
           ) : (
             <PosProductGrid
@@ -312,7 +338,8 @@ export default function PosPage() {
       {/* Mobile: Floating cart button */}
       {totalItems > 0 && (
         <button
-          className="fixed bottom-6 right-6 lg:hidden z-40 flex items-center gap-2 rounded-full bg-primary text-primary-foreground px-5 py-3 text-sm font-semibold shadow-lg active:scale-95 transition-transform"
+          type="button"
+          className="fixed bottom-6 right-6 lg:hidden z-40 flex items-center gap-2 rounded-full bg-primary text-primary-foreground px-5 py-3 text-sm font-semibold shadow-lg active:scale-95 transition-transform motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[var(--focus)]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
           onClick={() => setCartOpen(true)}
         >
           <ShoppingCart className="size-4" />

@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import { AlertCircle, Trophy } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -7,7 +8,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { LeaderboardTable } from '@/components/ops/leaderboard/LeaderboardTable';
 import { LeaderboardPodium } from '@/components/ops/leaderboard/LeaderboardPodium';
-import { BlurFade } from '@/components/ui/blur-fade';
 import { apiClient } from '@/lib/api-client';
 import { useAuthStore } from '@/lib/stores/auth-store';
 import type { LeaderboardResponse } from '@/lib/types/leaderboard';
@@ -44,7 +44,7 @@ export default function LeaderboardPage() {
         {isLoading && (
           <div className="space-y-2">
             {[1, 2, 3, 4, 5].map((i) => (
-              <div key={i} className="flex items-center gap-4 p-3 animate-pulse">
+              <div key={i} className="flex items-center gap-4 p-3 animate-pulse motion-reduce:animate-none">
                 <div className="h-4 w-8 rounded bg-muted" />
                 <div className="size-8 rounded-full bg-muted" />
                 <div className="h-4 w-32 rounded bg-muted" />
@@ -90,26 +90,32 @@ export default function LeaderboardPage() {
             <p className="text-sm text-muted-foreground max-w-md">
               Complete and validate tasks to earn XP and appear on the leaderboard.
             </p>
+            <Button
+              variant="outline"
+              size="sm"
+              nativeButton={false}
+              render={<Link href="/boards/quests" />}
+            >
+              Go to the quest board
+            </Button>
           </div>
         )}
 
         {/* Populated state — podium + ranked table */}
         {!isLoading && !isError && data?.enabled && data.users && data.users.length > 0 && (
-          <BlurFade>
-            <div className="space-y-6">
-              {data.users.length >= 2 && (
-                <LeaderboardPodium
-                  users={data.users}
-                  currentUserId={currentUserId}
-                />
-              )}
-              <LeaderboardTable
+          <div className="space-y-6">
+            {data.users.length >= 2 && (
+              <LeaderboardPodium
                 users={data.users}
                 currentUserId={currentUserId}
-                startRank={1}
               />
-            </div>
-          </BlurFade>
+            )}
+            <LeaderboardTable
+              users={data.users}
+              currentUserId={currentUserId}
+              startRank={1}
+            />
+          </div>
         )}
       </div>
   );

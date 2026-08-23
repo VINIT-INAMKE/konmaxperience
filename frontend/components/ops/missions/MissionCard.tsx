@@ -4,10 +4,12 @@ import Link from 'next/link';
 import { format } from 'date-fns';
 import { Calendar, TrendingUp } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { MagicCard } from '@/components/ui/magic-card';
-import { AnimatedCircularProgressBar } from '@/components/ui/animated-circular-progress-bar';
+import { Card } from '@/components/ui/card';
+import { Progress } from '@/components/ui/progress';
 import { NumberTicker } from '@/components/ui/number-ticker';
-import { AvatarCircles } from '@/components/ui/avatar-circles';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { ProgressRing } from '@/components/ops/ProgressRing';
+import { STATUS_BADGE } from '@/lib/status-styles';
 import type {
   Mission,
   MissionPhase,
@@ -15,146 +17,205 @@ import type {
   MISSION_PHASE_LABELS,
   MISSION_SCOPE_LABELS,
 } from '@/lib/types/missions';
-import { GRADIENT_OVERLAY } from '@/lib/brand-colors';
 
-const PHASE_COLORS: Record<MissionPhase, string> = {
-  setup: 'text-muted-foreground bg-muted',
-  foundation: 'text-blue-400 bg-blue-950',
-  activation: 'text-amber-400 bg-amber-950',
-  scale: 'text-green-400 bg-green-950',
+/** Long-form phase names used by the compact (board) density. */
+const PHASE_LABELS: Record<MissionPhase, string> = {
+  setup: 'Setup Phase',
+  foundation: 'Foundation Phase',
+  activation: 'Activation Phase',
+  scale: 'Scale Phase',
 };
 
-const STATUS_COLORS: Record<MissionStatus, string> = {
+const PHASE_BADGE: Record<MissionPhase, string> = {
+  setup: STATUS_BADGE.neutral,
+  foundation: STATUS_BADGE.info,
+  activation: STATUS_BADGE.warning,
+  scale: STATUS_BADGE.good,
+};
+
+const STATUS_BADGE_BY_STATUS: Record<MissionStatus, string> = {
   planned: '',
-  active: 'text-green-400 bg-green-950',
-  completed: 'text-blue-400 bg-blue-950',
-  paused: 'text-amber-400 bg-amber-950',
+  active: STATUS_BADGE.good,
+  completed: STATUS_BADGE.info,
+  paused: STATUS_BADGE.warning,
 };
 
 interface MissionCardProps {
   mission: Mission;
-  phaseLabelMap: typeof MISSION_PHASE_LABELS;
-  scopeLabelMap: typeof MISSION_SCOPE_LABELS;
+  /**
+   * `full` (default) is the missions-index card: badges, description, progress
+   * ring, readiness impact, dates and quest-owner avatars.
+   * `compact` is the mission-board card: title, phase, progress bar, quest
+   * count, readiness impact and the end date.
+   */
+  density?: 'full' | 'compact';
+  phaseLabelMap?: typeof MISSION_PHASE_LABELS;
+  scopeLabelMap?: typeof MISSION_SCOPE_LABELS;
+}
+
+function ReadinessImpactBadges({ mission }: { mission: Mission }) {
+  if (!mission.readiness_impact || mission.readiness_impact.length === 0) return null;
+  return (
+    <div className="flex flex-wrap items-center gap-1.5">
+      <TrendingUp className="size-3.5 text-[var(--status-info)]" />
+      {mission.readiness_impact.slice(0, 3).map((ri) => (
+        <Badge
+          key={ri.meter_code}
+          variant="outline"
+          className="text-[10px] h-5 px-1.5 text-[var(--status-info)] border-[var(--status-info)]/30"
+        >
+          +{ri.total_value}{' '}
+          {ri.meter_label.length > 15
+            ? ri.meter_label.slice(0, 15) + '...'
+            : ri.meter_label}
+        </Badge>
+      ))}
+    </div>
+  );
 }
 
 export function MissionCard({
   mission,
+  density = 'full',
   phaseLabelMap,
   scopeLabelMap,
 }: MissionCardProps) {
-  // Build avatar circles data from quest owners if present
+  if (density === 'compact') {
+    return (
+      <Link
+        href={`/missions/${mission.id}`}
+        className="block rounded-xl focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[var(--focus)]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
+      >
+        <Card className="rounded-xl cursor-pointer p-4 gap-3">
+          <h3 className="text-xl font-bold leading-tight line-clamp-2">
+            {mission.title}
+          </h3>
+          <p className="text-xs font-bold text-ink-muted">
+            {PHASE_LABELS[mission.phase] ?? mission.phase}
+          </p>
+          <div className="flex items-center gap-3">
+            <div className="flex-1">
+              <Progress value={mission.progress_percent} />
+            </div>
+            <span className="text-sm font-bold tabular-nums">
+              {mission.progress_percent}%
+            </span>
+          </div>
+          <p className="text-sm text-ink-muted">
+            {mission.quests?.[0]
+              ? `${mission.quests.length} quest${mission.quests.length !== 1 ? 's' : ''}`
+              : 'No quests yet'}
+          </p>
+          <ReadinessImpactBadges mission={mission} />
+          <p className="text-sm text-ink-muted">
+            {mission.end_date
+              ? format(new Date(mission.end_date), 'MMM d, yyyy')
+              : 'No deadline'}
+          </p>
+        </Card>
+      </Link>
+    );
+  }
+
+  // Quest owners shown as a stacked avatar row (top 4 + overflow count).
   const avatarData =
     mission.quests
       ?.filter((q) => q.status === 'active' || q.status === 'completed')
       .slice(0, 4)
-      .map((q, i) => ({
-        imageUrl: `https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(q.title)}&backgroundColor=0a0a0a&textColor=ffffff`,
-        profileUrl: '#',
+      .map((q) => ({
+        title: q.title,
+        imageUrl: `https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(q.title)}`,
       })) ?? [];
 
   const overflowCount =
-    (mission.quests?.length ?? 0) > 4
-      ? (mission.quests?.length ?? 0) - 4
-      : 0;
+    (mission.quests?.length ?? 0) > 4 ? (mission.quests?.length ?? 0) - 4 : 0;
 
   return (
-    <Link href={`/missions/${mission.id}`} className="block rounded-xl">
-      <MagicCard className="rounded-xl cursor-pointer" gradientColor={GRADIENT_OVERLAY}>
-        <div className="p-6 space-y-4">
-          {/* Header: badges */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <Badge
-              variant="secondary"
-              className={PHASE_COLORS[mission.phase]}
-            >
-              {phaseLabelMap[mission.phase]}
-            </Badge>
-            <Badge variant="secondary">
-              {scopeLabelMap[mission.scope]}
-            </Badge>
-            <Badge
-              variant="secondary"
-              className={STATUS_COLORS[mission.status]}
-            >
-              {mission.status.charAt(0).toUpperCase() + mission.status.slice(1)}
-            </Badge>
-          </div>
-
-          {/* Title and description */}
-          <div>
-            <h3 className="text-base font-semibold leading-tight">
-              {mission.title}
-            </h3>
-            <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-              {mission.description}
-            </p>
-          </div>
-
-          {/* Progress section */}
-          <div className="flex items-center gap-4">
-            <AnimatedCircularProgressBar
-              value={mission.progress_percent}
-              gaugePrimaryColor="var(--primary)"
-              gaugeSecondaryColor="var(--muted)"
-              className="size-12 text-xs"
-            />
-            <div className="flex-1">
-              <div className="flex items-baseline gap-1">
-                <NumberTicker
-                  value={mission.progress_percent}
-                  className="text-sm font-semibold"
-                />
-                <span className="text-sm text-muted-foreground">% complete</span>
-              </div>
-              {mission.quests && mission.quests.length > 0 && (
-                <span className="text-xs text-muted-foreground">
-                  {mission.quests.length} quest{mission.quests.length !== 1 ? 's' : ''}
-                </span>
-              )}
-            </div>
-          </div>
-
-          {/* Readiness impact badges (top 3 meters) */}
-          {mission.readiness_impact && mission.readiness_impact.length > 0 && (
-            <div className="flex flex-wrap items-center gap-1.5">
-              <TrendingUp className="size-3.5 text-blue-500" />
-              {mission.readiness_impact.slice(0, 3).map((ri) => (
-                <Badge
-                  key={ri.meter_code}
-                  variant="outline"
-                  className="text-[10px] h-5 px-1.5 text-blue-500 border-blue-500/30"
-                >
-                  +{ri.total_value}{' '}
-                  {ri.meter_label.length > 15
-                    ? ri.meter_label.slice(0, 15) + '...'
-                    : ri.meter_label}
-                </Badge>
-              ))}
-            </div>
+    <Link
+      href={`/missions/${mission.id}`}
+      className="block rounded-xl focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[var(--focus)]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
+    >
+      <Card className="rounded-xl cursor-pointer p-6 gap-4">
+        {/* Header: badges */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <Badge variant="secondary" className={PHASE_BADGE[mission.phase]}>
+            {phaseLabelMap?.[mission.phase] ?? PHASE_LABELS[mission.phase]}
+          </Badge>
+          {scopeLabelMap && (
+            <Badge variant="secondary">{scopeLabelMap[mission.scope]}</Badge>
           )}
+          <Badge
+            variant="secondary"
+            className={STATUS_BADGE_BY_STATUS[mission.status]}
+          >
+            {mission.status.charAt(0).toUpperCase() + mission.status.slice(1)}
+          </Badge>
+        </div>
 
-          {/* Footer: dates and avatars */}
-          <div className="flex items-center justify-between">
-            {mission.start_date && (
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <Calendar className="size-3.5" />
-                <span>
-                  {format(new Date(mission.start_date), 'MMM d, yyyy')}
-                  {mission.end_date &&
-                    ` - ${format(new Date(mission.end_date), 'MMM d, yyyy')}`}
-                </span>
-              </div>
-            )}
-            {avatarData.length > 0 && (
-              <AvatarCircles
-                avatarUrls={avatarData}
-                numPeople={overflowCount > 0 ? overflowCount : undefined}
-                className="[&_img]:size-6 [&_img]:border [&_a]:size-6 [&>a:last-child]:size-6"
+        {/* Title and description */}
+        <div>
+          <h3 className="text-base font-semibold leading-tight">{mission.title}</h3>
+          <p className="text-sm text-ink-muted mt-1 line-clamp-2">
+            {mission.description}
+          </p>
+        </div>
+
+        {/* Progress section */}
+        <div className="flex items-center gap-4">
+          <ProgressRing
+            value={mission.progress_percent}
+            className="size-12 text-xs shrink-0"
+          />
+          <div className="flex-1">
+            <div className="flex items-baseline gap-1">
+              <NumberTicker
+                value={mission.progress_percent}
+                className="text-sm font-semibold"
               />
+              <span className="text-sm text-ink-muted">% complete</span>
+            </div>
+            {mission.quests && mission.quests.length > 0 && (
+              <span className="text-xs text-ink-muted">
+                {mission.quests.length} quest
+                {mission.quests.length !== 1 ? 's' : ''}
+              </span>
             )}
           </div>
         </div>
-      </MagicCard>
+
+        <ReadinessImpactBadges mission={mission} />
+
+        {/* Footer: dates and quest-owner avatars */}
+        <div className="flex items-center justify-between">
+          {mission.start_date && (
+            <div className="flex items-center gap-1.5 text-xs text-ink-muted">
+              <Calendar className="size-3.5" />
+              <span>
+                {format(new Date(mission.start_date), 'MMM d, yyyy')}
+                {mission.end_date &&
+                  ` - ${format(new Date(mission.end_date), 'MMM d, yyyy')}`}
+              </span>
+            </div>
+          )}
+          {avatarData.length > 0 && (
+            <div className="flex -space-x-2">
+              {avatarData.map((a) => (
+                <Avatar key={a.title} size="sm" className="ring-2 ring-[var(--surface)]">
+                  <AvatarImage src={a.imageUrl} alt="" />
+                  <AvatarFallback className="text-[10px]">
+                    {a.title.slice(0, 2).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+              ))}
+              {overflowCount > 0 && (
+                <span className="flex size-6 items-center justify-center rounded-full bg-surface-raised text-[10px] font-medium text-ink-muted ring-2 ring-[var(--surface)]">
+                  +{overflowCount}
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+      </Card>
     </Link>
   );
 }

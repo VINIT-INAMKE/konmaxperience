@@ -34,6 +34,12 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
+  Alert,
+  AlertAction,
+  AlertDescription,
+  AlertTitle,
+} from '@/components/ui/alert';
+import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
@@ -48,6 +54,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { apiClient } from '@/lib/api-client';
+import { STATUS_BADGE } from '@/lib/status-styles';
 import {
   IMPORT_TYPES,
   IMPORT_TYPE_CONFIG,
@@ -111,6 +118,7 @@ export default function ImportTypePage() {
   const [fileError, setFileError] = useState<string | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
   const [parseResult, setParseResult] = useState<ParseResult | null>(null);
+  const [parseError, setParseError] = useState<string | null>(null);
   const [isParsing, setIsParsing] = useState(false);
   const [rows, setRows] = useState<ImportRow[]>([]);
   const [editingCell, setEditingCell] = useState<{
@@ -196,6 +204,7 @@ export default function ImportTypePage() {
 
       setFile(droppedFile);
       setParseResult(null);
+      setParseError(null);
       setRows([]);
       setCommitResult(null);
     },
@@ -216,6 +225,7 @@ export default function ImportTypePage() {
 
       setFile(selectedFile);
       setParseResult(null);
+      setParseError(null);
       setRows([]);
       setCommitResult(null);
     },
@@ -227,6 +237,7 @@ export default function ImportTypePage() {
     setFile(null);
     setFileError(null);
     setParseResult(null);
+    setParseError(null);
     setRows([]);
     setCommitResult(null);
     if (fileInputRef.current) {
@@ -240,6 +251,7 @@ export default function ImportTypePage() {
 
     setIsParsing(true);
     setCommitResult(null);
+    setParseError(null);
 
     try {
       const formData = new FormData();
@@ -279,6 +291,7 @@ export default function ImportTypePage() {
         } catch {
           // ignore
         }
+        setParseError(message);
         toast.error(message);
         return;
       }
@@ -293,9 +306,10 @@ export default function ImportTypePage() {
         setExpandedRecipes(new Set(result.rows.map(r => ((r.raw.name || '') as string).trim().toLowerCase())));
       }
     } catch {
-      toast.error(
-        'Could not read this file. Make sure it is a valid CSV or XLSX and try again.',
-      );
+      const message =
+        'Could not read this file. Make sure it is a valid CSV or XLSX and try again.';
+      setParseError(message);
+      toast.error(message);
     } finally {
       setIsParsing(false);
     }
@@ -409,13 +423,20 @@ export default function ImportTypePage() {
     switch (row.status) {
       case 'valid':
         return (
-          <span className="inline-block size-2.5 rounded-full bg-green-500" />
+          <span
+            role="img"
+            aria-label="Valid row"
+            className="inline-block size-2.5 rounded-full bg-[var(--status-good)]"
+          />
         );
       case 'invalid':
         return (
           <>
-            <span className="inline-block size-2.5 rounded-full bg-red-500 mr-2" />
-            <Badge variant="destructive" className="text-xs">
+            <span
+              aria-hidden="true"
+              className="inline-block size-2.5 rounded-full bg-[var(--status-critical)] mr-2"
+            />
+            <Badge variant="outline" className={`text-xs ${STATUS_BADGE.critical}`}>
               Invalid
             </Badge>
           </>
@@ -423,10 +444,15 @@ export default function ImportTypePage() {
       case 'duplicate':
         return (
           <>
-            <span className="inline-block size-2.5 rounded-full bg-amber-500 mr-2" />
+            <span
+              aria-hidden="true"
+              className="inline-block size-2.5 rounded-full bg-[var(--status-warning)] mr-2"
+            />
             <Badge
-              variant={updateExisting ? 'secondary' : 'outline'}
-              className="text-xs whitespace-nowrap"
+              variant="outline"
+              className={`text-xs whitespace-nowrap ${
+                updateExisting ? STATUS_BADGE.warning : STATUS_BADGE.muted
+              }`}
             >
               {updateExisting ? 'Duplicate \u2014 will update' : 'Duplicate \u2014 will skip'}
             </Badge>
@@ -435,8 +461,11 @@ export default function ImportTypePage() {
       case 'blocked':
         return (
           <>
-            <span className="inline-block size-2.5 rounded-full bg-red-500 mr-2" />
-            <Badge variant="destructive" className="text-xs">
+            <span
+              aria-hidden="true"
+              className="inline-block size-2.5 rounded-full bg-[var(--status-critical)] mr-2"
+            />
+            <Badge variant="outline" className={`text-xs ${STATUS_BADGE.critical}`}>
               Blocked
             </Badge>
           </>
@@ -492,9 +521,9 @@ export default function ImportTypePage() {
 
       {/* Stock additive warning banner (D-23) */}
       {importType === 'opening_stock' && (
-        <div className="flex items-start gap-3 rounded-lg border border-amber-300 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950/20">
-          <AlertTriangle className="size-4 text-amber-600 shrink-0 mt-0.5" />
-          <p className="text-sm text-amber-800 dark:text-amber-200">
+        <div className={`flex items-start gap-3 rounded-lg border p-4 ${STATUS_BADGE.warning}`}>
+          <AlertTriangle className="size-4 shrink-0 mt-0.5" />
+          <p className="text-sm">
             Stock imports are ADDITIVE. Each row adds to current inventory. If you import this file twice, quantities will be doubled.
           </p>
         </div>
@@ -502,9 +531,9 @@ export default function ImportTypePage() {
 
       {/* Recipe draft notice info banner */}
       {importType === 'recipes' && (
-        <div className="flex items-start gap-3 rounded-lg border border-blue-300 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-950/20">
-          <Info className="size-4 text-blue-600 shrink-0 mt-0.5" />
-          <p className="text-sm text-blue-800 dark:text-blue-200">
+        <div className={`flex items-start gap-3 rounded-lg border p-4 ${STATUS_BADGE.info}`}>
+          <Info className="size-4 shrink-0 mt-0.5" />
+          <p className="text-sm">
             Recipes import as drafts. Approve them in the app before linking to products.
           </p>
         </div>
@@ -564,7 +593,8 @@ export default function ImportTypePage() {
               fileInputRef.current?.click();
             }
           }}
-          className={`relative flex flex-col items-center justify-center gap-3 rounded-lg border-2 border-dashed p-8 min-h-[160px] cursor-pointer transition-all ${
+          aria-label="Upload a file to import"
+          className={`relative flex flex-col items-center justify-center gap-3 rounded-lg border-2 border-dashed p-8 min-h-[160px] cursor-pointer transition-all focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[var(--focus)]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)] ${
             isDragOver
               ? 'border-[var(--primary)] bg-[var(--muted)] scale-[1.01]'
               : fileError
@@ -605,7 +635,7 @@ export default function ImportTypePage() {
           {!parseResult && !isParsing && (
             <button
               onClick={removeFile}
-              className="shrink-0 rounded-md p-1 hover:bg-muted transition-colors"
+              className="shrink-0 rounded-md p-1 hover:bg-muted transition-colors focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[var(--focus)]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
               aria-label="Remove file"
             >
               <X className="size-4 text-muted-foreground" />
@@ -623,7 +653,7 @@ export default function ImportTypePage() {
       {isParsing && (
         <div className="space-y-3">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Loader2 className="size-4 animate-spin" />
+            <Loader2 className="size-4 animate-spin motion-reduce:animate-none" />
             Parsing...
           </div>
           <div className="space-y-2">
@@ -634,11 +664,30 @@ export default function ImportTypePage() {
         </div>
       )}
 
+      {/* Parse failure — the preview grid's error state */}
+      {parseError && !isParsing && (
+        <Alert variant="destructive">
+          <AlertTriangle className="size-4" />
+          <AlertTitle>Could not parse this file</AlertTitle>
+          <AlertDescription>{parseError}</AlertDescription>
+          <AlertAction>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => void handleParse()}
+              disabled={!file}
+            >
+              Retry
+            </Button>
+          </AlertAction>
+        </Alert>
+      )}
+
       {/* Stock re-import warning banner (D-09, D-22) */}
       {parseResult?.warning && (
-        <div className="flex items-start gap-3 rounded-lg border border-amber-300 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950/20">
-          <AlertTriangle className="size-4 text-amber-600 shrink-0 mt-0.5" />
-          <p className="text-sm text-amber-800 dark:text-amber-200">
+        <div className={`flex items-start gap-3 rounded-lg border p-4 ${STATUS_BADGE.warning}`}>
+          <AlertTriangle className="size-4 shrink-0 mt-0.5" />
+          <p className="text-sm">
             {parseResult.warning}
           </p>
         </div>
@@ -663,19 +712,19 @@ export default function ImportTypePage() {
           <span>
             <strong>{rows.length}</strong> rows parsed
           </span>
-          <span className="text-green-600">
+          <span className="text-[var(--status-good)]">
             <strong>{validCount}</strong> valid
           </span>
-          <span className="text-red-600">
+          <span className="text-[var(--status-critical)]">
             <strong>{invalidCount}</strong> invalid
           </span>
           {duplicateCount > 0 && (
-            <span className="text-amber-600">
+            <span className="text-[var(--status-warning)]">
               <strong>{duplicateCount}</strong> duplicates
             </span>
           )}
           {blockedCount > 0 && (
-            <span className="text-red-600">
+            <span className="text-[var(--status-critical)]">
               <strong>{blockedCount}</strong> blocked
             </span>
           )}
@@ -715,11 +764,14 @@ export default function ImportTypePage() {
                         <TableRow className="bg-[var(--muted)] font-bold">
                           <TableCell className="sticky left-0 z-10 bg-[var(--muted)]">
                             <button
+                              type="button"
                               onClick={() => {
                                 const next = new Set(expandedRecipes);
                                 isExpanded ? next.delete(recipeName) : next.add(recipeName);
                                 setExpandedRecipes(next);
                               }}
+                              className="rounded-md focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[var(--focus)]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
+                              aria-expanded={isExpanded}
                               aria-label={isExpanded ? `Collapse recipe ${headerRow.raw.name}` : `Expand recipe ${headerRow.raw.name}`}
                             >
                               {isExpanded ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
@@ -975,7 +1027,7 @@ export default function ImportTypePage() {
           >
             {isCommitting ? (
               <>
-                <Loader2 className="size-4 animate-spin mr-1.5" />
+                <Loader2 className="size-4 animate-spin motion-reduce:animate-none mr-1.5" />
                 Importing...
               </>
             ) : (
@@ -990,13 +1042,13 @@ export default function ImportTypePage() {
         <div className="space-y-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="rounded-lg border p-4 min-h-[48px]">
-              <p className="text-2xl font-bold text-green-600">
+              <p className="text-2xl font-bold text-[var(--status-good)]">
                 {commitResult.imported}
               </p>
               <p className="text-xs text-muted-foreground">Imported</p>
             </div>
             <div className="rounded-lg border p-4 min-h-[48px]">
-              <p className="text-2xl font-bold text-blue-600">
+              <p className="text-2xl font-bold text-[var(--status-info)]">
                 {commitResult.updated}
               </p>
               <p className="text-xs text-muted-foreground">Updated</p>
@@ -1008,7 +1060,7 @@ export default function ImportTypePage() {
               <p className="text-xs text-muted-foreground">Skipped</p>
             </div>
             <div className="rounded-lg border p-4 min-h-[48px]">
-              <p className="text-2xl font-bold text-red-600">
+              <p className="text-2xl font-bold text-[var(--status-critical)]">
                 {commitResult.errors}
               </p>
               <p className="text-xs text-muted-foreground">Errors</p>
@@ -1016,9 +1068,9 @@ export default function ImportTypePage() {
           </div>
 
           {commitResult.errors > 0 && (
-            <div className="flex items-start gap-3 rounded-lg border border-amber-300 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950/20">
-              <AlertTriangle className="size-4 text-amber-600 shrink-0 mt-0.5" />
-              <p className="text-sm text-amber-800 dark:text-amber-200">
+            <div className={`flex items-start gap-3 rounded-lg border p-4 ${STATUS_BADGE.warning}`}>
+              <AlertTriangle className="size-4 shrink-0 mt-0.5" />
+              <p className="text-sm">
                 {commitResult.errors} rows had errors and were not imported.
                 Fix them inline and re-import.
               </p>
@@ -1029,11 +1081,21 @@ export default function ImportTypePage() {
 
       {/* Empty state when parse returns 0 rows */}
       {parseResult && rows.length === 0 && (
-        <div className="text-center py-8">
+        <div className="flex flex-col items-center gap-2 text-center py-8">
+          <Info className="size-10 text-muted-foreground/40" />
           <h3 className="text-lg font-bold">File parsed &mdash; no importable rows found</h3>
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className="text-sm text-muted-foreground">
             Download the template to see the required column format, then re-upload.
           </p>
+          <Button
+            variant="outline"
+            size="sm"
+            className="mt-2"
+            onClick={handleDownloadXlsxTemplate}
+          >
+            <FileDown className="size-4 mr-1.5" />
+            Download Template (.xlsx)
+          </Button>
         </div>
       )}
     </div>

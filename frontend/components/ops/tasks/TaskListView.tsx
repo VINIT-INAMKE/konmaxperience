@@ -3,7 +3,8 @@
 import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { format, isPast, parseISO } from 'date-fns';
-import { Link as LinkIcon, AlertTriangle } from 'lucide-react';
+import { Link as LinkIcon, AlertTriangle, ClipboardList, Plus, SearchX } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -21,7 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { BlurFade } from '@/components/ui/blur-fade';
+import { AdHocTaskSheet } from './AdHocTaskSheet';
 import type { Task, TaskStatus } from '@/lib/types/tasks';
 import {
   TASK_TYPE_LABELS,
@@ -30,6 +31,7 @@ import {
   TASK_TYPE_XP_WEIGHT,
 } from '@/lib/types/tasks';
 import {
+  getPriorityBadge,
   getTaskStatusBadge,
   getTaskTypeBadge,
 } from '@/lib/status-styles';
@@ -53,19 +55,7 @@ const priorityOrder: Record<string, number> = {
 
 const getTypeBadgeClass = getTaskTypeBadge;
 const getStatusBadgeClass = getTaskStatusBadge;
-
-function getPriorityBadgeClass(priority: string) {
-  switch (priority) {
-    case 'critical':
-      return 'text-red-400 bg-red-950 border-red-500/20';
-    case 'high':
-      return 'text-orange-400 bg-orange-950 border-orange-500/20';
-    case 'low':
-      return 'text-muted-foreground bg-muted';
-    default:
-      return '';
-  }
-}
+const getPriorityBadgeClass = getPriorityBadge;
 
 // Statuses available for the Select dropdown (no 'blocked' -- blocking requires reason)
 const selectableStatuses: TaskStatus[] = ['todo', 'doing', 'done'];
@@ -80,6 +70,7 @@ export function TaskListView({
   const [filter, setFilter] = useState('');
   const [sortField, setSortField] = useState<SortField>('priority');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
+  const [adHocOpen, setAdHocOpen] = useState(false);
 
   const toggleSort = (field: SortField) => {
     if (sortField === field) {
@@ -124,6 +115,18 @@ export function TaskListView({
   const sortIndicator = (field: SortField) =>
     sortField === field ? (sortDir === 'asc' ? ' \u2191' : ' \u2193') : '';
 
+  const sortButton = (field: SortField, label: string) => (
+    <button
+      type="button"
+      onClick={() => toggleSort(field)}
+      aria-label={`Sort by ${label}`}
+      className="inline-flex items-center rounded-sm select-none focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[var(--focus)]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
+    >
+      {label}
+      {sortIndicator(field)}
+    </button>
+  );
+
   return (
     <div className="space-y-4">
       <Input
@@ -134,41 +137,52 @@ export function TaskListView({
       />
 
       {filteredAndSorted.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16 space-y-2 text-center">
-          <h3 className="text-xl font-semibold">No tasks in this quest</h3>
-          <p className="text-sm text-muted-foreground">
-            Add the first task or inject an ad-hoc task to begin tracking work.
-          </p>
-        </div>
+        filter ? (
+          <div className="flex flex-col items-center justify-center py-16 space-y-2 text-center">
+            <SearchX className="size-6 text-muted-foreground" />
+            <h3 className="text-xl font-semibold">No matching tasks</h3>
+            <p className="text-sm text-muted-foreground">
+              No task title contains &ldquo;{filter}&rdquo;.
+            </p>
+            <Button
+              size="sm"
+              variant="outline"
+              className="mt-2"
+              onClick={() => setFilter('')}
+            >
+              Clear filter
+            </Button>
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center py-16 space-y-2 text-center">
+            <ClipboardList className="size-6 text-muted-foreground" />
+            <h3 className="text-xl font-semibold">No tasks in this quest</h3>
+            <p className="text-sm text-muted-foreground">
+              Add the first task or inject an ad-hoc task to begin tracking work.
+            </p>
+            <Button size="sm" className="mt-2" onClick={() => setAdHocOpen(true)}>
+              <Plus className="size-4" />
+              Inject ad-hoc task
+            </Button>
+          </div>
+        )
       ) : (
-        <div className="rounded-lg border overflow-hidden">
+        <div className="rounded-lg border overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead
-                className="cursor-pointer select-none w-[25%]"
-                onClick={() => toggleSort('title')}
-              >
-                Title{sortIndicator('title')}
+              <TableHead className="w-[25%]">
+                {sortButton('title', 'Title')}
               </TableHead>
-              <TableHead
-                className="cursor-pointer select-none w-[10%]"
-                onClick={() => toggleSort('status')}
-              >
-                Status{sortIndicator('status')}
+              <TableHead className="w-[10%]">
+                {sortButton('status', 'Status')}
               </TableHead>
-              <TableHead
-                className="cursor-pointer select-none w-[10%]"
-                onClick={() => toggleSort('priority')}
-              >
-                Priority{sortIndicator('priority')}
+              <TableHead className="w-[10%]">
+                {sortButton('priority', 'Priority')}
               </TableHead>
               <TableHead className="w-[12%]">Owner</TableHead>
-              <TableHead
-                className="cursor-pointer select-none w-[10%]"
-                onClick={() => toggleSort('due_date')}
-              >
-                Due Date{sortIndicator('due_date')}
+              <TableHead className="w-[10%]">
+                {sortButton('due_date', 'Due Date')}
               </TableHead>
               <TableHead className="hidden md:table-cell w-[12%]">Quest</TableHead>
               <TableHead className="hidden md:table-cell w-[12%]">Mission</TableHead>
@@ -177,7 +191,7 @@ export function TaskListView({
             </TableRow>
           </TableHeader>
           <TableBody>
-              {filteredAndSorted.map((task, index) => {
+              {filteredAndSorted.map((task) => {
                 const isOverdue =
                   task.due_date &&
                   !task.completed_at &&
@@ -185,7 +199,7 @@ export function TaskListView({
                 return (
                     <TableRow
                       key={task.id}
-                      className={`cursor-pointer hover:bg-muted/50 ${task.valid ? 'bg-green-500/5' : ''}`}
+                      className={`cursor-pointer hover:bg-muted/50 ${task.valid ? 'bg-[var(--status-good)]/5' : ''}`}
                       onClick={() => router.push(`/tasks/${task.id}`)}
                     >
                       <TableCell>
@@ -267,7 +281,7 @@ export function TaskListView({
                       </TableCell>
                       <TableCell className="text-xs">
                         {task.valid ? (
-                          <span className="text-green-500 font-medium">
+                          <span className="text-[var(--status-good)] font-medium">
                             {task.valid_xp} XP
                           </span>
                         ) : (
@@ -288,6 +302,8 @@ export function TaskListView({
         </Table>
         </div>
       )}
+
+      <AdHocTaskSheet open={adHocOpen} onOpenChange={setAdHocOpen} />
     </div>
   );
 }
