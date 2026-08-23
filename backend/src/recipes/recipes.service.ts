@@ -4,13 +4,35 @@ import {
   BadRequestException,
   ForbiddenException,
 } from '@nestjs/common';
-import { RecipeStatus } from '@prisma/client';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import {
+  ApprovalEntityType,
+  ApprovalScope,
+  ApprovalStatus,
+  RecipeStatus,
+  TaskDomain,
+} from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateRecipeDto } from './dto/create-recipe.dto';
 import { UpdateRecipeDto } from './dto/update-recipe.dto';
 import { CostCalculatorService } from './cost-calculator.service';
 import { AuditService } from '../audit/audit.service';
+import { ApprovalPolicyService } from '../approvals/approval-policy.service';
+import {
+  DomainEvent,
+  domainEventBase,
+  emitDomainEvent,
+  userActor,
+} from '../common/events/domain-events';
 import { convertUnit } from '../common/utils/unit-conversion';
+
+/**
+ * SPEC §4.4 — recipe approval is governed by the `(recipe, food)` policy.
+ * Recipes are Konma Food's artefact, so the domain is constant; the policy row
+ * (seeded `BACKEND_LEAD + FRONTEND_LEAD`, `mode: all`) decides who signs.
+ */
+const RECIPE_APPROVAL_SCOPE = ApprovalScope.recipe;
+const RECIPE_APPROVAL_DOMAIN = TaskDomain.food;
 
 const RECIPE_INCLUDE = {
   brand: { select: { id: true, name: true } },
@@ -63,6 +85,8 @@ export class RecipesService {
     private readonly prisma: PrismaService,
     private readonly costCalculatorService: CostCalculatorService,
     private readonly auditService: AuditService,
+    private readonly approvalPolicy: ApprovalPolicyService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async findAll(filters: {
@@ -201,9 +225,23 @@ export class RecipesService {
 
     // Status transition validation
     if (dto.status !== undefined && dto.status !== existing.status) {
+      // SPEC §4.4 — the legacy direct flip is removed. `pending → approved`
+      // happens inside ApprovalsService when the last required approval lands,
+      // never by setting the column. Answered before the generic transition
+      // error so the caller is told where the gate actually lives.
+      if (
+        existing.status === RecipeStatus.pending &&
+        dto.status === RecipeStatus.approved
+      ) {
+        throw new BadRequestException(
+          'Recipe approval is granted through the approvals queue, not by setting status. ' +
+            'Approve the pending Approval rows for this recipe instead.',
+        );
+      }
+
       const ALLOWED_TRANSITIONS: Record<RecipeStatus, RecipeStatus[]> = {
         [RecipeStatus.draft]: [RecipeStatus.pending],
-        [RecipeStatus.pending]: [RecipeStatus.approved, RecipeStatus.draft],
+        [RecipeStatus.pending]: [RecipeStatus.draft], // withdraw only
         [RecipeStatus.approved]: [RecipeStatus.archived],
         [RecipeStatus.archived]: [],
       };
@@ -217,6 +255,18 @@ export class RecipesService {
 
     const statusChanged =
       dto.status !== undefined && dto.status !== existing.status;
+    const submitted =
+      statusChanged &&
+      existing.status === RecipeStatus.draft &&
+      dto.status === RecipeStatus.pending;
+    const withdrawn =
+      statusChanged &&
+      existing.status === RecipeStatus.pending &&
+      dto.status === RecipeStatus.draft;
+    const archived =
+      statusChanged &&
+      existing.status === RecipeStatus.approved &&
+      dto.status === RecipeStatus.archived;
 
     await this.prisma.$transaction(async (tx) => {
       await tx.recipe.update({
@@ -247,6 +297,40 @@ export class RecipesService {
           }),
         },
       });
+
+      // SPEC §4.4 — submitting materialises the gate from the `(recipe, food)`
+      // policy. Every submission starts from a clean gate: `materialise` skips
+      // roles that already hold a row, so a leftover `rejected` row from the
+      // previous attempt (a rejection sends the recipe back to `draft`) would
+      // otherwise make the gate permanently unsatisfiable. The decision itself
+      // survives as the `approval.decided` AuditEvent.
+      if (submitted) {
+        await tx.approval.deleteMany({
+          where: {
+            entity_type: ApprovalEntityType.recipe,
+            entity_id: id,
+          },
+        });
+        await this.approvalPolicy.materialise(
+          tx,
+          {
+            entity_type: ApprovalEntityType.recipe,
+            entity_id: id,
+            scope: RECIPE_APPROVAL_SCOPE,
+            domain: RECIPE_APPROVAL_DOMAIN,
+          },
+          existing.node_id,
+        );
+      } else if (withdrawn) {
+        // Withdrawing releases the approvers still holding the recipe.
+        await tx.approval.deleteMany({
+          where: {
+            entity_type: ApprovalEntityType.recipe,
+            entity_id: id,
+            status: ApprovalStatus.pending,
+          },
+        });
+      }
 
       if (dto.bom_lines !== undefined) {
         // BOM upsert: delete all existing lines, then create new ones
@@ -284,8 +368,65 @@ export class RecipesService {
       }
     });
 
+    // SPEC §4.1 — emitted only after the transaction commits, and never able to
+    // fail the write (`emitDomainEvent` swallows listener errors).
+    if (archived) {
+      emitDomainEvent(this.eventEmitter, DomainEvent.RECIPE_ARCHIVED, {
+        ...domainEventBase(existing.node_id, userActor(userId)),
+        recipeId: id,
+        name: existing.name,
+        version: existing.version,
+      });
+    }
+
     await this.costCalculatorService.recalculateAndSave(id);
     return this.findOne(id);
+  }
+
+  /**
+   * The explicit `draft → pending` action (SPEC §4.4). Same path as
+   * `PATCH { status: 'pending' }` — ownership check, transition guard, gate
+   * materialisation and audit all run once, in `update`.
+   */
+  async submit(id: string, userId: string, isAdmin: boolean) {
+    return this.update(id, { status: RecipeStatus.pending }, userId, isAdmin);
+  }
+
+  /**
+   * The approval gate as the recipe page needs to render it: one row per role
+   * the `(recipe, food)` policy requires, ordered by role code so the banner is
+   * stable across refreshes.
+   */
+  async findApprovalState(id: string) {
+    const recipe = await this.prisma.recipe.findUnique({
+      where: { id },
+      select: { id: true },
+    });
+    if (!recipe) {
+      throw new NotFoundException(`Recipe with ID ${id} not found`);
+    }
+
+    return this.prisma.approval.findMany({
+      where: {
+        entity_type: ApprovalEntityType.recipe,
+        entity_id: id,
+      },
+      select: {
+        id: true,
+        required_role_code: true,
+        status: true,
+        notes: true,
+        approved_by: true,
+        approver: { select: { id: true, name: true } },
+        override_by: true,
+        override_reason: true,
+        override_at: true,
+        policy_id: true,
+        created_at: true,
+        updated_at: true,
+      },
+      orderBy: { required_role_code: 'asc' },
+    });
   }
 
   async remove(id: string) {
@@ -384,11 +525,21 @@ export class RecipesService {
         },
       });
 
-      return clone;
+      return { clone, archived: current };
     });
+
+    // The superseded version really was archived — same event the explicit
+    // `approved → archived` transition emits, so the bridge sees both paths.
+    emitDomainEvent(this.eventEmitter, DomainEvent.RECIPE_ARCHIVED, {
+      ...domainEventBase(result.archived.node_id, userActor(userId)),
+      recipeId: result.archived.id,
+      name: result.archived.name,
+      version: result.archived.version,
+    });
+
     // Recalculate cost for clone (outside tx for performance)
-    await this.costCalculatorService.recalculateAndSave(result.id);
-    return this.findOne(result.id);
+    await this.costCalculatorService.recalculateAndSave(result.clone.id);
+    return this.findOne(result.clone.id);
   }
 
   async calculateCostPreview(
