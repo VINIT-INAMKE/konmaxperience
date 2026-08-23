@@ -5,6 +5,7 @@ import { CustomerAuthModule } from '../customer-auth/customer-auth.module';
 import { ChatModule } from '../chat/chat.module';
 import { FulfilmentModule } from '../fulfilment/fulfilment.module';
 import { ShipmentsModule } from '../shipments/shipments.module';
+import { OrdersModule } from '../orders/orders.module';
 import { WebhooksController } from './webhooks.controller';
 import { WebhooksService } from './webhooks.service';
 import { ShiprocketWebhookService } from './shiprocket-webhook.service';
@@ -24,6 +25,7 @@ import { ShiprocketWebhookService } from './shiprocket-webhook.service';
     ChatModule,
     FulfilmentModule,
     ShipmentsModule,
+    OrdersModule,
   ],
   controllers: [WebhooksController],
   providers: [WebhooksService, ShiprocketWebhookService],

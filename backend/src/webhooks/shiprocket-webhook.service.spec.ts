@@ -17,6 +17,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { PusherService } from '../chat/pusher.service';
 import { ShipmentsService } from '../shipments/shipments.service';
+import { OrderLifecycleService } from '../orders/order-lifecycle.service';
 import { WhatsAppService } from '../customer-auth/whatsapp.service';
 import { DomainEvent } from '../common/events/domain-events';
 import {
@@ -122,6 +123,10 @@ describe('ShiprocketWebhookService', () => {
         { provide: PusherService, useValue: pusher },
         { provide: WhatsAppService, useValue: whatsapp },
         { provide: EventEmitter2, useValue: emitter },
+        {
+          provide: OrderLifecycleService,
+          useValue: { onDelivered: jest.fn().mockResolvedValue(0) },
+        },
       ],
     }).compile();
 

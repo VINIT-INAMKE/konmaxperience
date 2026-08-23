@@ -18,6 +18,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { PusherService } from '../chat/pusher.service';
 import { ShipmentsService } from '../shipments/shipments.service';
+import { OrderLifecycleService } from '../orders/order-lifecycle.service';
 import { WhatsAppService } from '../customer-auth/whatsapp.service';
 import { mapShiprocketStatus } from '../shipping/shipping.constants';
 import {
@@ -137,6 +138,7 @@ export class ShiprocketWebhookService {
     private readonly pusher: PusherService,
     private readonly whatsapp: WhatsAppService,
     private readonly eventEmitter: EventEmitter2,
+    private readonly lifecycle: OrderLifecycleService,
   ) {}
 
   /**
@@ -300,6 +302,10 @@ export class ShiprocketWebhookService {
       DomainEvent.ORDER_DELIVERED,
       orderDelivered,
     );
+    // p5a-15 seam: the fan-out writes Order.status directly, so the loyalty
+    // credit must be triggered explicitly. onDelivered never throws and is
+    // exactly-once on (order_id, reason).
+    await this.lifecycle.onDelivered(orderId, systemActor());
     return true;
   }
 

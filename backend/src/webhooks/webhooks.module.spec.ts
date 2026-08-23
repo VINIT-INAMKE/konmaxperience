@@ -3,6 +3,9 @@ import { ConfigModule } from '@nestjs/config';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { PrismaModule } from '../prisma/prisma.module';
 import { AuditModule } from '../audit/audit.module';
+import { NodeModule } from '../node/node.module';
+import { ApprovalPolicyModule } from '../approvals/approval-policy.module';
+import { RefundsModule } from '../refunds/refunds.module';
 import { PrismaService } from '../prisma/prisma.service';
 import { WebhooksModule } from './webhooks.module';
 import { WebhooksController } from './webhooks.controller';
@@ -26,6 +29,9 @@ describe('WebhooksModule', () => {
         PrismaModule,
         AuditModule,
         EventEmitterModule.forRoot(),
+        NodeModule,
+        ApprovalPolicyModule,
+        RefundsModule,
         WebhooksModule,
       ],
     })
