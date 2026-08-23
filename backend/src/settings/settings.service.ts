@@ -30,9 +30,25 @@ export const SETTING_DEFAULTS = {
     default_dimensions_cm: { length: 20, breadth: 15, height: 10 },
   },
   loyalty: {
+    /** Points earned per ₹100 of net order value (subtotal − discount). */
     earn_rate_per_100: 5,
+    /** Rupee value of one point at redemption — 0.25 means 4 points = ₹1. */
     redeem_value_per_point: 0.25,
+    /** Points expire this many days after they are earned. */
+    expiry_days: 365,
+    /** Hard ceiling on the share of a subtotal a redemption may cover. */
+    max_redeem_percent: 20,
     tiers: { member: 0, regular: 500, insider: 2000 },
+  },
+  reviews: {
+    /** A review at or above this rating publishes without moderation. */
+    auto_publish_min_rating: 4,
+    /** Delay between an order being delivered and its review invitation. */
+    invitation_delay_hours: 24,
+  },
+  promotions: {
+    /** When false, at most one coupon may apply to an order. */
+    allow_stacking: false,
   },
   readiness: {
     /** SPEC §4.3 — trailing window for the SALES and QUALITY formulas. */
@@ -54,6 +70,11 @@ export type SettingKey = keyof typeof SETTING_DEFAULTS;
 
 export const SETTING_KEYS = Object.keys(SETTING_DEFAULTS) as SettingKey[];
 
+/** A JSON block setting — not an array, not a scalar, not null. */
+function isBlock(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
 @Injectable()
 export class SettingsService {
   constructor(private readonly prisma: PrismaService) {}
@@ -71,8 +92,23 @@ export class SettingsService {
     key: K,
   ): Promise<(typeof SETTING_DEFAULTS)[K]> {
     this.validateKey(key);
+    const fallback = SETTING_DEFAULTS[key];
     const row = await this.prisma.systemSetting.findUnique({ where: { key } });
-    if (!row || row.value === null) return SETTING_DEFAULTS[key];
+    if (!row || row.value === null) return fallback;
+    // A block setting grows keys over time (`loyalty` gained `expiry_days` and
+    // `max_redeem_percent` in P5a), and `seed-reference.ts` deliberately never
+    // rewrites a row an operator may have edited. Layer the stored block over
+    // the declared default so a row written before a key existed still answers
+    // for it — the alternative is `undefined` reaching the money path, where
+    // the paise helpers reject it and the request 500s. Shallow by design: a
+    // nested block (`loyalty.tiers`) is replaced wholesale, not merged.
+    // `fallback` is a generic indexed access, which a type guard cannot narrow
+    // in place; widen to `unknown` first so the guard does the work.
+    const declared: unknown = fallback;
+    const stored: unknown = row.value;
+    if (isBlock(declared) && isBlock(stored)) {
+      return { ...declared, ...stored } as (typeof SETTING_DEFAULTS)[K];
+    }
     return row.value as (typeof SETTING_DEFAULTS)[K];
   }
 

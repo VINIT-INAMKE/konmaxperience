@@ -32,7 +32,16 @@ export const SEED_SETTING_DEFAULTS: typeof SETTING_DEFAULTS = {
   loyalty: {
     earn_rate_per_100: 5,
     redeem_value_per_point: 0.25,
+    expiry_days: 365,
+    max_redeem_percent: 20,
     tiers: { member: 0, regular: 500, insider: 2000 },
+  },
+  reviews: {
+    auto_publish_min_rating: 4,
+    invitation_delay_hours: 24,
+  },
+  promotions: {
+    allow_stacking: false,
   },
   readiness: {
     trailing_days: 7,
