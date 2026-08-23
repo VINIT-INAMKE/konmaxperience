@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import dynamic from 'next/dynamic';
 import { Skeleton } from '@/components/ui/skeleton';
 import { QuestProgress } from '@/components/ops/quests/QuestProgress';
+import { QuestLinkedEntities } from '@/components/ops/quests/QuestLinkedEntities';
 import { ConfirmActivateDialog } from '@/components/ops/quests/ConfirmActivateDialog';
 import { TaskListView } from '@/components/ops/tasks/TaskListView';
 import { TaskViewToggle } from '@/components/ops/tasks/TaskViewToggle';
@@ -269,6 +270,9 @@ export default function QuestDetailPage(props: {
             isAdmin={isAdmin}
           />
         )}
+
+        {/* SPEC §6.4 — the records this quest's tasks actually touched. */}
+        <QuestLinkedEntities tasks={tasks} isLoading={tasksLoading} />
 
         {/* Activate dialog */}
         <ConfirmActivateDialog

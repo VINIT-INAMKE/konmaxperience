@@ -15,6 +15,7 @@ import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { RejectionDialog } from './RejectionDialog';
+import { QuestTaskChip } from '@/components/ops/tasks/QuestTaskChip';
 import { apiClient } from '@/lib/api-client';
 import type { Evidence, EvidenceType } from '@/lib/types/evidence';
 import { getEvidenceStatusBadge, STATUS_BADGE } from '@/lib/status-styles';
@@ -223,6 +224,16 @@ export function EvidenceItem({
           </div>
         )}
       </div>
+
+      {/* SPEC §6.4 — which task this proves, and the quest that asked for it. */}
+      {evidence.task && (
+        <div className="flex pl-9">
+          <QuestTaskChip
+            quest={evidence.task.quest}
+            task={{ id: evidence.task.id, title: evidence.task.title }}
+          />
+        </div>
+      )}
 
       {evidence.approval_status === 'rejected' && evidence.notes && (
         <div className="pl-9">

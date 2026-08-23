@@ -60,7 +60,16 @@ export interface EvidenceFeedEntry {
   source?: EvidenceSource;
   /** The bridge event that produced this evidence, when `source === 'bridge'`. */
   bridge_event?: string | null;
-  task?: { title: string };
+  /**
+   * `quest` feeds the SPEC §6.4 lineage chip. `GET /evidence/feed` selects only
+   * `title` today, so the chip renders nothing until that `include` grows —
+   * which is why both extra members are optional rather than required.
+   */
+  task?: {
+    id?: string;
+    title: string;
+    quest?: { id: string; title: string } | null;
+  };
   uploader?: { id: string; name: string };
 }
 

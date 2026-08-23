@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { DecisionStatusBadge } from './DecisionStatusBadge';
 import { DecisionTypeBadge } from './DecisionTypeBadge';
+import { QuestTaskChip } from '@/components/ops/tasks/QuestTaskChip';
 import type { Decision } from '@/lib/types/decisions';
 import { GOVERNANCE_TIER_SHORT_LABELS } from '@/lib/types/decisions';
 
@@ -83,11 +84,15 @@ export function DecisionCard({
             {decision.linked_mission.title}
           </Badge>
         )}
+        {/* SPEC §6.4 — the decision's task lineage, deep-linked rather than
+            reprinted as a dead label. Stops the click from toggling the card. */}
         {decision.linked_task && (
-          <Badge variant="outline" className="gap-1 text-xs">
-            <ExternalLink className="size-3" aria-hidden="true" />
-            {decision.linked_task.title}
-          </Badge>
+          <span
+            className="inline-flex max-w-[220px]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <QuestTaskChip task={decision.linked_task} />
+          </span>
         )}
         <div className="flex items-center gap-1.5">
           <Avatar className="size-5">

@@ -19,7 +19,7 @@ import {
 } from '@/components/ops/readiness/meter-tone';
 import { TodaysFocusSection } from './TodaysFocusSection';
 import { NudgesPanel } from './NudgesPanel';
-import { selectRoleMeters } from './role-meters';
+import { selectRoleMeters } from '@/lib/nav/meters';
 import { apiClient } from '@/lib/api-client';
 import { optionalGet, unwrapList, type MaybePaginated } from '@/lib/api/optional';
 import { P31 } from '@/lib/api/phase31';

@@ -7,6 +7,8 @@ import { CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { MeterChip } from '@/components/ops/tasks/MeterChip';
+import { QuestTaskChip } from '@/components/ops/tasks/QuestTaskChip';
 import { useAuthStore } from '@/lib/stores/auth-store';
 
 interface FocusTask {
@@ -19,6 +21,10 @@ interface FocusTask {
   priority: string;
   quest_id: string | null;
   quest?: { id: string; title: string } | null;
+  /** SPEC §6.5 — "my meter contributions", read straight off the task row. */
+  readiness_meter_id?: string | null;
+  readiness_meter?: { id: string; name: string } | null;
+  readiness_value?: number | null;
 }
 
 interface TodaysFocusSectionProps {
@@ -145,10 +151,24 @@ export function TodaysFocusSection({
                   <span className="min-w-0 flex-1 truncate text-sm text-ink">
                     {task.title}
                   </span>
+                  {/* SPEC §6.4 — the quest this row answers to. The whole row is
+                      one anchor already, so the chip renders unlinked. */}
                   {task.quest && (
-                    <span className="hidden max-w-[140px] shrink-0 truncate text-xs text-ink-muted sm:inline">
-                      {task.quest.title}
-                    </span>
+                    <QuestTaskChip
+                      quest={task.quest}
+                      linkify={false}
+                      className="hidden max-w-[140px] shrink-0 sm:inline-flex"
+                    />
+                  )}
+                  {/* …and the meter it moves when it validates. */}
+                  {task.readiness_meter_id && (
+                    <MeterChip
+                      meterId={task.readiness_meter_id}
+                      meterLabel={task.readiness_meter?.name}
+                      value={task.readiness_value}
+                      linkify={false}
+                      className="hidden max-w-[140px] shrink-0 md:inline-flex"
+                    />
                   )}
                   {task.due_date && (
                     <span
