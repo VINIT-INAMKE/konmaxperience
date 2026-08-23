@@ -6,17 +6,22 @@ import {
   Delete,
   Body,
   Param,
+  ParseUUIDPipe,
   Req,
   Header,
   UseGuards,
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { CustomerGuard } from '../customer-auth/guards/customer.guard';
-import { CustomerOrdersService, CartData } from './customer-orders.service';
+import {
+  CustomerOrdersService,
+  PricedCartData,
+} from './customer-orders.service';
 import { CreateAddressDto } from './dto/create-address.dto';
 import { UpdateAddressDto } from './dto/update-address.dto';
 import { SyncCartDto } from './dto/sync-cart.dto';
 import { ConfirmOrderDto } from './dto/confirm-order.dto';
+import { CreateOrderFromQuoteDto } from './dto/create-order-from-quote.dto';
 import { Public } from '../common/decorators/public.decorator';
 
 @Controller('customer')
@@ -32,25 +37,18 @@ export class CustomerOrdersController {
   // Cart endpoints
   // ---------------------------------------------------------------
 
+  /** CHK-01 — re-priced from the database on every read; never the client's cached price. */
   @Get('cart')
-  async getCart(@Req() req: any): Promise<CartData> {
+  async getCart(@Req() req: any): Promise<PricedCartData> {
     const customerId: string = req.user.customerId;
-    const cart = await this.customerOrdersService.getCart(customerId);
-    return (
-      cart ?? {
-        items: [],
-        channel: null,
-        deliveryAddressId: null,
-        updatedAt: new Date().toISOString(),
-      }
-    );
+    return this.customerOrdersService.getPricedCart(customerId);
   }
 
   @Post('cart/sync')
   async syncCart(
     @Req() req: any,
     @Body() dto: SyncCartDto,
-  ): Promise<CartData> {
+  ): Promise<PricedCartData> {
     const customerId: string = req.user.customerId;
     return this.customerOrdersService.syncCart(customerId, dto);
   }
@@ -66,11 +64,16 @@ export class CustomerOrdersController {
   // Order endpoints
   // ---------------------------------------------------------------
 
+  /**
+   * CHK-03 — **breaking change**: this used to take an empty body and re-derive
+   * the price from the cart. It now takes the `quote_id` of a frozen quote from
+   * `POST /customer/checkout/quote`; an empty body is a `400`.
+   */
   @Post('orders')
   @Throttle({ default: { limit: 5, ttl: 60000 } })
-  async checkoutCart(@Req() req: any) {
+  async createOrder(@Req() req: any, @Body() dto: CreateOrderFromQuoteDto) {
     const customerId: string = req.user.customerId;
-    return this.customerOrdersService.checkoutCart(customerId);
+    return this.customerOrdersService.createOrderFromQuote(customerId, dto);
   }
 
   @Post('orders/confirm')
@@ -92,6 +95,16 @@ export class CustomerOrdersController {
   async getOrderReceipt(@Req() req: any, @Param('id') id: string) {
     const customerId: string = req.user.customerId;
     return this.customerOrdersService.generateOrderReceipt(customerId, id);
+  }
+
+  /** SHIP-05 — `null` when the order has no shipped lines. Also before `:id`. */
+  @Get('orders/:id/shipment')
+  async getOrderShipment(
+    @Req() req: any,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    const customerId: string = req.user.customerId;
+    return this.customerOrdersService.getOrderShipment(customerId, id);
   }
 
   @Get('orders/:id')

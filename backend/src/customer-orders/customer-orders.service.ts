@@ -1,29 +1,41 @@
 import {
   Injectable,
   NotFoundException,
+  GoneException,
   BadRequestException,
   ForbiddenException,
   ConflictException,
   ServiceUnavailableException,
 } from '@nestjs/common';
 import {
+  FulfilmentType,
   OrderChannel,
   OrderSource,
   OrderStatus,
-  ProductStatus,
+  ProductType,
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../customer-auth/redis.service';
 import { RazorpayService } from '../razorpay/razorpay.service';
 import { PusherService } from '../chat/pusher.service';
 import {
+  ConfirmPaidOrderInput,
   FulfilmentService,
   PendingOrderData,
 } from '../fulfilment/fulfilment.service';
+import { CartPricingService } from '../checkout/cart-pricing.service';
+import type {
+  PendingOrderV2,
+  PricedCart,
+  PricedLine,
+  StoredQuote,
+} from '../checkout/quote.types';
+import { toDecimal, type Paise } from '../common/money/money';
 import { CreateAddressDto } from './dto/create-address.dto';
 import { UpdateAddressDto } from './dto/update-address.dto';
 import { SyncCartDto } from './dto/sync-cart.dto';
 import { ConfirmOrderDto } from './dto/confirm-order.dto';
+import { CreateOrderFromQuoteDto } from './dto/create-order-from-quote.dto';
 import { renderOrderReceipt, renderBookingReceipt } from './receipt.template';
 import { NodeService } from '../node/node.service';
 
@@ -44,6 +56,48 @@ export interface CartData {
   updatedAt: string;
 }
 
+/**
+ * One cart line as the storefront now receives it (`CHK-01`).
+ *
+ * `unitPrice` is the **server** price in rupees, not the one the client cached;
+ * `fulfilment` is derived from `Product.fulfilment`; `available` is false for a
+ * line that could not be priced, and `unavailable_reason` carries the message to
+ * show next to it.
+ */
+export interface PricedCartItem {
+  productId: string;
+  variantId: string | null;
+  name: string;
+  quantity: number;
+  unitPrice: number;
+  imageUrl: string | null;
+  fulfilment: FulfilmentType | null;
+  available: boolean;
+  unavailable_reason: string | null;
+}
+
+/** `GET /customer/cart` and `POST /customer/cart/sync` — the cart plus server totals. */
+export interface PricedCartData {
+  items: PricedCartItem[];
+  channel: OrderChannel | null;
+  deliveryAddressId: string | null;
+  updatedAt: string;
+  /** Rupees. `subtotal` is tax-inclusive and `tax_total` is contained in it (decision 1). */
+  totals: { subtotal: number; tax_total: number };
+}
+
+/** `POST /customer/orders` — everything Razorpay Checkout needs to open. */
+export interface CreateOrderFromQuoteResponse {
+  razorpay_order_id: string;
+  /** **Paise** — Razorpay's own unit, copied verbatim from the frozen quote. */
+  amount: Paise;
+  currency: 'INR';
+  /** The publishable key, so the storefront need not carry it in its own env. */
+  key_id: string | null;
+  /** Echoed back so a client can correlate the payment with the quote it accepted. */
+  quote_id: string;
+}
+
 /** The only channels a marketplace (customer app) cart may check out on — D-04. */
 const CHECKOUT_CHANNELS: OrderChannel[] = [
   OrderChannel.takeaway,
@@ -52,6 +106,104 @@ const CHECKOUT_CHANNELS: OrderChannel[] = [
 
 const CART_TTL = 604800; // 7 days in seconds
 const PENDING_ORDER_TTL = 1800; // 30 minutes
+
+/** Integer paise -> the rupee number the API contract puts on the wire. */
+function rupees(paise: Paise): number {
+  return toDecimal(paise).toNumber();
+}
+
+/**
+ * A quote (`StoredQuote`) minus the two fields that only make sense while it is
+ * still a quote, plus the payment identity — that is exactly `PendingOrderV2`.
+ */
+export function toPendingOrder(
+  quote: StoredQuote,
+  razorpayOrderId: string,
+  idempotencyKey: string,
+): PendingOrderV2 {
+  const { quote_id: _quoteId, expires_at: _expiresAt, ...frozen } = quote;
+  return {
+    ...frozen,
+    v: 2,
+    razorpay_order_id: razorpayOrderId,
+    idempotency_key: idempotencyKey,
+  };
+}
+
+/**
+ * Reads either pending-order shape (decision 5).
+ *
+ * A payload with no `v` was written by the pre-P5a `checkoutCart` and is upgraded
+ * in memory: rupee floats become paise, every line routes `local`, and discount,
+ * shipping, tax and loyalty are zero. The 30-minute TTL means at most one deploy
+ * window of these exists, but dropping them would strand a paid customer.
+ */
+export function upgradePending(raw: string): PendingOrderV2 {
+  const parsed = JSON.parse(raw) as PendingOrderV2 | PendingOrderData;
+  if ((parsed as PendingOrderV2).v === 2) return parsed as PendingOrderV2;
+
+  const v1 = parsed as PendingOrderData;
+  const lines: PricedLine[] = (v1.cart?.items ?? []).map((item) => {
+    const unitPrice = Math.round(item.unitPrice * 100);
+    return {
+      product_id: item.productId,
+      variant_id: item.variantId ?? null,
+      name: item.name,
+      sku: null,
+      quantity: item.quantity,
+      type: ProductType.prepared_food,
+      fulfilment: FulfilmentType.local,
+      unit_price: unitPrice,
+      gross: unitPrice * item.quantity,
+      tax_rate: '0.00',
+      tax: 0,
+      weight_grams: 0,
+      hsn_code: null,
+      available: true,
+      unavailable_reason: null,
+      event_id: null,
+    };
+  });
+
+  return {
+    v: 2,
+    razorpay_order_id: '',
+    idempotency_key: '',
+    customer_id: v1.customerId,
+    created_at: new Date().toISOString(),
+    channel: v1.channel,
+    delivery_address_id: v1.deliveryAddressId,
+    pickup: false,
+    lines,
+    holds: [],
+    subtotal: Math.round(v1.subtotal * 100),
+    discount_amount: 0,
+    coupon: null,
+    shipping_amount: 0,
+    shipping: null,
+    tax_amount: 0,
+    tax_breakup: [],
+    loyalty_points_redeemed: 0,
+    loyalty_redeem_amount: 0,
+    loyalty_points_earned_estimate: 0,
+    total: Math.round(v1.total * 100),
+  };
+}
+
+/**
+ * Hands a `PendingOrderV2` to `FulfilmentService`.
+ *
+ * P5a Task 10 widens `ConfirmPaidOrderInput['pending']` to `PendingOrderV2`; until
+ * that lands, `FulfilmentService` still declares the v1 shape and the two are
+ * structurally unrelated. Writing the cast against `ConfirmPaidOrderInput['pending']`
+ * rather than a hard-coded type means this function needs no edit when Task 10
+ * merges — it simply becomes an identity.
+ */
+function pendingForFulfilment(
+  pending: PendingOrderV2,
+): ConfirmPaidOrderInput['pending'] {
+  return pending as unknown as ConfirmPaidOrderInput['pending'];
+}
 
 @Injectable()
 export class CustomerOrdersService {
@@ -62,6 +214,7 @@ export class CustomerOrdersService {
     private readonly razorpayService: RazorpayService,
     private readonly pusherService: PusherService,
     private readonly fulfilmentService: FulfilmentService,
+    private readonly pricing: CartPricingService,
   ) {}
 
   // ---------------------------------------------------------------
@@ -107,10 +260,97 @@ export class CustomerOrdersService {
     await redis.del(this.cartKey(customerId));
   }
 
+  /**
+   * `GET /customer/cart` (`CHK-01`) — the stored cart, re-priced from the
+   * database on every read so the storefront can never render a stale price.
+   */
+  async getPricedCart(customerId: string): Promise<PricedCartData> {
+    const cart = await this.getCart(customerId);
+    return this.priceCart(
+      cart ?? {
+        items: [],
+        channel: null,
+        deliveryAddressId: null,
+        updatedAt: new Date().toISOString(),
+      },
+    );
+  }
+
+  /**
+   * Re-prices a cart through `CartPricingService` and folds the answer back into
+   * the cart shape the storefront already renders (`CHK-01`).
+   *
+   * Matching a stored line to its priced line is not a plain key lookup: when the
+   * client sends no `variantId` the pricer resolves the product's *default*
+   * variant, so the priced line carries a variant id the cart line does not have.
+   * Each priced line is therefore claimed at most once — exact product+variant
+   * first, then product-only — which also keeps two identical cart lines from
+   * both claiming the same price.
+   */
+  private async priceCart(cart: CartData): Promise<PricedCartData> {
+    const priced = await this.pricing.price(
+      cart.items,
+      cart.channel ?? OrderChannel.delivery,
+    );
+
+    const pool = priced.lines.map((line) => ({ line, claimed: false }));
+    const claim = (
+      productId: string,
+      variantId: string | null,
+    ): PricedLine | null => {
+      const exact = pool.find(
+        (entry) =>
+          !entry.claimed &&
+          entry.line.product_id === productId &&
+          (entry.line.variant_id ?? null) === variantId,
+      );
+      const hit =
+        exact ??
+        pool.find(
+          (entry) => !entry.claimed && entry.line.product_id === productId,
+        );
+      if (!hit) return null;
+      hit.claimed = true;
+      return hit.line;
+    };
+
+    const items: PricedCartItem[] = cart.items.map((item) => {
+      const variantId = item.variantId ?? null;
+      const line = claim(item.productId, variantId);
+      // A rejection is matched on the product alone: several of the rejection
+      // branches never learn which variant the client asked for.
+      const rejection = line
+        ? undefined
+        : priced.rejected.find((r) => r.product_id === item.productId);
+      return {
+        productId: item.productId,
+        variantId: line?.variant_id ?? variantId,
+        name: line?.name ?? item.name,
+        quantity: item.quantity,
+        unitPrice: line ? rupees(line.unit_price) : item.unitPrice,
+        imageUrl: item.imageUrl ?? null,
+        fulfilment: line?.fulfilment ?? null,
+        available: Boolean(line),
+        unavailable_reason: rejection?.reason ?? null,
+      };
+    });
+
+    return {
+      items,
+      channel: cart.channel,
+      deliveryAddressId: cart.deliveryAddressId,
+      updatedAt: cart.updatedAt,
+      totals: {
+        subtotal: rupees(priced.subtotal),
+        tax_total: rupees(priced.tax_total),
+      },
+    };
+  }
+
   async syncCart(
     customerId: string,
     localCart: SyncCartDto,
-  ): Promise<CartData> {
+  ): Promise<PricedCartData> {
     const existing = await this.getCart(customerId);
 
     let merged: CartData;
@@ -163,150 +403,163 @@ export class CustomerOrdersService {
     }
 
     await this.setCart(customerId, merged);
-    return merged;
+    // The merge decides *what* is in the cart; the database decides what it costs.
+    return this.priceCart(merged);
   }
 
   // ---------------------------------------------------------------
-  // Serviceability Check (D-16)
+  // Checkout — Create a Razorpay order from a frozen quote (CHK-03)
   // ---------------------------------------------------------------
 
-  isServiceable(pincode: string): boolean {
-    const pincodes = (process.env.DELIVERY_PINCODES || '')
-      .split(',')
-      .map((p) => p.trim())
-      .filter(Boolean);
-    if (pincodes.length === 0) return true; // no restriction if env not set
-    return pincodes.includes(pincode);
+  /** Redis `quote:{customerId}:{quoteId}` — written by `CheckoutService.quote`, TTL 15 min. */
+  quoteKey(customerId: string, quoteId: string): string {
+    return `quote:${customerId}:${quoteId}`;
   }
 
-  // ---------------------------------------------------------------
-  // Checkout — Create Razorpay Order from Cart (D-09)
-  // ---------------------------------------------------------------
+  /**
+   * Loads the quote the customer accepted.
+   *
+   * A quote is a *stored artefact*, never a recomputation (decision 4): the
+   * numbers the customer saw are the numbers that get charged. The key carries
+   * the customer id, so another customer's quote id simply does not resolve.
+   *
+   * `404` when the quote is gone (never issued, already spent, or its TTL
+   * reaped it); `410` when the payload is still in Redis but its own
+   * `expires_at` has passed — a stale record must never be honoured just
+   * because the TTL has not caught up.
+   */
+  async readQuote(customerId: string, quoteId: string): Promise<StoredQuote> {
+    const raw = await this.requireRedis().get(
+      this.quoteKey(customerId, quoteId),
+    );
+    if (!raw) {
+      throw new NotFoundException(
+        'Your quote expired — please review your cart again',
+      );
+    }
+    const quote = JSON.parse(raw) as StoredQuote;
+    if (Date.parse(quote.expires_at) <= Date.now()) {
+      throw new GoneException(
+        'Your quote expired — please review your cart again',
+      );
+    }
+    return quote;
+  }
 
-  async checkoutCart(
+  /**
+   * `POST /customer/orders` (`CHK-03`).
+   *
+   * The float arithmetic this replaced re-derived the price at pay time, so a
+   * catalog edit between "review order" and "pay" silently changed the amount.
+   * Now the frozen quote is the price: the cart is re-priced only to *refuse*
+   * the payment if anything moved, never to change what is charged.
+   */
+  async createOrderFromQuote(
     customerId: string,
-  ): Promise<{ razorpay_order_id: string }> {
-    // 1. Read cart from Redis
-    const cart = await this.getCart(customerId);
-    if (!cart || cart.items.length === 0) {
-      throw new BadRequestException('Cart is empty');
+    dto: CreateOrderFromQuoteDto,
+  ): Promise<CreateOrderFromQuoteResponse> {
+    // Redis must be reachable BEFORE a Razorpay order exists — otherwise the
+    // pending record is lost and the payment can never be confirmed.
+    const redis = this.requireRedis();
+
+    // 1. The frozen quote (404 gone / 410 expired).
+    const quote = await this.readQuote(customerId, dto.quote_id);
+    if (quote.customer_id !== customerId) {
+      throw new ForbiddenException('Quote does not belong to this customer');
     }
 
-    // 2. Validate channel is set (D-04: takeaway or delivery only)
-    if (!cart.channel || !CHECKOUT_CHANNELS.includes(cart.channel)) {
+    // 2. D-04: a marketplace order is takeaway or delivery, never a POS channel.
+    if (!CHECKOUT_CHANNELS.includes(quote.channel)) {
       throw new BadRequestException(
         'Please select a channel (takeaway or delivery)',
       );
     }
+    if (quote.lines.length === 0) {
+      throw new BadRequestException('Cart is empty');
+    }
+    if (quote.total <= 0) {
+      throw new BadRequestException(
+        'This order has nothing left to pay — please review your cart',
+      );
+    }
 
-    // 3. If delivery, validate pincode serviceability
-    if (cart.channel === OrderChannel.delivery) {
-      if (!cart.deliveryAddressId) {
-        throw new BadRequestException('Please select a delivery address');
-      }
-      const address = await this.prisma.customerAddress.findFirst({
-        where: { id: cart.deliveryAddressId, customer_id: customerId },
-      });
-      if (!address) {
-        throw new BadRequestException('Delivery address not found');
-      }
-      if (!this.isServiceable(address.pincode)) {
+    // 3. Re-validate: prices, availability and stock can have moved in 15 minutes.
+    const cart = await this.getCart(customerId);
+    const reprice = await this.pricing.price(cart?.items ?? [], quote.channel);
+    this.assertQuoteStillValid(quote, reprice);
+
+    // 4. Razorpay order for the **quoted** total, already in paise — no float anywhere.
+    const rzpOrder = await this.razorpayService.createOrder({
+      amount: quote.total,
+      receipt: `mkt_${customerId.slice(0, 8)}_${Date.now()}`,
+      notes: { type: 'marketplace', entity_id: customerId },
+    });
+
+    // 5. Freeze the quote into the pending record (30 min TTL, unchanged contract).
+    const pending = toPendingOrder(
+      quote,
+      rzpOrder.id,
+      dto.idempotency_key ?? dto.quote_id,
+    );
+    await redis.set(
+      `pending_order:${rzpOrder.id}`,
+      JSON.stringify(pending),
+      'EX',
+      PENDING_ORDER_TTL,
+    );
+    // 6. The quote is spent. Re-quoting is cheap; paying twice off one quote is not.
+    await redis.del(this.quoteKey(customerId, dto.quote_id));
+
+    return {
+      razorpay_order_id: rzpOrder.id,
+      amount: quote.total,
+      currency: 'INR',
+      key_id: process.env.RAZORPAY_KEY_ID || null,
+      quote_id: dto.quote_id,
+    };
+  }
+
+  /**
+   * A quote is honoured only if every line is still available at the same unit
+   * price. Anything else sends the customer back to the cart rather than
+   * charging a stale total.
+   */
+  private assertQuoteStillValid(quote: StoredQuote, reprice: PricedCart): void {
+    const now = new Map(
+      reprice.lines.map((l) => [`${l.product_id}:${l.variant_id ?? ''}`, l]),
+    );
+    for (const line of quote.lines) {
+      const current = now.get(`${line.product_id}:${line.variant_id ?? ''}`);
+      if (!current) {
         throw new BadRequestException(
-          "Sorry, we don't deliver to this pincode yet",
+          `"${line.name}" is no longer available — please review your cart`,
+        );
+      }
+      if (current.unit_price !== line.unit_price) {
+        throw new BadRequestException(
+          `The price of "${line.name}" changed — please review your cart`,
+        );
+      }
+      if (current.quantity < line.quantity) {
+        throw new BadRequestException(
+          `Only ${current.quantity} of "${line.name}" left — please review your cart`,
         );
       }
     }
+  }
 
-    // 4. Server-side price validation — fetch published products only.
-    //    `Product.status = active` is the successor of the old available+status pair.
-    const productIds = cart.items.map((i) => i.productId);
-    const products = await this.prisma.product.findMany({
-      where: {
-        id: { in: productIds },
-        status: ProductStatus.active,
-      },
-      select: { id: true, base_price: true },
-    });
-
-    const priceMap = new Map(products.map((p) => [p.id, Number(p.base_price)]));
-
-    // Check all items are still available
-    for (const item of cart.items) {
-      if (!priceMap.has(item.productId)) {
-        throw new BadRequestException(
-          `Item "${item.name}" is no longer available`,
-        );
-      }
-    }
-
-    // 5. Calculate subtotal from SERVER prices (never trust cart prices)
-    const subtotal = cart.items.reduce((sum, item) => {
-      const serverPrice = priceMap.get(item.productId)!;
-      return sum + serverPrice * item.quantity;
-    }, 0);
-
-    // 6. Look up channel modifier
-    const modifier = await this.prisma.channelModifier.findFirst({
-      where: { channel: cart.channel, status: 'active' },
-    });
-
-    let modifierAmount = 0;
-    if (modifier) {
-      if (modifier.modifier_type === 'fixed') {
-        modifierAmount = Number(modifier.modifier_value);
-      } else if (modifier.modifier_type === 'percentage') {
-        modifierAmount = (subtotal * Number(modifier.modifier_value)) / 100;
-      }
-    }
-
-    // 7. Calculate total
-    const total = subtotal + modifierAmount;
-
-    // 8. Convert to paise
-    const amountInPaise = Math.round(total * 100);
-
-    // 9. Redis must be reachable BEFORE we create a Razorpay order — otherwise the
-    //    pending-order record is lost and the payment can never be confirmed.
+  /**
+   * The checkout path fails closed: without Redis a pending order cannot be
+   * written, so no Razorpay order may be created.
+   */
+  private requireRedis() {
     const redis = this.redisService.getClient();
     if (!redis) {
       throw new ServiceUnavailableException(
         'Checkout is temporarily unavailable. Please try again in a moment.',
       );
     }
-
-    // 10. Create Razorpay order
-    const rzpOrder = await this.razorpayService.createOrder({
-      amount: amountInPaise,
-      receipt: `mkt_${customerId.slice(0, 8)}_${Date.now()}`,
-      notes: { type: 'marketplace', entity_id: customerId },
-    });
-
-    // 11. Store pending order data in Redis with 30-min TTL (server-validated prices)
-    const validatedItems = cart.items.map((item) => ({
-      productId: item.productId,
-      variantId: item.variantId ?? null,
-      name: item.name,
-      quantity: item.quantity,
-      unitPrice: priceMap.get(item.productId)!,
-      imageUrl: item.imageUrl,
-    }));
-    await redis.set(
-      `pending_order:${rzpOrder.id}`,
-      JSON.stringify({
-        customerId,
-        cart: { ...cart, items: validatedItems },
-        subtotal,
-        modifierAmount,
-        total,
-        channel: cart.channel,
-        deliveryAddressId: cart.deliveryAddressId,
-      }),
-      'EX',
-      PENDING_ORDER_TTL,
-    );
-
-    // 12. Return Razorpay order ID
-    return { razorpay_order_id: rzpOrder.id };
+    return redis;
   }
 
   // ---------------------------------------------------------------
@@ -335,10 +588,11 @@ export class CustomerOrdersService {
         'Order session expired or not found. Please try again.',
       );
     }
-    const pending = JSON.parse(pendingRaw) as PendingOrderData;
+    // Either shape parses; a pre-P5a payload is upgraded to v2 in memory.
+    const pending = upgradePending(pendingRaw);
 
     // 2. Verify customerId matches
-    if (pending.customerId !== customerId) {
+    if (pending.customer_id !== customerId) {
       throw new ForbiddenException('Order does not belong to this customer');
     }
 
@@ -362,8 +616,9 @@ export class CustomerOrdersService {
       );
     }
 
-    // 5. Verify amount matches
-    if (Number(payment.amount) !== Math.round(pending.total * 100)) {
+    // 5. Verify amount matches. Both sides are already integer paise, so the
+    //    `Math.round(total * 100)` float step this replaced is gone.
+    if (Number(payment.amount) !== pending.total) {
       throw new BadRequestException('Payment amount mismatch');
     }
 
@@ -387,7 +642,10 @@ export class CustomerOrdersService {
         customerId,
         razorpayOrderId: dto.razorpay_order_id,
         razorpayPaymentId: dto.razorpay_payment_id,
-        pending,
+        pending: pendingForFulfilment({
+          ...pending,
+          razorpay_order_id: dto.razorpay_order_id,
+        }),
         placedVia: OrderSource.storefront,
       });
     } catch (err) {
@@ -439,6 +697,31 @@ export class CustomerOrdersService {
     }
 
     return order;
+  }
+
+  /**
+   * `GET /customer/orders/:id/shipment` (`SHIP-05`).
+   *
+   * One shipment per order (decision 8), covering every `shipped` line. Returns
+   * `null` — not a 404 — when the order has no shipped lines: "this order is not
+   * a parcel" is a normal answer, and the storefront renders nothing.
+   */
+  async getOrderShipment(customerId: string, orderId: string) {
+    const order = await this.prisma.order.findUnique({
+      where: { id: orderId },
+      select: { id: true, customer_id: true },
+    });
+    if (!order) {
+      throw new NotFoundException('Order not found');
+    }
+    if (order.customer_id !== customerId) {
+      throw new ForbiddenException('You do not have access to this order');
+    }
+
+    return this.prisma.shipment.findUnique({
+      where: { order_id: orderId },
+      include: { events: { orderBy: { occurred_at: 'desc' } } },
+    });
   }
 
   // ---------------------------------------------------------------
@@ -518,6 +801,9 @@ export class CustomerOrdersService {
       created_at: order.created_at,
       subtotal: Number(order.subtotal),
       channel_modifier_amount: Number(order.channel_modifier_amount),
+      discount_amount: Number(order.discount_amount),
+      shipping_amount: Number(order.shipping_amount),
+      tax_amount: Number(order.tax_amount),
       total: Number(order.total),
       delivery_address: order.delivery_address,
       items: order.items.map((item) => ({
