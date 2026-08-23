@@ -49,6 +49,8 @@ import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import type { Evidence } from '@/lib/types/evidence';
 import type { Decision } from '@/lib/types/decisions';
+import type { SystemSetting } from '@/lib/types/settings';
+import { readSetting } from '@/lib/types/settings';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -190,12 +192,15 @@ export function Sidebar({ onNavigate }: SidebarProps = {}) {
   const { data: leaderboardSetting } = useQuery({
     queryKey: ['settings', 'leaderboard_enabled'],
     queryFn: () =>
-      apiClient.get<{ key: string; value: string }>('/settings/leaderboard_enabled'),
+      apiClient.get<SystemSetting<'leaderboard_enabled'>>('/settings/leaderboard_enabled'),
     enabled: isAdminOrTech,
     retry: false,
   });
-  // Default to true — leaderboard shows unless admin explicitly disabled it
-  const leaderboardEnabled = isAdminOrTech ? leaderboardSetting?.value !== 'false' : true;
+  // `SystemSetting.value` is a Json column, so this is a real boolean.
+  // Default to true — leaderboard shows unless admin explicitly disabled it.
+  const leaderboardEnabled = isAdminOrTech
+    ? readSetting('leaderboard_enabled', leaderboardSetting)
+    : true;
 
   // Helper: check if user has a permission
   const can = (perm: string) => permissions.includes(perm);

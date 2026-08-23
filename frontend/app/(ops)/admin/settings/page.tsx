@@ -16,11 +16,8 @@ import {
 } from '@/components/ui/dialog';
 import { apiClient } from '@/lib/api-client';
 import { Label } from '@/components/ui/label';
-
-interface SettingResponse {
-  key: string;
-  value: string;
-}
+import type { SystemSetting, UpdateSettingPayload } from '@/lib/types/settings';
+import { readSetting } from '@/lib/types/settings';
 
 export default function AdminSettingsPage() {
   const queryClient = useQueryClient();
@@ -31,14 +28,19 @@ export default function AdminSettingsPage() {
     isLoading,
   } = useQuery({
     queryKey: ['settings', 'leaderboard_enabled'],
-    queryFn: () => apiClient.get<SettingResponse>('/settings/leaderboard_enabled'),
+    queryFn: () =>
+      apiClient.get<SystemSetting<'leaderboard_enabled'>>('/settings/leaderboard_enabled'),
   });
 
-  const isEnabled = setting?.value === 'true';
+  // `SystemSetting.value` is a Json column — the boolean arrives (and must be
+  // sent back) as a real JSON boolean, never as the string 'true'.
+  const isEnabled = readSetting('leaderboard_enabled', setting);
 
   const mutation = useMutation({
-    mutationFn: (value: boolean) =>
-      apiClient.patch('/settings/leaderboard_enabled', { value: String(value) }),
+    mutationFn: (value: boolean) => {
+      const body: UpdateSettingPayload<'leaderboard_enabled'> = { value };
+      return apiClient.patch('/settings/leaderboard_enabled', body);
+    },
     onSuccess: (_data, value) => {
       queryClient.invalidateQueries({ queryKey: ['settings', 'leaderboard_enabled'] });
       queryClient.invalidateQueries({ queryKey: ['leaderboard'] });
