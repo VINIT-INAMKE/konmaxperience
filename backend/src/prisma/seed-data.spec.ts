@@ -32,9 +32,18 @@ import {
   DEMO_PRODUCT_CATEGORIES,
   DEMO_RECIPES,
 } from '../../prisma/seed-data/demo-catalog';
+import { SYSTEM_ACTOR } from '../../prisma/seed-data/system-actor';
 import { RoleCode } from '../types/roles';
 import { Permission } from '../types/permissions';
 import { SETTING_DEFAULTS, SETTING_KEYS } from '../settings/settings.service';
+import {
+  SYSTEM_ROLE_CODE,
+  SYSTEM_USER_EMAIL,
+  SYSTEM_USER_ID,
+  SYSTEM_USER_NAME,
+  SYSTEM_USER_PASSWORD_HASH,
+  SYSTEM_USER_STATUS,
+} from '../common/constants/system-actor';
 
 const ROLE_CODES = Object.values(RoleCode) as string[];
 
@@ -254,6 +263,49 @@ describe('seed-data: system settings', () => {
     expect(typeof SEED_SETTING_DEFAULTS.xp_rules).toBe('object');
     expect(typeof SEED_SETTING_DEFAULTS.shipping).toBe('object');
     expect(typeof SEED_SETTING_DEFAULTS.loyalty).toBe('object');
+  });
+
+  it('mirrors the SPEC §4.3 readiness block exactly', () => {
+    expect(SEED_SETTING_DEFAULTS.readiness).toEqual(SETTING_DEFAULTS.readiness);
+  });
+});
+
+describe('seed-data: system actor (SPEC §4.2)', () => {
+  it('seeds the fixed id the bridge writes evidence with', () => {
+    expect(SYSTEM_ACTOR.user.id).toBe(SYSTEM_USER_ID);
+    expect(SYSTEM_ACTOR.user.email).toBe(SYSTEM_USER_EMAIL);
+    expect(SYSTEM_ACTOR.user.name).toBe(SYSTEM_USER_NAME);
+    expect(SYSTEM_ACTOR.role.code).toBe(SYSTEM_ROLE_CODE);
+  });
+
+  it('gives the SYSTEM role zero permissions', () => {
+    // A permission creeping onto the bridge account is exactly the failure
+    // this catches: it holds an identity, never authority.
+    expect(SYSTEM_ACTOR.role.permissions).toHaveLength(0);
+  });
+
+  it('cannot log in — inactive status and a hash bcrypt can never match', () => {
+    expect(SYSTEM_ACTOR.user.status).toBe(SYSTEM_USER_STATUS);
+    expect(SYSTEM_ACTOR.user.status).not.toBe('active');
+    expect(SYSTEM_ACTOR.user.password_hash).toBe(SYSTEM_USER_PASSWORD_HASH);
+    expect(SYSTEM_ACTOR.user.password_hash).not.toMatch(/^\$2[aby]\$/);
+  });
+
+  it('is kept out of ROLE_SEEDS, which drives demo logins', () => {
+    expect(ROLE_SEEDS.map((r) => r.code as string)).not.toContain(
+      SYSTEM_ROLE_CODE,
+    );
+    expect(ROLE_CODES).not.toContain(SYSTEM_ROLE_CODE);
+  });
+
+  it('is never granted a module, so no navigation entry resolves to it', () => {
+    const approvers = ROLE_SEEDS.filter((r) =>
+      r.permissions.includes(Permission.APPROVE_EVIDENCE),
+    ).map((r) => r.code as string);
+    const granted = new Set(
+      MODULE_ACCESS.flatMap((m) => resolveModuleRoleCodes(m, approvers)),
+    );
+    expect(granted.has(SYSTEM_ROLE_CODE)).toBe(false);
   });
 });
 

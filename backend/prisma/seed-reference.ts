@@ -13,6 +13,7 @@ import {
   resolveModuleRoleCodes,
 } from './seed-data/module-access';
 import { APPROVAL_POLICIES } from './seed-data/approval-policies';
+import { SYSTEM_ACTOR } from './seed-data/system-actor';
 import { SEED_SETTING_DEFAULTS, SEED_SETTING_KEYS } from './seed-data/settings';
 import { guideSections, computeReadTime } from './seed-data/guide-content';
 import { Permission } from '../src/types/permissions';
@@ -67,6 +68,36 @@ export async function seedReference(prisma: PrismaClient): Promise<void> {
           create: { code: seed.code, ...data },
         });
       }
+
+      // SPEC §4.2 — the bridge's identity. Upserted, never reset. Kept out of
+      // ROLE_SEEDS on purpose: that list drives demo *logins* in seed-demo.ts,
+      // and this account must never be one. No password is generated here and
+      // nothing is deleted, so the block is production-safe.
+      const systemRole = await tx.role.upsert({
+        where: { code: SYSTEM_ACTOR.role.code },
+        update: {
+          name: SYSTEM_ACTOR.role.name,
+          description: SYSTEM_ACTOR.role.description,
+          permissions: [...SYSTEM_ACTOR.role.permissions],
+        },
+        create: {
+          code: SYSTEM_ACTOR.role.code,
+          name: SYSTEM_ACTOR.role.name,
+          description: SYSTEM_ACTOR.role.description,
+          permissions: [...SYSTEM_ACTOR.role.permissions],
+        },
+      });
+      await tx.user.upsert({
+        where: { id: SYSTEM_ACTOR.user.id },
+        // `email` and `password_hash` are never re-written: rotating them on a
+        // re-run would be the only way this account could become usable.
+        update: {
+          name: SYSTEM_ACTOR.user.name,
+          status: SYSTEM_ACTOR.user.status,
+          role_id: systemRole.id,
+        },
+        create: { ...SYSTEM_ACTOR.user, role_id: systemRole.id },
+      });
 
       // SPEC §6.3 — ModuleAccess is global (no node_id). `APPROVERS` resolves to
       // every role that can approve evidence.
@@ -260,7 +291,8 @@ export async function seedReference(prisma: PrismaClient): Promise<void> {
       `${APPROVAL_POLICIES.length} approval policies, ${ZONES.length} zones, ` +
       `${BRANDS.length} brands, ${CHANNELS.length} channels, ` +
       `${UNIT_CONVERSIONS.length} unit conversions, ${INGREDIENT_CATEGORIES.length} categories, ` +
-      `${SEED_SETTING_KEYS.length} settings, ${guideSections.length} guide sections`,
+      `${SEED_SETTING_KEYS.length} settings, ${guideSections.length} guide sections, ` +
+      `1 system actor`,
   );
 }
 

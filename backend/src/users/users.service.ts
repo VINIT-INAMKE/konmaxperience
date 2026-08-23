@@ -2,6 +2,8 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
+  ForbiddenException,
+  BadRequestException,
   Logger,
 } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
@@ -9,6 +11,11 @@ import * as crypto from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { EmailService } from '../email/email.service';
 import { CreateUserDto } from '../types/users';
+import {
+  SYSTEM_ROLE_CODE,
+  SYSTEM_USER_ID,
+  SYSTEM_USER_STATUS,
+} from '../common/constants/system-actor';
 
 @Injectable()
 export class UsersService {
@@ -19,8 +26,23 @@ export class UsersService {
     private readonly emailService: EmailService,
   ) {}
 
+  /**
+   * SPEC §4.2 (plan decision 3) — the MissionBridge writes as a seeded `User`
+   * because `Evidence.uploaded_by` is a required FK. That account is machinery,
+   * not a teammate: it must never appear in the admin roster and must never be
+   * renamed, re-roled, reactivated or deactivated through the users API.
+   */
+  private assertNotSystemUser(id: string): void {
+    if (id === SYSTEM_USER_ID) {
+      throw new ForbiddenException('The system account cannot be modified');
+    }
+  }
+
   async findAll() {
     return this.prisma.user.findMany({
+      // Hides the bridge account from /admin/users. Every other reader already
+      // filters `status: 'active'` (leaderboard, chat, activity, notifications).
+      where: { status: { not: SYSTEM_USER_STATUS } },
       select: {
         id: true,
         name: true,
@@ -43,6 +65,12 @@ export class UsersService {
   }
 
   async findOne(id: string) {
+    // Beyond the roster: `GET /users/:id` and the admin `?viewAs=` filter both
+    // land here, so the bridge account is unreachable through every read path.
+    if (id === SYSTEM_USER_ID) {
+      throw new NotFoundException(`User with ID ${id} not found`);
+    }
+
     const user = await this.prisma.user.findUnique({
       where: { id },
       select: {
@@ -97,6 +125,11 @@ export class UsersService {
     if (!role) {
       throw new NotFoundException(`Role with ID ${dto.roleId} not found`);
     }
+    // SYSTEM holds zero permissions and exists only for the bridge; handing it
+    // to a person would create an account nobody can act as.
+    if (role.code === SYSTEM_ROLE_CODE) {
+      throw new BadRequestException('SYSTEM is not an assignable role');
+    }
 
     // Create user and setup token in transaction
     const user = await this.prisma.$transaction(async (tx) => {
@@ -129,6 +162,8 @@ export class UsersService {
   }
 
   async update(id: string, dto: { name?: string; status?: string }) {
+    this.assertNotSystemUser(id);
+
     const existing = await this.prisma.user.findUnique({
       where: { id },
       select: { id: true, status: true },
@@ -160,6 +195,10 @@ export class UsersService {
   }
 
   async triggerPasswordReset(id: string) {
+    // A reset is the one path that would replace `password_hash: '!'` with a
+    // real bcrypt digest, so it is closed too.
+    this.assertNotSystemUser(id);
+
     const user = await this.prisma.user.findUnique({
       where: { id },
       select: { id: true, email: true, name: true },
@@ -186,6 +225,10 @@ export class UsersService {
   }
 
   async deactivate(id: string) {
+    // The plan calls this guard `remove()`; the service deactivates rather than
+    // deletes, and this is the only destructive path on a user row.
+    this.assertNotSystemUser(id);
+
     const user = await this.prisma.user.findUnique({
       where: { id },
       select: { id: true },
