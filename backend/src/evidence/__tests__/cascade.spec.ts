@@ -2,7 +2,13 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ForbiddenException } from '@nestjs/common';
 import { EvidenceService } from '../evidence.service';
 import { PrismaService } from '../../prisma/prisma.service';
-import { provideTasksService } from '../../test-utils/mock-providers';
+import { ApprovalPolicyService } from '../../approvals/approval-policy.service';
+import {
+  provideTasksService,
+  mockApprovalPolicyService,
+  mockEventEmitter,
+  provideEventEmitter,
+} from '../../test-utils/mock-providers';
 
 jest.mock('../../permissions/permissions.cache', () => ({
   getPermissionsForRole: jest.fn(),
@@ -12,6 +18,8 @@ describe('EvidenceService - Validation Cascade', () => {
   let service: EvidenceService;
   let prisma: any;
   let txMock: any;
+  let approvalPolicy: ReturnType<typeof mockApprovalPolicyService>;
+  let emitter: ReturnType<typeof mockEventEmitter>;
 
   const reviewerId = 'reviewer-1';
   const uploaderId = 'uploader-1';
@@ -30,11 +38,14 @@ describe('EvidenceService - Validation Cascade', () => {
 
   const mockTask = {
     id: 'task-1',
+    node_id: 'node-1',
+    title: 'Ship the thing',
     mission_id: 'mission-1',
     quest_id: 'quest-1',
     owner_user_id: 'uploader-1',
     status: 'done',
     task_type: 'core',
+    domain: 'food',
     xp: 100,
     valid: false,
     valid_xp: 0,
@@ -80,6 +91,11 @@ describe('EvidenceService - Validation Cascade', () => {
         aggregate: jest.fn(),
       },
       readinessMeter: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: 'meter-1',
+          mode: 'task_driven',
+          derived_value: null,
+        }),
         update: jest.fn(),
       },
     };
@@ -99,11 +115,16 @@ describe('EvidenceService - Validation Cascade', () => {
       $transaction: jest.fn((cb: any) => cb(txMock)),
     };
 
+    approvalPolicy = mockApprovalPolicyService();
+    emitter = mockEventEmitter();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         EvidenceService,
         { provide: PrismaService, useValue: prisma },
         provideTasksService(),
+        { provide: ApprovalPolicyService, useValue: approvalPolicy },
+        provideEventEmitter(emitter),
       ],
     }).compile();
 
@@ -181,17 +202,28 @@ describe('EvidenceService - Validation Cascade', () => {
   });
 
   describe('validateTask', () => {
-    it('sets valid=true when status=done + approved evidence + approvals satisfied', async () => {
-      txMock.task.findUnique.mockResolvedValue(mockTask);
-      txMock.task.update.mockResolvedValue({ ...mockTask, valid: true, valid_xp: 100 });
+    function setupCascadeDefaults() {
+      txMock.task.update.mockResolvedValue({ ...mockTask });
       txMock.task.aggregate.mockResolvedValue({ _sum: { valid_xp: 100 } });
       txMock.user.update.mockResolvedValue({});
       txMock.quest.findUnique.mockResolvedValue(null);
       txMock.mission.update.mockResolvedValue({});
+    }
+
+    it('sets valid=true when status=done + approved evidence + approvals satisfied', async () => {
+      txMock.task.findUnique.mockResolvedValue(mockTask);
+      setupCascadeDefaults();
 
       const result = await (service as any).validateTask('task-1', txMock);
 
-      expect(result).toEqual({ valid: true, valid_xp: 100, user: { id: 'uploader-1', xp_total: 100, level: 1 } });
+      expect(result).toEqual(
+        expect.objectContaining({
+          valid: true,
+          valid_xp: 100,
+          newly_valid: true,
+          user: { id: 'uploader-1', xp_total: 100, level: 1 },
+        }),
+      );
       expect(txMock.task.update).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
@@ -208,15 +240,13 @@ describe('EvidenceService - Validation Cascade', () => {
         ...mockTask,
         status: 'doing',
       });
-      txMock.task.update.mockResolvedValue({ ...mockTask, valid: false, valid_xp: 0 });
-      txMock.task.aggregate.mockResolvedValue({ _sum: { valid_xp: 0 } });
-      txMock.user.update.mockResolvedValue({});
-      txMock.quest.findUnique.mockResolvedValue(null);
-      txMock.mission.update.mockResolvedValue({});
+      setupCascadeDefaults();
 
       const result = await (service as any).validateTask('task-1', txMock);
 
-      expect(result).toEqual({ valid: false, valid_xp: 0, user: { id: 'uploader-1', xp_total: 100, level: 1 } });
+      expect(result).toEqual(
+        expect.objectContaining({ valid: false, valid_xp: 0, event: null }),
+      );
     });
 
     it('sets valid=false when no approved evidence', async () => {
@@ -224,15 +254,85 @@ describe('EvidenceService - Validation Cascade', () => {
         ...mockTask,
         _count: { evidence: 0, approvals: 1 },
       });
-      txMock.task.update.mockResolvedValue({ ...mockTask, valid: false, valid_xp: 0 });
-      txMock.task.aggregate.mockResolvedValue({ _sum: { valid_xp: 0 } });
-      txMock.user.update.mockResolvedValue({});
-      txMock.quest.findUnique.mockResolvedValue(null);
-      txMock.mission.update.mockResolvedValue({});
+      setupCascadeDefaults();
 
       const result = await (service as any).validateTask('task-1', txMock);
 
-      expect(result).toEqual({ valid: false, valid_xp: 0, user: { id: 'uploader-1', xp_total: 100, level: 1 } });
+      expect(result).toEqual(
+        expect.objectContaining({ valid: false, valid_xp: 0 }),
+      );
+    });
+
+    // P3 decision 4 — the behaviour change: "no approval rows" used to be read
+    // as "satisfied", which meant the gate never ran.
+    it('requires_approval=true with ZERO approval rows is now valid=false', async () => {
+      txMock.task.findUnique.mockResolvedValue(mockTask);
+      approvalPolicy.isSatisfied.mockResolvedValue(false);
+      setupCascadeDefaults();
+
+      const result = await (service as any).validateTask('task-1', txMock);
+
+      expect(result.valid).toBe(false);
+      expect(txMock.task.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ valid: false, verified: false }),
+        }),
+      );
+    });
+
+    it('requires_approval=true with every policy row approved is valid=true', async () => {
+      txMock.task.findUnique.mockResolvedValue(mockTask);
+      approvalPolicy.isSatisfied.mockResolvedValue(true);
+      setupCascadeDefaults();
+
+      const result = await (service as any).validateTask('task-1', txMock);
+
+      expect(result.valid).toBe(true);
+    });
+
+    it('requires_approval=false still validates on approved evidence alone', async () => {
+      txMock.task.findUnique.mockResolvedValue({
+        ...mockTask,
+        requires_approval: false,
+      });
+      approvalPolicy.isSatisfied.mockResolvedValue(false);
+      setupCascadeDefaults();
+
+      const result = await (service as any).validateTask('task-1', txMock);
+
+      expect(approvalPolicy.isSatisfied).not.toHaveBeenCalled();
+      expect(result.valid).toBe(true);
+    });
+  });
+
+  describe('applyReadinessFromTask', () => {
+    it('writes task_value and a blended current_value for a hybrid meter', async () => {
+      txMock.taskReadinessEvent.findFirst.mockResolvedValue(null);
+      txMock.taskReadinessEvent.create.mockResolvedValue({});
+      txMock.taskReadinessEvent.aggregate.mockResolvedValue({
+        _sum: { value: 80 },
+      });
+      txMock.readinessMeter.findUnique.mockResolvedValue({
+        id: 'meter-1',
+        mode: 'hybrid',
+        derived_value: 20,
+      });
+      txMock.readinessMeter.update.mockResolvedValue({});
+
+      await (service as any).applyReadinessFromTask('task-1', true, txMock, {
+        readiness_meter_id: 'meter-1',
+        readiness_value: 80,
+      });
+
+      // 0.5 * 80 + 0.5 * 20 = 50
+      expect(txMock.readinessMeter.update).toHaveBeenCalledWith({
+        where: { id: 'meter-1' },
+        data: {
+          task_value: 80,
+          current_value: 50,
+          last_computed_at: expect.any(Date),
+        },
+      });
     });
   });
 

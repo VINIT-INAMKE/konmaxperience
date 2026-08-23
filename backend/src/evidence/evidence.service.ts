@@ -3,8 +3,10 @@ import {
   NotFoundException,
   ForbiddenException,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import {
   ApprovalEntityType,
+  ApprovalScope,
   ApprovalStatus,
   Prisma,
   TaskStatus,
@@ -14,12 +16,49 @@ import { getPermissionsForRole } from '../permissions/permissions.cache';
 import { Permission } from '../types/permissions';
 import { CreateEvidenceDto } from './dto/create-evidence.dto';
 import { TasksService } from '../tasks/tasks.service';
+import { ApprovalPolicyService } from '../approvals/approval-policy.service';
+import { blendMeterValue } from '../readiness/derivation/meter-value';
+import {
+  DomainEvent,
+  domainEventBase,
+  emitDomainEvent,
+  userActor,
+} from '../common/events/domain-events';
+
+/**
+ * Everything the after-commit `task.validated` emit needs. `validateTask` runs
+ * *inside* a caller's transaction, so it never emits itself — it hands this seed
+ * back and the public entry point (or `ApprovalsService.decide`) emits once the
+ * enclosing transaction has committed (SPEC §4.1).
+ */
+export interface TaskValidatedSeed {
+  taskId: string;
+  nodeId: string;
+  title: string;
+  ownerUserId: string;
+  questId: string | null;
+  missionId: string;
+  readinessMeterId: string | null;
+  validXp: number;
+}
+
+export interface ValidateTaskResult {
+  valid: boolean;
+  valid_xp: number;
+  /** True only on the `false → true` transition, so the event fires once. */
+  newly_valid: boolean;
+  user: { id: string; xp_total: number; level: number };
+  /** Non-null only when `newly_valid`; stripped before the HTTP response. */
+  event: TaskValidatedSeed | null;
+}
 
 @Injectable()
 export class EvidenceService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly tasksService: TasksService,
+    private readonly approvalPolicy: ApprovalPolicyService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async getFeed(status?: string, limit = 20, cursor?: string) {
@@ -247,7 +286,7 @@ export class EvidenceService {
       });
     }
 
-    // ALWAYS recompute meter current_value from all active events
+    // ALWAYS recompute the task-driven half from all active events…
     const sumResult = await tx.taskReadinessEvent.aggregate({
       where: {
         readiness_meter_id: task.readiness_meter_id,
@@ -256,11 +295,28 @@ export class EvidenceService {
       _sum: { value: true },
     });
 
-    const total = sumResult._sum.value || 0;
+    const taskValue = Math.min(Number(sumResult._sum.value ?? 0), 100);
+
+    // …then publish `current_value` through the one shared blend rule
+    // (SPEC §4.3 / P3 decision 10) so the task-driven half and the formula half
+    // can never write the published value by two different rules.
+    const meter = await tx.readinessMeter.findUnique({
+      where: { id: task.readiness_meter_id },
+      select: { id: true, mode: true, derived_value: true },
+    });
+    if (!meter) return;
 
     await tx.readinessMeter.update({
-      where: { id: task.readiness_meter_id },
-      data: { current_value: Math.min(total, 100) },
+      where: { id: meter.id },
+      data: {
+        task_value: taskValue,
+        current_value: blendMeterValue(
+          meter.mode,
+          taskValue,
+          meter.derived_value,
+        ),
+        last_computed_at: new Date(),
+      },
     });
   }
 
@@ -268,18 +324,25 @@ export class EvidenceService {
    * Validate a task atomically within a transaction.
    * Sets valid=true only when: status=done + approved evidence + approvals satisfied.
    * Also recalculates user XP, quest progress, mission progress, and readiness.
+   *
+   * P3 decision 4 — `requires_approval: true` with **zero** `Approval` rows now
+   * BLOCKS validation. v1 treated "no rows" as satisfied, which meant the
+   * approval gate never actually ran; `ApprovalPolicyService.isSatisfied`
+   * returns false for zero rows, so a task that declares it needs sign-off must
+   * carry policy-generated rows and satisfy the policy's `mode`/`min_approvals`.
    */
-  async validateTask(
-    taskId: string,
-    tx: any,
-  ): Promise<{ valid: boolean; valid_xp: number; user: { id: string; xp_total: number; level: number } }> {
+  async validateTask(taskId: string, tx: any): Promise<ValidateTaskResult> {
     const task = await tx.task.findUnique({
       where: { id: taskId },
       select: {
         id: true,
+        node_id: true,
+        title: true,
         status: true,
         xp: true,
         task_type: true,
+        domain: true,
+        valid: true,
         requires_approval: true,
         owner_user_id: true,
         quest_id: true,
@@ -288,7 +351,7 @@ export class EvidenceService {
         readiness_value: true,
         // Use _count with filters instead of loading full relations.
         // Approvals are NOT a Task relation (`Approval.entity_id` is polymorphic,
-        // SPEC §3.5) — they are counted separately below.
+        // SPEC §3.5) — they are resolved by the policy service below.
         _count: {
           select: {
             evidence: { where: { approval_status: ApprovalStatus.approved } },
@@ -303,24 +366,23 @@ export class EvidenceService {
 
     const hasApprovedEvidence = task._count.evidence > 0;
 
-    // For approvals, we need to check if ALL are approved (not just count).
-    // A task with zero approval rows counts as satisfied.
     let approvalsSatisfied = true;
     if (task.requires_approval) {
-      const nonApprovedCount = await tx.approval.count({
-        where: {
-          entity_type: ApprovalEntityType.task,
-          entity_id: taskId,
-          status: { not: ApprovalStatus.approved },
-        },
-      });
-      approvalsSatisfied = nonApprovedCount === 0;
+      approvalsSatisfied = await this.approvalPolicy.isSatisfied(
+        tx,
+        ApprovalEntityType.task,
+        taskId,
+        ApprovalScope.task,
+        task.domain,
+      );
     }
 
     const isValid =
       task.status === TaskStatus.done &&
       hasApprovedEvidence &&
       approvalsSatisfied;
+
+    const newlyValid = isValid && task.valid !== true;
 
     const validXp = isValid ? this.calculateEffectiveXp(task) : 0;
 
@@ -348,7 +410,54 @@ export class EvidenceService {
       select: { id: true, xp_total: true, level: true },
     });
 
-    return { valid: isValid, valid_xp: validXp, user: updatedUser };
+    return {
+      valid: isValid,
+      valid_xp: validXp,
+      newly_valid: newlyValid,
+      user: updatedUser,
+      event: newlyValid
+        ? {
+            taskId: task.id,
+            nodeId: task.node_id,
+            title: task.title,
+            ownerUserId: task.owner_user_id,
+            questId: task.quest_id ?? null,
+            missionId: task.mission_id,
+            readinessMeterId: task.readiness_meter_id ?? null,
+            validXp,
+          }
+        : null,
+    };
+  }
+
+  /**
+   * SPEC §4.1 — emits `task.validated` AFTER the enclosing transaction commits.
+   * A no-op when the task did not flip `false → true`, and never throws
+   * (`emitDomainEvent` swallows listener failures).
+   */
+  emitTaskValidated(
+    seed: TaskValidatedSeed | null,
+    actorUserId: string | null,
+  ): void {
+    if (!seed) return;
+    emitDomainEvent(this.eventEmitter, DomainEvent.TASK_VALIDATED, {
+      ...domainEventBase(seed.nodeId, userActor(actorUserId)),
+      taskId: seed.taskId,
+      title: seed.title,
+      ownerUserId: seed.ownerUserId,
+      questId: seed.questId,
+      missionId: seed.missionId,
+      readinessMeterId: seed.readinessMeterId,
+      validXp: seed.validXp,
+    });
+  }
+
+  /** Drops the internal after-commit seed from a validation result. */
+  static publicResult(
+    result: ValidateTaskResult,
+  ): Omit<ValidateTaskResult, 'event'> {
+    const { event: _event, ...rest } = result;
+    return rest;
   }
 
   /**
@@ -360,8 +469,8 @@ export class EvidenceService {
     evidenceId: string,
     reviewerId: string,
     reviewerRoleCode?: string,
-  ): Promise<{ valid: boolean; valid_xp: number; user: { id: string; xp_total: number; level: number } }> {
-    return this.prisma.$transaction(async (tx: any) => {
+  ): Promise<Omit<ValidateTaskResult, 'event'>> {
+    const result: ValidateTaskResult = await this.prisma.$transaction(async (tx: any) => {
       const evidence = await tx.evidence.findUnique({
         where: { id: evidenceId },
       });
@@ -388,6 +497,9 @@ export class EvidenceService {
 
       return this.validateTask(evidence.task_id, tx);
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+
+    this.emitTaskValidated(result.event, reviewerId);
+    return EvidenceService.publicResult(result);
   }
 
   /**
@@ -400,7 +512,7 @@ export class EvidenceService {
     notes: string,
     reviewerRoleCode?: string,
   ): Promise<void> {
-    await this.prisma.$transaction(async (tx: any) => {
+    const result: ValidateTaskResult | undefined = await this.prisma.$transaction(async (tx: any) => {
       const evidence = await tx.evidence.findUnique({
         where: { id: evidenceId },
       });
@@ -427,7 +539,11 @@ export class EvidenceService {
       });
 
       // Re-validate: task may become invalid if this was the only approved evidence
-      await this.validateTask(evidence.task_id, tx);
+      return this.validateTask(evidence.task_id, tx);
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+
+    // A rejection can still flip a task valid (e.g. a second, approved evidence
+    // row already satisfied the gate), so the same after-commit emit applies.
+    this.emitTaskValidated(result?.event ?? null, reviewerId);
   }
 }
