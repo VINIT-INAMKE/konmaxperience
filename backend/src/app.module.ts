@@ -72,6 +72,7 @@ import { CheckoutModule } from './checkout/checkout.module';
 import { ShipmentsModule } from './shipments/shipments.module';
 import { ShippingModule } from './shipping/shipping.module';
 import { PromotionsModule } from './promotions/promotions.module';
+import { RefundsModule } from './refunds/refunds.module';
 
 @Module({
   imports: [
@@ -134,6 +135,7 @@ import { PromotionsModule } from './promotions/promotions.module';
     ShipmentsModule,
     ShippingModule,
     PromotionsModule,
+    RefundsModule,
     RealtimeModule,
     UsageModule,
     MeModule,
