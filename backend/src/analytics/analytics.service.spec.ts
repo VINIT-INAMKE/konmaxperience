@@ -13,7 +13,7 @@ const mockPrisma = {
     groupBy: jest.fn(),
     findMany: jest.fn(),
   },
-  menuItem: {
+  product: {
     findMany: jest.fn(),
   },
   quest: {
@@ -40,9 +40,9 @@ describe('AnalyticsService', () => {
       mockPrisma.order.count.mockResolvedValue(3);
       mockPrisma.order.aggregate.mockResolvedValue({ _sum: { total: dec(800) }, _count: { id: 2 } });
       mockPrisma.orderItem.findMany.mockResolvedValue([
-        { quantity: 2, menu_item: { base_price: dec(250), recipe: { computed_cost: dec(75) } } },
-        { quantity: 1, menu_item: { base_price: dec(300), recipe: { computed_cost: dec(135) } } },
-        { quantity: 3, menu_item: { base_price: dec(200), recipe: { computed_cost: dec(50) } } },
+        { quantity: 2, product: { base_price: dec(250), recipe: { computed_cost: dec(75) } } },
+        { quantity: 1, product: { base_price: dec(300), recipe: { computed_cost: dec(135) } } },
+        { quantity: 3, product: { base_price: dec(200), recipe: { computed_cost: dec(50) } } },
       ]);
 
       const result = await service.getSummary('2026-03-20', '2026-03-20');
@@ -105,12 +105,12 @@ describe('AnalyticsService', () => {
   describe('getTopItems', () => {
     it('returns top 10 items ordered by quantity_sold desc', async () => {
       mockPrisma.orderItem.findMany.mockResolvedValue([
-        { menu_item_id: 'mi-1', quantity: 50, unit_price: dec(350) },
-        { menu_item_id: 'mi-2', quantity: 30, unit_price: dec(250) },
-        { menu_item_id: 'mi-3', quantity: 10, unit_price: dec(50) },
+        { product_id: 'mi-1', quantity: 50, unit_price: dec(350) },
+        { product_id: 'mi-2', quantity: 30, unit_price: dec(250) },
+        { product_id: 'mi-3', quantity: 10, unit_price: dec(50) },
       ]);
 
-      mockPrisma.menuItem.findMany.mockResolvedValue([
+      mockPrisma.product.findMany.mockResolvedValue([
         { id: 'mi-1', name: 'Butter Chicken', base_price: dec(350) },
         { id: 'mi-2', name: 'Paneer Tikka', base_price: dec(250) },
         { id: 'mi-3', name: 'Naan', base_price: dec(50) },
@@ -119,7 +119,7 @@ describe('AnalyticsService', () => {
       const result = await service.getTopItems('2026-03-20', '2026-03-20');
 
       expect(result).toHaveLength(3);
-      expect(result[0].menu_item_id).toBe('mi-1');
+      expect(result[0].product_id).toBe('mi-1');
       expect(result[0].quantity_sold).toBe(50);
       expect(result[0].revenue).toBe(50 * 350);
       expect(result[0].name).toBe('Butter Chicken');
@@ -163,11 +163,11 @@ describe('AnalyticsService', () => {
   describe('getRecipeCosts', () => {
     it('returns recipes sorted by food_cost_pct desc', async () => {
       mockPrisma.orderItem.groupBy.mockResolvedValue([
-        { menu_item_id: 'mi-1', _sum: { quantity: 20 } },
-        { menu_item_id: 'mi-2', _sum: { quantity: 15 } },
+        { product_id: 'mi-1', _sum: { quantity: 20 } },
+        { product_id: 'mi-2', _sum: { quantity: 15 } },
       ]);
 
-      mockPrisma.menuItem.findMany.mockResolvedValue([
+      mockPrisma.product.findMany.mockResolvedValue([
         {
           id: 'mi-1',
           base_price: dec(200),

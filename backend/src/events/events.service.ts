@@ -1,6 +1,7 @@
 import {
   Injectable,
   BadRequestException,
+  ConflictException,
   NotFoundException,
 } from '@nestjs/common';
 import { EventStatus, Prisma } from '@prisma/client';
@@ -165,6 +166,15 @@ export class EventsService {
     });
     if (!exists) {
       throw new NotFoundException(`Event with ID ${id} not found`);
+    }
+
+    // `EventBooking.event` is `onDelete: Restrict` (P2-05), so deleting an event
+    // that still has bookings would surface a raw Prisma FK error. Say it plainly.
+    const bookings = await this.prisma.eventBooking.count({
+      where: { event_id: id },
+    });
+    if (bookings > 0) {
+      throw new ConflictException('Event has bookings; cancel it instead');
     }
 
     return this.prisma.event.delete({ where: { id } });

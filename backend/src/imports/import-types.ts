@@ -9,8 +9,8 @@ export const IMPORT_TYPES = [
   'kpis',
   'events',
   'recipes',
-  'menu_categories',
-  'menu_items',
+  'product_categories',
+  'products',
   'purchase_orders',
 ] as const;
 export type ImportType = (typeof IMPORT_TYPES)[number];
@@ -73,6 +73,20 @@ export function sanitizeNumber(raw: string): number | null {
   if (!cleaned) return null;
   const num = parseFloat(cleaned);
   return isNaN(num) ? null : num;
+}
+
+/**
+ * URL-safe slug for `Product.slug` / `ProductCategory.slug`, which are required
+ * and part of a `@@unique([node_id, slug])`. Sheets carry a human name, so the
+ * slug is derived from it when the optional `slug` column is blank.
+ */
+export function slugify(raw: string): string {
+  return raw
+    .normalize('NFKD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
 }
 
 /**
@@ -253,26 +267,28 @@ export const IMPORT_TYPE_CONFIG: Record<ImportType, ImportTypeConfig> = {
       'portion_size',
     ],
   },
-  menu_categories: {
-    label: 'Menu Categories',
+  product_categories: {
+    label: 'Product Categories',
     description:
-      'Bulk import menu categories with brand assignment and sort order',
+      'Bulk import product categories with brand assignment and sort order',
     columns: ['name', 'brand', 'sort_order'],
     requiredColumns: ['name', 'brand'],
   },
-  menu_items: {
-    label: 'Menu Items',
+  products: {
+    label: 'Products',
     description:
-      'Bulk import menu items with recipe, category, brand, and pricing',
+      'Bulk import products with type, recipe, category, brand, and pricing',
     columns: [
       'name',
+      'slug',
+      'type',
       'recipe',
       'category',
       'brand',
       'base_price',
-      'available',
+      'status',
     ],
-    requiredColumns: ['name', 'recipe', 'category', 'brand', 'base_price'],
+    requiredColumns: ['name', 'type', 'category', 'brand', 'base_price'],
   },
   purchase_orders: {
     label: 'Purchase Orders',

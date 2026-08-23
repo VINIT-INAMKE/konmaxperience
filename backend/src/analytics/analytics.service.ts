@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { OrderStatus, PaymentStatus } from '@prisma/client';
+import { OrderStatus, PaymentStatus, QuestStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -43,7 +43,7 @@ export class AnalyticsService {
         where: { order: dateFilter },
         select: {
           quantity: true,
-          menu_item: {
+          product: {
             select: {
               base_price: true,
               recipe: { select: { computed_cost: true } },
@@ -62,8 +62,8 @@ export class AnalyticsService {
     let weightedSum = 0;
     let totalQty = 0;
     for (const item of foodCostItems) {
-      const basePrice = Number(item.menu_item?.base_price ?? 0);
-      const computedCost = Number(item.menu_item?.recipe?.computed_cost ?? 0);
+      const basePrice = Number(item.product?.base_price ?? 0);
+      const computedCost = Number(item.product?.recipe?.computed_cost ?? 0);
       if (basePrice > 0) {
         const fcp = (computedCost / basePrice) * 100;
         weightedSum += fcp * item.quantity;
@@ -121,19 +121,19 @@ export class AnalyticsService {
         },
       },
       select: {
-        menu_item_id: true,
+        product_id: true,
         quantity: true,
         unit_price: true,
       },
     });
 
-    // Aggregate by menu_item_id
+    // Aggregate by product_id
     const itemMap = new Map<string, { quantity_sold: number; revenue: number }>();
     for (const item of orderItems) {
-      const existing = itemMap.get(item.menu_item_id) || { quantity_sold: 0, revenue: 0 };
+      const existing = itemMap.get(item.product_id) || { quantity_sold: 0, revenue: 0 };
       existing.quantity_sold += item.quantity;
       existing.revenue += item.quantity * Number(item.unit_price);
-      itemMap.set(item.menu_item_id, existing);
+      itemMap.set(item.product_id, existing);
     }
 
     // Sort by quantity sold descending, take top 10
@@ -141,17 +141,17 @@ export class AnalyticsService {
       .sort((a, b) => b[1].quantity_sold - a[1].quantity_sold)
       .slice(0, 10);
 
-    const menuItemIds = sorted.map(([id]) => id);
-    const menuItems = await this.prisma.menuItem.findMany({
-      where: { id: { in: menuItemIds } },
+    const productIds = sorted.map(([id]) => id);
+    const products = await this.prisma.product.findMany({
+      where: { id: { in: productIds } },
       select: { id: true, name: true },
     });
 
-    const menuMap = new Map(menuItems.map((mi) => [mi.id, mi]));
+    const productMap = new Map(products.map((p) => [p.id, p]));
 
-    return sorted.map(([menuItemId, data]) => ({
-      menu_item_id: menuItemId,
-      name: menuMap.get(menuItemId)?.name || 'Unknown',
+    return sorted.map(([productId, data]) => ({
+      product_id: productId,
+      name: productMap.get(productId)?.name || 'Unknown',
       quantity_sold: data.quantity_sold,
       revenue: data.revenue,
     }));
@@ -203,7 +203,7 @@ export class AnalyticsService {
     const { start, end } = this.parseDateRange(from, to);
 
     const grouped = await this.prisma.orderItem.groupBy({
-      by: ['menu_item_id'],
+      by: ['product_id'],
       where: {
         order: {
           created_at: { gte: start, lt: end },
@@ -213,10 +213,10 @@ export class AnalyticsService {
       _sum: { quantity: true },
     });
 
-    const menuItemIds = grouped.map((g) => g.menu_item_id);
+    const productIds = grouped.map((g) => g.product_id);
 
-    const menuItems = await this.prisma.menuItem.findMany({
-      where: { id: { in: menuItemIds } },
+    const products = await this.prisma.product.findMany({
+      where: { id: { in: productIds } },
       select: {
         id: true,
         base_price: true,
@@ -224,8 +224,8 @@ export class AnalyticsService {
       },
     });
 
-    const menuMap = new Map(menuItems.map((mi) => [mi.id, mi]));
-    const qtyMap = new Map(grouped.map((g) => [g.menu_item_id, g._sum.quantity || 0]));
+    const productMap = new Map(products.map((p) => [p.id, p]));
+    const qtyMap = new Map(grouped.map((g) => [g.product_id, g._sum.quantity || 0]));
 
     const results: Array<{
       recipe_id: string;
@@ -236,16 +236,16 @@ export class AnalyticsService {
       units_sold: number;
     }> = [];
 
-    for (const [menuItemId, mi] of menuMap) {
-      if (!mi.recipe) continue;
-      const unitsSold = qtyMap.get(menuItemId) || 0;
-      const computedCost = Number(mi.recipe.computed_cost ?? 0);
-      const sellingPrice = Number(mi.base_price);
+    for (const [productId, product] of productMap) {
+      if (!product.recipe) continue;
+      const unitsSold = qtyMap.get(productId) || 0;
+      const computedCost = Number(product.recipe.computed_cost ?? 0);
+      const sellingPrice = Number(product.base_price);
       const foodCostPct = sellingPrice > 0 ? (computedCost / sellingPrice) * 100 : 0;
 
       results.push({
-        recipe_id: mi.recipe.id,
-        recipe_name: mi.recipe.name,
+        recipe_id: product.recipe.id,
+        recipe_name: product.recipe.name,
         computed_cost: computedCost,
         selling_price: sellingPrice,
         food_cost_pct: Math.round(foodCostPct * 100) / 100,
@@ -260,7 +260,9 @@ export class AnalyticsService {
   // Wins (Completed Quests + Validated Tasks)
   // ---------------------------------------------------------------
   async getWins(limit: number, cursor?: string) {
-    const questWhere: Record<string, unknown> = { status: 'completed' };
+    const questWhere: Record<string, unknown> = {
+      status: QuestStatus.completed,
+    };
     const taskWhere: Record<string, unknown> = {
       valid: true,
       completed_at: { not: null },

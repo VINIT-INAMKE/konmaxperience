@@ -6,7 +6,12 @@ import {
   ConflictException,
   ServiceUnavailableException,
 } from '@nestjs/common';
-import { OrderChannel, OrderSource, OrderStatus } from '@prisma/client';
+import {
+  OrderChannel,
+  OrderSource,
+  OrderStatus,
+  ProductStatus,
+} from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../customer-auth/redis.service';
 import { RazorpayService } from '../razorpay/razorpay.service';
@@ -26,7 +31,8 @@ import { renderOrderReceipt, renderBookingReceipt } from './receipt.template';
 // ---------------------------------------------------------------
 export interface CartData {
   items: Array<{
-    menuItemId: string;
+    productId: string;
+    variantId?: string | null;
     name: string;
     quantity: number;
     unitPrice: number;
@@ -71,7 +77,13 @@ export class CustomerOrdersService {
     const raw = await redis.get(this.cartKey(customerId));
     if (!raw) return null;
 
-    return JSON.parse(raw) as CartData;
+    // Carts written before P2-11 key their lines on the old catalog id, not
+    // `productId`. Drop those rather than let syncCart/checkoutCart crash.
+    const parsed = JSON.parse(raw) as CartData;
+    const items = (parsed.items ?? []).filter(
+      (i: { productId?: string }) => typeof i.productId === 'string',
+    );
+    return { ...parsed, items };
   }
 
   async setCart(customerId: string, cart: CartData): Promise<void> {
@@ -108,7 +120,8 @@ export class CustomerOrdersService {
       } else {
         merged = {
           items: localCart.items.map((i) => ({
-            menuItemId: i.menuItemId,
+            productId: i.productId,
+            variantId: i.variantId ?? null,
             name: i.name,
             quantity: i.quantity,
             unitPrice: i.unitPrice,
@@ -123,7 +136,8 @@ export class CustomerOrdersService {
       // Only local cart has items
       merged = {
         items: localCart.items.map((i) => ({
-          menuItemId: i.menuItemId,
+          productId: i.productId,
+          variantId: i.variantId ?? null,
           name: i.name,
           quantity: i.quantity,
           unitPrice: i.unitPrice,
@@ -201,24 +215,22 @@ export class CustomerOrdersService {
       }
     }
 
-    // 4. Server-side price validation — fetch active, available menu items
-    const menuItemIds = cart.items.map((i) => i.menuItemId);
-    const menuItems = await this.prisma.menuItem.findMany({
+    // 4. Server-side price validation — fetch published products only.
+    //    `Product.status = active` is the successor of the old available+status pair.
+    const productIds = cart.items.map((i) => i.productId);
+    const products = await this.prisma.product.findMany({
       where: {
-        id: { in: menuItemIds },
-        available: true,
-        status: 'active',
+        id: { in: productIds },
+        status: ProductStatus.active,
       },
       select: { id: true, base_price: true },
     });
 
-    const priceMap = new Map(
-      menuItems.map((mi) => [mi.id, Number(mi.base_price)]),
-    );
+    const priceMap = new Map(products.map((p) => [p.id, Number(p.base_price)]));
 
     // Check all items are still available
     for (const item of cart.items) {
-      if (!priceMap.has(item.menuItemId)) {
+      if (!priceMap.has(item.productId)) {
         throw new BadRequestException(
           `Item "${item.name}" is no longer available`,
         );
@@ -227,7 +239,7 @@ export class CustomerOrdersService {
 
     // 5. Calculate subtotal from SERVER prices (never trust cart prices)
     const subtotal = cart.items.reduce((sum, item) => {
-      const serverPrice = priceMap.get(item.menuItemId)!;
+      const serverPrice = priceMap.get(item.productId)!;
       return sum + serverPrice * item.quantity;
     }, 0);
 
@@ -269,10 +281,11 @@ export class CustomerOrdersService {
 
     // 11. Store pending order data in Redis with 30-min TTL (server-validated prices)
     const validatedItems = cart.items.map((item) => ({
-      menuItemId: item.menuItemId,
+      productId: item.productId,
+      variantId: item.variantId ?? null,
       name: item.name,
       quantity: item.quantity,
-      unitPrice: priceMap.get(item.menuItemId)!,
+      unitPrice: priceMap.get(item.productId)!,
       imageUrl: item.imageUrl,
     }));
     await redis.set(
@@ -408,7 +421,7 @@ export class CustomerOrdersService {
       include: {
         items: {
           include: {
-            menu_item: { select: { id: true, name: true } },
+            product: { select: { id: true, name: true } },
           },
         },
         payment: true,
@@ -437,7 +450,7 @@ export class CustomerOrdersService {
       include: {
         items: {
           include: {
-            menu_item: { select: { id: true, name: true } },
+            product: { select: { id: true, name: true } },
           },
         },
         payment: {
@@ -481,7 +494,7 @@ export class CustomerOrdersService {
       include: {
         items: {
           include: {
-            menu_item: { select: { name: true } },
+            product: { select: { name: true } },
           },
         },
         payment: true,
@@ -506,7 +519,7 @@ export class CustomerOrdersService {
       total: Number(order.total),
       delivery_address: order.delivery_address,
       items: order.items.map((item) => ({
-        menu_item: item.menu_item,
+        product: item.product,
         quantity: item.quantity,
         unit_price: Number(item.unit_price),
       })),

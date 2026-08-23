@@ -1,4 +1,8 @@
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common';
 import { EventsService } from './events.service';
 
 const mockTx = {
@@ -22,6 +26,7 @@ const mockPrisma = {
   },
   eventBooking: {
     findMany: jest.fn(),
+    count: jest.fn(),
     groupBy: jest.fn().mockResolvedValue([]),
   },
   $transaction: jest.fn((cb: (tx: typeof mockTx) => Promise<any>) =>
@@ -243,6 +248,42 @@ describe('EventsService', () => {
       await expect(service.findOne('nonexistent')).rejects.toThrow(
         NotFoundException,
       );
+    });
+  });
+
+  // ---------------------------------------------------------------
+  // remove — EventBooking.event is onDelete: Restrict (P2-05)
+  // ---------------------------------------------------------------
+  describe('remove', () => {
+    it('throws NotFoundException when event does not exist', async () => {
+      mockPrisma.event.findUnique.mockResolvedValue(null);
+
+      await expect(service.remove('nonexistent')).rejects.toThrow(
+        NotFoundException,
+      );
+      expect(mockPrisma.event.delete).not.toHaveBeenCalled();
+    });
+
+    it('throws ConflictException instead of a raw FK error when bookings exist', async () => {
+      mockPrisma.event.findUnique.mockResolvedValue({ id: 'e1' });
+      mockPrisma.eventBooking.count.mockResolvedValue(3);
+
+      await expect(service.remove('e1')).rejects.toThrow(ConflictException);
+      await expect(service.remove('e1')).rejects.toThrow(
+        'Event has bookings; cancel it instead',
+      );
+      expect(mockPrisma.event.delete).not.toHaveBeenCalled();
+    });
+
+    it('deletes the event when it has no bookings', async () => {
+      mockPrisma.event.findUnique.mockResolvedValue({ id: 'e1' });
+      mockPrisma.eventBooking.count.mockResolvedValue(0);
+      mockPrisma.event.delete.mockResolvedValue({ id: 'e1' });
+
+      await expect(service.remove('e1')).resolves.toEqual({ id: 'e1' });
+      expect(mockPrisma.event.delete).toHaveBeenCalledWith({
+        where: { id: 'e1' },
+      });
     });
   });
 });

@@ -84,7 +84,7 @@ export function renderOrderReceipt(order: {
   total: number | string;
   delivery_address?: string | null;
   items: Array<{
-    menu_item?: { name: string } | null;
+    product?: { name: string } | null;
     quantity: number;
     unit_price: number | string;
   }>;
@@ -101,7 +101,7 @@ export function renderOrderReceipt(order: {
 
   const itemRows = order.items
     .map((item) => {
-      const name = escapeHtml(item.menu_item?.name ?? 'Unknown Item');
+      const name = escapeHtml(item.product?.name ?? 'Unknown Item');
       const lineTotal = Number(item.unit_price) * item.quantity;
       return `<tr>
         <td>${name}</td>

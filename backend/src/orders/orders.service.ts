@@ -77,22 +77,22 @@ export class OrdersService {
   async createOrder(dto: CreateOrderDto, userId: string) {
     const order = await withSerializableRetry(() =>
       this.prisma.$transaction(async (tx) => {
-        // Look up authoritative prices for each menu item from the database
-        const menuItemIds = dto.items.map((i) => i.menu_item_id);
-        const menuItems = await tx.menuItem.findMany({
-          where: { id: { in: menuItemIds } },
+        // Look up authoritative prices for each product from the database
+        const productIds = dto.items.map((i) => i.product_id);
+        const products = await tx.product.findMany({
+          where: { id: { in: productIds } },
           select: { id: true, base_price: true },
         });
 
         const priceMap = new Map(
-          menuItems.map((mi) => [mi.id, Number(mi.base_price)]),
+          products.map((p) => [p.id, Number(p.base_price)]),
         );
 
-        // Validate all menu items exist
+        // Validate all products exist
         for (const item of dto.items) {
-          if (!priceMap.has(item.menu_item_id)) {
+          if (!priceMap.has(item.product_id)) {
             throw new BadRequestException(
-              `Menu item with ID ${item.menu_item_id} not found`,
+              `Product with ID ${item.product_id} not found`,
             );
           }
         }
@@ -104,7 +104,7 @@ export class OrdersService {
 
         // Compute subtotal using server-side prices
         const subtotal = dto.items.reduce((sum, item) => {
-          const basePrice = priceMap.get(item.menu_item_id)!;
+          const basePrice = priceMap.get(item.product_id)!;
           return sum + basePrice * item.quantity;
         }, 0);
 
@@ -137,9 +137,10 @@ export class OrdersService {
             notes: dto.notes,
             items: {
               create: dto.items.map((i) => ({
-                menu_item_id: i.menu_item_id,
+                product_id: i.product_id,
+                variant_id: i.variant_id ?? null,
                 quantity: i.quantity,
-                unit_price: priceMap.get(i.menu_item_id)!,
+                unit_price: priceMap.get(i.product_id)!,
                 item_notes: i.item_notes,
                 status: OrderItemStatus.pending,
               })),
@@ -279,7 +280,7 @@ export class OrdersService {
       include: {
         items: {
           include: {
-            menu_item: { select: { id: true, name: true } },
+            product: { select: { id: true, name: true } },
           },
         },
         payment: true,

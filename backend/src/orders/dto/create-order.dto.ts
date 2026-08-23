@@ -14,7 +14,11 @@ import { OrderChannel } from '@prisma/client';
 
 export class CreateOrderItemDto {
   @IsUUID()
-  menu_item_id: string;
+  product_id: string;
+
+  @IsOptional()
+  @IsUUID()
+  variant_id?: string;
 
   @IsInt()
   @Min(1)

@@ -13,7 +13,7 @@ export class PickAndPackService {
         status: { in: ['placed', 'preparing'] },
         items: {
           some: {
-            menu_item: {
+            product: {
               recipe: {
                 preparation_type: { not: 'scratch' },
               },
@@ -25,14 +25,14 @@ export class PickAndPackService {
       include: {
         items: {
           where: {
-            menu_item: {
+            product: {
               recipe: {
                 preparation_type: { not: 'scratch' },
               },
             },
           },
           include: {
-            menu_item: {
+            product: {
               select: {
                 id: true,
                 name: true,
@@ -71,15 +71,15 @@ export class PickAndPackService {
       items: order.items.map((item) => ({
         id: item.id,
         status: item.status,
-        menu_item_id: item.menu_item_id,
-        menu_item_name: item.menu_item?.name ?? '',
+        product_id: item.product_id,
+        product_name: item.product?.name ?? '',
         quantity: item.quantity,
         item_notes: item.item_notes ?? null,
-        preparation_type: item.menu_item?.recipe?.preparation_type ?? 'scratch',
+        preparation_type: item.product?.recipe?.preparation_type ?? 'scratch',
         // For assemble items, include component checklist
         components:
-          item.menu_item?.recipe?.preparation_type === 'assemble'
-            ? (item.menu_item.recipe.RecipeLines ?? []).map((line) => ({
+          item.product?.recipe?.preparation_type === 'assemble'
+            ? (item.product.recipe.RecipeLines ?? []).map((line) => ({
                 recipe_id: line.source_recipe?.id ?? '',
                 recipe_name: line.source_recipe?.name ?? '',
                 quantity: Number(line.quantity),
