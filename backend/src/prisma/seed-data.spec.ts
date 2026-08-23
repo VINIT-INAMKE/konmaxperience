@@ -263,10 +263,35 @@ describe('seed-data: system settings', () => {
     expect(typeof SEED_SETTING_DEFAULTS.xp_rules).toBe('object');
     expect(typeof SEED_SETTING_DEFAULTS.shipping).toBe('object');
     expect(typeof SEED_SETTING_DEFAULTS.loyalty).toBe('object');
+    expect(typeof SEED_SETTING_DEFAULTS.reviews).toBe('object');
+    expect(typeof SEED_SETTING_DEFAULTS.promotions.allow_stacking).toBe(
+      'boolean',
+    );
   });
 
   it('mirrors the SPEC §4.3 readiness block exactly', () => {
     expect(SEED_SETTING_DEFAULTS.readiness).toEqual(SETTING_DEFAULTS.readiness);
+  });
+
+  it('mirrors the P5a marketplace blocks exactly', () => {
+    expect(SEED_SETTING_DEFAULTS.loyalty).toEqual(SETTING_DEFAULTS.loyalty);
+    expect(SEED_SETTING_DEFAULTS.reviews).toEqual(SETTING_DEFAULTS.reviews);
+    expect(SEED_SETTING_DEFAULTS.promotions).toEqual(
+      SETTING_DEFAULTS.promotions,
+    );
+    expect(SEED_SETTING_DEFAULTS.shipping).toEqual(SETTING_DEFAULTS.shipping);
+  });
+
+  it('seeds every key the P5a commerce path reads', () => {
+    for (const key of [
+      'shipping',
+      'loyalty',
+      'reviews',
+      'promotions',
+      'delivery_pincodes',
+    ] as const) {
+      expect(SEED_SETTING_KEYS).toContain(key);
+    }
   });
 });
 
