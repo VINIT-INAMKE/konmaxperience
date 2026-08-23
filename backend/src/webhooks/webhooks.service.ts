@@ -19,6 +19,10 @@ import {
   PendingOrderPayload,
   pendingTotalPaise,
 } from '../fulfilment/fulfilment.service';
+import {
+  RefundsService,
+  type GatewayRefundEntity,
+} from '../refunds/refunds.service';
 
 @Injectable()
 export class WebhooksService {
@@ -30,6 +34,7 @@ export class WebhooksService {
     private readonly prisma: PrismaService,
     private readonly pusherService: PusherService,
     private readonly fulfilmentService: FulfilmentService,
+    private readonly refundsService: RefundsService,
   ) {}
 
   async processWebhook(
@@ -219,11 +224,21 @@ export class WebhooksService {
       );
   }
 
+  /**
+   * CHK-05. This branch used to flip `Payment.status` straight to `refunded` for
+   * any refund, however small, and never wrote a `Refund` row — a ₹1 goodwill
+   * refund closed a ₹5,000 order. It now delegates to `RefundsService`, which
+   * writes/promotes the `Refund` row, re-derives `Payment.refunded_amount` from
+   * the processed rows, and only calls a payment `refunded` once the whole
+   * amount is back.
+   *
+   * Event bookings keep their original behaviour: they carry
+   * `razorpay_payment_id` directly and have no `Order`/`Payment` pair to settle.
+   */
   private async handleRefundProcessed(payload: any) {
-    const refund = payload.refund?.entity;
-    if (!refund) return;
+    const refund = payload.refund?.entity as GatewayRefundEntity | undefined;
+    if (!refund?.id || !refund.payment_id) return;
 
-    // Update booking or payment status to refunded
     const booking = await this.prisma.eventBooking.findFirst({
       where: { razorpay_payment_id: refund.payment_id },
     });
@@ -235,14 +250,6 @@ export class WebhooksService {
       return;
     }
 
-    const paymentRecord = await this.prisma.payment.findFirst({
-      where: { razorpay_payment_id: refund.payment_id },
-    });
-    if (paymentRecord) {
-      await this.prisma.payment.update({
-        where: { id: paymentRecord.id },
-        data: { status: PaymentStatus.refunded },
-      });
-    }
+    await this.refundsService.reconcileGatewayRefund(refund);
   }
 }

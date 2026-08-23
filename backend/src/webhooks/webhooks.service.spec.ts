@@ -6,6 +6,10 @@ import { RedisService } from '../customer-auth/redis.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { PusherService } from '../chat/pusher.service';
 import { FulfilmentService } from '../fulfilment/fulfilment.service';
+import {
+  RefundsService,
+  type GatewayRefundEntity,
+} from '../refunds/refunds.service';
 
 describe('WebhooksService', () => {
   let service: WebhooksService;
@@ -16,6 +20,18 @@ describe('WebhooksService', () => {
   let mockFulfilment: {
     confirmPaidOrder: jest.Mock;
     findOrderByRazorpayPaymentId: jest.Mock;
+  };
+  let mockRefunds: { reconcileGatewayRefund: jest.Mock };
+
+  /** Signs and delivers one webhook body through the real `processWebhook` path. */
+  const deliver = async (body: unknown, eventId: string) => {
+    (razorpayService.verifyWebhookSignature as jest.Mock).mockReturnValue(true);
+    mockRedisClient.set.mockResolvedValue('OK');
+    return service.processWebhook(
+      Buffer.from(JSON.stringify(body)),
+      'sig',
+      eventId,
+    );
   };
 
   beforeEach(async () => {
@@ -30,6 +46,10 @@ describe('WebhooksService', () => {
     mockFulfilment = {
       confirmPaidOrder: jest.fn(),
       findOrderByRazorpayPaymentId: jest.fn().mockResolvedValue(null),
+    };
+
+    mockRefunds = {
+      reconcileGatewayRefund: jest.fn().mockResolvedValue(undefined),
     };
 
     mockPrisma = {
@@ -69,6 +89,7 @@ describe('WebhooksService', () => {
         },
         { provide: PusherService, useValue: mockPusher },
         { provide: FulfilmentService, useValue: mockFulfilment },
+        { provide: RefundsService, useValue: mockRefunds },
       ],
     }).compile();
 
@@ -261,35 +282,67 @@ describe('WebhooksService', () => {
     expect(mockPrisma.eventBooking.update).not.toHaveBeenCalled();
   });
 
-  it('should handle refund.processed and update booking status', async () => {
-    const payload = {
-      event: 'refund.processed',
-      payload: {
-        refund: {
-          entity: {
-            id: 'rfnd_1',
-            payment_id: 'pay_refund_1',
-            amount: 50000,
-          },
-        },
-      },
+  // ---------------------------------------------------------------
+  // refund.processed — the booking branch stays here; the order/payment
+  // reconciliation (partial vs full, idempotency, unknown payments) is owned and
+  // covered by RefundsService.
+  // ---------------------------------------------------------------
+  describe('refund.processed', () => {
+    const entity: GatewayRefundEntity = {
+      id: 'rfnd_1',
+      payment_id: 'pay_refund_1',
+      amount: 50000,
     };
-    const rawBody = Buffer.from(JSON.stringify(payload));
-    (razorpayService.verifyWebhookSignature as jest.Mock).mockReturnValue(true);
-    mockRedisClient.set.mockResolvedValue('OK');
+    const body = {
+      event: 'refund.processed',
+      payload: { refund: { entity } },
+    };
 
-    const mockBooking = { id: 'bk-rfnd', payment_status: 'paid' };
-    mockPrisma.eventBooking.findFirst.mockResolvedValue(mockBooking);
-    mockPrisma.eventBooking.update.mockResolvedValue({
-      ...mockBooking,
-      payment_status: 'refunded',
+    it('refunds an event booking without touching the order ledger', async () => {
+      const mockBooking = { id: 'bk-rfnd', payment_status: 'paid' };
+      mockPrisma.eventBooking.findFirst.mockResolvedValue(mockBooking);
+      mockPrisma.eventBooking.update.mockResolvedValue({
+        ...mockBooking,
+        payment_status: 'refunded',
+      });
+
+      await deliver(body, 'evt_refund_1');
+
+      expect(mockPrisma.eventBooking.update).toHaveBeenCalledWith({
+        where: { id: 'bk-rfnd' },
+        data: { payment_status: 'refunded' },
+      });
+      expect(mockRefunds.reconcileGatewayRefund).not.toHaveBeenCalled();
     });
 
-    await service.processWebhook(rawBody, 'sig', 'evt_refund_1');
+    it('hands a marketplace refund to RefundsService for reconciliation', async () => {
+      mockPrisma.eventBooking.findFirst.mockResolvedValue(null);
 
-    expect(mockPrisma.eventBooking.update).toHaveBeenCalledWith({
-      where: { id: 'bk-rfnd' },
-      data: { payment_status: 'refunded' },
+      await deliver(body, 'evt_refund_2');
+
+      expect(mockRefunds.reconcileGatewayRefund).toHaveBeenCalledWith(entity);
+      // The old code flipped Payment.status to `refunded` here for any refund,
+      // however partial. Nothing outside RefundsService may write that column.
+      expect(mockPrisma.payment.update).not.toHaveBeenCalled();
+    });
+
+    it('ignores a payload with no refund entity', async () => {
+      await deliver({ event: 'refund.processed', payload: {} }, 'evt_refund_3');
+
+      expect(mockRefunds.reconcileGatewayRefund).not.toHaveBeenCalled();
+      expect(mockPrisma.eventBooking.findFirst).not.toHaveBeenCalled();
+    });
+
+    it('ignores a refund entity with no payment id', async () => {
+      await deliver(
+        {
+          event: 'refund.processed',
+          payload: { refund: { entity: { id: 'rfnd_2' } } },
+        },
+        'evt_refund_4',
+      );
+
+      expect(mockRefunds.reconcileGatewayRefund).not.toHaveBeenCalled();
     });
   });
 
