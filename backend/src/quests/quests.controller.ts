@@ -20,17 +20,24 @@ import { UpdateQuestDto } from './dto/update-quest.dto';
 export class QuestsController {
   constructor(private readonly questsService: QuestsService) {}
 
+  /** `mine=1` narrows to the quests the caller owns (`IA-04`). */
   @Get()
   async findAll(
     @Req() request: express.Request,
     @Query('mission_id') missionId?: string,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
+    @Query('mine') mine?: string,
   ) {
     const user = (request as any).user;
     return this.questsService.findAll(
       { id: user.id, roleCode: user.roleCode },
-      { missionId, page: Number(page), limit: Number(limit) },
+      {
+        missionId,
+        page: Number(page),
+        limit: Number(limit),
+        mine: mine === '1' || mine === 'true',
+      },
     );
   }
 

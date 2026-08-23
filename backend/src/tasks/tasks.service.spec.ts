@@ -244,6 +244,99 @@ describe('TasksService', () => {
 
       expect(prisma.approval.groupBy).not.toHaveBeenCalled();
     });
+
+    // ── IA-04: mine / status list / cursor pagination ──────────────────────
+
+    it('narrows an admin to their own tasks when mine is true', async () => {
+      mockGetPermissions.mockResolvedValue([Permission.VIEW_ALL]);
+      prisma.task.findMany.mockResolvedValue([mockTask]);
+
+      await service.findAll(adminUser, { mine: true });
+
+      expect(prisma.task.findMany.mock.calls[0][0].where).toMatchObject({
+        owner_user_id: 'admin-1',
+      });
+    });
+
+    it('turns a comma-separated status into an `in` filter', async () => {
+      mockGetPermissions.mockResolvedValue([Permission.VIEW_ALL]);
+      prisma.task.findMany.mockResolvedValue([]);
+
+      await service.findAll(adminUser, { status: 'todo,doing' });
+
+      expect(prisma.task.findMany.mock.calls[0][0].where.status).toEqual({
+        in: ['todo', 'doing'],
+      });
+    });
+
+    it('keeps a single status as a scalar', async () => {
+      mockGetPermissions.mockResolvedValue([Permission.VIEW_ALL]);
+      prisma.task.findMany.mockResolvedValue([]);
+
+      await service.findAll(adminUser, { status: 'todo' });
+
+      expect(prisma.task.findMany.mock.calls[0][0].where.status).toBe('todo');
+    });
+
+    it('throws BadRequestException for a status outside the enum', async () => {
+      mockGetPermissions.mockResolvedValue([Permission.VIEW_ALL]);
+
+      await expect(
+        service.findAll(adminUser, { status: 'bogus' }),
+      ).rejects.toThrow(BadRequestException);
+      expect(prisma.task.findMany).not.toHaveBeenCalled();
+    });
+
+    it('returns a cursor page when limit is supplied', async () => {
+      mockGetPermissions.mockResolvedValue([Permission.VIEW_ALL]);
+      prisma.task.findMany.mockResolvedValue([
+        mockTask,
+        { ...mockTask, id: 'task-2' },
+        { ...mockTask, id: 'task-3' },
+      ]);
+
+      const result = (await service.findAll(adminUser, {
+        limit: 2,
+      })) as { items: any[]; next_cursor: string | null; has_more: boolean };
+
+      // take is limit + 1 so "is there another page?" costs no extra query.
+      expect(prisma.task.findMany.mock.calls[0][0].take).toBe(3);
+      expect(result.items.map((t) => t.id)).toEqual(['task-1', 'task-2']);
+      expect(result.next_cursor).toBe('task-2');
+      expect(result.has_more).toBe(true);
+      // The over-fetched row is not counted for approval chips.
+      expect(prisma.approval.groupBy.mock.calls[0][0].where.entity_id).toEqual({
+        in: ['task-1', 'task-2'],
+      });
+    });
+
+    it('reports has_more false and a null cursor on the last page', async () => {
+      mockGetPermissions.mockResolvedValue([Permission.VIEW_ALL]);
+      prisma.task.findMany.mockResolvedValue([mockTask]);
+
+      const result = (await service.findAll(adminUser, {
+        cursor: 'task-0',
+        limit: 2,
+      })) as { items: any[]; next_cursor: string | null; has_more: boolean };
+
+      expect(prisma.task.findMany.mock.calls[0][0]).toMatchObject({
+        cursor: { id: 'task-0' },
+        skip: 1,
+      });
+      expect(result.has_more).toBe(false);
+      expect(result.next_cursor).toBeNull();
+    });
+
+    it('keeps the legacy bare-array shape when neither cursor nor limit is sent', async () => {
+      mockGetPermissions.mockResolvedValue([Permission.VIEW_ALL]);
+      prisma.task.findMany.mockResolvedValue([mockTask]);
+
+      const result = await service.findAll(adminUser, {});
+
+      expect(Array.isArray(result)).toBe(true);
+      expect(prisma.task.findMany.mock.calls[0][0].take).toBe(200);
+      expect(prisma.task.findMany.mock.calls[0][0].cursor).toBeUndefined();
+    });
   });
 
   describe('create', () => {
