@@ -28,6 +28,7 @@ import { OrderFiltersDto } from './dto/order-filters.dto';
 import { ConfirmRazorpayPaymentDto } from './dto/create-razorpay-order.dto';
 import { FulfilmentService } from '../fulfilment/fulfilment.service';
 import { AuditService } from '../audit/audit.service';
+import { OrderLifecycleService } from './order-lifecycle.service';
 import {
   DomainEvent,
   domainEventBase,
@@ -41,22 +42,39 @@ import {
 
 /**
  * Valid order status transitions (non-cancellation).
- * `shipped`/`delivered`/`completed`/`refunded` belong to the shipment and refund
- * lifecycles and are wired up in P5 — the enum members already exist so that
- * extension needs no migration.
+ *
+ * Three lanes leave `ready`, one per fulfilment mode: `served` is the counter,
+ * `dispatched` the in-house rider, `shipped` the courier. All three converge on
+ * `completed`, the one state an order never leaves — `delivered` is a waypoint,
+ * not the end (SPEC §5.2 step 6). `refunded` is written by the refund path, which
+ * does not go through this map.
+ *
+ * Exported so `order-lifecycle.service.ts` can be pinned against it in tests
+ * without either file importing the other at runtime.
  */
-const STATUS_TRANSITIONS: Partial<Record<OrderStatus, OrderStatus[]>> = {
+export const STATUS_TRANSITIONS: Partial<Record<OrderStatus, OrderStatus[]>> = {
   [OrderStatus.placed]: [OrderStatus.confirmed, OrderStatus.preparing],
   [OrderStatus.confirmed]: [OrderStatus.preparing],
   [OrderStatus.preparing]: [OrderStatus.ready],
-  [OrderStatus.ready]: [OrderStatus.served, OrderStatus.dispatched],
+  [OrderStatus.ready]: [
+    OrderStatus.served,
+    OrderStatus.dispatched,
+    OrderStatus.shipped,
+  ],
+  [OrderStatus.dispatched]: [OrderStatus.delivered],
+  [OrderStatus.shipped]: [OrderStatus.delivered],
+  [OrderStatus.served]: [OrderStatus.completed],
+  [OrderStatus.delivered]: [OrderStatus.completed],
 };
 
-/** Terminal statuses that cannot be cancelled */
-const TERMINAL_STATUSES: OrderStatus[] = [
+/**
+ * Statuses that cannot be cancelled. `delivered` is no longer among them: the
+ * goods have landed but the order is still open until it is `completed`, and
+ * staff may still cancel out of it (a refund is Task 13's separate path).
+ */
+export const TERMINAL_STATUSES: OrderStatus[] = [
   OrderStatus.served,
   OrderStatus.dispatched,
-  OrderStatus.delivered,
   OrderStatus.completed,
   OrderStatus.cancelled,
   OrderStatus.refunded,
@@ -80,6 +98,7 @@ export class OrdersService {
     private readonly pusherService: PusherService,
     private readonly fulfilmentService: FulfilmentService,
     private readonly auditService: AuditService,
+    private readonly orderLifecycle: OrderLifecycleService,
   ) {}
 
   // ---------------------------------------------------------------
@@ -391,12 +410,24 @@ export class OrdersService {
         .catch((err) => console.error('[Pusher] Status trigger error:', err));
     }
 
+    // SPEC §5.2 step 6 — the goods have landed, so the order earns its loyalty
+    // points. Runs AFTER the status transaction commits and before the re-read,
+    // so the returned order already carries `loyalty_points_earned`. Idempotent
+    // and non-throwing: the optimistic guard above means only one caller reaches
+    // this line per transition, and a loyalty outage must not 500 a delivery.
+    if (newStatus === OrderStatus.delivered) {
+      await this.orderLifecycle.onDelivered(orderId, AuditService.user(userId));
+    }
+
     const updated = await this.prisma.order.findUnique({
       where: { id: orderId },
     });
 
-    // The two terminal fulfilment states the bridge listens for, emitted AFTER
-    // the status transaction has committed (SPEC §4.1).
+    // The two fulfilment hand-overs the bridge listens for, emitted AFTER the
+    // status transaction has committed (SPEC §4.1). This is the *only* emitter of
+    // `order.delivered` — the lifecycle service credits loyalty but stays silent,
+    // so the review invitation and the mission bridge see one event per order
+    // however many times the credit hook is replayed.
     if (
       updated &&
       (newStatus === OrderStatus.served || newStatus === OrderStatus.delivered)
@@ -562,7 +593,29 @@ export class OrdersService {
         .catch((err) => console.error('[Pusher] Delivery trigger error:', err));
     }
 
+    // The rider's last scan is a delivery too: credit loyalty here as well, so a
+    // local order earns whether staff drive `Order.status` or the rider drives
+    // `Order.delivery_status`. The ledger's `@@unique([order_id, reason])` means
+    // whichever lands second credits nothing.
+    if (dto.delivery_status === DeliveryStatus.delivered) {
+      await this.orderLifecycle.onDelivered(
+        orderId,
+        AuditService.user(order.created_by),
+      );
+    }
+
     return updated;
+  }
+
+  // ---------------------------------------------------------------
+  // Complete Order (POST /orders/:id/complete)
+  // ---------------------------------------------------------------
+  /**
+   * Terminal close-out — delegates to {@link OrderLifecycleService.complete} so
+   * the controller needs no second injected service.
+   */
+  async completeOrder(orderId: string, userId: string | null) {
+    return this.orderLifecycle.complete(orderId, userId);
   }
 
   // ---------------------------------------------------------------

@@ -13,8 +13,15 @@ import {
   provideAuditService,
 } from '../test-utils/mock-providers';
 import { DomainEvent } from '../common/events/domain-events';
+import { OrderLifecycleService } from './order-lifecycle.service';
 
 const emitter = mockEventEmitter();
+
+/** The delivery hook is exercised in `order-lifecycle.service.spec.ts`. */
+const lifecycle = {
+  onDelivered: jest.fn().mockResolvedValue(0),
+  complete: jest.fn(),
+};
 
 /** Mock Prisma Decimal -- supports Number() via valueOf() */
 const dec = (n: number) => ({ valueOf: () => n, toNumber: () => n });
@@ -95,6 +102,7 @@ describe('OrdersService', () => {
         },
         { provide: FulfilmentService, useValue: mockFulfilment },
         provideAuditService(audit),
+        { provide: OrderLifecycleService, useValue: lifecycle },
       ],
     }).compile();
 
@@ -102,6 +110,7 @@ describe('OrdersService', () => {
     jest.clearAllMocks();
     emitter.emit.mockReturnValue(true);
     mockFulfilment.applyPrepTypeOnCreate.mockResolvedValue(undefined);
+    lifecycle.onDelivered.mockResolvedValue(0);
     // updateOrderStatus now runs its optimistic guard + audit row in one transaction.
     mockPrisma.$transaction.mockImplementation(async (cb: any) => cb(mockPrisma));
   });
@@ -415,6 +424,135 @@ describe('OrdersService', () => {
       ).rejects.toThrow(BadRequestException);
     });
 
+    // ---------------------------------------------------------------
+    // P5a lifecycle: the three lanes out of `ready` and the close-out
+    // ---------------------------------------------------------------
+    describe('shipment and completion lifecycle', () => {
+      const arrange = (from: string, to: string) => {
+        mockPrisma.order.findUnique
+          .mockResolvedValueOnce({
+            id: 'o-1',
+            status: from,
+            customer_id: null,
+            order_number: 42,
+          })
+          .mockResolvedValueOnce({
+            id: 'o-1',
+            node_id: 'node-1',
+            order_number: 42,
+            channel: 'delivery',
+            total: '550',
+            status: to,
+          });
+        mockPrisma.order.updateMany.mockResolvedValue({ count: 1 });
+      };
+
+      it.each([
+        ['ready', 'shipped'],
+        ['ready', 'dispatched'],
+        ['ready', 'served'],
+        ['dispatched', 'delivered'],
+        ['shipped', 'delivered'],
+        ['served', 'completed'],
+        ['delivered', 'completed'],
+      ])('allows %s -> %s', async (from, to) => {
+        arrange(from, to);
+
+        const result = await service.updateOrderStatus('o-1', to as any, 'u-1');
+
+        expect(mockPrisma.order.updateMany).toHaveBeenCalledWith({
+          where: { id: 'o-1', status: from },
+          data: { status: to, updated_by: 'u-1' },
+        });
+        expect(result!.status).toBe(to);
+      });
+
+      it.each([
+        // `delivered` is reached from a *dispatch*, never straight off the pass.
+        ['ready', 'delivered'],
+        // `completed` is terminal in both senses: nothing leaves it.
+        ['completed', 'served'],
+        ['completed', 'delivered'],
+        ['completed', 'refunded'],
+        // The courier lane and the rider lane do not cross.
+        ['shipped', 'dispatched'],
+      ])('rejects %s -> %s', async (from, to) => {
+        mockPrisma.order.findUnique.mockResolvedValue({
+          id: 'o-1',
+          status: from,
+          customer_id: null,
+        });
+
+        await expect(
+          service.updateOrderStatus('o-1', to as any, 'u-1'),
+        ).rejects.toThrow(BadRequestException);
+        expect(mockPrisma.order.updateMany).not.toHaveBeenCalled();
+      });
+
+      it('credits loyalty once the order reaches delivered', async () => {
+        arrange('shipped', 'delivered');
+
+        await service.updateOrderStatus('o-1', 'delivered', 'u-1');
+
+        expect(lifecycle.onDelivered).toHaveBeenCalledTimes(1);
+        expect(lifecycle.onDelivered).toHaveBeenCalledWith('o-1', {
+          actor_type: 'user',
+          actor_id: 'u-1',
+        });
+      });
+
+      it('credits loyalty before re-reading the order, so the caller sees the points', async () => {
+        arrange('shipped', 'delivered');
+        let creditedFirst = false;
+        lifecycle.onDelivered.mockImplementation(async () => {
+          creditedFirst = mockPrisma.order.findUnique.mock.calls.length === 1;
+          return 20;
+        });
+
+        await service.updateOrderStatus('o-1', 'delivered', 'u-1');
+
+        expect(creditedFirst).toBe(true);
+      });
+
+      it('does not credit loyalty on any other transition', async () => {
+        arrange('ready', 'shipped');
+
+        await service.updateOrderStatus('o-1', 'shipped', 'u-1');
+
+        expect(lifecycle.onDelivered).not.toHaveBeenCalled();
+      });
+
+      it('allows cancellation from delivered — only completed closes the order', async () => {
+        mockPrisma.order.findUnique
+          .mockResolvedValueOnce({
+            id: 'o-1',
+            status: 'delivered',
+            customer_id: null,
+          })
+          .mockResolvedValueOnce({ id: 'o-1', status: 'cancelled' });
+        mockPrisma.order.updateMany.mockResolvedValue({ count: 1 });
+
+        const result = await service.updateOrderStatus(
+          'o-1',
+          'cancelled',
+          'u-1',
+        );
+
+        expect(result!.status).toBe('cancelled');
+      });
+
+      it('refuses to cancel a completed order', async () => {
+        mockPrisma.order.findUnique.mockResolvedValue({
+          id: 'o-1',
+          status: 'completed',
+        });
+
+        await expect(
+          service.updateOrderStatus('o-1', 'cancelled', 'u-1'),
+        ).rejects.toThrow(BadRequestException);
+      });
+    });
+
     it('allows cancellation from non-terminal status', async () => {
       mockPrisma.order.findUnique
         .mockResolvedValueOnce({
@@ -598,6 +736,61 @@ describe('OrdersService', () => {
         service.updateDelivery('o-1', { delivery_status: 'delivered' }),
       ).rejects.toThrow(BadRequestException);
     });
+
+    it('credits loyalty when the rider marks the drop delivered', async () => {
+      mockPrisma.order.findUnique.mockResolvedValue({
+        id: 'o-1',
+        channel: 'delivery',
+        delivery_status: 'in_transit',
+        created_by: 'user-9',
+        customer_id: 'cust-1',
+      });
+      mockPrisma.order.update.mockResolvedValue({
+        id: 'o-1',
+        node_id: 'node-1',
+        delivery_status: 'delivered',
+      });
+
+      await service.updateDelivery('o-1', { delivery_status: 'delivered' });
+
+      expect(lifecycle.onDelivered).toHaveBeenCalledWith('o-1', {
+        actor_type: 'user',
+        actor_id: 'user-9',
+      });
+    });
+
+    it('does not credit loyalty on an earlier delivery leg', async () => {
+      mockPrisma.order.findUnique.mockResolvedValue({
+        id: 'o-1',
+        channel: 'delivery',
+        delivery_status: 'picked_up',
+        created_by: 'user-9',
+        customer_id: null,
+      });
+      mockPrisma.order.update.mockResolvedValue({
+        id: 'o-1',
+        node_id: 'node-1',
+        delivery_status: 'in_transit',
+      });
+
+      await service.updateDelivery('o-1', { delivery_status: 'in_transit' });
+
+      expect(lifecycle.onDelivered).not.toHaveBeenCalled();
+    });
+  });
+
+  // ---------------------------------------------------------------
+  // completeOrder
+  // ---------------------------------------------------------------
+  describe('completeOrder', () => {
+    it('hands the close-out to the lifecycle service', async () => {
+      lifecycle.complete.mockResolvedValue({ id: 'o-1', status: 'completed' });
+
+      const result = await service.completeOrder('o-1', 'u-1');
+
+      expect(lifecycle.complete).toHaveBeenCalledWith('o-1', 'u-1');
+      expect(result).toEqual({ id: 'o-1', status: 'completed' });
+    });
   });
 
   // ---------------------------------------------------------------
@@ -766,15 +959,55 @@ describe('OrdersService', () => {
       });
 
       /**
-       * `STATUS_TRANSITIONS` has no path into `delivered` yet (the marketplace
-       * flow stops at `dispatched`), so the `order.delivered` gate is wired but
-       * dormant. This pins the current behaviour: the guard rejects before any
-       * write, and nothing is emitted.
+       * Phase 31 typed and wired `order.delivered` while no path into `delivered`
+       * existed. P5a opens `dispatched → delivered` and `shipped → delivered`, so
+       * the dormant gate now fires — once, with the payload the mission bridge
+       * and the review-invitation listener were specified against.
        */
-      it('rejects the still-unreachable transition into delivered and emits nothing', async () => {
+      it.each(['dispatched', 'shipped'])(
+        'emits order.delivered on %s -> delivered',
+        async (from) => {
+          arrangeStatus(from, 'delivered');
+
+          await service.updateOrderStatus('o-1', 'delivered', 'u-1');
+
+          expect(emitter.emit).toHaveBeenCalledTimes(1);
+          expect(emitter.emit).toHaveBeenCalledWith(
+            DomainEvent.ORDER_DELIVERED,
+            expect.objectContaining({
+              node_id: 'node-1',
+              actor: { actor_type: 'user', actor_id: 'u-1' },
+              occurred_at: expect.any(String),
+              orderId: 'o-1',
+              orderNumber: 42,
+              channel: 'dine_in',
+              total: '550',
+            }),
+          );
+        },
+      );
+
+      /**
+       * The lifecycle service credits loyalty but stays silent, so replaying the
+       * credit hook can never double-fire the review invitation.
+       */
+      it('emits order.delivered exactly once even when the credit hook runs', async () => {
+        arrangeStatus('shipped', 'delivered');
+        lifecycle.onDelivered.mockResolvedValue(20);
+
+        await service.updateOrderStatus('o-1', 'delivered', 'u-1');
+
+        expect(
+          emitter.emit.mock.calls.filter(
+            (call: unknown[]) => call[0] === DomainEvent.ORDER_DELIVERED,
+          ),
+        ).toHaveLength(1);
+      });
+
+      it('rejects ready -> delivered and emits nothing', async () => {
         mockPrisma.order.findUnique.mockResolvedValue({
           id: 'o-1',
-          status: 'dispatched',
+          status: 'ready',
           customer_id: null,
           order_number: 42,
         });
@@ -783,6 +1016,7 @@ describe('OrdersService', () => {
           service.updateOrderStatus('o-1', 'delivered', 'u-1'),
         ).rejects.toThrow(BadRequestException);
         expect(emitter.emit).not.toHaveBeenCalled();
+        expect(lifecycle.onDelivered).not.toHaveBeenCalled();
       });
 
       it('emits nothing for a non-terminal transition', async () => {
