@@ -12,6 +12,11 @@ import { EmailService } from '../email/email.service';
 import { StorageService } from '../storage/storage.service';
 import { TasksService } from '../tasks/tasks.service';
 import { AuditService } from '../audit/audit.service';
+import {
+  SETTING_DEFAULTS,
+  SettingsService,
+} from '../settings/settings.service';
+import { WhatsAppService } from '../customer-auth/whatsapp.service';
 
 export const PRISMA_MODELS = [
   'auditEvent',
@@ -26,6 +31,15 @@ export const PRISMA_MODELS = [
   'productVariant',
   'productMedia',
   'channelModifier',
+  'shipment',
+  'shipmentEvent',
+  'refund',
+  'coupon',
+  'couponRedemption',
+  'loyaltyAccount',
+  'loyaltyTransaction',
+  'review',
+  'brand',
   'customer',
   'customerAddress',
   'event',
@@ -141,10 +155,14 @@ export function mockRedisClient() {
   return {
     get: jest.fn(),
     set: jest.fn(),
+    setex: jest.fn(),
     del: jest.fn(),
     incr: jest.fn(),
     expire: jest.fn(),
     getdel: jest.fn(),
+    ttl: jest.fn(),
+    mget: jest.fn(),
+    keys: jest.fn().mockResolvedValue([]),
   };
 }
 
@@ -268,5 +286,58 @@ export const provideTasksService = (value = mockTasksService()) => ({
 });
 export const provideAuditService = (value = mockAuditService()) => ({
   provide: AuditService,
+  useValue: value,
+});
+
+/** A SettingsService stand-in that returns the declared defaults unless overridden. */
+export function mockSettings(overrides: Partial<typeof SETTING_DEFAULTS> = {}) {
+  const values = { ...SETTING_DEFAULTS, ...overrides } as Record<
+    string,
+    unknown
+  >;
+  return {
+    get: jest.fn((key: string) => Promise.resolve(values[key])),
+    getSetting: jest.fn(),
+    updateSetting: jest.fn(),
+  };
+}
+
+/** A ShippingProvider stand-in — every method resolves, none touches the network. */
+export function mockShippingProvider() {
+  return {
+    name: 'manual' as const,
+    checkServiceability: jest.fn().mockResolvedValue({
+      serviceable: true,
+      rate: 0,
+      courier_name: null,
+      etd: null,
+    }),
+    createShipment: jest.fn().mockResolvedValue({
+      provider_order_id: null,
+      provider_shipment_id: null,
+    }),
+    assignAwb: jest.fn().mockResolvedValue({ awb: null, courier_name: null }),
+    schedulePickup: jest
+      .fn()
+      .mockResolvedValue({ scheduled: true, pickup_token: null }),
+    getLabel: jest.fn().mockResolvedValue({ label_url: null }),
+    track: jest.fn().mockResolvedValue({ status: 'pending', events: [] }),
+    cancel: jest.fn().mockResolvedValue({ cancelled: true }),
+  };
+}
+
+export function mockWhatsApp() {
+  return {
+    sendOtp: jest.fn().mockResolvedValue(undefined),
+    sendTemplate: jest.fn().mockResolvedValue(undefined),
+  };
+}
+
+export const provideSettings = (value = mockSettings()) => ({
+  provide: SettingsService,
+  useValue: value,
+});
+export const provideWhatsApp = (value = mockWhatsApp()) => ({
+  provide: WhatsAppService,
   useValue: value,
 });

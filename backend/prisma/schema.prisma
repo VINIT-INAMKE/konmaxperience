@@ -334,6 +334,18 @@ enum ReviewStatus {
   hidden
 }
 
+enum RefundStatus {
+  pending
+  processed
+  failed
+}
+
+enum CouponStatus {
+  draft
+  active
+  disabled
+}
+
 // ─── Operations ──────────────────────────────────────────────────────────────
 enum RecipeStatus {
   draft
@@ -436,6 +448,10 @@ model Node {
   product_categories  ProductCategory[]
   audit_events        AuditEvent[]
   bridge_dispatches   BridgeDispatch[]
+  shipments           Shipment[]
+  refunds             Refund[]
+  coupons             Coupon[]
+  reviews             Review[]
 }
 
 /// SPEC §3: every mutating write that changes state also writes an AuditEvent inside
@@ -511,6 +527,8 @@ model User {
   export_records       ExportRecord[]
   chat_participations  ConversationParticipant[]
   sent_messages        Message[]
+  packed_shipments     Shipment[]                @relation("ShipmentPacker")
+  requested_refunds    Refund[]                  @relation("RefundRequester")
 
   // Optimizes: leaderboard query (active users sorted by xp_total desc)
   @@index([status, xp_total(sort: Desc)])
@@ -1152,6 +1170,7 @@ model Product {
   variants        ProductVariant[]
   media           ProductMedia[]
   orderItems      OrderItem[]
+  reviews         Review[]
 
   @@unique([node_id, slug])
   @@index([node_id, type, status])
@@ -1337,17 +1356,23 @@ model WasteLog {
 }
 
 model Customer {
-  id         String   @id @default(uuid())
-  phone      String   @unique
-  name       String?
-  email      String?
-  created_at DateTime @default(now()) @db.Timestamptz(3)
-  updated_at DateTime @updatedAt @db.Timestamptz(3)
+  id               String    @id @default(uuid())
+  phone            String    @unique
+  name             String?
+  email            String?
+  marketing_opt_in Boolean   @default(false)
+  last_seen_at     DateTime? @db.Timestamptz(3)
+  created_at       DateTime  @default(now()) @db.Timestamptz(3)
+  updated_at       DateTime  @updatedAt @db.Timestamptz(3)
 
-  bookings  EventBooking[]
-  orders    Order[]
-  feedbacks Feedback[]
-  addresses CustomerAddress[]
+  bookings             EventBooking[]
+  orders               Order[]
+  feedbacks            Feedback[]
+  addresses            CustomerAddress[]
+  loyalty_account      LoyaltyAccount?
+  loyalty_transactions LoyaltyTransaction[]
+  coupon_redemptions   CouponRedemption[]
+  reviews              Review[]
 
   @@index([phone])
 }
@@ -1370,42 +1395,48 @@ model CustomerAddress {
 }
 
 model Order {
-  id                      String          @id @default(uuid())
-  node_id                 String          @default("11111111-1111-4111-8111-111111111111")
-  node                    Node            @relation(fields: [node_id], references: [id], onDelete: Restrict)
-  order_number            Int             @unique @default(autoincrement())
+  id                      String               @id @default(uuid())
+  node_id                 String               @default("11111111-1111-4111-8111-111111111111")
+  node                    Node                 @relation(fields: [node_id], references: [id], onDelete: Restrict)
+  order_number            Int                  @unique @default(autoincrement())
   channel                 OrderChannel
-  status                  OrderStatus     @default(placed)
+  status                  OrderStatus          @default(placed)
   table_number            String?
   customer_name           String?
   customer_phone          String?
   delivery_address        String?
   delivery_assigned_to    String?
   delivery_status         DeliveryStatus?
-  placed_via              OrderSource     @default(pos)
+  placed_via              OrderSource          @default(pos)
   customer_id             String?
-  customer                Customer?       @relation(fields: [customer_id], references: [id])
-  subtotal                Decimal         @db.Decimal(12, 2)
-  channel_modifier_amount Decimal         @default(0) @db.Decimal(12, 2)
-  discount_amount         Decimal         @default(0) @db.Decimal(12, 2)
-  shipping_amount         Decimal         @default(0) @db.Decimal(12, 2)
-  tax_amount              Decimal         @default(0) @db.Decimal(12, 2)
-  total                   Decimal         @db.Decimal(12, 2)
-  loyalty_points_earned   Int             @default(0)
-  loyalty_points_redeemed Int             @default(0)
-  idempotency_key         String?         @unique
+  customer                Customer?            @relation(fields: [customer_id], references: [id])
+  subtotal                Decimal              @db.Decimal(12, 2)
+  channel_modifier_amount Decimal              @default(0) @db.Decimal(12, 2)
+  discount_amount         Decimal              @default(0) @db.Decimal(12, 2)
+  shipping_amount         Decimal              @default(0) @db.Decimal(12, 2)
+  tax_amount              Decimal              @default(0) @db.Decimal(12, 2)
+  total                   Decimal              @db.Decimal(12, 2)
+  loyalty_points_earned   Int                  @default(0)
+  loyalty_points_redeemed Int                  @default(0)
+  coupon_id               String?
+  coupon                  Coupon?              @relation(fields: [coupon_id], references: [id], onDelete: SetNull)
+  idempotency_key         String?              @unique
   address_snapshot        Json?
   notes                   String?
   created_by              String?
   updated_by              String?
   zone_id                 String?
-  created_at              DateTime        @default(now()) @db.Timestamptz(3)
-  updated_at              DateTime        @updatedAt @db.Timestamptz(3)
-  creator                 User?           @relation("OrderCreator", fields: [created_by], references: [id])
-  zone                    Zone?           @relation(fields: [zone_id], references: [id])
+  created_at              DateTime             @default(now()) @db.Timestamptz(3)
+  updated_at              DateTime             @updatedAt @db.Timestamptz(3)
+  creator                 User?                @relation("OrderCreator", fields: [created_by], references: [id])
+  zone                    Zone?                @relation(fields: [zone_id], references: [id])
   items                   OrderItem[]
   payment                 Payment?
   feedbacks               Feedback[]
+  shipment                Shipment?
+  refunds                 Refund[]
+  coupon_redemptions      CouponRedemption[]
+  loyalty_transactions    LoyaltyTransaction[]
 
   // Optimizes: analytics date-range + status filters, orders list by status+date, daily summary
   @@index([status, created_at])
@@ -1415,24 +1446,29 @@ model Order {
   @@index([zone_id, status])
   // Optimizes: customer order history lookups (Phase 24)
   @@index([customer_id])
+  // Optimizes: coupon usage counts and admin "orders that used coupon X"
+  @@index([coupon_id])
 }
 
 model OrderItem {
-  id         String          @id @default(uuid())
-  order_id   String
-  product_id String
-  variant_id String?
-  quantity   Int
-  unit_price Decimal         @db.Decimal(12, 2)
-  item_notes String?
-  status     OrderItemStatus @default(pending)
-  fulfilment FulfilmentType  @default(local)
-  tax_rate   Decimal         @default(0) @db.Decimal(5, 2)
-  ready_at   DateTime?       @db.Timestamptz(3)
-  created_at DateTime        @default(now()) @db.Timestamptz(3)
-  order      Order           @relation(fields: [order_id], references: [id], onDelete: Cascade)
-  product    Product         @relation(fields: [product_id], references: [id])
-  variant    ProductVariant? @relation(fields: [variant_id], references: [id])
+  id               String          @id @default(uuid())
+  order_id         String
+  product_id       String
+  variant_id       String?
+  quantity         Int
+  unit_price       Decimal         @db.Decimal(12, 2)
+  item_notes       String?
+  status           OrderItemStatus @default(pending)
+  fulfilment       FulfilmentType  @default(local)
+  tax_rate         Decimal         @default(0) @db.Decimal(5, 2)
+  ready_at         DateTime?       @db.Timestamptz(3)
+  event_booking_id String?         @unique
+  created_at       DateTime        @default(now()) @db.Timestamptz(3)
+  order            Order           @relation(fields: [order_id], references: [id], onDelete: Cascade)
+  product          Product         @relation(fields: [product_id], references: [id])
+  variant          ProductVariant? @relation(fields: [variant_id], references: [id])
+  event_booking    EventBooking?   @relation(fields: [event_booking_id], references: [id], onDelete: SetNull)
+  review           Review?
 
   // Optimizes: KDS findMany by order_id, all-items-ready check
   @@index([order_id])
@@ -1454,6 +1490,7 @@ model Payment {
   razorpay_payment_id String?       @unique
   created_at          DateTime      @default(now()) @db.Timestamptz(3)
   order               Order         @relation(fields: [order_id], references: [id])
+  refunds             Refund[]
 }
 
 model Notification {
@@ -1535,6 +1572,7 @@ model EventBooking {
   hold_expires_at     DateTime?     @db.Timestamptz(3)
   payment_amount      Decimal?      @db.Decimal(12, 2)
   created_at          DateTime      @default(now()) @db.Timestamptz(3)
+  order_item          OrderItem?
 
   @@unique([event_id, customer_phone])
   @@index([customer_id])
@@ -1641,4 +1679,172 @@ model Message {
 
   @@index([conversation_id, created_at(sort: Desc)])
   @@index([sender_id])
+}
+
+// ─── P5a commerce (SPEC §3.3 — models deferred from P2) ──────────────────────
+
+/// One shipment per order, covering every `fulfilment = shipped` line of that
+/// order. `order_id` is unique so "pack" is idempotent at the database level.
+model Shipment {
+  id                   String           @id @default(uuid())
+  node_id              String           @default("11111111-1111-4111-8111-111111111111")
+  node                 Node             @relation(fields: [node_id], references: [id], onDelete: Restrict)
+  order_id             String           @unique
+  order                Order            @relation(fields: [order_id], references: [id], onDelete: Restrict)
+  provider             ShippingProvider @default(manual)
+  provider_order_id    String?
+  provider_shipment_id String?
+  awb                  String?          @unique
+  courier_name         String?
+  status               ShipmentStatus   @default(pending)
+  label_url            String?
+  tracking_url         String?
+  pickup_location_code String           @default("")
+  weight_grams         Int              @default(0)
+  cost                 Decimal?         @db.Decimal(12, 2)
+  etd                  DateTime?        @db.Timestamptz(3)
+  packed_by            String?
+  packer               User?            @relation("ShipmentPacker", fields: [packed_by], references: [id])
+  created_at           DateTime         @default(now()) @db.Timestamptz(3)
+  updated_at           DateTime         @updatedAt @db.Timestamptz(3)
+  events               ShipmentEvent[]
+
+  @@index([node_id, status, created_at])
+}
+
+/// Append-only tracking ledger. The unique triple is the SHIP-04 idempotency key
+/// (`awb` is 1:1 with `shipment_id`, so the shipment id stands in for it).
+model ShipmentEvent {
+  id          String         @id @default(uuid())
+  shipment_id String
+  shipment    Shipment       @relation(fields: [shipment_id], references: [id], onDelete: Cascade)
+  status      ShipmentStatus
+  raw         Json?
+  occurred_at DateTime       @db.Timestamptz(3)
+  created_at  DateTime       @default(now()) @db.Timestamptz(3)
+
+  @@unique([shipment_id, status, occurred_at])
+  @@index([shipment_id, occurred_at])
+}
+
+model Refund {
+  id                 String       @id @default(uuid())
+  node_id            String       @default("11111111-1111-4111-8111-111111111111")
+  node               Node         @relation(fields: [node_id], references: [id], onDelete: Restrict)
+  order_id           String
+  order              Order        @relation(fields: [order_id], references: [id], onDelete: Restrict)
+  payment_id         String
+  payment            Payment      @relation(fields: [payment_id], references: [id], onDelete: Restrict)
+  amount             Decimal      @db.Decimal(12, 2)
+  reason             String
+  razorpay_refund_id String?      @unique
+  status             RefundStatus @default(pending)
+  requested_by       String?
+  requester          User?        @relation("RefundRequester", fields: [requested_by], references: [id])
+  created_at         DateTime     @default(now()) @db.Timestamptz(3)
+  updated_at         DateTime     @updatedAt @db.Timestamptz(3)
+
+  @@index([order_id, created_at])
+  @@index([payment_id])
+}
+
+/// Redemption limits are enforced by counting `CouponRedemption` rows — there is
+/// deliberately no denormalised counter to drift under Serializable retries.
+model Coupon {
+  id                 String             @id @default(uuid())
+  node_id            String             @default("11111111-1111-4111-8111-111111111111")
+  node               Node               @relation(fields: [node_id], references: [id], onDelete: Restrict)
+  code               String             @unique
+  description        String             @default("")
+  type               CouponType
+  value              Decimal            @db.Decimal(12, 2)
+  min_order          Decimal?           @db.Decimal(12, 2)
+  max_discount       Decimal?           @db.Decimal(12, 2)
+  applies_to         ProductType[]      @default([])
+  starts_at          DateTime           @db.Timestamptz(3)
+  ends_at            DateTime           @db.Timestamptz(3)
+  usage_limit        Int?
+  per_customer_limit Int?
+  status             CouponStatus       @default(draft)
+  created_by         String?
+  created_at         DateTime           @default(now()) @db.Timestamptz(3)
+  updated_at         DateTime           @updatedAt @db.Timestamptz(3)
+  redemptions        CouponRedemption[]
+  orders             Order[]
+
+  @@index([node_id, status, starts_at, ends_at])
+}
+
+model CouponRedemption {
+  id          String   @id @default(uuid())
+  coupon_id   String
+  coupon      Coupon   @relation(fields: [coupon_id], references: [id], onDelete: Restrict)
+  order_id    String
+  order       Order    @relation(fields: [order_id], references: [id], onDelete: Cascade)
+  customer_id String
+  customer    Customer @relation(fields: [customer_id], references: [id], onDelete: Restrict)
+  amount      Decimal  @db.Decimal(12, 2)
+  created_at  DateTime @default(now()) @db.Timestamptz(3)
+
+  @@unique([coupon_id, order_id])
+  @@index([coupon_id, customer_id])
+  @@index([customer_id])
+}
+
+/// Loyalty is per customer and global, not per node (SPEC §12).
+model LoyaltyAccount {
+  customer_id     String      @id
+  customer        Customer    @relation(fields: [customer_id], references: [id], onDelete: Cascade)
+  points_balance  Int         @default(0)
+  lifetime_points Int         @default(0)
+  tier            LoyaltyTier @default(member)
+  created_at      DateTime    @default(now()) @db.Timestamptz(3)
+  updated_at      DateTime    @updatedAt @db.Timestamptz(3)
+}
+
+/// `@@unique([order_id, reason])` makes earn and redeem idempotent per order —
+/// Postgres treats NULL `order_id` (manual adjustments, expiry) as distinct.
+model LoyaltyTransaction {
+  id            String        @id @default(uuid())
+  customer_id   String
+  customer      Customer      @relation(fields: [customer_id], references: [id], onDelete: Cascade)
+  order_id      String?
+  order         Order?        @relation(fields: [order_id], references: [id], onDelete: SetNull)
+  delta         Int
+  balance_after Int
+  reason        LoyaltyReason
+  notes         String?
+  expires_at    DateTime?     @db.Timestamptz(3)
+  expired       Boolean       @default(false)
+  created_by    String?
+  created_at    DateTime      @default(now()) @db.Timestamptz(3)
+
+  @@unique([order_id, reason])
+  @@index([customer_id, created_at(sort: Desc)])
+  @@index([expired, expires_at])
+}
+
+model Review {
+  id            String       @id @default(uuid())
+  node_id       String       @default("11111111-1111-4111-8111-111111111111")
+  node          Node         @relation(fields: [node_id], references: [id], onDelete: Restrict)
+  product_id    String
+  product       Product      @relation(fields: [product_id], references: [id], onDelete: Cascade)
+  customer_id   String
+  customer      Customer     @relation(fields: [customer_id], references: [id], onDelete: Cascade)
+  order_item_id String       @unique
+  order_item    OrderItem    @relation(fields: [order_item_id], references: [id], onDelete: Cascade)
+  rating        Int
+  title         String?
+  body          String?
+  media         String[]     @default([])
+  status        ReviewStatus @default(pending)
+  moderated_by  String?
+  moderated_at  DateTime?    @db.Timestamptz(3)
+  created_at    DateTime     @default(now()) @db.Timestamptz(3)
+  updated_at    DateTime     @updatedAt @db.Timestamptz(3)
+
+  @@index([product_id, status, created_at(sort: Desc)])
+  @@index([node_id, status])
+  @@index([customer_id])
 }
