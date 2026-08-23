@@ -7,6 +7,7 @@ import { Card, CardAction, CardContent, CardHeader, CardTitle } from '@/componen
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { QuestTaskChip } from '@/components/ops/tasks/QuestTaskChip';
 import { apiClient } from '@/lib/api-client';
 
 interface BlockedTask {
@@ -75,10 +76,12 @@ export function AdminBlockersWidget() {
                 className="block rounded-md px-2 py-1.5 transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[var(--focus)]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
               >
                 <p className="text-sm font-medium truncate">{task.title}</p>
+                {/* SPEC §6.4 — which quest this blocker is holding up. The row
+                    is already an anchor, so the chip renders unlinked. */}
                 {task.quest && (
-                  <p className="text-xs text-muted-foreground truncate">
-                    {task.quest.title}
-                  </p>
+                  <div className="flex pt-0.5">
+                    <QuestTaskChip quest={task.quest} linkify={false} />
+                  </div>
                 )}
                 {task.blocked_reason && (
                   <p className="text-xs text-destructive truncate">

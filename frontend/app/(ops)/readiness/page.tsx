@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { formatDistanceToNow, parseISO } from 'date-fns';
 import { AlertCircle, Gauge, RefreshCw } from 'lucide-react';
@@ -33,8 +34,35 @@ function lastComputed(meters: ReadinessMeter[] | undefined): string | null {
   }
 }
 
-export default function ReadinessPage() {
-  const [selectedMeterId, setSelectedMeterId] = useState<string | null>(null);
+/** Eight meter rings, the shape the grid settles into. */
+function ReadinessSkeleton() {
+  return (
+    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      {Array.from({ length: 8 }).map((_, i) => (
+        <div
+          key={i}
+          className="flex animate-pulse flex-col items-center gap-2 opacity-40 motion-reduce:animate-none"
+        >
+          <div className="size-40 rounded-full bg-surface-raised" />
+          <div className="h-4 w-24 rounded bg-surface-raised" />
+          <div className="h-5 w-20 rounded-full bg-surface-raised" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ReadinessContent() {
+  /**
+   * SPEC §6.4 — the meter chip deep-links `?meter=CODE`, so the code opens that
+   * meter's detail on arrival. `undefined` means "nobody has clicked yet", which
+   * is what lets a click close the URL-opened meter instead of it snapping back.
+   */
+  const searchParams = useSearchParams();
+  const meterCodeParam = searchParams.get('meter');
+  const [clickedMeterId, setClickedMeterId] = useState<string | null | undefined>(
+    undefined,
+  );
   const queryClient = useQueryClient();
   const roleCode = useAuthStore((s) => s.user?.roleCode);
   const canRecompute =
@@ -68,6 +96,13 @@ export default function ReadinessPage() {
 
   const isEmpty = !isLoading && !isError && (!meters || meters.length === 0);
   const computedAgo = lastComputed(meters);
+
+  const meterFromUrl =
+    meterCodeParam && meters
+      ? (meters.find((m) => m.code === meterCodeParam)?.id ?? null)
+      : null;
+  const selectedMeterId =
+    clickedMeterId === undefined ? meterFromUrl : clickedMeterId;
 
   return (
     <div className="space-y-6">
@@ -106,20 +141,7 @@ export default function ReadinessPage() {
       </div>
 
       {/* Loading state */}
-      {isLoading && (
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <div
-              key={i}
-              className="flex animate-pulse flex-col items-center gap-2 opacity-40"
-            >
-              <div className="size-40 rounded-full bg-surface-raised" />
-              <div className="h-4 w-24 rounded bg-surface-raised" />
-              <div className="h-5 w-20 rounded-full bg-surface-raised" />
-            </div>
-          ))}
-        </div>
-      )}
+      {isLoading && <ReadinessSkeleton />}
 
       {/* Error state */}
       {isError && (
@@ -154,9 +176,18 @@ export default function ReadinessPage() {
         <ReadinessGrid
           meters={meters}
           selectedMeterId={selectedMeterId}
-          onSelectMeter={setSelectedMeterId}
+          onSelectMeter={setClickedMeterId}
         />
       )}
     </div>
+  );
+}
+
+export default function ReadinessPage() {
+  // `useSearchParams()` needs a Suspense boundary above it to prerender.
+  return (
+    <Suspense fallback={<ReadinessSkeleton />}>
+      <ReadinessContent />
+    </Suspense>
   );
 }

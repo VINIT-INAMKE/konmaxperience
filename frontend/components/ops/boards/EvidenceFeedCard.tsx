@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
 import { FileText, Video, Link as LinkIcon, StickyNote, Zap } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { QuestTaskChip } from '@/components/ops/tasks/QuestTaskChip';
 import { STATUS_BADGE, getEvidenceStatusBadge } from '@/lib/status-styles';
 import type { EvidenceFeedEntry } from '@/lib/types/analytics';
 
@@ -109,6 +110,13 @@ export function EvidenceFeedCard({ evidence }: EvidenceFeedCardProps) {
           <p className="text-xs text-muted-foreground">
             Evidence type: {evidence.type}
           </p>
+          {/* SPEC §6.4 — the quest that asked for this proof. The whole card is
+              already one anchor, so the chip renders as text, not a nested link. */}
+          {evidence.task?.quest && (
+            <div className="flex">
+              <QuestTaskChip quest={evidence.task.quest} linkify={false} />
+            </div>
+          )}
         </div>
       </div>
     </Link>

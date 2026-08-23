@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { QuestTaskChip } from '@/components/ops/tasks/QuestTaskChip';
 import type { PurchaseOrder, PurchaseOrderStatus } from '@/lib/types/purchase-order';
 import { PO_STATUS_BADGE_CLASSES, PO_STATUS_LABELS } from '@/lib/types/purchase-order';
 
@@ -27,7 +28,17 @@ export function PurchaseOrderRow({ po, onCancel }: PurchaseOrderRowProps) {
   return (
     <tr className="border-b last:border-b-0 hover:bg-muted/30 transition-colors">
       <td className="px-4 py-2 text-sm font-medium">
-        {po.vendor?.name ?? '\u2014'}
+        <div className="flex flex-col gap-1">
+          <span>{po.vendor?.name ?? '\u2014'}</span>
+          {/* SPEC \u00a76.4 \u2014 why this PO exists: the task that raised it. */}
+          {po.linked_task && (
+            <QuestTaskChip
+              quest={po.linked_task.quest}
+              task={{ id: po.linked_task.id, title: po.linked_task.title }}
+              className="max-w-[220px]"
+            />
+          )}
+        </div>
       </td>
       <td className="px-4 py-2 text-xs text-muted-foreground">
         {po.lines?.length ?? 0} items

@@ -6,9 +6,9 @@ import type { ReadinessMeter } from '@/lib/types/readiness';
  * contributions"). Matching is by meter *name*, substring, case-insensitive —
  * meter names are seeded reference data, codes are not stable across nodes.
  *
- * Lifted out of the role dashboard My Day replaced, so exactly one copy exists.
- * It moves to `lib/nav/meters.ts` with the Quest › Task chip work, which owns
- * that file.
+ * Lives beside `lib/nav/spine.ts` because it answers the same question that
+ * file does — "what does this role look at" — and because two unrelated
+ * surfaces read it: My Day's meter block and the meter chip on a task card.
  */
 export const ROLE_METER_NAMES: Record<string, string[]> = {
   [RoleCode.BACKEND_LEAD]: ['Backend', 'Food', 'Standardization'],
@@ -49,4 +49,14 @@ export function selectRoleMeters(
   return chosen
     .sort((a, b) => a.current_value - b.current_value)
     .slice(0, limit);
+}
+
+/**
+ * SPEC §6.4 — the one place that knows how a meter is deep-linked. `/readiness`
+ * opens the matching meter's detail when `?meter=CODE` is present and falls
+ * back to the grid when the code is unknown, so a chip whose code could not be
+ * resolved still lands somewhere useful rather than on a 404.
+ */
+export function readinessHref(code: string | null | undefined): string {
+  return code ? `/readiness?meter=${encodeURIComponent(code)}` : '/readiness';
 }

@@ -42,4 +42,11 @@ export interface PurchaseOrder {
   zone?: { id: string; name: string };
   ordered_by_user?: { id: string; name: string };
   lines?: PurchaseOrderLine[];
+  /** The mission task that asked for this PO — SPEC §6.4's lineage chip. */
+  linked_task_id?: string | null;
+  linked_task?: {
+    id: string;
+    title: string;
+    quest?: { id: string; title: string } | null;
+  } | null;
 }

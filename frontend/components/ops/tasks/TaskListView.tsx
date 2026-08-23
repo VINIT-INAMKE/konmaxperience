@@ -1,7 +1,6 @@
 'use client';
 
 import { Fragment, useState, useMemo } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { format, isPast, parseISO } from 'date-fns';
 import { Link as LinkIcon, AlertTriangle, ClipboardList, Plus, SearchX } from 'lucide-react';
@@ -24,6 +23,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { AdHocTaskSheet } from './AdHocTaskSheet';
+import { MeterChip } from './MeterChip';
+import { QuestTaskChip } from './QuestTaskChip';
 import type { Task, TaskStatus } from '@/lib/types/tasks';
 import {
   TASK_TYPE_LABELS,
@@ -170,21 +171,33 @@ export function TaskListView({
         onClick={() => router.push(`/tasks/${task.id}`)}
       >
         <TableCell>
-          <div className="flex items-center gap-2">
-            <span className="truncate max-w-[200px]">{task.title}</span>
-            <Badge
-              variant="secondary"
-              className={getTypeBadgeClass(task.task_type)}
-            >
-              {TASK_TYPE_LABELS[task.task_type]}
-            </Badge>
-            {task.depends_on && (
-              <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                <LinkIcon className="size-3" />
-                {task.depends_on.status !== 'done' && (
-                  <AlertTriangle className="size-3 text-destructive" />
-                )}
-              </span>
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-2">
+              <span className="truncate max-w-[200px]">{task.title}</span>
+              <Badge
+                variant="secondary"
+                className={getTypeBadgeClass(task.task_type)}
+              >
+                {TASK_TYPE_LABELS[task.task_type]}
+              </Badge>
+              {task.depends_on && (
+                <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <LinkIcon className="size-3" />
+                  {task.depends_on.status !== 'done' && (
+                    <AlertTriangle className="size-3 text-destructive" />
+                  )}
+                </span>
+              )}
+            </div>
+            {/* SPEC §6.4 — the meter this row feeds, deep-linked by code. */}
+            {task.readiness_meter_id && (
+              <div className="flex" onClick={(e) => e.stopPropagation()}>
+                <MeterChip
+                  meterId={task.readiness_meter_id}
+                  meterLabel={task.readiness_meter?.name}
+                  value={task.readiness_value}
+                />
+              </div>
             )}
           </div>
         </TableCell>
@@ -240,12 +253,7 @@ export function TaskListView({
           onClick={(e) => e.stopPropagation()}
         >
           {task.quest ? (
-            <Link
-              href={`/quests/${task.quest.id}`}
-              className="block max-w-[140px] truncate rounded-sm transition-colors hover:text-brand focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[var(--focus)]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
-            >
-              {task.quest.title}
-            </Link>
+            <QuestTaskChip quest={task.quest} className="max-w-[140px]" />
           ) : (
             <span className="block max-w-[140px] truncate">-</span>
           )}

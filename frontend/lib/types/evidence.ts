@@ -6,6 +6,17 @@ export type EvidenceApprovalStatus = 'pending' | 'approved' | 'rejected';
 export interface Evidence {
   id: string;
   task_id: string;
+  /**
+   * SPEC §6.4 — the lineage the "Quest › Task" chip renders. `GET /evidence`
+   * selects it; the per-task and post-upload responses do not, so it is
+   * optional and the chip stands down where it is absent.
+   */
+  task?: {
+    id: string;
+    title: string;
+    quest?: { id: string; title: string } | null;
+    mission?: { id: string; title: string } | null;
+  } | null;
   uploaded_by: string;
   uploader?: { id: string; name: string };
   type: EvidenceType;
