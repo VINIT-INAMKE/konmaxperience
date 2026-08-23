@@ -10,14 +10,14 @@ export function PolicyNotice() {
 
   return (
     <div
-      className="flex items-center gap-2 px-4 py-2 bg-amber-500/10 border-b border-amber-500/20 text-[12px] text-amber-600 shrink-0"
+      className="flex items-center gap-2 px-4 py-2 bg-[var(--status-warning)]/10 border-b border-[var(--status-warning)]/20 text-[12px] text-warning shrink-0"
       role="status"
     >
       <Info className="size-3 shrink-0" />
       Conversations may be reviewed by admins for operational purposes.
       <button
         onClick={() => setDismissed(true)}
-        className="ml-auto text-amber-600/70 hover:text-amber-600"
+        className="ml-auto rounded-sm text-warning/70 hover:text-warning focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[var(--focus)]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
         aria-label="Dismiss notice"
       >
         <X className="size-3" />

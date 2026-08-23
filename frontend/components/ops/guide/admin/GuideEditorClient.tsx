@@ -394,7 +394,7 @@ function GuideEditorInner({
             </span>
           )}
           {saveState === 'unsaved' && (
-            <span className="flex items-center gap-1 text-[14px] text-amber-500">
+            <span className="flex items-center gap-1 text-[14px] text-warning">
               <Circle className="size-3 fill-current" /> Unsaved changes
             </span>
           )}
@@ -429,7 +429,7 @@ function GuideEditorInner({
 
       {/* Draft banner */}
       {status === 'draft' && (
-        <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg px-4 py-2 mx-6 mt-4 flex items-center gap-2 text-[14px] text-amber-600">
+        <div className="bg-[var(--status-warning)]/10 border border-[var(--status-warning)]/20 rounded-lg px-4 py-2 mx-6 mt-4 flex items-center gap-2 text-[14px] text-warning">
           <AlertTriangle className="size-4" /> This page is a draft. Only admins
           can see it.
         </div>

@@ -1,3 +1,5 @@
+import type { EvidenceSource } from './evidence';
+
 export interface AnalyticsSummary {
   total_revenue: number;
   avg_food_cost_pct: number;
@@ -50,6 +52,14 @@ export interface EvidenceFeedEntry {
   notes: string | null;
   approval_status: 'pending' | 'approved' | 'rejected';
   created_at: string;
+  /**
+   * SPEC §4.2 — `'bridge'` marks evidence the mission bridge captured rather than
+   * a person. Optional because the feed endpoint may not select the column yet;
+   * the card falls back to the manual presentation when it is absent.
+   */
+  source?: EvidenceSource;
+  /** The bridge event that produced this evidence, when `source === 'bridge'`. */
+  bridge_event?: string | null;
   task?: { title: string };
   uploader?: { id: string; name: string };
 }

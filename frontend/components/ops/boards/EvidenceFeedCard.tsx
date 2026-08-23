@@ -2,9 +2,9 @@
 
 import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
-import { FileText, Video, Link as LinkIcon, StickyNote } from 'lucide-react';
+import { FileText, Video, Link as LinkIcon, StickyNote, Zap } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { getEvidenceStatusBadge } from '@/lib/status-styles';
+import { STATUS_BADGE, getEvidenceStatusBadge } from '@/lib/status-styles';
 import type { EvidenceFeedEntry } from '@/lib/types/analytics';
 
 const STATUS_LABELS: Record<EvidenceFeedEntry['approval_status'], string> = {
@@ -58,6 +58,8 @@ interface EvidenceFeedCardProps {
 }
 
 export function EvidenceFeedCard({ evidence }: EvidenceFeedCardProps) {
+  const isBridge = evidence.source === 'bridge';
+
   return (
     <Link
       href={`/tasks/${evidence.task_id}`}
@@ -71,15 +73,35 @@ export function EvidenceFeedCard({ evidence }: EvidenceFeedCardProps) {
             <p className="text-sm font-bold truncate">
               {evidence.task?.title ?? 'Unknown task'}
             </p>
-            <Badge
-              variant="secondary"
-              className={getEvidenceStatusBadge(evidence.approval_status)}
-            >
-              {STATUS_LABELS[evidence.approval_status]}
-            </Badge>
+            <div className="flex items-center gap-1.5 shrink-0">
+              {/* SPEC §4.2 — evidence the mission bridge captured, not a person */}
+              {isBridge && (
+                <Badge
+                  variant="outline"
+                  className={`gap-1 ${STATUS_BADGE.info}`}
+                  title={
+                    evidence.bridge_event
+                      ? `Auto-captured from ${evidence.bridge_event}`
+                      : 'Auto-captured by the mission bridge'
+                  }
+                >
+                  <Zap aria-hidden="true" />
+                  Bridge
+                </Badge>
+              )}
+              <Badge
+                variant="secondary"
+                className={getEvidenceStatusBadge(evidence.approval_status)}
+              >
+                {STATUS_LABELS[evidence.approval_status]}
+              </Badge>
+            </div>
           </div>
           <p className="text-sm text-muted-foreground">
-            Uploaded by {evidence.uploader?.name ?? 'Unknown'} &middot;{' '}
+            {isBridge
+              ? 'Auto-captured by the mission bridge'
+              : `Uploaded by ${evidence.uploader?.name ?? 'Unknown'}`}{' '}
+            &middot;{' '}
             {formatDistanceToNow(new Date(evidence.created_at), {
               addSuffix: true,
             })}

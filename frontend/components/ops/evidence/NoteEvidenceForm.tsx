@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { ShimmerButton } from '@/components/ui/shimmer-button';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { apiClient } from '@/lib/api-client';
@@ -55,13 +54,14 @@ export function NoteEvidenceForm({
         disabled={isSubmitting}
       />
       <div className="flex items-center gap-3">
-        <ShimmerButton
+        <Button
+          size="sm"
           className="h-9 text-sm"
           onClick={handleSubmit}
           disabled={isSubmitting}
         >
           {isSubmitting ? 'Saving...' : 'Save note'}
-        </ShimmerButton>
+        </Button>
         <Button
           variant="ghost"
           size="sm"

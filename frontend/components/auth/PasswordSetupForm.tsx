@@ -177,7 +177,7 @@ export function PasswordSetupForm({
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-2 top-1/2 -translate-y-1/2 h-[44px] w-[44px] flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+                className="absolute right-2 top-1/2 -translate-y-1/2 h-[44px] w-[44px] flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground transition-colors motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[var(--focus)]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
                 aria-label={showPassword ? 'Hide password' : 'Show password'}
               >
                 {showPassword ? (
@@ -205,14 +205,14 @@ export function PasswordSetupForm({
               <div
                 className={`h-1 flex-1 rounded-full transition-colors ${
                   passwordStrength >= 2
-                    ? 'bg-amber-500'
+                    ? 'bg-warning'
                     : 'bg-muted'
                 }`}
               />
               <div
                 className={`h-1 flex-1 rounded-full transition-colors ${
                   passwordStrength >= 3
-                    ? 'bg-green-500'
+                    ? 'bg-good'
                     : 'bg-muted'
                 }`}
               />
@@ -285,7 +285,7 @@ export function PasswordSetupForm({
                 onClick={() =>
                   setShowConfirmPassword(!showConfirmPassword)
                 }
-                className="absolute right-2 top-1/2 -translate-y-1/2 h-[44px] w-[44px] flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+                className="absolute right-2 top-1/2 -translate-y-1/2 h-[44px] w-[44px] flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground transition-colors motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[var(--focus)]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
                 aria-label={
                   showConfirmPassword ? 'Hide password' : 'Show password'
                 }

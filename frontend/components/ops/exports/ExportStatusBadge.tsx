@@ -1,18 +1,10 @@
 import { Badge } from '@/components/ui/badge';
+import { STATUS_BADGE } from '@/lib/status-styles';
 
 const statusConfig = {
-  completed: {
-    label: 'Completed',
-    className: 'bg-success/10 text-success border-success/20',
-  },
-  generating: {
-    label: 'Generating',
-    className: 'bg-amber-500/10 text-amber-600 border-amber-500/20',
-  },
-  failed: {
-    label: 'Failed',
-    className: 'bg-destructive/10 text-destructive border-destructive/20',
-  },
+  completed: { label: 'Completed', className: STATUS_BADGE.good },
+  generating: { label: 'Generating', className: STATUS_BADGE.warning },
+  failed: { label: 'Failed', className: STATUS_BADGE.serious },
 } as const;
 
 interface ExportStatusBadgeProps {

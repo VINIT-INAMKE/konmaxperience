@@ -3,7 +3,6 @@
 import { useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 import { Confetti, type ConfettiRef } from '@/components/ui/confetti';
-import { TextAnimate } from '@/components/ui/text-animate';
 
 interface LevelUpCelebrationProps {
   newLevel: number;
@@ -47,14 +46,9 @@ export function LevelUpCelebration({ newLevel, onComplete }: LevelUpCelebrationP
         className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center"
         aria-hidden="true"
       >
-        <TextAnimate
-          animation="scaleUp"
-          by="word"
-          startOnView={false}
-          className="text-[28px] font-semibold text-white drop-shadow-lg"
-        >
+        <span className="rounded-full bg-brand px-6 py-2 text-[28px] font-semibold text-brand-ink shadow-lg animate-in zoom-in-95 fade-in-0 duration-300 motion-reduce:animate-none">
           Level Up!
-        </TextAnimate>
+        </span>
       </div>
     </>
   );

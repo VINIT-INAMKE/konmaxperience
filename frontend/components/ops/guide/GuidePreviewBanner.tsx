@@ -20,15 +20,15 @@ interface GuidePreviewBannerProps {
 
 export function GuidePreviewBanner({ previewRole, onReset }: GuidePreviewBannerProps) {
   return (
-    <div className="flex items-center justify-between px-4 py-2 rounded-lg bg-amber-500/10 border border-amber-500/20 mb-4 animate-in slide-in-from-top-2 fade-in-0 duration-200">
-      <div className="flex items-center gap-2 text-[14px] text-amber-700 dark:text-amber-400">
+    <div className="flex items-center justify-between px-4 py-2 rounded-lg bg-[var(--status-warning)]/10 border border-[var(--status-warning)]/20 mb-4 animate-in slide-in-from-top-2 fade-in-0 duration-200 motion-reduce:animate-none">
+      <div className="flex items-center gap-2 text-[14px] text-warning">
         <Eye className="size-4 shrink-0" />
         Previewing as: <span className="font-semibold">{ROLE_DISPLAY_NAMES[previewRole] ?? previewRole}</span>
       </div>
       <button
         onClick={onReset}
         aria-label="Exit role preview and return to your view"
-        className="text-[14px] text-amber-700 underline hover:text-amber-900 dark:text-amber-400 dark:hover:text-amber-300 transition-colors"
+        className="text-[14px] text-warning underline transition-colors hover:text-ink motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[var(--focus)]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)] rounded-sm"
       >
         Back to your view
       </button>

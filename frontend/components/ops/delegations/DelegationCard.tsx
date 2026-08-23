@@ -6,9 +6,21 @@ import { format, parseISO } from 'date-fns';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { AvatarCircles } from '@/components/ui/avatar-circles';
+import { Avatar, AvatarFallback, AvatarGroup } from '@/components/ui/avatar';
 import { apiClient } from '@/lib/api-client';
+import { STATUS_BADGE } from '@/lib/status-styles';
 import type { ApprovalDelegation } from '@/lib/types/delegations';
+
+/** First letters of the first two words, e.g. "Ada Lovelace" → "AL". */
+function initials(name: string | undefined): string {
+  if (!name) return '?';
+  return name
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? '')
+    .join('') || '?';
+}
 
 interface DelegationCardProps {
   delegation: ApprovalDelegation;
@@ -17,17 +29,6 @@ interface DelegationCardProps {
 
 export function DelegationCard({ delegation, onDeactivated }: DelegationCardProps) {
   const isExpired = !delegation.active || new Date(delegation.end_date) < new Date();
-
-  const avatarUrls = [
-    {
-      imageUrl: `https://api.dicebear.com/8.x/initials/svg?seed=${encodeURIComponent(delegation.from_user?.name || '')}`,
-      profileUrl: '#',
-    },
-    {
-      imageUrl: `https://api.dicebear.com/8.x/initials/svg?seed=${encodeURIComponent(delegation.to_user?.name || '')}`,
-      profileUrl: '#',
-    },
-  ];
 
   const handleDeactivate = async () => {
     try {
@@ -44,10 +45,14 @@ export function DelegationCard({ delegation, onDeactivated }: DelegationCardProp
       <CardContent className="p-4 space-y-2">
         {/* Row 1: Avatars, names, status badge, deactivate button */}
         <div className="flex items-center gap-3">
-          <AvatarCircles
-            avatarUrls={avatarUrls}
-            className="[&_img]:size-7 [&_img]:h-7 [&_img]:w-7"
-          />
+          <AvatarGroup aria-hidden="true">
+            <Avatar size="sm">
+              <AvatarFallback>{initials(delegation.from_user?.name)}</AvatarFallback>
+            </Avatar>
+            <Avatar size="sm">
+              <AvatarFallback>{initials(delegation.to_user?.name)}</AvatarFallback>
+            </Avatar>
+          </AvatarGroup>
           <span className="text-base font-semibold flex-1">
             {delegation.from_user?.name ?? 'Unknown'} &rarr; {delegation.to_user?.name ?? 'Unknown'}
           </span>
@@ -61,7 +66,7 @@ export function DelegationCard({ delegation, onDeactivated }: DelegationCardProp
           ) : (
             <Badge
               variant="outline"
-              className="bg-blue-500/10 text-blue-400 border-blue-500/30 shrink-0"
+              className={`shrink-0 ${STATUS_BADGE.info}`}
             >
               Active
             </Badge>

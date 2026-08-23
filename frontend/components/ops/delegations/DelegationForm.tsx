@@ -19,7 +19,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { ShimmerButton } from '@/components/ui/shimmer-button';
 import { apiClient } from '@/lib/api-client';
 
 interface DelegationFormProps {
@@ -190,7 +189,7 @@ export function DelegationForm({ open, onOpenChange, onCreated }: DelegationForm
 
           {/* Actions */}
           <div className="flex items-center gap-3 pt-2">
-            <ShimmerButton
+            <Button
               type="submit"
               disabled={isSubmitting || !isValid}
               className="h-9 text-sm px-4"
@@ -203,7 +202,7 @@ export function DelegationForm({ open, onOpenChange, onCreated }: DelegationForm
               ) : (
                 'Create Delegation'
               )}
-            </ShimmerButton>
+            </Button>
             <Button
               type="button"
               variant="ghost"

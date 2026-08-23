@@ -1,7 +1,7 @@
 'use client';
 
 import { FileQuestion } from 'lucide-react';
-import { AnimatedList } from '@/components/ui/animated-list';
+import { Skeleton } from '@/components/ui/skeleton';
 import { EvidenceItem } from './EvidenceItem';
 import type { Evidence } from '@/lib/types/evidence';
 
@@ -24,10 +24,7 @@ export function EvidenceList({
     return (
       <div className="space-y-2">
         {Array.from({ length: 3 }).map((_, i) => (
-          <div
-            key={i}
-            className="min-h-[48px] rounded-md bg-muted/50 animate-pulse"
-          />
+          <Skeleton key={i} className="min-h-[48px]" />
         ))}
       </div>
     );
@@ -46,7 +43,7 @@ export function EvidenceList({
 
   return (
     <div aria-live="polite">
-      <AnimatedList delay={50} className="gap-1">
+      <div className="flex flex-col gap-1">
         {evidence.map((item) => (
           <EvidenceItem
             key={item.id}
@@ -58,7 +55,7 @@ export function EvidenceList({
             onApprovalAction={onApprovalAction}
           />
         ))}
-      </AnimatedList>
+      </div>
     </div>
   );
 }
