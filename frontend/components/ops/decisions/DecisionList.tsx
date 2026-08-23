@@ -2,9 +2,7 @@
 
 import { useState } from 'react';
 import { AlertCircle, ClipboardList } from 'lucide-react';
-import { BlurFade } from '@/components/ui/blur-fade';
-import { AnimatedList } from '@/components/ui/animated-list';
-import { ShimmerButton } from '@/components/ui/shimmer-button';
+import { Button } from '@/components/ui/button';
 import { DecisionCard } from './DecisionCard';
 import { DecisionDetail } from './DecisionDetail';
 import type { Decision } from '@/lib/types/decisions';
@@ -32,7 +30,7 @@ export function DecisionList({
         {Array.from({ length: 3 }).map((_, i) => (
           <div
             key={i}
-            className="h-[100px] bg-muted/50 animate-pulse rounded-lg"
+            className="h-[100px] animate-pulse rounded-lg bg-surface-raised motion-reduce:animate-none"
           />
         ))}
       </div>
@@ -41,10 +39,10 @@ export function DecisionList({
 
   if (isError) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 text-center space-y-2">
-        <AlertCircle className="size-10 text-destructive" />
-        <p className="text-sm text-muted-foreground">
-          Can't load decisions right now. Try refreshing.
+      <div className="flex flex-col items-center justify-center gap-2 py-12 text-center">
+        <AlertCircle className="size-10 text-serious" />
+        <p className="text-sm text-ink-muted">
+          Can&apos;t load decisions right now. Try refreshing.
         </p>
       </div>
     );
@@ -52,52 +50,48 @@ export function DecisionList({
 
   if (decisions.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 text-center space-y-3">
-        <ClipboardList className="size-12 text-muted-foreground" />
-        <h2 className="text-xl font-semibold">No decisions yet</h2>
-        <p className="text-sm text-muted-foreground max-w-sm">
-          Log your first decision to start building a clear record of the calls you've made.
+      <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
+        <ClipboardList className="size-12 text-ink-muted" />
+        <h2 className="text-xl font-semibold text-ink">No decisions yet</h2>
+        <p className="max-w-sm text-sm text-ink-muted">
+          Log your first decision to start building a clear record of the calls
+          you&apos;ve made.
         </p>
         {onLogDecision && (
-          <ShimmerButton
-            shimmerColor="#4ade80"
-            className="mt-2 h-9 text-sm px-4"
-            onClick={onLogDecision}
-          >
+          <Button size="lg" className="mt-2" onClick={onLogDecision}>
             Log Decision
-          </ShimmerButton>
+          </Button>
         )}
       </div>
     );
   }
 
   return (
-    <BlurFade>
-      <AnimatedList delay={50} className="gap-3 items-stretch">
-        {decisions.map((decision) => (
-          <div key={decision.id} className="w-full space-y-2">
-            <DecisionCard
+    <div className="flex flex-col items-stretch gap-3">
+      {decisions.map((decision) => (
+        <div key={decision.id} className="w-full space-y-2">
+          <DecisionCard
+            decision={decision}
+            isExpanded={expandedId === decision.id}
+            onToggle={() =>
+              setExpandedId((prev) =>
+                prev === decision.id ? null : decision.id,
+              )
+            }
+            isNew={decision.id === newDecisionId}
+          />
+          {expandedId === decision.id && (
+            <DecisionDetail
               decision={decision}
-              isExpanded={expandedId === decision.id}
-              onToggle={() =>
-                setExpandedId((prev) =>
-                  prev === decision.id ? null : decision.id,
-                )
-              }
-              isNew={decision.id === newDecisionId}
+              /**
+               * The panel invalidates `['decisions']` itself; the row stays
+               * expanded so the voter sees the new tally land.
+               */
+              onStatusChange={() => undefined}
             />
-            {expandedId === decision.id && (
-              <DecisionDetail
-                decision={decision}
-                onStatusChange={() => {
-                  // Parent page handles query invalidation via onStatusChange callback
-                  setExpandedId(null);
-                }}
-              />
-            )}
-          </div>
-        ))}
-      </AnimatedList>
-    </BlurFade>
+          )}
+        </div>
+      ))}
+    </div>
   );
 }

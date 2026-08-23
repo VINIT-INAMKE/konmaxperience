@@ -5,9 +5,9 @@ import type { DecisionType } from '@/lib/types/decisions';
 import { DECISION_TYPE_LABELS } from '@/lib/types/decisions';
 
 const typeClasses: Record<DecisionType, string> = {
-  individual: 'bg-slate-500/10 text-slate-400',
-  cross_function: 'bg-blue-500/10 text-blue-400',
-  strategic: 'bg-purple-500/10 text-purple-400',
+  individual: 'bg-surface-raised text-ink-muted',
+  cross_function: 'bg-info-status/12 text-info-status',
+  strategic: 'bg-gold/12 text-gold-text',
 };
 
 interface DecisionTypeBadgeProps {

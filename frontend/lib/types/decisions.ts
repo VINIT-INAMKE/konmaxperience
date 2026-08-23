@@ -3,6 +3,20 @@ export type DecisionType = 'individual' | 'cross_function' | 'strategic';
 export type DecisionStatus = 'proposed' | 'aligned' | 'approved' | 'rejected' | 'reopened';
 /** Prisma `GovernanceTier` — how much sign-off a decision needs. */
 export type GovernanceTier = 'tier_1' | 'tier_2' | 'tier_3';
+/** Prisma `VoteValue` — one required role's position on a decision. */
+export type VoteValue = 'approve' | 'reject' | 'abstain';
+
+/** SPEC §4.4 — one `DecisionVote` row, keyed `(decision_id, user_id)`. */
+export interface DecisionVote {
+  id: string;
+  decision_id: string;
+  user_id: string;
+  user?: { id: string; name: string };
+  role_code: string;
+  vote: VoteValue;
+  notes: string | null;
+  created_at: string;
+}
 
 export interface Decision {
   id: string;
@@ -16,6 +30,7 @@ export interface Decision {
   status: DecisionStatus;
   tier: GovernanceTier;
   required_role_codes: string[];
+  votes?: DecisionVote[];
   resolved_by: string | null;
   resolved_at: string | null;
   linked_task_id: string | null;
@@ -53,3 +68,12 @@ export const GOVERNANCE_TIER_SHORT_LABELS: Record<GovernanceTier, string> = {
   tier_2: 'Tier 2',
   tier_3: 'Tier 3',
 };
+
+export const VOTE_VALUE_LABELS: Record<VoteValue, string> = {
+  approve: 'Approved',
+  reject: 'Rejected',
+  abstain: 'Abstained',
+};
+
+/** Statuses that still accept votes (mirrors `OPEN_STATUSES` in the service). */
+export const OPEN_DECISION_STATUSES: DecisionStatus[] = ['proposed', 'reopened'];

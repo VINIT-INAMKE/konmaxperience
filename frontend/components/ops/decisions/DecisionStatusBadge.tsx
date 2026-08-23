@@ -3,13 +3,14 @@
 import { Badge } from '@/components/ui/badge';
 import type { DecisionStatus } from '@/lib/types/decisions';
 import { DECISION_STATUS_LABELS } from '@/lib/types/decisions';
+import { STATUS_BADGE } from '@/lib/status-styles';
 
 const statusClasses: Record<DecisionStatus, string> = {
-  proposed: 'border-amber-500/40 text-amber-400',
-  aligned: 'border-blue-500/40 text-blue-400',
-  approved: 'border-green-500/40 text-green-400',
-  rejected: 'border-red-500/40 text-red-400',
-  reopened: 'border-amber-500/40 text-amber-400',
+  proposed: STATUS_BADGE.warning,
+  aligned: STATUS_BADGE.info,
+  approved: STATUS_BADGE.good,
+  rejected: STATUS_BADGE.serious,
+  reopened: STATUS_BADGE.warning,
 };
 
 interface DecisionStatusBadgeProps {

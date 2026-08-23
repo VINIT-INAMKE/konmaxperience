@@ -1,27 +1,23 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Loader2 } from 'lucide-react';
+import { useState } from 'react';
+import Link from 'next/link';
 import {
-  Image,
-  FileText,
-  Video,
-  Link as LinkIcon,
   FileEdit,
+  FileText,
+  Image,
+  Link as LinkIcon,
+  Loader2,
+  Video,
+  Zap,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
-import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button';
-import { ShineBorder } from '@/components/ui/shine-border';
+import { Button } from '@/components/ui/button';
 import { RejectionDialog } from './RejectionDialog';
 import { apiClient } from '@/lib/api-client';
 import type { Evidence, EvidenceType } from '@/lib/types/evidence';
-import { getEvidenceStatusBadge } from '@/lib/status-styles';
+import { getEvidenceStatusBadge, STATUS_BADGE } from '@/lib/status-styles';
 
 const TYPE_ICONS: Record<EvidenceType, typeof Image> = {
   image: Image,
@@ -40,6 +36,15 @@ function getDisplayName(evidence: Evidence): string {
   // For file types, extract filename from URL
   const segments = evidence.url.split('/');
   return segments[segments.length - 1] || evidence.url;
+}
+
+/**
+ * Bridge evidence stores an app-relative deep link (`/operations/…`) rather than
+ * a presigned R2 URL, so it renders as an internal `<Link>`. Manual evidence
+ * keeps the external anchor.
+ */
+function isInternalUrl(url: string): boolean {
+  return url.startsWith('/');
 }
 
 interface EvidenceItemProps {
@@ -63,19 +68,11 @@ export function EvidenceItem({
   const statusLabel =
     evidence.approval_status.charAt(0).toUpperCase() +
     evidence.approval_status.slice(1);
+  const isBridge = evidence.source === 'bridge';
 
   const [isApproving, setIsApproving] = useState(false);
   const [isRejecting, setIsRejecting] = useState(false);
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
-  const [showShine, setShowShine] = useState(false);
-
-  // Show shine border for 3 seconds after approval
-  useEffect(() => {
-    if (showShine) {
-      const timer = setTimeout(() => setShowShine(false), 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [showShine]);
 
   const handleApprove = async () => {
     setIsApproving(true);
@@ -96,7 +93,6 @@ export function EvidenceItem({
           ? `Task validated! +${data.valid_xp} XP earned.`
           : 'Evidence approved.',
       );
-      setShowShine(true);
       onApprovalAction?.();
     } catch {
       toast.error('Failed to approve evidence.');
@@ -119,39 +115,58 @@ export function EvidenceItem({
     }
   };
 
+  const linkClasses =
+    'text-sm truncate max-w-[240px] text-left hover:underline underline-offset-4 hover:text-ink text-ink-muted transition-colors';
+
   return (
     <div className="relative space-y-1">
-      {showShine && (
-        <ShineBorder
-          shineColor={['#4ade80', '#22c55e']}
-          borderWidth={2}
-          duration={3}
-        />
-      )}
-
-      <div className="flex items-center gap-4 min-h-[48px]">
-        <Icon className="size-5 shrink-0 text-muted-foreground" />
+      <div className="flex min-h-[48px] items-center gap-4">
+        <Icon className="size-5 shrink-0 text-ink-muted" aria-hidden="true" />
 
         {evidence.type === 'note' ? (
-          <span className="text-sm truncate max-w-[240px] text-left">
+          <span className="max-w-[240px] truncate text-left text-sm">
             {evidence.notes || 'Note'}
           </span>
+        ) : isInternalUrl(evidence.url) ? (
+          <Link
+            href={evidence.url}
+            className={linkClasses}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {displayName}
+          </Link>
         ) : (
           <a
             href={evidence.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-sm truncate max-w-[240px] text-left hover:underline underline-offset-4 hover:text-foreground text-muted-foreground transition-colors"
+            className={linkClasses}
             onClick={(e) => e.stopPropagation()}
           >
             {displayName}
           </a>
         )}
 
+        {/* SPEC §4.2 — evidence the mission bridge captured, not a person */}
+        {isBridge && (
+          <Badge
+            variant="outline"
+            className={`gap-1 ${STATUS_BADGE.info}`}
+            title={
+              evidence.bridge_event
+                ? `Auto-captured from ${evidence.bridge_event}`
+                : 'Auto-captured by the mission bridge'
+            }
+          >
+            <Zap aria-hidden="true" />
+            Bridge
+          </Badge>
+        )}
+
         {uploadProgress !== undefined ? (
-          <div className="flex items-center gap-2 ml-auto">
+          <div className="ml-auto flex items-center gap-2">
             <div
-              className="w-[120px] h-1 bg-muted rounded-full overflow-hidden"
+              className="h-1 w-[120px] overflow-hidden rounded-full bg-surface-sunken"
               role="progressbar"
               aria-valuenow={uploadProgress}
               aria-valuemin={0}
@@ -159,15 +174,15 @@ export function EvidenceItem({
               aria-label="Upload progress"
             >
               <div
-                className="h-full bg-blue-400 transition-all duration-200 rounded-full"
+                className="h-full rounded-full bg-info-status transition-all duration-200"
                 style={{ width: `${uploadProgress}%` }}
               />
             </div>
-            <span className="text-xs text-blue-400">{uploadProgress}%</span>
+            <span className="text-xs text-info-status">{uploadProgress}%</span>
           </div>
         ) : (
           <Badge
-            variant="secondary"
+            variant="outline"
             className={`ml-auto shrink-0 ${getStatusBadgeClass(evidence.approval_status)}`}
           >
             {statusLabel}
@@ -175,42 +190,44 @@ export function EvidenceItem({
         )}
 
         {evidence.reviewer && (
-          <span className="text-xs text-muted-foreground shrink-0">
+          <span className="shrink-0 text-xs text-ink-muted">
             {evidence.reviewer.name}
           </span>
         )}
 
         {/* Approve / Reject actions */}
         {canApprove && evidence.approval_status === 'pending' && (
-          <div className="flex items-center gap-2 shrink-0">
-            <InteractiveHoverButton
-                className="h-8 px-3 text-xs border-green-500/30 hover:bg-green-950"
-                onClick={() => void handleApprove()}
-                disabled={isApproving}
-              >
-                {isApproving ? (
-                  <span className="flex items-center gap-1">
-                    <Loader2 className="size-3 animate-spin motion-reduce:animate-none" />
-                    Approving...
-                  </span>
-                ) : (
-                  'Approve'
-                )}
-              </InteractiveHoverButton>
-            <InteractiveHoverButton
-              className="h-8 px-3 text-xs border-red-500/30 hover:bg-red-950"
+          <div className="flex shrink-0 items-center gap-2">
+            <Button
+              size="sm"
+              onClick={() => void handleApprove()}
+              disabled={isApproving || isRejecting}
+            >
+              {isApproving ? (
+                <>
+                  <Loader2 className="size-3 animate-spin motion-reduce:animate-none" />
+                  Approving...
+                </>
+              ) : (
+                'Approve'
+              )}
+            </Button>
+            <Button
+              size="sm"
+              variant="destructive"
               onClick={() => setRejectDialogOpen(true)}
+              disabled={isApproving || isRejecting}
             >
               Reject
-            </InteractiveHoverButton>
+            </Button>
           </div>
         )}
       </div>
 
       {evidence.approval_status === 'rejected' && evidence.notes && (
         <div className="pl-9">
-          <p className="text-sm italic text-muted-foreground">
-            <span className="text-xs text-red-400 not-italic">Rejected: </span>
+          <p className="text-sm italic text-ink-muted">
+            <span className="text-xs not-italic text-serious">Rejected: </span>
             {evidence.notes}
           </p>
         </div>
