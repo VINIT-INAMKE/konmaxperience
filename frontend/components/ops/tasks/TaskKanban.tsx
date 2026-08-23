@@ -1,6 +1,18 @@
 'use client';
 
+/**
+ * Columns group on `Task.status`, which is exactly what `GET /tasks?status=` and
+ * the `?status=blocked` dashboard deep links filter on, so the board and the URL
+ * can never disagree.
+ *
+ * `blocked` is both a `TaskStatus` and an independent `Task.blocked` flag: a task
+ * can be `doing` *and* blocked. The flag is never a column — `TaskKanbanCard`
+ * renders it as a badge and a left border, so a blocked-but-in-progress task
+ * stays in the column that says what stage it is at.
+ */
+
 import { useState, useCallback } from 'react';
+import Link from 'next/link';
 import {
   DndContext,
   DragOverlay,
@@ -31,6 +43,11 @@ interface TaskKanbanProps {
   onStatusChange: (taskId: string, newStatus: TaskStatus) => void;
   currentUserId: string;
   isAdmin: boolean;
+  /**
+   * Show each card's quest underneath it. On `/quests/[id]` every card shares one
+   * quest, so it stays off; `/tasks` is cross-quest and turns it on.
+   */
+  showQuestLink?: boolean;
 }
 
 function getColumnHeaderColor(status: TaskStatus) {
@@ -43,17 +60,38 @@ function getColumnHeaderColor(status: TaskStatus) {
       return 'text-[var(--status-good)]';
     case 'blocked':
       return 'text-[var(--status-critical)]';
+    case 'cancelled':
+      return 'text-ink-faint';
     default:
       return '';
   }
 }
 
+/**
+ * `cancelled` is a real `TaskStatus` but not a workflow stage, so it only earns a
+ * column when the current filter actually produced cancelled rows — which is what
+ * makes `/tasks?status=cancelled` render something instead of an empty board.
+ */
+/** Every id a column droppable can carry, whether or not it is on screen. */
+const ALL_COLUMN_IDS: TaskStatus[] = [...KANBAN_COLUMNS, 'cancelled'];
+
+function resolveColumns(tasks: Task[]): TaskStatus[] {
+  const extra = KANBAN_COLUMNS.includes('cancelled')
+    ? []
+    : tasks.some((task) => task.status === 'cancelled')
+      ? (['cancelled'] as TaskStatus[])
+      : [];
+  return [...KANBAN_COLUMNS, ...extra];
+}
+
 function SortableCard({
   task,
   isDraggable,
+  showQuestLink,
 }: {
   task: Task;
   isDraggable: boolean;
+  showQuestLink: boolean;
 }) {
   const {
     attributes,
@@ -83,6 +121,16 @@ function SortableCard({
       {...(isDraggable ? { ...attributes, ...listeners } : {})}
     >
       <TaskKanbanCard task={task} isDraggable={isDraggable} />
+      {showQuestLink && task.quest && (
+        // `stopPropagation` on pointer-down so following the link never starts a drag.
+        <Link
+          href={`/quests/${task.quest.id}`}
+          onPointerDown={(event) => event.stopPropagation()}
+          className="mt-1 block truncate rounded-sm px-1 text-[11px] text-ink-muted transition-colors hover:text-brand focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[var(--focus)]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
+        >
+          {task.quest.title}
+        </Link>
+      )}
     </div>
   );
 }
@@ -92,6 +140,7 @@ export function TaskKanban({
   onStatusChange,
   currentUserId,
   isAdmin,
+  showQuestLink = false,
 }: TaskKanbanProps) {
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const [adHocOpen, setAdHocOpen] = useState(false);
@@ -101,7 +150,9 @@ export function TaskKanban({
     useSensor(KeyboardSensor),
   );
 
-  const tasksByColumn = KANBAN_COLUMNS.reduce(
+  const columns = resolveColumns(tasks);
+
+  const tasksByColumn = columns.reduce(
     (acc, status) => {
       acc[status] = tasks.filter((t) => t.status === status);
       return acc;
@@ -136,7 +187,7 @@ export function TaskKanban({
       let targetColumn: TaskStatus | null = null;
 
       // Check if dropped on a column droppable
-      if (KANBAN_COLUMNS.includes(over.id as TaskStatus)) {
+      if (ALL_COLUMN_IDS.includes(over.id as TaskStatus)) {
         targetColumn = over.id as TaskStatus;
       } else {
         // Dropped on a task - find which column that task is in
@@ -148,8 +199,9 @@ export function TaskKanban({
 
       if (!targetColumn || targetColumn === task.status) return;
 
-      // Do NOT allow dragging TO blocked column
-      if (targetColumn === 'blocked') return;
+      // Blocking needs a reason and cancelling needs intent, so neither is
+      // reachable by drag — `BlockerDialog` and the task detail page own them.
+      if (targetColumn === 'blocked' || targetColumn === 'cancelled') return;
 
       onStatusChange(taskId, targetColumn);
     },
@@ -184,7 +236,7 @@ export function TaskKanban({
     >
       <div className="overflow-x-auto -mx-4 px-4 sm:-mx-6 sm:px-6">
       <div className="flex gap-3 sm:gap-4 min-h-[50vh] lg:h-[calc(100vh-280px)]">
-        {KANBAN_COLUMNS.map((status) => {
+        {columns.map((status) => {
           const columnTasks = tasksByColumn[status] || [];
           return (
             <SortableContext
@@ -197,6 +249,7 @@ export function TaskKanban({
                 status={status}
                 tasks={columnTasks}
                 canDrag={canDrag}
+                showQuestLink={showQuestLink}
               />
             </SortableContext>
           );
@@ -219,10 +272,12 @@ function KanbanColumn({
   status,
   tasks,
   canDrag,
+  showQuestLink,
 }: {
   status: TaskStatus;
   tasks: Task[];
   canDrag: (task: Task) => boolean;
+  showQuestLink: boolean;
 }) {
   const { setNodeRef } = useSortable({
     id: status,
@@ -263,6 +318,7 @@ function KanbanColumn({
                 key={task.id}
                 task={task}
                 isDraggable={canDrag(task)}
+                showQuestLink={showQuestLink}
               />
             ))
           )}
