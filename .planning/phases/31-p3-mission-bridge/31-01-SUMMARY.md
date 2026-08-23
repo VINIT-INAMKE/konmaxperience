@@ -276,7 +276,7 @@ The passwords recorded in the P2 summary belong to the throwaway `konma_p2_verif
 
 Both were built in separate worktrees and merged into `v2-os-marketplace` ahead of Task 17; neither touches `backend/`. The backend response shapes they consume are the ones recorded in the smoke tables above — in particular the history envelope `{code, mode, current_value, points:[{date,value}]}` and `POST /approvals/:id/decide {decision, note?}`.
 
-**Not yet verified by this phase:** the frontend gates (`npx tsc --noEmit`, `npm run lint`, `npm run build` in `frontend/`) were run by the Task 15/16 agents in their worktrees, not re-run on the merged tree by Task 17. Re-run them before the phase is called done end to end.
+**Frontend gates on the merged tree (harness, after `700c72d`):** `npx tsc --noEmit` exit 0 · `npx eslint .` 0 errors / 67 warnings · `npm run build` compiled successfully. Phase 31 is done end to end.
 
 ---
 

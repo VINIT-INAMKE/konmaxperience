@@ -38,9 +38,8 @@ migration `20260823180000_p3_mission_bridge` (enum + `BridgeDispatch` + 3 meter 
 Gates at `080a664`: backend 75/75 suites · 974 tests · tsc clean · 0 lint errors · build clean · drift gate
 `No difference detected.`
 
-**Outstanding before Phase 31 is closed end to end:** re-run the frontend gates
-(`cd frontend && npx tsc --noEmit && npm run lint && npm run build`) on the merged tree — Tasks 15 and 16 were
-verified in their own worktrees, not after the merge.
+Frontend gates re-run on the merged tree (harness, 2026-08-23): `tsc --noEmit` clean · `eslint .` 0 errors /
+67 warnings · `next build` compiled. Phase 31 is closed end to end.
 
 P2 shipped all 16 tasks of `docs/superpowers/plans/2026-08-23-p2-platform-foundation.md`: 50 Prisma enums,
 `Node` + `node_id` on 24 aggregates, `AuditEvent` + `AuditService`, `Task.subject`, `ApprovalPolicy`,
