@@ -1,11 +1,48 @@
 @import "tailwindcss";
 @import "tw-animate-css";
-@import "shadcn/tailwind.css";
+@import "./base-ui-variants.css";
+@import "./tokens.css";
 @plugin '@tailwindcss/typography';
 
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
+  /* ── Brand + semantic utilities (SPEC §7) ── */
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-sunken: var(--surface-sunken);
+  --color-ink: var(--ink);
+  --color-ink-strong: var(--ink-strong);
+  --color-ink-subtle: var(--ink-subtle);
+  --color-ink-muted: var(--ink-muted);
+  --color-ink-faint: var(--ink-faint);
+  --color-line: var(--line);
+  --color-line-warm: var(--line-warm);
+  --color-line-strong: var(--line-strong);
+  --color-brand: var(--accent);
+  --color-brand-hover: var(--accent-hover);
+  --color-brand-ink: var(--accent-ink);
+  --color-brand-soft: var(--accent-soft);
+  --color-leaf: var(--leaf);
+  --color-leaf-hover: var(--leaf-hover);
+  --color-leaf-ink: var(--leaf-ink);
+  --color-gold: var(--gold);
+  --color-gold-text: var(--gold-text);
+  --color-gold-ink: var(--gold-ink);
+  --color-good: var(--status-good);
+  --color-good-ink: var(--status-good-ink);
+  --color-warning: var(--status-warning);
+  --color-warning-ink: var(--status-warning-ink);
+  --color-serious: var(--status-serious);
+  --color-serious-ink: var(--status-serious-ink);
+  --color-critical: var(--status-critical);
+  --color-critical-ink: var(--status-critical-ink);
+  --color-info-status: var(--status-info);
+  --color-info-status-ink: var(--status-info-ink);
+  --color-neutral-status: var(--status-neutral);
+
+  /* ── Compat utilities (existing shadcn/base-ui names, new values) ── */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-plus-jakarta);
@@ -29,8 +66,10 @@
   --color-destructive: var(--destructive);
   --color-success: var(--success);
   --color-info: var(--info);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-accent: var(--accent);
+  /* NOTE: shadcn's `accent` is a *hover tint*, not the brand accent. It maps to
+     --ui-accent (= --surface-raised); the brand utilities are bg-brand/text-brand. */
+  --color-accent-foreground: var(--ui-accent-foreground);
+  --color-accent: var(--ui-accent);
   --color-muted-foreground: var(--muted-foreground);
   --color-muted: var(--muted);
   --color-secondary-foreground: var(--secondary-foreground);
@@ -48,163 +87,6 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
-  --animate-shimmer-slide: shimmer-slide var(--speed) ease-in-out infinite alternate;
-  --animate-spin-around: spin-around calc(var(--speed) * 2) infinite linear;
-  @keyframes shimmer-slide {
-  to {
-    transform: translate(calc(100cqw - 100%), 0);
-    }
-  }
-  @keyframes spin-around {
-  0% {
-    transform: translateZ(0) rotate(0);
-    }
-  15%, 35% {
-    transform: translateZ(0) rotate(90deg);
-    }
-  65%, 85% {
-    transform: translateZ(0) rotate(270deg);
-    }
-  100% {
-    transform: translateZ(0) rotate(360deg);
-    }
-  }
-  --animate-pulse: pulse var(--duration) ease-out infinite
-;
-  @keyframes pulse {
-  0%, 100% {
-    box-shadow: 0 0 0 0 var(--pulse-color);}
-  50% {
-    box-shadow: 0 0 0 8px var(--pulse-color);}}
-  --animate-shine: shine var(--duration) infinite linear;
-  @keyframes shine {
-  0% {
-    background-position: 0% 0%;}
-  50% {
-    background-position: 100% 100%;}
-  to {
-    background-position: 0% 0%;}}}
-
-/* Public / warm theme tokens */
-:root {
-  --public-bg: oklch(0.98 0.005 80);
-  --public-fg: #1c1917;
-  --public-fg-hover: #292524;
-  --public-muted: #78716c;
-  --public-muted-warm: #a1977e;
-  --public-muted-stone: #a8a29e;
-  --public-border: #e8e0d4;
-  --public-surface: #f0ebe3;
-  --public-surface-alt: #f0ebe3;
-  --public-border-warm: #e0d8cc;
-  --public-terracotta: #c2410c;
-  --public-terracotta-hover: #b13a0a;
-  --public-olive: #365314;
-  --public-olive-hover: #2d4510;
-  --public-fg-subtle: #44403c;
-  --public-border-light: #d6cfc4;
-  --public-accent: #a16207;
-  --public-cart-bar: #1c1917;
-  --public-cart-bar-fg: #fafaf9;
-  --public-tracking-active: #c2410c;
-  --public-tracking-done: #365314;
-  --public-tracking-pending: #d6cfc4;
-}
-
-:root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --success: oklch(0.59 0.2 145);
-  --info: oklch(0.55 0.18 250);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.809 0.105 251.813);
-  --chart-2: oklch(0.623 0.214 259.815);
-  --chart-3: oklch(0.546 0.245 262.881);
-  --chart-4: oklch(0.488 0.243 264.376);
-  --chart-5: oklch(0.424 0.199 265.638);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
-}
-
-.dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --success: oklch(0.72 0.19 150);
-  --info: oklch(0.72 0.15 250);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.809 0.105 251.813);
-  --chart-2: oklch(0.623 0.214 259.815);
-  --chart-3: oklch(0.546 0.245 262.881);
-  --chart-4: oklch(0.488 0.243 264.376);
-  --chart-5: oklch(0.424 0.199 265.638);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
-}
-
-.light {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --success: oklch(0.59 0.2 145);
-  --info: oklch(0.55 0.18 250);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
 }
 
 @layer base {
@@ -225,7 +107,7 @@
 
 mark {
   background: transparent;
-  color: #9E7AFF;
+  color: var(--accent);
   font-weight: 600;
 }
 

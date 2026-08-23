@@ -1,0 +1,164 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   Konma Xperience OS — the one token file (SPEC §7, DESIGN-01/02).
+   Layer 1 `--public-*` : the homepage palette, values unchanged. app/page.tsx and
+                          ScrollVideoStory.tsx are frozen and read these directly.
+   Layer 2 semantic     : --bg / --surface / --ink / --line / --accent / --leaf / --gold
+   Layer 3 status       : good < warning < serious < critical, separate from brand
+   Layer 4 compat       : the shadcn/base-ui names, re-pointed at layer 2.
+   No component may declare a colour. Enforced by eslint-rules/no-raw-colors.mjs.
+   ───────────────────────────────────────────────────────────────────────────── */
+
+/* ── Layer 1 — public palette (moved from globals.css, values byte-identical) ── */
+:root {
+  --public-bg: oklch(0.98 0.005 80);
+  --public-fg: #1c1917;
+  --public-fg-hover: #292524;
+  --public-muted: #78716c;
+  --public-muted-warm: #a1977e;
+  --public-muted-stone: #a8a29e;
+  --public-border: #e8e0d4;
+  --public-surface: #f0ebe3;
+  --public-surface-alt: #f0ebe3;
+  --public-border-warm: #e0d8cc;
+  --public-terracotta: #c2410c;
+  --public-terracotta-hover: #b13a0a;
+  --public-olive: #365314;
+  --public-olive-hover: #2d4510;
+  --public-fg-subtle: #44403c;
+  --public-border-light: #d6cfc4;
+  --public-accent: #a16207;
+  --public-cart-bar: #1c1917;
+  --public-cart-bar-fg: #fafaf9;
+  --public-tracking-active: #c2410c;
+  --public-tracking-done: #365314;
+  --public-tracking-pending: #d6cfc4;
+}
+
+/* ── Layers 2 + 3 — semantic and status, light ── */
+:root {
+  --bg: var(--public-bg);
+  --surface: #faf8f5;
+  --surface-raised: var(--public-surface);
+  --surface-sunken: var(--public-border);
+
+  --ink: var(--public-fg);
+  --ink-strong: #0c0a09;
+  --ink-subtle: var(--public-fg-subtle);
+  --ink-muted: var(--public-muted);
+  --ink-faint: var(--public-muted-warm);
+
+  --line: var(--public-border);
+  --line-warm: var(--public-border-warm);
+  --line-strong: var(--public-border-light);
+
+  --accent: var(--public-terracotta);
+  --accent-hover: var(--public-terracotta-hover);
+  --accent-ink: #fffbf7;
+  --accent-soft: color-mix(in oklab, var(--accent) 12%, transparent);
+
+  --leaf: var(--public-olive);
+  --leaf-hover: var(--public-olive-hover);
+  --leaf-ink: #f7faf2;
+
+  --gold: var(--public-accent);
+  --gold-text: #8a5406;   /* #a16207 is 4.71:1 on --bg; this is 6.0:1, safe for small text */
+  --gold-ink: #fffaf0;
+
+  --focus: var(--accent);
+  --radius: 0.625rem;
+
+  --status-good: #15803d;
+  --status-good-ink: #f0fdf4;
+  --status-warning: #b45309;
+  --status-warning-ink: #fffbeb;
+  --status-serious: #be123c;
+  --status-serious-ink: #fff1f2;
+  --status-critical: #7f1d1d;
+  --status-critical-ink: #fff1f2;
+  --status-info: #1d4ed8;
+  --status-info-ink: #eff6ff;
+  --status-neutral: var(--ink-muted);
+  --status-neutral-ink: var(--surface);
+}
+
+/* ── Layers 2 + 3 — dark (SPEC §7 designed dark set) ── */
+.dark {
+  --bg: #141210;
+  --surface: #1c1917;
+  --surface-raised: #252220;
+  --surface-sunken: #0d0b0a;
+
+  --ink: #f5f0e8;
+  --ink-strong: #ffffff;
+  --ink-subtle: #d6cfc4;
+  --ink-muted: #a8a29e;
+  --ink-faint: #78716c;
+
+  --line: #2e2a26;
+  --line-warm: #332e29;
+  --line-strong: #413b35;
+
+  --accent: #e8663a;
+  --accent-hover: #f07a52;
+  --accent-ink: #1c0f09;
+  --accent-soft: color-mix(in oklab, var(--accent) 20%, transparent);
+
+  --leaf: #8fae4a;
+  --leaf-hover: #a2c159;
+  --leaf-ink: #131a08;
+
+  --gold: #d9a441;
+  --gold-text: #d9a441;
+  --gold-ink: #1c1408;
+
+  --status-good: #4ade80;
+  --status-good-ink: #141210;
+  --status-warning: #fbbf24;
+  --status-warning-ink: #141210;
+  --status-serious: #fb7185;
+  --status-serious-ink: #141210;
+  --status-critical: #ef4444;
+  --status-critical-ink: #141210;
+  --status-info: #60a5fa;
+  --status-info-ink: #141210;
+  --status-neutral: var(--ink-muted);
+  --status-neutral-ink: #141210;
+}
+
+/* ── Layer 4 — compat: the names every components/ui/* file already consumes ── */
+:root,
+.dark {
+  --background: var(--bg);
+  --foreground: var(--ink);
+  --card: var(--surface);
+  --card-foreground: var(--ink);
+  --popover: var(--surface);
+  --popover-foreground: var(--ink);
+  --primary: var(--accent);
+  --primary-foreground: var(--accent-ink);
+  --secondary: var(--surface-raised);
+  --secondary-foreground: var(--ink);
+  --muted: var(--surface-raised);
+  --muted-foreground: var(--ink-muted);
+  --ui-accent: var(--surface-raised);
+  --ui-accent-foreground: var(--ink);
+  --destructive: var(--status-critical);
+  --success: var(--status-good);
+  --info: var(--status-info);
+  --border: var(--line);
+  --input: var(--line-strong);
+  --ring: var(--focus);
+  --chart-1: var(--accent);
+  --chart-2: var(--leaf);
+  --chart-3: var(--gold);
+  --chart-4: var(--status-info);
+  --chart-5: var(--ink-faint);
+  --sidebar: var(--surface);
+  --sidebar-foreground: var(--ink);
+  --sidebar-primary: var(--accent);
+  --sidebar-primary-foreground: var(--accent-ink);
+  --sidebar-accent: var(--surface-raised);
+  --sidebar-accent-foreground: var(--ink);
+  --sidebar-border: var(--line);
+  --sidebar-ring: var(--focus);
+}

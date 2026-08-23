@@ -1,31 +1,42 @@
 /**
- * Brand color constants for visual effects (Magic UI component defaults).
+ * The only colour constants allowed outside tokens.css. These components take colours
+ * as *props*, not classes, so they cannot use a Tailwind utility — the values below
+ * read brand tokens instead.
  *
- * These are used as prop defaults for gradient, glow, and shimmer effects.
- * Centralized here so the brand palette is defined in one place.
+ * SPEC §6.4 allows BorderBeam on new KDS / Pick & Pack orders only. `BEAM_FROM` /
+ * `BEAM_TO` are the surviving pair.
+ *
+ * Everything under the deprecation line is a Magic-UI prop default whose call sites
+ * are removed by the Wave 1 sweeps (Tasks 7–9) and whose components are deleted by
+ * Task 19. They are kept here — re-pointed at tokens, never at a raw hue — so the
+ * tree type-checks between Wave 0 and Wave 4. Delete them with their last call site.
  */
 
-// MagicCard gradient border (purple → pink)
-export const GRADIENT_FROM = '#9E7AFF';
-export const GRADIENT_TO = '#FE8BBB';
+// ── Surviving: BorderBeam ──
+export const BEAM_FROM = 'var(--accent)';
+export const BEAM_TO = 'var(--gold)';
 
-// MagicCard hover overlay
-export const GRADIENT_OVERLAY = '#262626';
+// ── Deprecated: Magic-UI prop defaults, deleted with their call sites ──
 
-// MagicCard orb glow
-export const ORB_GLOW_FROM = '#ee4f27';
-export const ORB_GLOW_TO = '#6b21ef';
-
-// BorderBeam gradient
-export const BEAM_FROM = '#ffaa40';
-export const BEAM_TO = '#9c40ff';
-
-// ShimmerButton
+/** @deprecated MagicCard gradient border — deleted with MagicCard (Task 19). */
+export const GRADIENT_FROM = 'var(--accent)';
+/** @deprecated MagicCard gradient border — deleted with MagicCard (Task 19). */
+export const GRADIENT_TO = 'var(--gold)';
+/** @deprecated MagicCard hover overlay — deleted with MagicCard (Task 19). */
+export const GRADIENT_OVERLAY = 'var(--surface-raised)';
+/** @deprecated MagicCard orb glow — deleted with MagicCard (Task 19). */
+export const ORB_GLOW_FROM = 'var(--accent)';
+/** @deprecated MagicCard orb glow — deleted with MagicCard (Task 19). */
+export const ORB_GLOW_TO = 'var(--leaf)';
+/**
+ * @deprecated ShimmerButton sweep. Achromatic on purpose: `shimmer-button.tsx`
+ * hard-codes `text-white`, so the ground must stay dark in *both* themes or the
+ * label drops below AA. Deleted with ShimmerButton (Wave 1 sweeps + Task 19).
+ */
 export const SHIMMER_COLOR = '#ffffff';
+/** @deprecated ShimmerButton ground — see `SHIMMER_COLOR`. */
 export const SHIMMER_BG = 'rgba(0, 0, 0, 1)';
-
-// ShineBorder
-export const SHINE_COLOR = '#000000';
-
-// PulsatingButton
-export const PULSE_COLOR = '#808080';
+/** @deprecated ShineBorder default — deleted with ShineBorder (Task 19). */
+export const SHINE_COLOR = 'var(--line-strong)';
+/** @deprecated PulsatingButton default — deleted with PulsatingButton (Task 19). */
+export const PULSE_COLOR = 'var(--accent-soft)';
