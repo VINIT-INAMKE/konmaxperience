@@ -7,13 +7,20 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { Permission } from '../types/permissions';
 import { invalidateRoleCache } from '../permissions/permissions.cache';
+import { SYSTEM_ROLE_CODE } from '../common/constants/system-actor';
 
 @Injectable()
 export class RolesService {
   constructor(private readonly prisma: PrismaService) {}
 
+  /**
+   * P3 — the `SYSTEM` role is the MissionBridge's identity, not an assignable
+   * role. It carries zero permissions and its only member is the system user,
+   * so it never belongs in the RBAC admin list or the user-create role picker.
+   */
   async findAll() {
     return this.prisma.role.findMany({
+      where: { code: { not: SYSTEM_ROLE_CODE } },
       select: {
         id: true,
         code: true,
@@ -40,6 +47,12 @@ export class RolesService {
       throw new ForbiddenException(
         'Cannot modify FOUNDER_ADMIN role permissions',
       );
+    }
+
+    // The bridge's SYSTEM identity must stay permission-less — granting it any
+    // permission would give the system user a way into the API surface.
+    if (role.code === SYSTEM_ROLE_CODE) {
+      throw new ForbiddenException('Cannot modify SYSTEM role permissions');
     }
 
     // Validate each permission is a valid Permission enum value
