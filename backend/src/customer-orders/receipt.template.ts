@@ -66,6 +66,7 @@ const baseStyles = `
   .totals { margin-top: 8px; page-break-inside: avoid; }
   .totals p { margin: 2px 0; font-size: 13px; display: flex; justify-content: space-between; }
   .totals .grand-total { font-weight: bold; font-size: 15px; border-top: 1px solid #333; padding-top: 4px; margin-top: 4px; }
+  .totals .tax-note { font-size: 11px; color: #666; }
   .payment-info { margin-top: 12px; font-size: 13px; page-break-inside: avoid; }
   .payment-info p { margin: 2px 0; }
   .footer { text-align: center; margin-top: 20px; color: #666; font-size: 12px; page-break-inside: avoid; }
@@ -77,8 +78,14 @@ export function renderOrderReceipt(
     order_number: number;
     channel: string;
     created_at: Date | string;
+    /** Tax-inclusive sum of the lines (decision 1) — `tax_amount` sits *inside* it. */
     subtotal: number | string;
     channel_modifier_amount: number | string;
+    /** Coupon discount plus loyalty redemption value; one column, as the schema has it. */
+    discount_amount?: number | string | null;
+    shipping_amount?: number | string | null;
+    /** GST already contained in `subtotal`. Printed for the customer's records, never added. */
+    tax_amount?: number | string | null;
     total: number | string;
     delivery_address?: string | null;
     items: Array<{
@@ -97,6 +104,9 @@ export function renderOrderReceipt(
   },
 ): string {
   const modifierAmount = Number(order.channel_modifier_amount);
+  const discountAmount = Number(order.discount_amount ?? 0);
+  const shippingAmount = Number(order.shipping_amount ?? 0);
+  const taxAmount = Number(order.tax_amount ?? 0);
 
   const itemRows = order.items
     .map((item) => {
@@ -152,7 +162,10 @@ export function renderOrderReceipt(
   <div class="totals">
     <p><span>Subtotal</span><span>${formatCurrency(order.subtotal)}</span></p>
     ${modifierAmount > 0 ? `<p><span>Delivery Charge</span><span>${formatCurrency(modifierAmount)}</span></p>` : ''}
+    ${discountAmount > 0 ? `<p><span>Discount</span><span>-${formatCurrency(discountAmount)}</span></p>` : ''}
+    ${shippingAmount > 0 ? `<p><span>Shipping</span><span>${formatCurrency(shippingAmount)}</span></p>` : ''}
     <p class="grand-total"><span>Total</span><span>INR ${formatCurrency(order.total)}</span></p>
+    ${taxAmount > 0 ? `<p class="tax-note"><span>Includes GST</span><span>${formatCurrency(taxAmount)}</span></p>` : ''}
   </div>
 
   ${

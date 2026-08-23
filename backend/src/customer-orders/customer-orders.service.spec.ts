@@ -2,9 +2,11 @@ import { Test, TestingModule } from '@nestjs/testing';
 import {
   BadRequestException,
   ForbiddenException,
+  GoneException,
   NotFoundException,
   ServiceUnavailableException,
 } from '@nestjs/common';
+import { FulfilmentType, OrderChannel, ProductType } from '@prisma/client';
 import { CustomerOrdersService } from './customer-orders.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { NodeService } from '../node/node.service';
@@ -12,6 +14,57 @@ import { RedisService } from '../customer-auth/redis.service';
 import { RazorpayService } from '../razorpay/razorpay.service';
 import { PusherService } from '../chat/pusher.service';
 import { FulfilmentService } from '../fulfilment/fulfilment.service';
+import { CartPricingService } from '../checkout/cart-pricing.service';
+import type {
+  PricedCart,
+  PricedLine,
+  StoredQuote,
+} from '../checkout/quote.types';
+
+/** A priced line with sane defaults; every money field is integer paise. */
+function line(overrides: Partial<PricedLine> = {}): PricedLine {
+  return {
+    product_id: 'p1',
+    variant_id: null,
+    name: 'Konma Signature Thali',
+    sku: null,
+    quantity: 2,
+    type: ProductType.prepared_food,
+    fulfilment: FulfilmentType.local,
+    unit_price: 45000,
+    gross: 90000,
+    tax_rate: '5.00',
+    tax: 4286,
+    weight_grams: 0,
+    hsn_code: null,
+    available: true,
+    unavailable_reason: null,
+    event_id: null,
+    ...overrides,
+  };
+}
+
+/** A `CartPricingService.price` answer built from the lines it should return. */
+function pricedCart(
+  lines: PricedLine[],
+  rejected: PricedCart['rejected'] = [],
+): PricedCart {
+  const subtotal = lines.reduce((sum, l) => sum + l.gross, 0);
+  const taxTotal = lines.reduce((sum, l) => sum + l.tax, 0);
+  return {
+    lines,
+    subtotal,
+    tax_total: taxTotal,
+    tax_breakup: [],
+    channel: OrderChannel.delivery,
+    channel_modifier: 0,
+    has_local: lines.some((l) => l.fulfilment === FulfilmentType.local),
+    has_shipped: lines.some((l) => l.fulfilment === FulfilmentType.shipped),
+    has_booking: lines.some((l) => l.fulfilment === FulfilmentType.booking),
+    shipped_weight_grams: 0,
+    rejected,
+  };
+}
 
 describe('CustomerOrdersService', () => {
   let service: CustomerOrdersService;
@@ -20,6 +73,7 @@ describe('CustomerOrdersService', () => {
   let redisService: { getClient: jest.Mock };
   let razorpayService: Record<string, jest.Mock>;
   let pusherService: { trigger: jest.Mock };
+  let pricingService: { price: jest.Mock };
   let fulfilmentService: {
     confirmPaidOrder: jest.Mock;
     findOrderByRazorpayPaymentId: jest.Mock;
@@ -60,6 +114,9 @@ describe('CustomerOrdersService', () => {
         findMany: jest.fn(),
         create: jest.fn(),
       },
+      shipment: {
+        findUnique: jest.fn(),
+      },
       eventBooking: {
         findUnique: jest.fn(),
         findMany: jest.fn(),
@@ -82,6 +139,10 @@ describe('CustomerOrdersService', () => {
       findOrderByRazorpayPaymentId: jest.fn().mockResolvedValue(null),
     };
 
+    pricingService = {
+      price: jest.fn().mockResolvedValue(pricedCart([])),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         CustomerOrdersService,
@@ -94,6 +155,7 @@ describe('CustomerOrdersService', () => {
         { provide: RazorpayService, useValue: razorpayService },
         { provide: PusherService, useValue: pusherService },
         { provide: FulfilmentService, useValue: fulfilmentService },
+        { provide: CartPricingService, useValue: pricingService },
       ],
     }).compile();
 
@@ -195,6 +257,10 @@ describe('CustomerOrdersService', () => {
     });
   });
 
+  // ---------------------------------------------------------------
+  // syncCart / getPricedCart — CHK-01, server prices on every read
+  // ---------------------------------------------------------------
+
   describe('syncCart', () => {
     it('should keep Redis cart when it has more items', async () => {
       const existing = {
@@ -260,203 +326,311 @@ describe('CustomerOrdersService', () => {
       const result = await service.syncCart(customerId, local as any);
       expect(result.items).toHaveLength(3);
     });
-  });
 
-  // ---------------------------------------------------------------
-  // Serviceability
-  // ---------------------------------------------------------------
-
-  describe('isServiceable', () => {
-    const originalEnv = process.env.DELIVERY_PINCODES;
-
-    afterEach(() => {
-      if (originalEnv === undefined) {
-        delete process.env.DELIVERY_PINCODES;
-      } else {
-        process.env.DELIVERY_PINCODES = originalEnv;
-      }
-    });
-
-    it('should return true when DELIVERY_PINCODES not set', () => {
-      delete process.env.DELIVERY_PINCODES;
-      expect(service.isServiceable('560001')).toBe(true);
-    });
-
-    it('should return true for listed pincode', () => {
-      process.env.DELIVERY_PINCODES = '560001,560002,560003';
-      expect(service.isServiceable('560001')).toBe(true);
-    });
-
-    it('should return false for unlisted pincode', () => {
-      process.env.DELIVERY_PINCODES = '560001,560002,560003';
-      expect(service.isServiceable('999999')).toBe(false);
-    });
-
-    it('should handle whitespace in env var', () => {
-      process.env.DELIVERY_PINCODES = ' 560001 , 560002 ';
-      expect(service.isServiceable('560001')).toBe(true);
-    });
-  });
-
-  // ---------------------------------------------------------------
-  // checkoutCart
-  // ---------------------------------------------------------------
-
-  describe('checkoutCart', () => {
-    it('should throw if cart is empty', async () => {
-      redisClient.get.mockResolvedValue(
-        JSON.stringify({
-          items: [],
-          channel: null,
-          deliveryAddressId: null,
-          updatedAt: '',
-        }),
-      );
-      await expect(service.checkoutCart(customerId)).rejects.toThrow(
-        BadRequestException,
-      );
-    });
-
-    it('should throw if cart is null', async () => {
+    it('overwrites the client price with the server price and adds totals', async () => {
       redisClient.get.mockResolvedValue(null);
-      await expect(service.checkoutCart(customerId)).rejects.toThrow(
-        BadRequestException,
+      pricingService.price.mockResolvedValue(
+        pricedCart([line({ product_id: 'm1', quantity: 2 })]),
       );
+
+      const result = await service.syncCart(customerId, {
+        items: [
+          {
+            productId: 'm1',
+            name: 'Stale name',
+            quantity: 2,
+            unitPrice: 1, // the client's cached price is a lie
+          },
+        ],
+        channel: 'delivery' as const,
+      } as any);
+
+      expect(result.items[0]).toEqual({
+        productId: 'm1',
+        variantId: null,
+        name: 'Konma Signature Thali',
+        quantity: 2,
+        unitPrice: 450,
+        imageUrl: null,
+        fulfilment: FulfilmentType.local,
+        available: true,
+        unavailable_reason: null,
+      });
+      expect(result.totals).toEqual({ subtotal: 900, tax_total: 42.86 });
     });
 
-    it('should throw for delivery with non-serviceable pincode', async () => {
-      process.env.DELIVERY_PINCODES = '560001';
-
-      redisClient.get.mockResolvedValue(
-        JSON.stringify({
-          items: [
+    it('flags a rejected line as unavailable and carries its reason', async () => {
+      redisClient.get.mockResolvedValue(null);
+      pricingService.price.mockResolvedValue(
+        pricedCart(
+          [line({ product_id: 'm1' })],
+          [
             {
-              productId: 'm1',
-              name: 'A',
-              quantity: 1,
-              unitPrice: 100,
-              imageUrl: null,
+              product_id: 'm2',
+              variant_id: null,
+              name: 'Linen Apron',
+              reason: 'Only 0 left',
             },
           ],
-          channel: 'delivery',
-          deliveryAddressId: 'addr-1',
-          updatedAt: '',
-        }),
+        ),
       );
 
-      prisma.customerAddress.findFirst.mockResolvedValue({
-        id: 'addr-1',
+      const result = await service.syncCart(customerId, {
+        items: [
+          { productId: 'm1', name: 'A', quantity: 2, unitPrice: 450 },
+          { productId: 'm2', name: 'Linen Apron', quantity: 1, unitPrice: 799 },
+        ],
+        channel: 'delivery' as const,
+      } as any);
+
+      expect(result.items[1]).toMatchObject({
+        productId: 'm2',
+        available: false,
+        unavailable_reason: 'Only 0 left',
+        fulfilment: null,
+        unitPrice: 799, // the client's own price, since the server has none to give
+      });
+      // A rejected line contributes nothing to the totals.
+      expect(result.totals.subtotal).toBe(900);
+    });
+
+    it('matches a line whose default variant the server resolved for it', async () => {
+      redisClient.get.mockResolvedValue(null);
+      pricingService.price.mockResolvedValue(
+        pricedCart([
+          line({
+            product_id: 'm1',
+            variant_id: 'var-default',
+            name: 'Coconut Oil — 500 ml',
+            quantity: 1,
+            unit_price: 64900,
+            gross: 64900,
+          }),
+        ]),
+      );
+
+      const result = await service.syncCart(customerId, {
+        items: [
+          // No variantId — the pricer picks the product's default.
+          { productId: 'm1', name: 'Coconut Oil', quantity: 1, unitPrice: 649 },
+        ],
+        channel: 'delivery' as const,
+      } as any);
+
+      expect(result.items[0]).toMatchObject({
+        available: true,
+        variantId: 'var-default',
+        unitPrice: 649,
+      });
+    });
+  });
+
+  describe('getPricedCart', () => {
+    it('returns an empty priced cart when Redis holds nothing', async () => {
+      redisClient.get.mockResolvedValue(null);
+
+      const result = await service.getPricedCart(customerId);
+
+      expect(result.items).toEqual([]);
+      expect(result.totals).toEqual({ subtotal: 0, tax_total: 0 });
+    });
+  });
+
+  // ---------------------------------------------------------------
+  // createOrderFromQuote — CHK-03
+  // ---------------------------------------------------------------
+
+  describe('createOrderFromQuote', () => {
+    const quoteId = '11111111-2222-4333-8444-555555555555';
+
+    function storedQuote(overrides: Partial<StoredQuote> = {}): StoredQuote {
+      return {
+        v: 2,
+        quote_id: quoteId,
         customer_id: customerId,
-        pincode: '999999',
-        address: '123 Test St',
+        created_at: '2026-08-24T06:00:00.000Z',
+        expires_at: new Date(Date.now() + 900_000).toISOString(),
+        channel: OrderChannel.delivery,
+        delivery_address_id: 'addr-1',
+        pickup: false,
+        lines: [line()],
+        holds: [],
+        subtotal: 90000,
+        discount_amount: 20000,
+        coupon: {
+          id: 'coup-1',
+          code: 'WELCOME10',
+          type: 'percent',
+          discount: 20000,
+        },
+        shipping_amount: 7900,
+        shipping: null,
+        tax_amount: 4286,
+        tax_breakup: [],
+        loyalty_points_redeemed: 100,
+        loyalty_redeem_amount: 2500,
+        loyalty_points_earned_estimate: 30,
+        total: 75400,
+        ...overrides,
+      };
+    }
+
+    /** Redis: the quote key resolves, the cart key does not. */
+    function withQuote(quote: StoredQuote | null) {
+      redisClient.get.mockImplementation((key: string) =>
+        Promise.resolve(
+          key === `quote:${customerId}:${quoteId}` && quote
+            ? JSON.stringify(quote)
+            : null,
+        ),
+      );
+    }
+
+    beforeEach(() => {
+      razorpayService.createOrder.mockResolvedValue({ id: 'order_Xyz' });
+      pricingService.price.mockResolvedValue(pricedCart([line()]));
+    });
+
+    it('reads quote:{customerId}:{quoteId} and charges the quoted total, in paise', async () => {
+      withQuote(storedQuote());
+
+      const result = await service.createOrderFromQuote(customerId, {
+        quote_id: quoteId,
+        idempotency_key: 'idem-abc123',
       });
 
-      await expect(service.checkoutCart(customerId)).rejects.toThrow(
-        "Sorry, we don't deliver to this pincode yet",
+      expect(redisClient.get).toHaveBeenCalledWith(
+        `quote:${customerId}:${quoteId}`,
       );
-
-      delete process.env.DELIVERY_PINCODES;
-    });
-
-    it('should create Razorpay order with server-side prices and marketplace notes', async () => {
-      redisClient.get.mockResolvedValue(
-        JSON.stringify({
-          items: [
-            {
-              productId: 'm1',
-              name: 'Burger',
-              quantity: 2,
-              unitPrice: 999,
-              imageUrl: null,
-            },
-          ],
-          channel: 'takeaway',
-          deliveryAddressId: null,
-          updatedAt: '',
-        }),
-      );
-
-      // Server price is 150, not the untrusted cart price of 999
-      prisma.product.findMany.mockResolvedValue([
-        { id: 'm1', base_price: 150 },
-      ]);
-      prisma.channelModifier.findFirst.mockResolvedValue(null);
-
-      razorpayService.createOrder.mockResolvedValue({ id: 'order_rzp123' });
-
-      const result = await service.checkoutCart(customerId);
-
-      expect(result.razorpay_order_id).toBe('order_rzp123');
-      // Verify server-side price (150 * 2 = 300, * 100 = 30000 paise)
+      // Exactly the frozen total — no rounding, no re-derivation.
       expect(razorpayService.createOrder).toHaveBeenCalledWith(
         expect.objectContaining({
-          amount: 30000,
+          amount: 75400,
           notes: { type: 'marketplace', entity_id: customerId },
         }),
       );
-      // Verify pending order stored in Redis
-      expect(redisClient.set).toHaveBeenCalledWith(
-        'pending_order:order_rzp123',
-        expect.any(String),
-        'EX',
-        1800,
+      expect(result).toEqual({
+        razorpay_order_id: 'order_Xyz',
+        amount: 75400,
+        currency: 'INR',
+        key_id: process.env.RAZORPAY_KEY_ID || null,
+        quote_id: quoteId,
+      });
+    });
+
+    it('writes a v2 pending order that round-trips, and spends the quote', async () => {
+      withQuote(storedQuote());
+
+      await service.createOrderFromQuote(customerId, { quote_id: quoteId });
+
+      const [key, payload, ex, ttl] = redisClient.set.mock.calls.find(
+        (call: unknown[]) =>
+          typeof call[0] === 'string' &&
+          (call[0] as string).startsWith('pending_order:'),
+      )!;
+      expect(key).toBe('pending_order:order_Xyz');
+      expect(ex).toBe('EX');
+      expect(ttl).toBe(1800);
+
+      const pending = JSON.parse(payload as string);
+      expect(pending).toMatchObject({
+        v: 2,
+        razorpay_order_id: 'order_Xyz',
+        idempotency_key: quoteId, // defaults to the quote id
+        customer_id: customerId,
+        subtotal: 90000,
+        discount_amount: 20000,
+        shipping_amount: 7900,
+        loyalty_redeem_amount: 2500,
+        total: 75400,
+      });
+      // The two quote-only fields do not survive into the pending record.
+      expect(pending.quote_id).toBeUndefined();
+      expect(pending.expires_at).toBeUndefined();
+
+      expect(redisClient.del).toHaveBeenCalledWith(
+        `quote:${customerId}:${quoteId}`,
       );
     });
 
-    it('should throw when product no longer available', async () => {
-      redisClient.get.mockResolvedValue(
-        JSON.stringify({
-          items: [
-            {
-              productId: 'm1',
-              name: 'Gone Item',
-              quantity: 1,
-              unitPrice: 100,
-              imageUrl: null,
-            },
-          ],
-          channel: 'takeaway',
-          deliveryAddressId: null,
-          updatedAt: '',
-        }),
-      );
+    it('throws 404 when the quote is gone', async () => {
+      withQuote(null);
 
-      prisma.product.findMany.mockResolvedValue([]); // no items found
-
-      await expect(service.checkoutCart(customerId)).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(
+        service.createOrderFromQuote(customerId, { quote_id: quoteId }),
+      ).rejects.toThrow(NotFoundException);
+      expect(razorpayService.createOrder).not.toHaveBeenCalled();
     });
 
-    it('throws 503 and does not create a Razorpay order when Redis drops mid-checkout', async () => {
-      redisClient.get.mockResolvedValue(
-        JSON.stringify({
-          items: [
-            {
-              productId: 'm1',
-              name: 'Burger',
-              quantity: 1,
-              unitPrice: 150,
-              imageUrl: null,
-            },
-          ],
-          channel: 'takeaway',
-          deliveryAddressId: null,
-          updatedAt: '',
+    it('throws 410 when the stored quote outlived its own expires_at', async () => {
+      withQuote(
+        storedQuote({
+          expires_at: new Date(Date.now() - 1000).toISOString(),
         }),
       );
-      prisma.product.findMany.mockResolvedValue([
-        { id: 'm1', base_price: 150 },
-      ]);
-      prisma.channelModifier.findFirst.mockResolvedValue(null);
-      // First getClient() (cart read) returns a client; the second (pending-order write) returns null
-      redisService.getClient
-        .mockReturnValueOnce(redisClient)
-        .mockReturnValueOnce(null);
 
-      await expect(service.checkoutCart(customerId)).rejects.toThrow(
-        ServiceUnavailableException,
+      await expect(
+        service.createOrderFromQuote(customerId, { quote_id: quoteId }),
+      ).rejects.toThrow(GoneException);
+      expect(razorpayService.createOrder).not.toHaveBeenCalled();
+    });
+
+    it('refuses to charge when a price moved between quote and pay', async () => {
+      withQuote(storedQuote());
+      pricingService.price.mockResolvedValue(
+        pricedCart([line({ unit_price: 47500, gross: 95000 })]),
       );
+
+      await expect(
+        service.createOrderFromQuote(customerId, { quote_id: quoteId }),
+      ).rejects.toThrow(/price of "Konma Signature Thali" changed/);
+      expect(razorpayService.createOrder).not.toHaveBeenCalled();
+    });
+
+    it('refuses to charge when a quoted line has left the catalog', async () => {
+      withQuote(storedQuote());
+      pricingService.price.mockResolvedValue(pricedCart([]));
+
+      await expect(
+        service.createOrderFromQuote(customerId, { quote_id: quoteId }),
+      ).rejects.toThrow(/no longer available/);
+      expect(razorpayService.createOrder).not.toHaveBeenCalled();
+    });
+
+    it('refuses to charge when the cart no longer holds the quoted quantity', async () => {
+      withQuote(storedQuote());
+      pricingService.price.mockResolvedValue(
+        pricedCart([line({ quantity: 1, gross: 45000 })]),
+      );
+
+      await expect(
+        service.createOrderFromQuote(customerId, { quote_id: quoteId }),
+      ).rejects.toThrow(/Only 1 of "Konma Signature Thali" left/);
+    });
+
+    it('rejects a quote on a channel the marketplace cannot sell (D-04)', async () => {
+      withQuote(storedQuote({ channel: OrderChannel.dine_in }));
+
+      await expect(
+        service.createOrderFromQuote(customerId, { quote_id: quoteId }),
+      ).rejects.toThrow(/takeaway or delivery/);
+    });
+
+    it('rejects a quote with nothing left to pay rather than sending 0 to Razorpay', async () => {
+      withQuote(storedQuote({ total: 0 }));
+
+      await expect(
+        service.createOrderFromQuote(customerId, { quote_id: quoteId }),
+      ).rejects.toThrow(/nothing left to pay/);
+      expect(razorpayService.createOrder).not.toHaveBeenCalled();
+    });
+
+    it('throws 503 and creates no Razorpay order when Redis is down', async () => {
+      redisService.getClient.mockReturnValue(null);
+
+      await expect(
+        service.createOrderFromQuote(customerId, { quote_id: quoteId }),
+      ).rejects.toThrow(ServiceUnavailableException);
       expect(razorpayService.createOrder).not.toHaveBeenCalled();
     });
   });
@@ -472,7 +646,42 @@ describe('CustomerOrdersService', () => {
       razorpay_signature: 'sig_123',
     };
 
+    /** A v2 pending record as `createOrderFromQuote` writes it. Money is paise. */
     const pendingData = {
+      v: 2 as const,
+      razorpay_order_id: 'order_rzp123',
+      idempotency_key: 'idem-abc123',
+      customer_id: customerId,
+      created_at: '2026-08-24T06:00:00.000Z',
+      channel: 'takeaway',
+      delivery_address_id: null,
+      pickup: false,
+      lines: [
+        line({
+          product_id: 'm1',
+          name: 'Burger',
+          unit_price: 15000,
+          gross: 30000,
+          tax: 0,
+          tax_rate: '0.00',
+        }),
+      ],
+      holds: [],
+      subtotal: 30000,
+      discount_amount: 0,
+      coupon: null,
+      shipping_amount: 0,
+      shipping: null,
+      tax_amount: 0,
+      tax_breakup: [],
+      loyalty_points_redeemed: 0,
+      loyalty_redeem_amount: 0,
+      loyalty_points_earned_estimate: 0,
+      total: 30000,
+    };
+
+    /** The pre-P5a payload `checkoutCart` used to write — rupee floats, no `v`. */
+    const v1PendingData = {
       customerId,
       cart: {
         items: [
@@ -530,6 +739,11 @@ describe('CustomerOrdersService', () => {
         pending: pendingData,
         placedVia: 'storefront',
       });
+      // The frozen payload reaches fulfilment as v2, in paise.
+      const handed =
+        fulfilmentService.confirmPaidOrder.mock.calls[0][0].pending;
+      expect(handed.v).toBe(2);
+      expect(handed.total).toBe(30000);
       expect(prisma.$transaction).not.toHaveBeenCalled();
       expect(redisClient.del).toHaveBeenCalledWith(`cart:${customerId}`);
       expect(pusherService.trigger).toHaveBeenCalledWith(
@@ -600,14 +814,66 @@ describe('CustomerOrdersService', () => {
       );
     });
 
+    it('confirms a pre-P5a v1 pending record, upgraded in memory', async () => {
+      const raw = JSON.stringify(v1PendingData);
+      redisClient.get.mockResolvedValue(raw);
+      redisClient.getdel.mockResolvedValue(raw);
+      razorpayService.verifyPaymentSignature.mockReturnValue(true);
+      razorpayService.fetchPayment.mockResolvedValue({
+        status: 'captured',
+        amount: 30000, // ₹300 — the v1 float total, now compared in paise
+      });
+      fulfilmentService.confirmPaidOrder.mockResolvedValue({
+        id: 'ord-1',
+        order_number: 42,
+        customer_id: customerId,
+      });
+
+      await service.confirmOrder(customerId, dto);
+
+      const handed =
+        fulfilmentService.confirmPaidOrder.mock.calls[0][0].pending;
+      expect(handed).toMatchObject({
+        v: 2,
+        customer_id: customerId,
+        channel: 'takeaway',
+        subtotal: 30000,
+        total: 30000,
+        discount_amount: 0,
+        shipping_amount: 0,
+        loyalty_points_redeemed: 0,
+      });
+      expect(handed.lines).toHaveLength(1);
+      expect(handed.lines[0]).toMatchObject({
+        product_id: 'm1',
+        unit_price: 15000,
+        gross: 30000,
+        fulfilment: FulfilmentType.local,
+      });
+    });
+
     it('should throw ForbiddenException when customerId mismatch', async () => {
       redisClient.get.mockResolvedValue(
-        JSON.stringify({ ...pendingData, customerId: 'other-customer' }),
+        JSON.stringify({ ...pendingData, customer_id: 'other-customer' }),
       );
 
       await expect(service.confirmOrder(customerId, dto)).rejects.toThrow(
         ForbiddenException,
       );
+    });
+
+    it('rejects a payment whose amount is not the frozen paise total', async () => {
+      redisClient.get.mockResolvedValue(JSON.stringify(pendingData));
+      razorpayService.verifyPaymentSignature.mockReturnValue(true);
+      razorpayService.fetchPayment.mockResolvedValue({
+        status: 'captured',
+        amount: 29900,
+      });
+
+      await expect(service.confirmOrder(customerId, dto)).rejects.toThrow(
+        'Payment amount mismatch',
+      );
+      expect(redisClient.getdel).not.toHaveBeenCalled();
     });
 
     it('should throw when payment signature invalid', async () => {
@@ -670,6 +936,61 @@ describe('CustomerOrdersService', () => {
   // ---------------------------------------------------------------
   // Address CRUD
   // ---------------------------------------------------------------
+
+  // ---------------------------------------------------------------
+  // getOrderShipment — SHIP-05
+  // ---------------------------------------------------------------
+
+  describe('getOrderShipment', () => {
+    it('returns the shipment with its events newest first', async () => {
+      prisma.order.findUnique.mockResolvedValue({
+        id: 'ord-1',
+        customer_id: customerId,
+      });
+      const shipment = { id: 'shp-1', status: 'in_transit', events: [] };
+      prisma.shipment.findUnique.mockResolvedValue(shipment);
+
+      const result = await service.getOrderShipment(customerId, 'ord-1');
+
+      expect(result).toEqual(shipment);
+      expect(prisma.shipment.findUnique).toHaveBeenCalledWith({
+        where: { order_id: 'ord-1' },
+        include: { events: { orderBy: { occurred_at: 'desc' } } },
+      });
+    });
+
+    it('returns null when the order has no shipped lines', async () => {
+      prisma.order.findUnique.mockResolvedValue({
+        id: 'ord-1',
+        customer_id: customerId,
+      });
+      prisma.shipment.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.getOrderShipment(customerId, 'ord-1'),
+      ).resolves.toBeNull();
+    });
+
+    it('throws ForbiddenException for another customer’s order', async () => {
+      prisma.order.findUnique.mockResolvedValue({
+        id: 'ord-1',
+        customer_id: 'other-customer',
+      });
+
+      await expect(
+        service.getOrderShipment(customerId, 'ord-1'),
+      ).rejects.toThrow(ForbiddenException);
+      expect(prisma.shipment.findUnique).not.toHaveBeenCalled();
+    });
+
+    it('throws NotFoundException when the order does not exist', async () => {
+      prisma.order.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.getOrderShipment(customerId, 'ord-1'),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
 
   describe('createAddress', () => {
     it('should set is_default=true for first address', async () => {
