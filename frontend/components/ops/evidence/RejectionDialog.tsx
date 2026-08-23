@@ -19,6 +19,11 @@ interface RejectionDialogProps {
   onOpenChange: (open: boolean) => void;
   onReject: (notes: string) => void;
   isSubmitting: boolean;
+  /**
+   * What is being rejected. The approvals inbox is polymorphic since P3 — it
+   * rejects tasks, recipes and decisions as well as evidence.
+   */
+  subjectLabel?: string;
 }
 
 export function RejectionDialog({
@@ -26,6 +31,7 @@ export function RejectionDialog({
   onOpenChange,
   onReject,
   isSubmitting,
+  subjectLabel = 'evidence',
 }: RejectionDialogProps) {
   const [notes, setNotes] = useState('');
 
@@ -46,7 +52,7 @@ export function RejectionDialog({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Reject evidence</DialogTitle>
+          <DialogTitle>Reject {subjectLabel}</DialogTitle>
           <DialogDescription>
             Share what needs to change so they can improve it.
           </DialogDescription>
@@ -83,7 +89,7 @@ export function RejectionDialog({
                 Rejecting...
               </>
             ) : (
-              'Reject evidence'
+              `Reject ${subjectLabel}`
             )}
           </Button>
         </DialogFooter>

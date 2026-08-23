@@ -73,8 +73,10 @@ export default function DecisionsPage() {
             <TabsList className="overflow-x-auto">
               <TabsTrigger value="all">All</TabsTrigger>
               <TabsTrigger value="proposed">Proposed</TabsTrigger>
+              <TabsTrigger value="aligned">Aligned</TabsTrigger>
               <TabsTrigger value="approved">Approved</TabsTrigger>
               <TabsTrigger value="rejected">Rejected</TabsTrigger>
+              <TabsTrigger value="reopened">Reopened</TabsTrigger>
             </TabsList>
           </Tabs>
 

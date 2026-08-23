@@ -1,72 +1,44 @@
 'use client';
 
 import { useState } from 'react';
-import {
-  Image,
-  FileText,
-  Video,
-  Link as LinkIcon,
-  FileEdit,
-  Loader2,
-  AlertCircle,
-} from 'lucide-react';
+import Link from 'next/link';
+import { AlertCircle, Loader2, ShieldCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatDistanceToNow, parseISO } from 'date-fns';
 import { Card, CardContent } from '@/components/ui/card';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
-import { ShimmerButton } from '@/components/ui/shimmer-button';
-import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button';
-import { PulsatingButton } from '@/components/ui/pulsating-button';
-import { AvatarCircles } from '@/components/ui/avatar-circles';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { RejectionDialog } from '@/components/ops/evidence/RejectionDialog';
+import { ApprovalEntityChip } from './ApprovalEntityChip';
 import { OverrideDialog } from './OverrideDialog';
-import { apiClient } from '@/lib/api-client';
+import { ApiError, apiClient } from '@/lib/api-client';
 import { useAuthStore } from '@/lib/stores/auth-store';
-import { RoleCode } from '@/lib/types/roles';
-import type { Evidence, EvidenceType } from '@/lib/types/evidence';
+import { RoleCode, ROLE_DISPLAY_NAMES } from '@/lib/types/roles';
+import type { Approval } from '@/lib/types/approvals';
+import {
+  APPROVAL_ENTITY_LABELS,
+  approvalPolicyLabel,
+} from '@/lib/types/approvals';
+import { STATUS_BADGE } from '@/lib/status-styles';
 
-const TYPE_ICONS: Record<EvidenceType, typeof Image> = {
-  image: Image,
-  document: FileText,
-  system: FileEdit,
-  video: Video,
-  link: LinkIcon,
-  note: FileEdit,
-};
+const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
-function getDisplayName(evidence: Evidence): string {
-  if (evidence.type === 'note') return 'Note';
-  if (evidence.type === 'link') return evidence.url;
-  const segments = evidence.url.split('/');
-  return segments[segments.length - 1] || evidence.url;
+/** `required_role_code` is a plain string column — unknown codes print as-is. */
+function roleLabel(code: string): string {
+  return ROLE_DISPLAY_NAMES[code as RoleCode] ?? code;
 }
 
-interface ApprovalEvidence extends Evidence {
-  task?: {
-    id: string;
-    title: string;
-    quest?: { id: string; title: string } | null;
-    mission?: { id: string; title: string } | null;
-  };
-  // Override fields (present when this evidence was approved via override)
-  override_by?: string | null;
-  override_reason?: string | null;
-  override_at?: string | null;
-  overrider?: { id: string; name: string } | null;
-  delegated_from_user_id?: string | null;
-  delegated_from_user?: { id: string; name: string } | null;
+/** Surfaces the backend's own message ("This approval is reserved for …"). */
+function failureMessage(error: unknown, fallback: string): string {
+  return error instanceof ApiError && error.message ? error.message : fallback;
 }
 
 interface ApprovalItemProps {
-  evidence: ApprovalEvidence;
+  approval: Approval;
   onAction: () => void;
 }
 
-export function ApprovalItem({ evidence, onAction }: ApprovalItemProps) {
+export function ApprovalItem({ approval, onAction }: ApprovalItemProps) {
   const [isApproving, setIsApproving] = useState(false);
   const [isRejecting, setIsRejecting] = useState(false);
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
@@ -75,189 +47,151 @@ export function ApprovalItem({ evidence, onAction }: ApprovalItemProps) {
   const user = useAuthStore((s) => s.user);
   const isAdmin = user?.roleCode === RoleCode.FOUNDER_ADMIN;
 
-  const Icon = TYPE_ICONS[evidence.type] || FileText;
-  const displayName = getDisplayName(evidence);
+  const waitingMs = Date.now() - new Date(approval.created_at).getTime();
+  const isPendingLong = waitingMs > ONE_DAY_MS;
+  const pendingDays = Math.floor(waitingMs / ONE_DAY_MS);
 
-  const isPendingLong =
-    Date.now() - new Date(evidence.created_at).getTime() > 24 * 60 * 60 * 1000;
-  const pendingDays = Math.floor(
-    (Date.now() - new Date(evidence.created_at).getTime()) /
-      (24 * 60 * 60 * 1000),
-  );
-
-  const uploaderAvatars = evidence.uploader
-    ? [
-        {
-          imageUrl: `https://api.dicebear.com/8.x/initials/svg?seed=${encodeURIComponent(evidence.uploader.name)}`,
-          profileUrl: '#',
-        },
-      ]
-    : [];
+  const subjectTitle =
+    approval.subject?.title ?? `${approval.entity_type} ${approval.entity_id.slice(0, 8)}`;
 
   const handleApprove = async () => {
     setIsApproving(true);
     try {
-      await apiClient.post(`/evidence/${evidence.id}/approve`);
-      toast.success('Approved!');
+      await apiClient.post(`/approvals/${approval.id}/approve`);
+      toast.success('Approved.');
       onAction();
-    } catch {
-      toast.error('Couldn\'t approve that — try again.');
+    } catch (error) {
+      toast.error(failureMessage(error, "Couldn't approve that — try again."));
     } finally {
       setIsApproving(false);
     }
   };
 
+  /** SPEC §6.4 — `notes` is required on reject; `RejectionDialog` enforces it. */
   const handleReject = async (notes: string) => {
     setIsRejecting(true);
     try {
-      await apiClient.post(`/evidence/${evidence.id}/reject`, { notes });
+      await apiClient.post(`/approvals/${approval.id}/reject`, { notes });
       toast.success('Feedback sent.');
       setRejectDialogOpen(false);
       onAction();
-    } catch {
-      toast.error('Couldn\'t send feedback — try again.');
+    } catch (error) {
+      toast.error(failureMessage(error, "Couldn't send feedback — try again."));
     } finally {
       setIsRejecting(false);
     }
   };
 
-  const actionButtons = (
-    <div className="flex items-center gap-2">
-      <ShimmerButton
-          className="h-8 text-xs"
-          shimmerColor="#4ade80"
-          onClick={() => void handleApprove()}
-          disabled={isApproving}
-        >
-          {isApproving ? (
-            <span className="flex items-center gap-1">
-              <Loader2 className="size-3 animate-spin motion-reduce:animate-none" />
-              Approving...
-            </span>
-          ) : (
-            'Approve'
-          )}
-        </ShimmerButton>
-      <InteractiveHoverButton
-        className="h-8 px-3 text-xs border-red-500/30 hover:bg-red-950"
-        onClick={() => setRejectDialogOpen(true)}
-      >
-        Reject
-      </InteractiveHoverButton>
-      {isAdmin && (
-        <>
-          <div className="w-px h-4 bg-border" />
-          {isPendingLong ? (
-            <PulsatingButton
-              pulseColor="#f59e0b"
-              duration="2s"
-              className="h-8 px-3 text-xs bg-transparent border border-amber-500/30 text-amber-400 shadow-none"
-              onClick={() => setOverrideDialogOpen(true)}
-            >
-              Override
-            </PulsatingButton>
-          ) : (
-            <InteractiveHoverButton
-              className="h-8 px-3 text-xs border-amber-500/30"
-              onClick={() => setOverrideDialogOpen(true)}
-            >
-              Override
-            </InteractiveHoverButton>
-          )}
-        </>
-      )}
-    </div>
-  );
-
   return (
-    <Card>
-      <CardContent className="p-4 space-y-2">
-        {/* Row 1: Task title, quest, mission */}
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-sm font-semibold">
-            {evidence.task?.title || 'Unknown task'}
-          </span>
-          {evidence.task?.quest && (
-            <span className="text-xs text-muted-foreground">
-              {evidence.task.quest.title}
-            </span>
-          )}
-          {evidence.task?.mission && (
-            <span className="text-xs text-muted-foreground">
-              {evidence.task.mission.title}
-            </span>
-          )}
-        </div>
-
-        {/* Row 2: Type icon, filename, uploader, submitted time */}
-        <div className="flex items-center gap-3 flex-wrap">
-          <Icon className="size-4 shrink-0 text-muted-foreground" />
-          {evidence.type === 'note' ? (
-            <span className="text-sm truncate max-w-[200px] text-left">
-              {evidence.notes || 'Note'}
-            </span>
-          ) : (
-            <a
-              href={evidence.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-sm truncate max-w-[200px] text-left hover:underline underline-offset-4 hover:text-foreground text-muted-foreground transition-colors"
+    <Card className="border-line bg-surface">
+      <CardContent className="space-y-3 p-4">
+        {/* Row 1 — what is being approved */}
+        <div className="flex flex-wrap items-center gap-2">
+          {approval.subject?.url ? (
+            <Link
+              href={approval.subject.url}
+              className="group/subject flex items-center gap-2"
             >
-              {displayName}
-            </a>
-          )}
-          <div className="flex items-center gap-2 ml-auto">
-            <AvatarCircles
-              avatarUrls={uploaderAvatars}
-              className="[&_img]:h-6 [&_img]:w-6"
-            />
-            <span className="text-xs text-muted-foreground">
-              {evidence.uploader?.name || 'Unknown'}
-            </span>
-          </div>
-          <span className="text-xs text-muted-foreground shrink-0">
-            Submitted:{' '}
-            {formatDistanceToNow(parseISO(evidence.created_at), {
-              addSuffix: true,
-            })}
-          </span>
-        </div>
-
-        {/* Row 3: Actions */}
-        <div className="flex items-center gap-2 pt-1">
-          {isPendingLong ? (
-            <Tooltip>
-              <TooltipTrigger className="flex items-center">
-                <PulsatingButton
-                  pulseColor="#f59e0b"
-                  duration="2s"
-                  className="bg-transparent p-0 shadow-none"
-                >
-                  {actionButtons}
-                </PulsatingButton>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p className="text-xs">
-                  Pending for {pendingDays} {pendingDays === 1 ? 'day' : 'days'}
-                </p>
-              </TooltipContent>
-            </Tooltip>
+              <ApprovalEntityChip entityType={approval.entity_type} />
+              <span className="text-sm font-semibold text-ink underline-offset-4 group-hover/subject:underline">
+                {subjectTitle}
+              </span>
+            </Link>
           ) : (
-            actionButtons
+            <div className="flex items-center gap-2">
+              <ApprovalEntityChip entityType={approval.entity_type} />
+              <span className="text-sm font-semibold text-ink">
+                {subjectTitle}
+              </span>
+            </div>
+          )}
+          {approval.subject?.status && (
+            <Badge variant="outline" className={STATUS_BADGE.neutral}>
+              {approval.subject.status}
+            </Badge>
+          )}
+          {/* Age: a badge once it crosses a day, plain text before that */}
+          <div className="ml-auto flex items-center gap-3">
+            {isPendingLong ? (
+              <Badge
+                variant="outline"
+                className={STATUS_BADGE.warning}
+                title={`Pending for ${pendingDays} ${pendingDays === 1 ? 'day' : 'days'}`}
+              >
+                {pendingDays}d waiting
+              </Badge>
+            ) : (
+              <span className="shrink-0 text-xs text-ink-muted">
+                Waiting {formatDistanceToNow(parseISO(approval.created_at))}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Row 2 — who has to sign, under which policy, whose work it is */}
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-ink-muted">
+          <span className="flex items-center gap-1.5 text-ink-subtle">
+            <ShieldCheck className="size-3.5" aria-hidden="true" />
+            <span className="font-medium">
+              {roleLabel(approval.required_role_code)}
+            </span>
+          </span>
+          <span>{approvalPolicyLabel(approval.policy)}</span>
+          {approval.subject?.owner && (
+            <span>Submitted by {approval.subject.owner.name}</span>
           )}
         </div>
 
-        {/* Override attribution row */}
-        {evidence.override_reason && (
+        {/* Row 3 — actions */}
+        <div className="flex flex-wrap items-center gap-2 pt-1">
+          <Button
+            size="sm"
+            onClick={() => void handleApprove()}
+            disabled={isApproving || isRejecting}
+          >
+            {isApproving ? (
+              <>
+                <Loader2 className="size-3 animate-spin motion-reduce:animate-none" />
+                Approving...
+              </>
+            ) : (
+              'Approve'
+            )}
+          </Button>
+          <Button
+            size="sm"
+            variant="destructive"
+            onClick={() => setRejectDialogOpen(true)}
+            disabled={isApproving || isRejecting}
+          >
+            Reject
+          </Button>
+          {isAdmin && (
+            <>
+              <div className="h-4 w-px bg-line" />
+              <Button
+                size="sm"
+                variant="outline"
+                className="border-warning/40 text-warning"
+                onClick={() => setOverrideDialogOpen(true)}
+              >
+                Override
+              </Button>
+            </>
+          )}
+        </div>
+
+        {/* Override attribution — present once an admin has bypassed the gate */}
+        {approval.override_reason && (
           <div className="flex items-center gap-2 text-sm">
-            <AlertCircle className="size-3 text-amber-400 shrink-0" />
-            <span className="text-muted-foreground italic text-sm">
-              Overridden by {evidence.overrider?.name || 'Admin'} &mdash;{' '}
-              {evidence.override_reason}
+            <AlertCircle className="size-3 shrink-0 text-warning" />
+            <span className="text-sm italic text-ink-muted">
+              Overridden by {approval.overrider?.name ?? 'Admin'} &mdash;{' '}
+              {approval.override_reason}
             </span>
-            {evidence.override_at && (
-              <span className="text-muted-foreground text-xs ml-auto shrink-0">
-                {formatDistanceToNow(parseISO(evidence.override_at), {
+            {approval.override_at && (
+              <span className="ml-auto shrink-0 text-xs text-ink-muted">
+                {formatDistanceToNow(parseISO(approval.override_at), {
                   addSuffix: true,
                 })}
               </span>
@@ -265,14 +199,12 @@ export function ApprovalItem({ evidence, onAction }: ApprovalItemProps) {
           </div>
         )}
 
-        {/* Delegation attribution row */}
-        {evidence.delegated_from_user_id && evidence.delegated_from_user && (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <span className="text-sm">
-              Approved by {evidence.reviewer?.name || 'Unknown'} (on behalf of{' '}
-              {evidence.delegated_from_user.name})
-            </span>
-          </div>
+        {/* Delegation attribution */}
+        {approval.delegated_from_user && (
+          <p className="text-sm text-ink-muted">
+            Decided by {approval.approver?.name ?? 'Unknown'} on behalf of{' '}
+            {approval.delegated_from_user.name}
+          </p>
         )}
       </CardContent>
 
@@ -281,13 +213,14 @@ export function ApprovalItem({ evidence, onAction }: ApprovalItemProps) {
         onOpenChange={setRejectDialogOpen}
         onReject={handleReject}
         isSubmitting={isRejecting}
+        subjectLabel={APPROVAL_ENTITY_LABELS[approval.entity_type].toLowerCase()}
       />
 
       {isAdmin && (
         <OverrideDialog
           open={overrideDialogOpen}
           onOpenChange={setOverrideDialogOpen}
-          evidenceId={evidence.id}
+          approvalId={approval.id}
           onOverridden={onAction}
         />
       )}
