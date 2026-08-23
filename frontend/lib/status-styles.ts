@@ -1,70 +1,77 @@
 /**
- * Shared status badge color maps for the ops dark theme.
- *
- * Pattern: `text-{color}-400 bg-{color}-950 border-{color}-500/20`
- * These are designed for dark backgrounds and used across tasks, evidence, sidebar, etc.
+ * Semantic status classes. Colour lives in tokens.css; this file maps *meaning* to
+ * token classes. `serious` is a tint + coloured text, `critical` is a solid fill +
+ * inverse text — the two are differentiated by weight, not hue.
  */
 
-// --- Semantic status colors (dark theme badges) ---
-
 export const STATUS_BADGE = {
-  amber: 'text-amber-400 bg-amber-950 border-amber-500/20',
-  blue: 'text-blue-400 bg-blue-950 border-blue-500/20',
-  green: 'text-green-400 bg-green-950 border-green-500/20',
-  red: 'text-red-400 bg-red-950 border-red-500/20',
+  good:     'text-[var(--status-good)] bg-[var(--status-good)]/12 border-[var(--status-good)]/25',
+  warning:  'text-[var(--status-warning)] bg-[var(--status-warning)]/12 border-[var(--status-warning)]/25',
+  serious:  'text-[var(--status-serious)] bg-[var(--status-serious)]/12 border-[var(--status-serious)]/25',
+  critical: 'text-[var(--status-critical-ink)] bg-[var(--status-critical)] border-transparent',
+  info:     'text-[var(--status-info)] bg-[var(--status-info)]/12 border-[var(--status-info)]/25',
+  neutral:  'text-ink-muted bg-surface-raised border-transparent',
   /** Retired/abandoned states — present but no longer live. */
-  muted: 'text-muted-foreground bg-muted border-transparent line-through',
+  muted:    'text-ink-muted bg-surface-raised border-transparent line-through',
+  /** @deprecated colour-named aliases — deleted at the end of Wave 1. */
+  amber: 'text-[var(--status-warning)] bg-[var(--status-warning)]/12 border-[var(--status-warning)]/25',
+  /** @deprecated colour-named aliases — deleted at the end of Wave 1. */
+  blue:  'text-[var(--status-info)] bg-[var(--status-info)]/12 border-[var(--status-info)]/25',
+  /** @deprecated colour-named aliases — deleted at the end of Wave 1. */
+  green: 'text-[var(--status-good)] bg-[var(--status-good)]/12 border-[var(--status-good)]/25',
+  /** @deprecated colour-named aliases — deleted at the end of Wave 1. */
+  red:   'text-[var(--status-serious)] bg-[var(--status-serious)]/12 border-[var(--status-serious)]/25',
 } as const;
 
-// --- Domain-specific mappings ---
-
-/** Prisma `TaskStatus` — `todo` is the neutral default and gets no badge tint. */
+/** Prisma `TaskStatus` — `todo` is the neutral default. */
 export function getTaskStatusBadge(status: string): string {
   switch (status) {
-    case 'doing':
-      return STATUS_BADGE.blue;
-    case 'done':
-      return STATUS_BADGE.green;
-    case 'blocked':
-      return STATUS_BADGE.red;
-    case 'cancelled':
-      return STATUS_BADGE.muted;
-    default:
-      return '';
+    case 'doing': return STATUS_BADGE.info;
+    case 'done': return STATUS_BADGE.good;
+    case 'blocked': return STATUS_BADGE.critical;
+    case 'cancelled': return STATUS_BADGE.muted;
+    default: return STATUS_BADGE.neutral;
   }
 }
 
 export function getTaskTypeBadge(type: string): string {
   switch (type) {
-    case 'adhoc':
-      return STATUS_BADGE.amber;
-    case 'improvement':
-      return STATUS_BADGE.blue;
-    default:
-      return '';
+    case 'adhoc': return STATUS_BADGE.warning;
+    case 'improvement': return STATUS_BADGE.info;
+    default: return '';
   }
 }
 
 export function getPriorityBadge(priority: string): string {
   switch (priority) {
-    case 'critical':
-      return STATUS_BADGE.red;
-    case 'high':
-      return STATUS_BADGE.amber;
-    default:
-      return '';
+    case 'critical': return STATUS_BADGE.critical;
+    case 'high': return STATUS_BADGE.serious;
+    case 'medium': return STATUS_BADGE.warning;
+    default: return '';
   }
 }
 
 export function getEvidenceStatusBadge(status: string): string {
   switch (status) {
-    case 'pending':
-      return STATUS_BADGE.amber;
-    case 'approved':
-      return STATUS_BADGE.green;
-    case 'rejected':
-      return STATUS_BADGE.red;
-    default:
-      return '';
+    case 'pending': return STATUS_BADGE.warning;
+    case 'approved': return STATUS_BADGE.good;
+    case 'rejected': return STATUS_BADGE.serious;
+    default: return STATUS_BADGE.neutral;
   }
+}
+
+/** Readiness 0–100 → the four-band ramp (SPEC §7 status colours). */
+export function getReadinessBandBadge(value: number): string {
+  if (value >= 75) return STATUS_BADGE.good;
+  if (value >= 50) return STATUS_BADGE.warning;
+  if (value >= 25) return STATUS_BADGE.serious;
+  return STATUS_BADGE.critical;
+}
+
+/** Bare token for chart series and SVG fills, which cannot take a class. */
+export function readinessBandToken(value: number): string {
+  if (value >= 75) return 'var(--status-good)';
+  if (value >= 50) return 'var(--status-warning)';
+  if (value >= 25) return 'var(--status-serious)';
+  return 'var(--status-critical)';
 }
