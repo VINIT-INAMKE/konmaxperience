@@ -10,6 +10,15 @@ export interface UsageSummary {
   by_action: { action: string | null; count: number }[];
 }
 
+/**
+ * `UsageEvent.role_code` is a non-null `String` and `user_id` an optional FK to
+ * `User`, so a storefront visitor is recorded as `user_id: null` under this
+ * synthetic role. It is deliberately not a `Role.code` — no staff role may ever
+ * collide with it — and it is what makes the storefront show up as its own row
+ * in `GET /usage/summary`'s `by_role` bucket.
+ */
+export const CUSTOMER_ROLE_CODE = 'CUSTOMER';
+
 @Injectable()
 export class UsageService {
   private readonly logger = new Logger(UsageService.name);
@@ -43,6 +52,37 @@ export class UsageService {
       });
     } catch (err) {
       this.logger.debug(`usage event dropped: ${(err as Error).message}`);
+    }
+  }
+
+  /**
+   * One storefront beat, written by `CustomerPresenceService` at most once per
+   * customer per presence window — never once per request.
+   *
+   * Same fire-and-forget contract as {@link record}: a dropped telemetry row is
+   * strictly better than a failed customer action, so every error is swallowed
+   * after a debug log. `user_id` stays `null` because a `Customer` is not a
+   * `User`; the customer id travels in `meta` where no FK constrains it.
+   */
+  async recordCustomerVisit(input: {
+    customerId: string;
+    path?: string | null;
+  }): Promise<void> {
+    try {
+      await this.prisma.usageEvent.create({
+        data: {
+          user_id: null,
+          role_code: CUSTOMER_ROLE_CODE,
+          event_type: UsageEventType.page_view,
+          path: input.path ?? null,
+          action: null,
+          meta: { customer_id: input.customerId },
+        },
+      });
+    } catch (err) {
+      this.logger.debug(
+        `customer usage event dropped: ${(err as Error).message}`,
+      );
     }
   }
 
