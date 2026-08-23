@@ -7,7 +7,14 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { OrderSource, Prisma } from '@prisma/client';
-import { FulfilmentService, actorForOrder } from './fulfilment.service';
+import {
+  BOOKING_HOLD_EXPIRED,
+  FulfilmentService,
+  actorForOrder,
+  parsePendingOrder,
+  pendingTotalPaise,
+  upgradePendingOrder,
+} from './fulfilment.service';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   mockAuditService,
@@ -16,6 +23,9 @@ import {
   provideEventEmitter,
 } from '../test-utils/mock-providers';
 import { DomainEvent } from '../common/events/domain-events';
+import { CouponsService } from '../promotions/coupons.service';
+import { LoyaltyService } from '../loyalty/loyalty.service';
+import type { PendingOrderV2, PricedLine } from '../checkout/quote.types';
 
 jest.mock('../common/utils/unit-conversion', () => ({
   convertUnit: jest.fn().mockResolvedValue(null),
@@ -28,8 +38,9 @@ const dec = (n: number) => ({ valueOf: () => n, toNumber: () => n });
 
 const makeTx = () => ({
   product: { findMany: jest.fn(), findUniqueOrThrow: jest.fn() },
-  orderItem: { update: jest.fn() },
+  orderItem: { update: jest.fn(), updateMany: jest.fn() },
   order: { create: jest.fn(), findUniqueOrThrow: jest.fn() },
+  eventBooking: { findUnique: jest.fn(), update: jest.fn() },
   ingredientStock: { findFirst: jest.fn(), update: jest.fn() },
   stockMovement: { create: jest.fn() },
   prepBatch: { findMany: jest.fn(), update: jest.fn() },
@@ -40,6 +51,22 @@ const makeTx = () => ({
 type MockTx = ReturnType<typeof makeTx>;
 const asTx = (tx: MockTx) => tx as unknown as Prisma.TransactionClient;
 
+/**
+ * The `data` payload of the single `tx.order.create` call.
+ *
+ * Money is asserted through `String(...)` rather than by comparing `Decimal`
+ * instances: the string is what Postgres stores, and it fails loudly on a
+ * scale slip (`'300'` vs `'30000'`) that a numeric compare would hide.
+ */
+const createData = (tx: MockTx) =>
+  (
+    tx.order.create.mock.calls[0][0] as {
+      data: Record<string, any> & {
+        items: { create: Array<Record<string, any>> };
+      };
+    }
+  ).data;
+
 const mockPrisma = {
   $transaction: jest.fn(),
   order: { findFirst: jest.fn() },
@@ -48,6 +75,13 @@ const mockPrisma = {
 
 const audit = mockAuditService();
 const emitter = mockEventEmitter();
+const coupons = {
+  redeem: jest.fn(),
+  emitRedeemed: jest.fn(),
+};
+const loyalty = {
+  redeemForOrder: jest.fn(),
+};
 
 const userActor = { actor_type: 'user' as const, actor_id: 'user-1' };
 const orderItem = {
@@ -55,6 +89,7 @@ const orderItem = {
   order_id: 'order-1',
   product_id: 'mi-1',
   quantity: 1,
+  fulfilment: 'local' as const,
 };
 
 describe('FulfilmentService', () => {
@@ -67,12 +102,19 @@ describe('FulfilmentService', () => {
         { provide: PrismaService, useValue: mockPrisma },
         provideAuditService(audit),
         provideEventEmitter(emitter),
+        { provide: CouponsService, useValue: coupons },
+        { provide: LoyaltyService, useValue: loyalty },
       ],
     }).compile();
     service = module.get(FulfilmentService);
     jest.clearAllMocks();
     emitter.emit.mockReturnValue(true);
     mockConvertUnit.mockResolvedValue(null);
+    coupons.redeem.mockResolvedValue({
+      redemption: { id: 'cr-1' },
+      event: { couponId: 'cp-1', code: 'SAVE10' },
+    });
+    loyalty.redeemForOrder.mockResolvedValue(null);
   });
 
   describe('actorForOrder', () => {
@@ -599,6 +641,12 @@ describe('FulfilmentService', () => {
   });
 
   describe('confirmPaidOrder', () => {
+    /**
+     * A **v1** pending record — the shape the previous deploy wrote, still
+     * readable for one 30-minute TTL window (decision 5). Money is in rupees.
+     * Keeping the original suite on this fixture makes the whole block a
+     * standing regression test for the legacy upgrade path.
+     */
     const pending = {
       customerId: 'cust-1',
       cart: {
@@ -632,6 +680,7 @@ describe('FulfilmentService', () => {
       tx.zone.findUnique.mockResolvedValue({ id: 'zone-1' });
       tx.order.create.mockResolvedValue({
         id: 'ord-1',
+        node_id: 'node-1',
         zone_id: 'zone-1',
         items: [orderItem],
       });
@@ -679,6 +728,7 @@ describe('FulfilmentService', () => {
         entity_type: 'order',
         entity_id: 'ord-1',
         action: 'order.confirmed',
+        node_id: 'node-1',
         actor_type: 'customer',
         actor_id: 'cust-1',
         after: {
@@ -686,8 +736,66 @@ describe('FulfilmentService', () => {
           placed_via: OrderSource.storefront,
           razorpay_payment_id: 'pay_1',
           total: '300',
+          discount_amount: '0',
+          shipping_amount: '0',
+          tax_amount: '0',
+          coupon_code: null,
+          loyalty_points_redeemed: 0,
         },
       });
+    });
+
+    it('upgrades the legacy v1 payload: rupee money, local lines, zeroed P5a columns', async () => {
+      const tx = makeTx();
+      tx.systemSetting.findUnique.mockResolvedValue({ value: 'zone-1' });
+      tx.zone.findUnique.mockResolvedValue({ id: 'zone-1' });
+      tx.order.create.mockResolvedValue({
+        id: 'ord-1',
+        node_id: 'node-1',
+        zone_id: 'zone-1',
+        items: [orderItem],
+      });
+      tx.product.findMany.mockResolvedValue([
+        { id: 'mi-1', recipe: { id: 'r-1', preparation_type: 'scratch' } },
+      ]);
+      tx.order.findUniqueOrThrow.mockResolvedValue({
+        id: 'ord-1',
+        node_id: 'node-1',
+        order_number: 7,
+        items: [],
+        payment: {},
+      });
+      mockPrisma.$transaction.mockImplementation(
+        async (cb: (t: unknown) => unknown) => cb(tx),
+      );
+
+      await service.confirmPaidOrder(input);
+
+      const data = createData(tx);
+      // Rupees in, rupees out — the v1 total was never paise.
+      expect(String(data.subtotal)).toBe('300');
+      expect(String(data.total)).toBe('300');
+      expect(String(data.discount_amount)).toBe('0');
+      expect(String(data.shipping_amount)).toBe('0');
+      expect(String(data.tax_amount)).toBe('0');
+      expect(data.coupon_id).toBeNull();
+      expect(data.loyalty_points_redeemed).toBe(0);
+      expect(data.idempotency_key).toBeNull();
+      expect(data.address_snapshot).toBe(Prisma.JsonNull);
+      expect(data.items.create).toEqual([
+        expect.objectContaining({
+          product_id: 'mi-1',
+          variant_id: null,
+          quantity: 2,
+          fulfilment: 'local',
+        }),
+      ]);
+      expect(String(data.items.create[0].unit_price)).toBe('150');
+      expect(String(data.items.create[0].tax_rate)).toBe('0');
+      // Nothing commercial fires for a v1 payload — it predates all of it.
+      expect(coupons.redeem).not.toHaveBeenCalled();
+      expect(loyalty.redeemForOrder).not.toHaveBeenCalled();
+      expect(tx.orderItem.updateMany).not.toHaveBeenCalled();
     });
 
     it('returns the existing order when the payment id is already stored (P2002)', async () => {
@@ -754,6 +862,7 @@ describe('FulfilmentService', () => {
         tx.zone.findUnique.mockResolvedValue({ id: 'zone-1' });
         tx.order.create.mockResolvedValue({
           id: 'ord-1',
+          node_id: 'node-1',
           zone_id: 'zone-1',
           items: [orderItem],
         });
@@ -822,6 +931,652 @@ describe('FulfilmentService', () => {
           expect.objectContaining({ id: 'ord-1' }),
         );
       });
+    });
+  });
+
+  // ---------------------------------------------------------------------
+  // CHK-04: the v2 frozen quote — every commercial effect, one transaction
+  // ---------------------------------------------------------------------
+  describe('confirmPaidOrder (v2 frozen quote)', () => {
+    const line = (over: Partial<PricedLine> = {}): PricedLine => ({
+      product_id: 'p-local',
+      variant_id: null,
+      name: 'Burger',
+      sku: null,
+      quantity: 2,
+      type: 'prepared_food',
+      fulfilment: 'local',
+      unit_price: 15000,
+      gross: 30000,
+      tax_rate: '5.00',
+      tax: 1429,
+      weight_grams: 0,
+      hsn_code: null,
+      available: true,
+      unavailable_reason: null,
+      event_id: null,
+      ...over,
+    });
+
+    const v2 = (over: Partial<PendingOrderV2> = {}): PendingOrderV2 => ({
+      v: 2,
+      razorpay_order_id: 'order_rzp1',
+      idempotency_key: 'idem-1',
+      customer_id: 'cust-1',
+      created_at: '2026-08-24T00:00:00.000Z',
+      channel: 'takeaway',
+      delivery_address_id: null,
+      pickup: false,
+      lines: [line()],
+      holds: [],
+      subtotal: 30000,
+      discount_amount: 0,
+      coupon: null,
+      shipping_amount: 0,
+      shipping: null,
+      tax_amount: 1429,
+      tax_breakup: [],
+      loyalty_points_redeemed: 0,
+      loyalty_redeem_amount: 0,
+      loyalty_points_earned_estimate: 0,
+      total: 30000,
+      ...over,
+    });
+
+    const confirmInput = (pending: PendingOrderV2) => ({
+      customerId: 'cust-1',
+      razorpayOrderId: 'order_rzp1',
+      razorpayPaymentId: 'pay_1',
+      pending,
+      placedVia: OrderSource.storefront,
+    });
+
+    type ArrangedItem = {
+      id: string;
+      product_id: string;
+      fulfilment: string;
+      quantity?: number;
+    };
+
+    /**
+     * One `tx.product.findMany` mock serves both readers — `reconcileFulfilment`
+     * reads `fulfilment`, `applyPrepTypeOnCreate` reads `recipe` — so every
+     * fixture product carries both.
+     */
+    const arrange = (
+      items: ArrangedItem[],
+      products: Array<{ id: string; fulfilment?: string; recipe?: unknown }>,
+    ) => {
+      const tx = makeTx();
+      tx.systemSetting.findUnique.mockResolvedValue({ value: 'zone-1' });
+      tx.zone.findUnique.mockResolvedValue({ id: 'zone-1' });
+      tx.order.create.mockResolvedValue({
+        id: 'ord-1',
+        node_id: 'node-1',
+        zone_id: 'zone-1',
+        items: items.map((i) => ({ order_id: 'ord-1', quantity: 1, ...i })),
+      });
+      tx.product.findMany.mockResolvedValue(products);
+      tx.order.findUniqueOrThrow.mockResolvedValue({
+        id: 'ord-1',
+        node_id: 'node-1',
+        order_number: 7,
+        channel: 'takeaway',
+        total: '300',
+        customer_id: 'cust-1',
+        status: 'placed',
+        items,
+        payment: { id: 'p-1' },
+      });
+      mockPrisma.$transaction.mockImplementation(
+        async (cb: (t: unknown) => unknown) => cb(tx),
+      );
+      return tx;
+    };
+
+    const MIXED_ITEMS: ArrangedItem[] = [
+      { id: 'oi-local', product_id: 'p-local', fulfilment: 'local' },
+      { id: 'oi-ship', product_id: 'p-ship', fulfilment: 'shipped' },
+      { id: 'oi-book', product_id: 'p-book', fulfilment: 'booking' },
+    ];
+    const MIXED_PRODUCTS = [
+      {
+        id: 'p-local',
+        fulfilment: 'local',
+        recipe: { id: 'r-1', preparation_type: 'scratch' },
+      },
+      { id: 'p-ship', fulfilment: 'shipped' },
+      { id: 'p-book', fulfilment: 'booking' },
+    ];
+    const MIXED_PENDING = () =>
+      v2({
+        lines: [
+          line(),
+          line({
+            product_id: 'p-ship',
+            variant_id: 'var-1',
+            fulfilment: 'shipped',
+            type: 'merchandise',
+            tax_rate: '18.00',
+            quantity: 1,
+            unit_price: 50000,
+            gross: 50000,
+          }),
+          line({
+            product_id: 'p-book',
+            fulfilment: 'booking',
+            type: 'experience',
+            tax_rate: '0.00',
+            quantity: 1,
+            unit_price: 100000,
+            gross: 100000,
+            event_id: 'ev-1',
+          }),
+        ],
+        holds: [
+          {
+            booking_id: 'bk-1',
+            event_id: 'ev-1',
+            product_id: 'p-book',
+            guests: 2,
+            expires_at: '2026-08-24T00:15:00.000Z',
+          },
+        ],
+        subtotal: 180000,
+        tax_amount: 9057,
+        total: 180000,
+      });
+
+    it('writes one OrderItem per line with its frozen fulfilment, variant and tax rate', async () => {
+      const tx = arrange(MIXED_ITEMS, MIXED_PRODUCTS);
+      tx.eventBooking.findUnique.mockResolvedValue({
+        id: 'bk-1',
+        status: 'held',
+      });
+
+      await service.confirmPaidOrder(confirmInput(MIXED_PENDING()));
+
+      const items = createData(tx).items.create;
+      expect(items).toHaveLength(3);
+      expect(items.map((i) => i.fulfilment)).toEqual([
+        'local',
+        'shipped',
+        'booking',
+      ]);
+      expect(items[1].variant_id).toBe('var-1');
+      // tax_rate is the per-line Product rate, not the P2 default of 0.
+      expect(items.map((i) => String(i.tax_rate))).toEqual(['5', '18', '0']);
+      expect(items.map((i) => String(i.unit_price))).toEqual([
+        '150',
+        '500',
+        '1000',
+      ]);
+    });
+
+    it('routes shipped lines to the packed queue and leaves them out of prep', async () => {
+      const tx = arrange(MIXED_ITEMS, MIXED_PRODUCTS);
+      tx.eventBooking.findUnique.mockResolvedValue({
+        id: 'bk-1',
+        status: 'held',
+      });
+
+      await service.confirmPaidOrder(confirmInput(MIXED_PENDING()));
+
+      expect(tx.orderItem.updateMany).toHaveBeenCalledWith({
+        where: { id: { in: ['oi-ship'] } },
+        data: { status: 'packed' },
+      });
+      // A shipped line has no recipe to deduct against.
+      expect(tx.stockMovement.create).not.toHaveBeenCalled();
+    });
+
+    it('promotes the booking hold to confirmed and links it to the paying item', async () => {
+      const tx = arrange(MIXED_ITEMS, MIXED_PRODUCTS);
+      tx.eventBooking.findUnique.mockResolvedValue({
+        id: 'bk-1',
+        status: 'held',
+      });
+
+      await service.confirmPaidOrder(confirmInput(MIXED_PENDING()));
+
+      expect(tx.eventBooking.update).toHaveBeenCalledWith({
+        where: { id: 'bk-1' },
+        data: {
+          status: 'confirmed',
+          payment_status: 'paid',
+          hold_expires_at: null,
+          razorpay_payment_id: null,
+        },
+      });
+      expect(tx.orderItem.update).toHaveBeenCalledWith({
+        where: { id: 'oi-book' },
+        data: { event_booking_id: 'bk-1', status: 'ready' },
+      });
+    });
+
+    it('throws before the coupon step when the hold was cancelled', async () => {
+      const tx = arrange(MIXED_ITEMS, MIXED_PRODUCTS);
+      tx.eventBooking.findUnique.mockResolvedValue({
+        id: 'bk-1',
+        status: 'cancelled',
+      });
+
+      await expect(
+        service.confirmPaidOrder(confirmInput(MIXED_PENDING())),
+      ).rejects.toThrow(BOOKING_HOLD_EXPIRED);
+      expect(coupons.redeem).not.toHaveBeenCalled();
+      expect(loyalty.redeemForOrder).not.toHaveBeenCalled();
+      expect(emitter.emit).not.toHaveBeenCalled();
+    });
+
+    it('throws when a booking line has no hold at all', async () => {
+      const tx = arrange(MIXED_ITEMS, MIXED_PRODUCTS);
+      tx.eventBooking.findUnique.mockResolvedValue({
+        id: 'bk-1',
+        status: 'held',
+      });
+      const pending = MIXED_PENDING();
+      pending.holds = [];
+
+      await expect(
+        service.confirmPaidOrder(confirmInput(pending)),
+      ).rejects.toThrow(BOOKING_HOLD_EXPIRED);
+      expect(tx.eventBooking.update).not.toHaveBeenCalled();
+    });
+
+    it('redeems the coupon inside the transaction and emits only after it commits', async () => {
+      const tx = arrange(
+        [{ id: 'oi-local', product_id: 'p-local', fulfilment: 'local' }],
+        [
+          {
+            id: 'p-local',
+            fulfilment: 'local',
+            recipe: { id: 'r-1', preparation_type: 'scratch' },
+          },
+        ],
+      );
+      let committed = false;
+      mockPrisma.$transaction.mockImplementation(
+        async (cb: (t: unknown) => unknown) => {
+          const out = await cb(tx);
+          committed = true;
+          return out;
+        },
+      );
+      coupons.emitRedeemed.mockImplementation(() => {
+        expect(committed).toBe(true);
+      });
+
+      await service.confirmPaidOrder(
+        confirmInput(
+          v2({
+            coupon: {
+              id: 'cp-1',
+              code: 'SAVE10',
+              type: 'percent',
+              discount: 3000,
+            },
+            discount_amount: 3000,
+            total: 27000,
+          }),
+        ),
+      );
+
+      expect(coupons.redeem).toHaveBeenCalledTimes(1);
+      expect(coupons.redeem).toHaveBeenCalledWith(tx, {
+        couponId: 'cp-1',
+        orderId: 'ord-1',
+        customerId: 'cust-1',
+        // Paise-exact: the quote's discount, not a recomputed percentage.
+        amount: 3000,
+        nodeId: 'node-1',
+        actor: { actor_type: 'customer', actor_id: 'cust-1' },
+      });
+      expect(coupons.emitRedeemed).toHaveBeenCalledWith({
+        couponId: 'cp-1',
+        code: 'SAVE10',
+      });
+      expect(createData(tx).coupon_id).toBe('cp-1');
+    });
+
+    it('leaves the coupon alone when the frozen discount is zero', async () => {
+      const tx = arrange(
+        [{ id: 'oi-local', product_id: 'p-local', fulfilment: 'local' }],
+        [{ id: 'p-local', fulfilment: 'local' }],
+      );
+
+      await service.confirmPaidOrder(
+        confirmInput(
+          v2({
+            coupon: {
+              id: 'cp-1',
+              code: 'FREESHIP',
+              type: 'free_shipping',
+              discount: 0,
+            },
+            discount_amount: 0,
+          }),
+        ),
+      );
+
+      expect(coupons.redeem).not.toHaveBeenCalled();
+      expect(coupons.emitRedeemed).not.toHaveBeenCalled();
+      // The coupon is still recorded on the order — it was applied, just free.
+      expect(createData(tx).coupon_id).toBe('cp-1');
+    });
+
+    it('spends loyalty points through the transaction client, never through prisma', async () => {
+      const tx = arrange(
+        [{ id: 'oi-local', product_id: 'p-local', fulfilment: 'local' }],
+        [{ id: 'p-local', fulfilment: 'local' }],
+      );
+
+      await service.confirmPaidOrder(
+        confirmInput(
+          v2({
+            loyalty_points_redeemed: 120,
+            loyalty_redeem_amount: 12000,
+            total: 18000,
+          }),
+        ),
+      );
+
+      expect(loyalty.redeemForOrder).toHaveBeenCalledWith(
+        tx,
+        'cust-1',
+        'ord-1',
+        120,
+      );
+      expect(loyalty.redeemForOrder.mock.calls[0][0]).not.toBe(mockPrisma);
+      const data = createData(tx);
+      expect(data.loyalty_points_redeemed).toBe(120);
+      // Earned on delivery, never on payment.
+      expect(data.loyalty_points_earned).toBe(0);
+    });
+
+    it('folds the loyalty spend into discount_amount and never adds tax to the total', async () => {
+      const tx = arrange(
+        [{ id: 'oi-local', product_id: 'p-local', fulfilment: 'local' }],
+        [{ id: 'p-local', fulfilment: 'local' }],
+      );
+
+      await service.confirmPaidOrder(
+        confirmInput(
+          v2({
+            subtotal: 30000,
+            discount_amount: 3000,
+            loyalty_redeem_amount: 2000,
+            loyalty_points_redeemed: 20,
+            shipping_amount: 4900,
+            tax_amount: 1429,
+            total: 29900,
+            coupon: {
+              id: 'cp-1',
+              code: 'SAVE10',
+              type: 'percent',
+              discount: 3000,
+            },
+          }),
+        ),
+      );
+
+      const data = createData(tx);
+      expect(String(data.subtotal)).toBe('300');
+      // 3000 coupon + 2000 loyalty, both in paise, one rupee column.
+      expect(String(data.discount_amount)).toBe('50');
+      expect(String(data.shipping_amount)).toBe('49');
+      expect(String(data.tax_amount)).toBe('14.29');
+      // subtotal - discount - loyalty + shipping = 299; tax is carved out of
+      // subtotal (decision 1) and is NOT a fourth term.
+      expect(String(data.total)).toBe('299');
+      expect(String(data.channel_modifier_amount)).toBe('0');
+      expect(String(data.payment.create.amount)).toBe('299');
+    });
+
+    it('re-routes a line whose Product.fulfilment changed since the quote', async () => {
+      // Frozen as `local`; a staff edit made the product `shipped` before payment.
+      const tx = arrange(
+        [{ id: 'oi-local', product_id: 'p-local', fulfilment: 'local' }],
+        [
+          {
+            id: 'p-local',
+            fulfilment: 'shipped',
+            recipe: { id: 'r-1', preparation_type: 'ready_to_sell' },
+          },
+        ],
+      );
+
+      await service.confirmPaidOrder(confirmInput(v2()));
+
+      expect(tx.orderItem.update).toHaveBeenCalledWith({
+        where: { id: 'oi-local' },
+        data: { fulfilment: 'shipped' },
+      });
+      expect(tx.orderItem.updateMany).toHaveBeenCalledWith({
+        where: { id: { in: ['oi-local'] } },
+        data: { status: 'packed' },
+      });
+      // Re-routing happens BEFORE prep, so the now-shipped line never had its
+      // ingredients deducted for a kitchen that is not making it.
+      expect(tx.product.findUniqueOrThrow).not.toHaveBeenCalled();
+      expect(tx.stockMovement.create).not.toHaveBeenCalled();
+    });
+
+    it('freezes the delivery address into address_snapshot', async () => {
+      const tx = arrange(
+        [{ id: 'oi-local', product_id: 'p-local', fulfilment: 'local' }],
+        [{ id: 'p-local', fulfilment: 'local' }],
+      );
+      mockPrisma.customerAddress.findFirst.mockResolvedValue({
+        id: 'addr-1',
+        label: 'Home',
+        address: '12 Palm Road',
+        landmark: 'Near the pier',
+        pincode: '403001',
+        lat: 15.5,
+        lng: 73.8,
+      });
+
+      await service.confirmPaidOrder(
+        confirmInput(
+          v2({ channel: 'delivery', delivery_address_id: 'addr-1' }),
+        ),
+      );
+
+      const data = createData(tx);
+      expect(data.delivery_address).toBe(
+        '12 Palm Road, Near the pier - 403001',
+      );
+      expect(data.address_snapshot).toEqual({
+        id: 'addr-1',
+        label: 'Home',
+        address: '12 Palm Road',
+        landmark: 'Near the pier',
+        pincode: '403001',
+        lat: 15.5,
+        lng: 73.8,
+      });
+    });
+
+    it('resolves an address for a shipped line even on a non-delivery channel', async () => {
+      arrange(
+        [{ id: 'oi-ship', product_id: 'p-ship', fulfilment: 'shipped' }],
+        [{ id: 'p-ship', fulfilment: 'shipped' }],
+      );
+      mockPrisma.customerAddress.findFirst.mockResolvedValue(null);
+
+      await service.confirmPaidOrder(
+        confirmInput(
+          v2({
+            channel: 'takeaway',
+            delivery_address_id: 'addr-1',
+            lines: [line({ product_id: 'p-ship', fulfilment: 'shipped' })],
+          }),
+        ),
+      );
+
+      expect(mockPrisma.customerAddress.findFirst).toHaveBeenCalledWith({
+        where: { id: 'addr-1', customer_id: 'cust-1' },
+      });
+    });
+
+    it('carries the client idempotency key onto the order', async () => {
+      const tx = arrange(
+        [{ id: 'oi-local', product_id: 'p-local', fulfilment: 'local' }],
+        [{ id: 'p-local', fulfilment: 'local' }],
+      );
+
+      await service.confirmPaidOrder(
+        confirmInput(v2({ idempotency_key: 'quote-abc' })),
+      );
+
+      expect(createData(tx).idempotency_key).toBe('quote-abc');
+    });
+
+    it('records the new money fields on the audit row', async () => {
+      const tx = arrange(
+        [{ id: 'oi-local', product_id: 'p-local', fulfilment: 'local' }],
+        [{ id: 'p-local', fulfilment: 'local' }],
+      );
+
+      await service.confirmPaidOrder(
+        confirmInput(
+          v2({
+            coupon: {
+              id: 'cp-1',
+              code: 'SAVE10',
+              type: 'percent',
+              discount: 3000,
+            },
+            discount_amount: 3000,
+            shipping_amount: 4900,
+            loyalty_points_redeemed: 20,
+            loyalty_redeem_amount: 2000,
+            total: 29900,
+          }),
+        ),
+      );
+
+      expect(audit.record).toHaveBeenCalledWith(
+        tx,
+        expect.objectContaining({
+          action: 'order.confirmed',
+          node_id: 'node-1',
+          after: {
+            status: 'placed',
+            placed_via: OrderSource.storefront,
+            razorpay_payment_id: 'pay_1',
+            total: '299',
+            discount_amount: '50',
+            shipping_amount: '49',
+            tax_amount: '14.29',
+            coupon_code: 'SAVE10',
+            loyalty_points_redeemed: 20,
+          },
+        }),
+      );
+    });
+
+    it('replays a duplicate payment to the existing order without re-applying anything', async () => {
+      mockPrisma.$transaction.mockRejectedValue(
+        Object.assign(new Error('dup'), { code: 'P2002' }),
+      );
+      mockPrisma.order.findFirst.mockResolvedValue({ id: 'ord-existing' });
+
+      await expect(
+        service.confirmPaidOrder(
+          confirmInput(
+            v2({
+              coupon: {
+                id: 'cp-1',
+                code: 'SAVE10',
+                type: 'percent',
+                discount: 3000,
+              },
+              discount_amount: 3000,
+              loyalty_points_redeemed: 20,
+              loyalty_redeem_amount: 2000,
+            }),
+          ),
+        ),
+      ).resolves.toEqual({ id: 'ord-existing' });
+      expect(emitter.emit).not.toHaveBeenCalled();
+      expect(coupons.emitRedeemed).not.toHaveBeenCalled();
+    });
+  });
+
+  // ---------------------------------------------------------------------
+  // Pending-order version guard (decision 5)
+  // ---------------------------------------------------------------------
+  describe('pending order payload versioning', () => {
+    const v1 = {
+      customerId: 'cust-9',
+      cart: {
+        items: [
+          {
+            productId: 'p-1',
+            variantId: 'var-9',
+            name: 'Latte',
+            quantity: 3,
+            unitPrice: 12.5,
+            imageUrl: null,
+          },
+        ],
+      },
+      subtotal: 37.5,
+      modifierAmount: 0,
+      total: 37.5,
+      channel: 'delivery' as const,
+      deliveryAddressId: 'addr-9',
+    };
+
+    it('upgrades a v1 record to neutral v2 values in paise', () => {
+      const upgraded = upgradePendingOrder(v1);
+
+      expect(upgraded.v).toBe(2);
+      expect(upgraded.customer_id).toBe('cust-9');
+      expect(upgraded.delivery_address_id).toBe('addr-9');
+      expect(upgraded.subtotal).toBe(3750);
+      expect(upgraded.total).toBe(3750);
+      expect(upgraded.discount_amount).toBe(0);
+      expect(upgraded.shipping_amount).toBe(0);
+      expect(upgraded.tax_amount).toBe(0);
+      expect(upgraded.coupon).toBeNull();
+      expect(upgraded.holds).toEqual([]);
+      expect(upgraded.loyalty_points_redeemed).toBe(0);
+      expect(upgraded.lines).toEqual([
+        expect.objectContaining({
+          product_id: 'p-1',
+          variant_id: 'var-9',
+          quantity: 3,
+          fulfilment: 'local',
+          type: 'prepared_food',
+          unit_price: 1250,
+          gross: 3750,
+          tax_rate: '0.00',
+          tax: 0,
+        }),
+      ]);
+    });
+
+    it('returns a v2 record untouched', () => {
+      const already = {
+        v: 2,
+        total: 999,
+      } as unknown as PendingOrderV2;
+      expect(upgradePendingOrder(already)).toBe(already);
+    });
+
+    it('reads the total in paise from either version', () => {
+      expect(pendingTotalPaise(v1)).toBe(3750);
+      expect(
+        pendingTotalPaise({ v: 2, total: 3750 } as unknown as PendingOrderV2),
+      ).toBe(3750);
+    });
+
+    it('parses raw Redis JSON of either version', () => {
+      expect(parsePendingOrder(JSON.stringify(v1)).total).toBe(3750);
+      expect(parsePendingOrder('{"v":2,"total":4200}').total).toBe(4200);
     });
   });
 });

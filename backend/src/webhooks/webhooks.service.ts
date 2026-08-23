@@ -16,7 +16,8 @@ import { PrismaService } from '../prisma/prisma.service';
 import { PusherService } from '../chat/pusher.service';
 import {
   FulfilmentService,
-  PendingOrderData,
+  PendingOrderPayload,
+  pendingTotalPaise,
 } from '../fulfilment/fulfilment.service';
 
 @Injectable()
@@ -177,11 +178,14 @@ export class WebhooksService {
       );
       return;
     }
-    const pending = JSON.parse(pendingRaw) as PendingOrderData;
-    if (Number(payment.amount) !== Math.round(pending.total * 100)) {
+    // Either payload version may be in Redis; `pendingTotalPaise` reads both,
+    // and `confirmPaidOrder` upgrades a v1 record itself (decision 5).
+    const pending = JSON.parse(pendingRaw) as PendingOrderPayload;
+    const expectedPaise = pendingTotalPaise(pending);
+    if (Number(payment.amount) !== expectedPaise) {
       await redis.set(pendingKey, pendingRaw, 'EX', 1800, 'NX');
       this.logger.error(
-        `Amount mismatch for ${payment.order_id}: paid ${payment.amount}, expected ${Math.round(pending.total * 100)}`,
+        `Amount mismatch for ${payment.order_id}: paid ${payment.amount}, expected ${expectedPaise}`,
       );
       return;
     }
