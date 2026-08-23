@@ -35,7 +35,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  Alert,
+  AlertAction,
+  AlertDescription,
+  AlertTitle,
+} from '@/components/ui/alert';
 import { apiClient } from '@/lib/api-client';
+import { STATUS_BADGE } from '@/lib/status-styles';
 import { ROLE_DISPLAY_NAMES } from '@/lib/types/roles';
 import { CreateUserDialog } from '@/components/ops/CreateUserDialog';
 import type { UserProfile } from '@/lib/types/users';
@@ -49,7 +56,7 @@ export default function AdminUsersPage() {
   const [isDeactivating, setIsDeactivating] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
-  const { data: users, isLoading, isError } = useQuery({
+  const { data: users, isLoading, isError, refetch } = useQuery({
     queryKey: ['users'],
     queryFn: () => apiClient.get<UserProfile[]>('/users'),
   });
@@ -107,7 +114,7 @@ export default function AdminUsersPage() {
     return date.toLocaleDateString();
   }
 
-  const isEmpty = !isLoading && (!users || users.length === 0);
+  const isEmpty = !isLoading && !isError && (!users || users.length === 0);
 
   return (
     <div className="space-y-6">
@@ -126,12 +133,18 @@ export default function AdminUsersPage() {
       )}
 
       {isError && (
-        <div className="flex flex-col items-center justify-center py-12 space-y-2 text-center">
-          <AlertCircle className="size-6 text-destructive" />
-          <p className="text-sm text-muted-foreground">
-            Failed to load team members. Please try again later.
-          </p>
-        </div>
+        <Alert variant="destructive">
+          <AlertCircle className="size-4" />
+          <AlertTitle>Could not load the team</AlertTitle>
+          <AlertDescription>
+            Failed to load team members. Please try again.
+          </AlertDescription>
+          <AlertAction>
+            <Button variant="outline" size="sm" onClick={() => void refetch()}>
+              Retry
+            </Button>
+          </AlertAction>
+        </Alert>
       )}
 
       {isEmpty && (
@@ -190,9 +203,7 @@ export default function AdminUsersPage() {
                   <Badge
                     variant={user.status === 'active' ? 'default' : 'secondary'}
                     className={
-                      user.status === 'active'
-                        ? 'bg-green-500/10 text-green-500 border-green-500/20'
-                        : ''
+                      user.status === 'active' ? STATUS_BADGE.good : ''
                     }
                   >
                     {user.status}
@@ -204,7 +215,7 @@ export default function AdminUsersPage() {
                 <TableCell>
                   <DropdownMenu>
                     <DropdownMenuTrigger
-                      className="flex items-center justify-center size-8 rounded-md hover:bg-muted transition-colors"
+                      className="flex items-center justify-center size-8 rounded-md hover:bg-muted transition-colors focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[var(--focus)]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
                       aria-label={`Actions for ${user.name}`}
                     >
                       <MoreHorizontal className="size-4" />

@@ -62,7 +62,7 @@ export function TodaysFocusSection({ allTasks }: TodaysFocusSectionProps) {
   if (focusItems.length === 0) return null;
 
   return (
-    <Card className="border-l-2 border-l-blue-500">
+    <Card className="border-l-2 border-l-[var(--status-info)]">
       <CardContent className="pt-4">
         <span className="text-sm font-bold">Today&apos;s Focus</span>
         <div className="space-y-2 mt-3">
@@ -79,7 +79,7 @@ export function TodaysFocusSection({ allTasks }: TodaysFocusSectionProps) {
               <Link
                 key={task.id}
                 href={`/tasks/${task.id}`}
-                className="flex items-center gap-3 rounded-md px-2 py-1.5 hover:bg-muted transition-colors"
+                className="flex items-center gap-3 rounded-md px-2 py-1.5 transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[var(--focus)]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
               >
                 <span className="flex-1 text-sm truncate">{task.title}</span>
                 {task.quest && (
@@ -93,7 +93,7 @@ export function TodaysFocusSection({ allTasks }: TodaysFocusSectionProps) {
                       isOverdue
                         ? 'text-destructive'
                         : isDueToday
-                          ? 'text-amber-500'
+                          ? 'text-[var(--status-warning)]'
                           : 'text-muted-foreground'
                     }`}
                   >

@@ -5,10 +5,9 @@ import { GripVertical, Link as LinkIcon, CheckCircle2, FileCheck, FileQuestion, 
 import { format, isPast, parseISO } from 'date-fns';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { CoolMode } from '@/components/ui/cool-mode';
 import type { Task } from '@/lib/types/tasks';
 import { TASK_TYPE_LABELS, TASK_PRIORITY_LABELS, TASK_TYPE_XP_WEIGHT } from '@/lib/types/tasks';
-import { getTaskTypeBadge, STATUS_BADGE } from '@/lib/status-styles';
+import { getPriorityBadge, getTaskTypeBadge, STATUS_BADGE } from '@/lib/status-styles';
 
 interface TaskKanbanCardProps {
   task: Task;
@@ -16,24 +15,14 @@ interface TaskKanbanCardProps {
 }
 
 const getTypeBadgeClass = getTaskTypeBadge;
-
-function getPriorityBadgeClass(priority: string) {
-  switch (priority) {
-    case 'critical':
-      return 'text-red-400 bg-red-950 border-red-500/20';
-    case 'high':
-      return 'text-orange-400 bg-orange-950 border-orange-500/20';
-    case 'low':
-      return 'text-muted-foreground bg-muted';
-    default:
-      return '';
-  }
-}
+const getPriorityBadgeClass = getPriorityBadge;
 
 function getLeftBorderClass(task: Task) {
-  if (task.task_type === 'adhoc') return 'border-l-2 border-l-amber-500';
+  if (task.task_type === 'adhoc')
+    return 'border-l-2 border-l-[color:var(--status-warning)]';
   if (task.blocked) return 'border-l-4 border-l-destructive';
-  if (task.status === 'done') return 'border-l-[3px] border-l-green-500';
+  if (task.status === 'done')
+    return 'border-l-[3px] border-l-[color:var(--status-good)]';
   return '';
 }
 
@@ -75,7 +64,7 @@ export function TaskKanbanCard({ task, isDraggable }: TaskKanbanCardProps) {
             </Badge>
           )}
           {task.task_type === 'adhoc' && (
-            <Badge className={STATUS_BADGE.amber}>
+            <Badge className={STATUS_BADGE.warning}>
               Ad-hoc
             </Badge>
           )}
@@ -106,17 +95,15 @@ export function TaskKanbanCard({ task, isDraggable }: TaskKanbanCardProps) {
         <div className="flex items-center gap-1.5 flex-wrap">
           {/* XP */}
           {task.valid ? (
-            <CoolMode>
-              <div className="flex items-center gap-1">
-                <CheckCircle2 className="size-3.5 text-green-500" />
-                <Badge
-                  variant="outline"
-                  className="text-[10px] h-4 px-1 text-green-500 border-green-500/30"
-                >
-                  {task.valid_xp} XP
-                </Badge>
-              </div>
-            </CoolMode>
+            <div className="flex items-center gap-1">
+              <CheckCircle2 className="size-3.5 text-[var(--status-good)]" />
+              <Badge
+                variant="outline"
+                className="text-[10px] h-4 px-1 text-[var(--status-good)] border-[var(--status-good)]/30"
+              >
+                {task.valid_xp} XP
+              </Badge>
+            </div>
           ) : (
             <Badge variant="outline" className="text-[10px] h-4 px-1">
               +{Math.floor(task.xp * (TASK_TYPE_XP_WEIGHT[task.task_type] ?? 1))} XP
@@ -125,17 +112,23 @@ export function TaskKanbanCard({ task, isDraggable }: TaskKanbanCardProps) {
 
           {/* Evidence status indicator */}
           {task.status === 'done' && task.valid && (
-            <FileCheck className="size-3.5 text-green-500" />
+            <FileCheck
+              className="size-3.5 text-[var(--status-good)]"
+              aria-label="Evidence approved"
+            />
           )}
           {task.status === 'done' && !task.valid && (
             <span title="Evidence pending">
-              <FileQuestion className="size-3.5 text-amber-500" />
+              <FileQuestion
+                className="size-3.5 text-[var(--status-warning)]"
+                aria-label="Evidence pending"
+              />
             </span>
           )}
 
           {/* Readiness impact */}
           {task.readiness_value > 0 && (
-            <Badge variant="outline" className="text-[10px] h-4 px-1 text-blue-500 border-blue-500/30">
+            <Badge variant="outline" className="text-[10px] h-4 px-1 text-[var(--status-info)] border-[var(--status-info)]/30">
               <TrendingUp className="size-2.5 mr-0.5" />
               +{task.readiness_value}{task.readiness_meter?.name ? ` ${task.readiness_meter.name.length > 12 ? task.readiness_meter.name.slice(0, 12) + '...' : task.readiness_meter.name}` : ''}
             </Badge>

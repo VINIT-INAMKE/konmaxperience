@@ -23,8 +23,8 @@ export function QuestProgress({
   if (isComplete && baselineTaskCount > 0) {
     return (
       <div className="flex items-center gap-2">
-        <CheckCircle className="size-4 text-green-400" />
-        <span className="text-xs text-green-400">Quest complete</span>
+        <CheckCircle className="size-4 text-[var(--status-good)]" />
+        <span className="text-xs text-[var(--status-good)]">Quest complete</span>
       </div>
     );
   }
@@ -67,7 +67,7 @@ export function QuestProgress({
             aria-label={`Ad-hoc task progress: ${Math.round(adhocProgress)}%`}
           >
             <ProgressTrack className="h-1.5">
-              <ProgressIndicator className="[&]:bg-amber-500" />
+              <ProgressIndicator className="[&]:bg-[var(--status-warning)]" />
             </ProgressTrack>
           </Progress>
         </div>

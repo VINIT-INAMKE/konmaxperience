@@ -1,14 +1,13 @@
 'use client';
 
-import { use, useState, useRef } from 'react';
+import { use, useState } from 'react';
 import Link from 'next/link';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Plus, Loader2, AlertCircle } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { BlurFade } from '@/components/ui/blur-fade';
 import dynamic from 'next/dynamic';
-import { Confetti, type ConfettiRef } from '@/components/ui/confetti';
 import { Skeleton } from '@/components/ui/skeleton';
 import { QuestProgress } from '@/components/ops/quests/QuestProgress';
 import { ConfirmActivateDialog } from '@/components/ops/quests/ConfirmActivateDialog';
@@ -27,16 +26,17 @@ import type { Quest } from '@/lib/types/quests';
 import type { Task, TaskStatus } from '@/lib/types/tasks';
 import { TASK_TYPE_XP_WEIGHT } from '@/lib/types/tasks';
 import { NumberTicker } from '@/components/ui/number-ticker';
+import { STATUS_BADGE } from '@/lib/status-styles';
 import { ExportButton } from '@/components/ops/exports/ExportButton';
 
 function getStatusBadgeClass(status: string) {
   switch (status) {
     case 'active':
-      return 'text-blue-400 bg-blue-950 border-blue-500/20';
+      return STATUS_BADGE.info;
     case 'completed':
-      return 'text-green-400 bg-green-950 border-green-500/20';
+      return STATUS_BADGE.good;
     case 'blocked':
-      return 'text-red-400 bg-red-950 border-red-500/20';
+      return STATUS_BADGE.critical;
     default:
       return '';
   }
@@ -52,18 +52,23 @@ export default function QuestDetailPage(props: {
 
   const [view, setView] = useState<'kanban' | 'list'>('kanban');
   const [activateOpen, setActivateOpen] = useState(false);
-  const confettiRef = useRef<ConfettiRef>(null);
 
   const {
     data: quest,
     isLoading: questLoading,
     isError: questError,
+    refetch: refetchQuest,
   } = useQuery({
     queryKey: ['quests', id],
     queryFn: () => apiClient.get<Quest>(`/quests/${id}`),
   });
 
-  const { data: tasks = [], isLoading: tasksLoading } = useQuery({
+  const {
+    data: tasks = [],
+    isLoading: tasksLoading,
+    isError: tasksError,
+    refetch: refetchTasks,
+  } = useQuery({
     queryKey: ['tasks', { questId: id }],
     queryFn: () => apiClient.get<Task[]>(`/tasks?quest_id=${id}`),
     enabled: !!quest,
@@ -113,15 +118,6 @@ export default function QuestDetailPage(props: {
     0,
   );
 
-  // Fire confetti when quest status is completed on load
-  if (quest?.status === 'completed') {
-    confettiRef.current?.fire({
-      particleCount: 80,
-      spread: 60,
-      origin: { y: 0.5 },
-    });
-  }
-
   if (questLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -132,11 +128,16 @@ export default function QuestDetailPage(props: {
 
   if (questError || !quest) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 space-y-2 text-center">
-        <AlertCircle className="size-6 text-destructive" />
-        <p className="text-sm text-muted-foreground">
-          Could not load quest. Try refreshing the page.
-        </p>
+      <div className="space-y-3">
+        <Alert variant="destructive">
+          <AlertCircle className="size-4" />
+          <AlertDescription>
+            Could not load this quest. Try again in a moment.
+          </AlertDescription>
+        </Alert>
+        <Button variant="outline" size="sm" onClick={() => void refetchQuest()}>
+          Retry
+        </Button>
       </div>
     );
   }
@@ -147,14 +148,14 @@ export default function QuestDetailPage(props: {
         <div className="space-y-2">
           <Link
             href={`/missions/${quest.mission_id}`}
-            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+            className="inline-flex items-center gap-1 rounded-sm text-xs text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[var(--focus)]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
           >
             <ArrowLeft className="size-3" />
             {quest.mission?.title || 'Mission'}
           </Link>
 
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               <h1 className="text-2xl font-bold">{quest.title}</h1>
               <Badge variant="secondary">Week {quest.week_number}</Badge>
               <Badge
@@ -198,7 +199,7 @@ export default function QuestDetailPage(props: {
               <span className="text-sm text-muted-foreground">XP earned:</span>
               <NumberTicker
                 value={totalXpEarned}
-                className="text-sm font-semibold text-green-500 tabular-nums"
+                className="text-sm font-semibold text-[var(--status-good)] tabular-nums"
               />
               <span className="text-sm text-muted-foreground">
                 / {potentialXp} XP
@@ -208,13 +209,13 @@ export default function QuestDetailPage(props: {
         </div>
 
         {/* Task view header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <h2 className="text-xl font-semibold">Tasks</h2>
             <Badge variant="secondary">{tasks.length}</Badge>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <ExportButton reportType="tasks" reportName="Tasks" isTimeSeries={false} />
             <TaskViewToggle view={view} onViewChange={setView} />
             <Button
@@ -226,7 +227,7 @@ export default function QuestDetailPage(props: {
             </Button>
             <Button
               variant="outline"
-              className="text-amber-500 border-amber-500/30 hover:bg-amber-500/10"
+              className="text-[var(--status-warning)] border-[var(--status-warning)]/30 hover:bg-[var(--status-warning)]/10"
               nativeButton={false}
               render={<Link href={`/quests/${id}/tasks/new?type=adhoc`} />}
             >
@@ -240,6 +241,18 @@ export default function QuestDetailPage(props: {
         {tasksLoading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="size-6 animate-spin motion-reduce:animate-none text-muted-foreground" />
+          </div>
+        ) : tasksError ? (
+          <div className="space-y-3">
+            <Alert variant="destructive">
+              <AlertCircle className="size-4" />
+              <AlertDescription>
+                Could not load tasks for this quest. Try again in a moment.
+              </AlertDescription>
+            </Alert>
+            <Button variant="outline" size="sm" onClick={() => void refetchTasks()}>
+              Retry
+            </Button>
           </div>
         ) : view === 'kanban' ? (
           <TaskKanban
@@ -265,13 +278,6 @@ export default function QuestDetailPage(props: {
           open={activateOpen}
           onOpenChange={setActivateOpen}
           onActivated={handleActivated}
-        />
-
-        {/* Quest completion confetti */}
-        <Confetti
-          ref={confettiRef}
-          manualstart
-          className="pointer-events-none fixed inset-0 z-[200] h-full w-full"
         />
       </div>
   );

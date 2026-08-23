@@ -18,8 +18,11 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { ClipboardList, Plus } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { TaskKanbanCard } from './TaskKanbanCard';
+import { AdHocTaskSheet } from './AdHocTaskSheet';
 import type { Task, TaskStatus } from '@/lib/types/tasks';
 import { KANBAN_COLUMNS, TASK_STATUS_LABELS } from '@/lib/types/tasks';
 
@@ -35,11 +38,11 @@ function getColumnHeaderColor(status: TaskStatus) {
     case 'todo':
       return 'text-muted-foreground';
     case 'doing':
-      return 'text-blue-400';
+      return 'text-[var(--status-info)]';
     case 'done':
-      return 'text-green-400';
+      return 'text-[var(--status-good)]';
     case 'blocked':
-      return 'text-red-400';
+      return 'text-[var(--status-critical)]';
     default:
       return '';
   }
@@ -76,7 +79,7 @@ function SortableCard({
     <div
       ref={setNodeRef}
       style={style}
-      className="group"
+      className="group rounded-xl focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[var(--focus)]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
       {...(isDraggable ? { ...attributes, ...listeners } : {})}
     >
       <TaskKanbanCard task={task} isDraggable={isDraggable} />
@@ -91,6 +94,7 @@ export function TaskKanban({
   isAdmin,
 }: TaskKanbanProps) {
   const [activeTask, setActiveTask] = useState<Task | null>(null);
+  const [adHocOpen, setAdHocOpen] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -152,6 +156,25 @@ export function TaskKanban({
     [tasks, onStatusChange],
   );
 
+  if (tasks.length === 0) {
+    return (
+      <>
+        <div className="flex flex-col items-center justify-center gap-2 py-16 text-center">
+          <ClipboardList className="size-6 text-muted-foreground" />
+          <h3 className="text-base font-semibold">No tasks on this board yet</h3>
+          <p className="text-sm text-muted-foreground">
+            Tasks you add will appear here and move across the workflow columns.
+          </p>
+          <Button size="sm" className="mt-2" onClick={() => setAdHocOpen(true)}>
+            <Plus className="size-4" />
+            Inject ad-hoc task
+          </Button>
+        </div>
+        <AdHocTaskSheet open={adHocOpen} onOpenChange={setAdHocOpen} />
+      </>
+    );
+  }
+
   return (
     <DndContext
       sensors={sensors}
@@ -160,7 +183,7 @@ export function TaskKanban({
       onDragEnd={handleDragEnd}
     >
       <div className="overflow-x-auto -mx-4 px-4 sm:-mx-6 sm:px-6">
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 min-h-[50vh] lg:h-[calc(100vh-280px)] min-w-[600px] lg:min-w-0">
+      <div className="flex gap-3 sm:gap-4 min-h-[50vh] lg:h-[calc(100vh-280px)]">
         {KANBAN_COLUMNS.map((status) => {
           const columnTasks = tasksByColumn[status] || [];
           return (
@@ -210,7 +233,7 @@ function KanbanColumn({
   return (
     <div
       ref={setNodeRef}
-      className="bg-muted/30 rounded-lg p-2 flex flex-col"
+      className="bg-muted/30 rounded-lg p-2 flex flex-col min-w-[16rem] flex-1 shrink-0"
       role="region"
       aria-label={`${TASK_STATUS_LABELS[status]} column, ${tasks.length} tasks`}
     >
@@ -230,9 +253,10 @@ function KanbanColumn({
       <div className="flex-1 min-h-0 overflow-y-auto">
         <div className="space-y-2 p-1">
           {tasks.length === 0 ? (
-            <p className="text-center text-xs text-muted-foreground py-8">
-              No tasks
-            </p>
+            <div className="flex flex-col items-center gap-1.5 py-8 text-center">
+              <ClipboardList className="size-4 text-muted-foreground" />
+              <p className="text-xs text-muted-foreground">No tasks</p>
+            </div>
           ) : (
             tasks.map((task) => (
               <SortableCard

@@ -3,8 +3,11 @@
 import Link from 'next/link';
 import { ShoppingCart, AlertTriangle, TrendingUp, PackageSearch } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
-import { MagicCard } from '@/components/ui/magic-card';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { NumberTicker } from '@/components/ui/number-ticker';
+import { STATUS_BADGE } from '@/lib/status-styles';
 import { apiClient } from '@/lib/api-client';
 import type { IngredientStock } from '@/lib/types/inventory';
 
@@ -57,7 +60,7 @@ function formatINR(value: number): string {
 }
 
 export default function ProcurementPage() {
-  const { data: summary, isLoading } = useQuery({
+  const { data: summary, isLoading, isError, refetch } = useQuery({
     queryKey: ['procurement-summary'],
     queryFn: () => apiClient.get<ProcurementSummary>('/procurement/summary'),
   });
@@ -77,7 +80,7 @@ export default function ProcurementPage() {
         {isLoading && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="rounded-xl border p-4 space-y-2 animate-pulse">
+              <div key={i} className="rounded-xl border p-4 space-y-2 animate-pulse motion-reduce:animate-none">
                 <div className="h-4 w-2/3 rounded bg-muted" />
                 <div className="h-6 w-1/2 rounded bg-muted" />
               </div>
@@ -85,19 +88,32 @@ export default function ProcurementPage() {
           </div>
         )}
 
+        {isError && !isLoading && (
+          <Alert variant="destructive">
+            <AlertTriangle className="size-4" />
+            <AlertTitle>Could not load procurement summary</AlertTitle>
+            <AlertDescription className="flex flex-col items-start gap-2">
+              Pending orders, spend and low-stock counts are unavailable right now.
+              <Button variant="outline" size="sm" onClick={() => void refetch()}>
+                Try again
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
+
         {summary && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {SUMMARY_CARDS.map((card, index) => {
+            {SUMMARY_CARDS.map((card) => {
               const value = Number(summary[card.key]) || 0;
-              const showAmber = card.amberWhen && value > 0;
+              const showWarning = card.amberWhen && value > 0;
               return (
-                <MagicCard key={card.key} gradientColor="#1a1a2e" className="rounded-xl">
+                <Card key={card.key}>
                     <div className="p-4 space-y-2">
                       <div className="flex items-center gap-2 text-muted-foreground">
                         <card.icon className="size-4" />
                         <span className="text-xs font-medium">{card.label}</span>
                       </div>
-                      <div className={`text-2xl font-semibold ${card.isCurrency ? 'font-mono' : ''} ${showAmber ? 'text-amber-500' : ''}`}>
+                      <div className={`text-2xl font-semibold ${card.isCurrency ? 'font-mono' : ''} ${showWarning ? 'text-[var(--status-warning)]' : ''}`}>
                         {card.isCurrency ? (
                           <span className="font-mono">{formatINR(value)}</span>
                         ) : (
@@ -105,7 +121,7 @@ export default function ProcurementPage() {
                         )}
                       </div>
                     </div>
-                  </MagicCard>
+                  </Card>
               );
             })}
           </div>
@@ -116,10 +132,22 @@ export default function ProcurementPage() {
           <div className="space-y-3">
             <h2 className="text-sm font-semibold">Top Vendors by Spend</h2>
             {summary.top_vendors.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No vendor spend this month.</p>
+              <div className="flex flex-col items-start gap-2 rounded-lg border border-dashed p-6">
+                <p className="text-sm text-muted-foreground">
+                  No vendor spend this month. Raise a purchase order to start tracking spend.
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  nativeButton={false}
+                  render={<Link href="/operations/purchase-orders" />}
+                >
+                  Go to Purchase Orders
+                </Button>
+              </div>
             ) : (
-              <div className="rounded-lg border overflow-hidden">
-                <table className="w-full">
+              <div className="rounded-lg border overflow-x-auto">
+                <table className="w-full min-w-[420px]">
                   <thead className="bg-muted/40">
                     <tr className="border-b">
                       <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
@@ -153,22 +181,22 @@ export default function ProcurementPage() {
             {lowStockItems && lowStockItems.length > 0 && (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 {lowStockItems.slice(0, 4).map((item) => (
-                  <MagicCard key={item.id} gradientColor="#1a1a2e" className="rounded-xl">
+                  <Card key={item.id}>
                     <div className="p-4 space-y-2">
                       <div className="flex items-start justify-between gap-2">
                         <div>
                           <p className="text-sm font-medium leading-tight">{item.ingredient?.name}</p>
                           <p className="text-xs text-muted-foreground">{item.zone?.name}</p>
                         </div>
-                        <span className="inline-flex items-center rounded-md px-2 py-0.5 text-xs border-0 bg-amber-500/15 text-amber-500 font-medium">
+                        <span className={`inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium ${STATUS_BADGE.warning}`}>
                           Low Stock
                         </span>
                       </div>
-                      <p className="font-mono text-sm text-amber-500">
+                      <p className="font-mono text-sm text-[var(--status-warning)]">
                         {item.current_quantity} / {item.ingredient?.min_stock_level} {item.ingredient?.base_unit}
                       </p>
                     </div>
-                  </MagicCard>
+                  </Card>
                 ))}
               </div>
             )}

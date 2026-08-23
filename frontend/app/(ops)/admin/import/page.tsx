@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { STATUS_BADGE } from '@/lib/status-styles';
 import {
   IMPORT_TYPE_CONFIG,
   type ImportType,
@@ -50,17 +51,17 @@ const TIERS: Array<{
 }> = [
   {
     label: 'Foundation Data',
-    accentColor: 'border-l-amber-500',
+    accentColor: 'border-l-[var(--gold)]',
     types: ['ingredients', 'vendors', 'vendor_pricing'],
   },
   {
     label: 'Operations \u2014 Independent',
-    accentColor: 'border-l-blue-500',
+    accentColor: 'border-l-[var(--status-info)]',
     types: ['opening_stock', 'missions', 'kpis', 'events'],
   },
   {
     label: 'Operations \u2014 Sequenced',
-    accentColor: 'border-l-blue-500',
+    accentColor: 'border-l-[var(--status-info)]',
     types: ['quests', 'tasks'],
     prerequisites: {
       quests: { check: (p) => p.missions > 0, label: 'Needs: Missions' },
@@ -69,7 +70,7 @@ const TIERS: Array<{
   },
   {
     label: 'Menu',
-    accentColor: 'border-l-purple-500',
+    accentColor: 'border-l-brand',
     types: ['recipes', 'product_categories', 'products'],
     prerequisites: {
       product_categories: { check: (p) => p.brands > 0, label: 'Needs: Brands' },
@@ -79,10 +80,10 @@ const TIERS: Array<{
 ];
 
 const TIER_HEADER_COLORS: Record<string, string> = {
-  'Foundation Data': 'text-amber-500',
-  'Operations \u2014 Independent': 'text-blue-500',
-  'Operations \u2014 Sequenced': 'text-blue-500',
-  'Menu': 'text-purple-500',
+  'Foundation Data': 'text-gold-text',
+  'Operations \u2014 Independent': 'text-[var(--status-info)]',
+  'Operations \u2014 Sequenced': 'text-[var(--status-info)]',
+  'Menu': 'text-brand',
 };
 
 export default function AdminImportPage() {
@@ -123,7 +124,7 @@ export default function AdminImportPage() {
                 key={label}
                 className="inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs"
               >
-                <strong className={value > 0 ? 'text-green-600' : 'text-muted-foreground'}>{value}</strong>
+                <strong className={value > 0 ? 'text-[var(--status-good)]' : 'text-muted-foreground'}>{value}</strong>
                 <span className="text-muted-foreground">{label}</span>
               </span>
             ))}
@@ -144,7 +145,11 @@ export default function AdminImportPage() {
                 {tier.label}
               </p>
               {prereqs && tierComplete && (
-                <span className="inline-block size-1.5 rounded-full bg-green-500" />
+                <span
+                  className="inline-block size-1.5 rounded-full bg-[var(--status-good)]"
+                  aria-label={`${tier.label} prerequisites complete`}
+                  role="img"
+                />
               )}
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
@@ -153,7 +158,11 @@ export default function AdminImportPage() {
                 const prereqConfig = tier.prerequisites?.[type];
                 const prereqMissing = prereqConfig && prereqs ? !prereqConfig.check(prereqs) : false;
                 return (
-                  <Link key={type} href={`/admin/import/${type}`}>
+                  <Link
+                    key={type}
+                    href={`/admin/import/${type}`}
+                    className="block rounded-xl focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[var(--focus)]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
+                  >
                     <Card className={`border-l-4 ${tier.accentColor} hover:bg-[var(--muted)] transition-colors cursor-pointer h-full`}>
                       <CardContent className="p-4">
                         <div className="flex items-start gap-3">
@@ -166,7 +175,7 @@ export default function AdminImportPage() {
                               {config.description}
                             </p>
                             {prereqMissing && prereqConfig && (
-                              <Badge variant="outline" className="text-amber-600 border-amber-300 mt-2 text-[10px] px-1.5 py-0 max-w-full truncate">
+                              <Badge variant="outline" className={`${STATUS_BADGE.warning} mt-2 text-[10px] px-1.5 py-0 max-w-full truncate`}>
                                 <AlertTriangle className="size-2.5 mr-1 shrink-0" />
                                 <span className="truncate">{prereqConfig.label}</span>
                               </Badge>

@@ -1,10 +1,12 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import Link from 'next/link';
 import { Search, AlertTriangle, Package } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Select,
   SelectContent,
@@ -12,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { InventoryRow } from '@/components/ops/operations/inventory/InventoryRow';
 import { StockAdjustmentSheet } from '@/components/ops/operations/inventory/StockAdjustmentSheet';
 import { apiClient } from '@/lib/api-client';
@@ -32,7 +34,7 @@ export default function InventoryPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [adjustOpen, setAdjustOpen] = useState(false);
 
-  const { data: stocks, isLoading, isError } = useQuery({
+  const { data: stocks, isLoading, isError, refetch } = useQuery({
     queryKey: ['inventory'],
     queryFn: () => apiClient.get<IngredientStock[]>('/inventory'),
   });
@@ -85,9 +87,9 @@ export default function InventoryPage() {
 
         {/* Low-stock alert strip */}
         {lowStockCount > 0 && (
-          <Alert className="border-amber-500/30 bg-amber-500/5">
-            <AlertTriangle className="size-4 text-amber-500" />
-            <AlertDescription className="text-amber-500">
+          <Alert className="border-[var(--status-warning)]/30 bg-[var(--status-warning)]/8 text-[var(--status-warning)]">
+            <AlertTriangle className="size-4 text-[var(--status-warning)]" />
+            <AlertDescription className="text-[var(--status-warning)]">
               {lowStockCount} ingredient{lowStockCount !== 1 ? 's' : ''} below minimum stock level. Review and reorder.
             </AlertDescription>
           </Alert>
@@ -157,27 +159,49 @@ export default function InventoryPage() {
 
         {/* Table */}
         {isLoading && (
-          <div className="text-sm text-muted-foreground">Loading inventory...</div>
+          <div className="rounded-lg border divide-y" aria-busy="true">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-4 px-4 py-3">
+                <Skeleton className="h-4 w-40" />
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-4 w-20 ml-auto" />
+              </div>
+            ))}
+          </div>
         )}
         {isError && (
-          <div className="text-sm text-destructive">
-            Something went wrong. Refresh the page or try again in a moment.
-          </div>
+          <Alert variant="destructive">
+            <AlertTriangle className="size-4" />
+            <AlertTitle>Could not load inventory</AlertTitle>
+            <AlertDescription className="flex flex-col items-start gap-2">
+              Something went wrong while fetching stock levels.
+              <Button variant="outline" size="sm" onClick={() => void refetch()}>
+                Try again
+              </Button>
+            </AlertDescription>
+          </Alert>
         )}
 
         {!isLoading && !isError && filteredStocks.length === 0 && (
           <div className="flex flex-col items-center justify-center py-16 text-center space-y-3">
-            <Package className="size-12 text-muted-foreground/30" />
+            <Package className="size-12 text-ink-faint" />
             <h2 className="text-lg font-semibold">No Inventory Data</h2>
             <p className="text-sm text-muted-foreground max-w-md">
               No ingredients found. Add ingredients first in the Ingredients section.
             </p>
+            <Button
+              variant="outline"
+              nativeButton={false}
+              render={<Link href="/operations/ingredients" />}
+            >
+              Go to Ingredients
+            </Button>
           </div>
         )}
 
         {!isLoading && !isError && filteredStocks.length > 0 && (
-          <div className="rounded-lg border overflow-hidden">
-            <table className="w-full">
+          <div className="rounded-lg border overflow-x-auto">
+            <table className="w-full min-w-[720px]">
               <thead>
                 <tr className="border-b bg-muted/40">
                   <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">

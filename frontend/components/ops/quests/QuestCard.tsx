@@ -3,30 +3,39 @@
 import Link from 'next/link';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { AvatarCircles } from '@/components/ui/avatar-circles';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { QuestProgress } from './QuestProgress';
+import { STATUS_BADGE } from '@/lib/status-styles';
 import type { Quest, QuestStatus } from '@/lib/types/quests';
 
 const STATUS_COLORS: Record<QuestStatus, string> = {
-  planned: '',
-  active: 'text-green-400 bg-green-950',
-  completed: 'text-blue-400 bg-blue-950',
-  blocked: 'text-red-400 bg-red-950',
+  planned: STATUS_BADGE.neutral,
+  active: STATUS_BADGE.good,
+  completed: STATUS_BADGE.info,
+  blocked: STATUS_BADGE.critical,
 };
+
+/** How many stacked avatars render before the `+N` overflow chip. */
+const MAX_AVATARS = 3;
+
+function initials(name: string) {
+  return name
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0] ?? '')
+    .join('')
+    .toUpperCase();
+}
 
 interface QuestCardProps {
   quest: Quest;
 }
 
 export function QuestCard({ quest }: QuestCardProps) {
-  const ownerAvatars = quest.owner
-    ? [
-        {
-          imageUrl: `https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(quest.owner.name)}&backgroundColor=0a0a0a&textColor=ffffff`,
-          profileUrl: '#',
-        },
-      ]
-    : [];
+  const owners = quest.owner ? [quest.owner] : [];
+  const shownOwners = owners.slice(0, MAX_AVATARS);
+  const overflow = owners.length - shownOwners.length;
 
   const totalTasks = quest._count?.tasks ?? 0;
   // Ad-hoc tasks = total minus baseline (core) tasks
@@ -36,7 +45,10 @@ export function QuestCard({ quest }: QuestCardProps) {
       : 0;
 
   return (
-    <Link href={`/quests/${quest.id}`} className="block">
+    <Link
+      href={`/quests/${quest.id}`}
+      className="block rounded-xl focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[var(--focus)]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
+    >
       <Card className="p-4 hover:bg-muted/30 transition-colors cursor-pointer">
         <div className="flex items-start justify-between gap-4 overflow-hidden">
           <div className="flex-1 min-w-0 space-y-3">
@@ -73,12 +85,24 @@ export function QuestCard({ quest }: QuestCardProps) {
             </div>
           </div>
 
-          {/* Owner avatar */}
-          {ownerAvatars.length > 0 && (
-            <AvatarCircles
-              avatarUrls={ownerAvatars}
-              className="[&_img]:size-8 [&_img]:border [&_a]:size-8 shrink-0"
-            />
+          {/* Owner avatars */}
+          {shownOwners.length > 0 && (
+            <div className="flex -space-x-2 shrink-0">
+              {shownOwners.map((owner) => (
+                <Avatar key={owner.id} size="sm" title={owner.name}>
+                  <AvatarImage
+                    src={`https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(owner.name)}`}
+                    alt=""
+                  />
+                  <AvatarFallback>{initials(owner.name)}</AvatarFallback>
+                </Avatar>
+              ))}
+              {overflow > 0 && (
+                <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-surface-raised text-[10px] font-medium text-ink-muted">
+                  +{overflow}
+                </span>
+              )}
+            </div>
           )}
         </div>
       </Card>

@@ -4,16 +4,19 @@ import Link from 'next/link';
 import { CheckCircle, Rocket } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent } from '@/components/ui/card';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Progress, ProgressLabel, ProgressValue } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
-import { AnimatedCircularProgressBar } from '@/components/ui/animated-circular-progress-bar';
+import { ProgressRing } from '@/components/ops/ProgressRing';
 import { XpProgressBar } from '@/components/ops/gamification/XpProgressBar';
 import { LevelBadge } from '@/components/ops/gamification/LevelBadge';
 import { DashboardKpiAlert } from '@/components/ops/dashboard/DashboardKpiAlert';
 import { DashboardLowStockAlert } from '@/components/ops/dashboard/DashboardLowStockAlert';
 import { TodaysFocusSection } from '@/components/ops/dashboard/TodaysFocusSection';
 import { apiClient } from '@/lib/api-client';
+import { getTaskStatusBadge } from '@/lib/status-styles';
 import { useAuthStore } from '@/lib/stores/auth-store';
 import { RoleCode } from '@/lib/types/roles';
 import type { ReadinessMeter } from '@/lib/types/readiness';
@@ -42,13 +45,6 @@ interface QuestItem {
   adhoc_progress: number;
 }
 
-const STATUS_BADGE_CLASSES: Record<string, string> = {
-  planned: 'bg-muted text-muted-foreground border-0',
-  active: 'bg-amber-500/15 text-amber-600 border-0',
-  blocked: 'bg-destructive/10 text-destructive border-0',
-  completed: 'bg-emerald-500/15 text-emerald-700 border-0',
-};
-
 /** Maps role codes to relevant readiness meter names for contribution display */
 function getRelevantMeterNames(roleCode: string): string[] {
   switch (roleCode) {
@@ -75,7 +71,12 @@ export function RoleDashboardSections() {
   const user = useAuthStore((s) => s.user);
 
   // Section 1: My Tasks
-  const { data: allTasks, isLoading: tasksLoading } = useQuery({
+  const {
+    data: allTasks,
+    isLoading: tasksLoading,
+    isError: tasksError,
+    refetch: refetchTasks,
+  } = useQuery({
     queryKey: ['tasks', 'my'],
     queryFn: () => apiClient.get<TaskItem[]>('/tasks'),
   });
@@ -92,7 +93,12 @@ export function RoleDashboardSections() {
     : [];
 
   // Section 2: Active Quest
-  const { data: allQuests, isLoading: questsLoading } = useQuery({
+  const {
+    data: allQuests,
+    isLoading: questsLoading,
+    isError: questsError,
+    refetch: refetchQuests,
+  } = useQuery({
     queryKey: ['quests', 'my'],
     queryFn: () => apiClient.get<QuestItem[]>('/quests'),
   });
@@ -162,13 +168,24 @@ export function RoleDashboardSections() {
             {tasksLoading ? (
               <div className="space-y-3 mt-3">
                 {[1, 2, 3].map((i) => (
-                  <div key={i} className="h-10 rounded bg-muted animate-pulse" />
+                  <div key={i} className="h-10 rounded bg-muted animate-pulse motion-reduce:animate-none" />
                 ))}
               </div>
+            ) : tasksError ? (
+              <Alert variant="destructive" className="mt-3">
+                <AlertTitle>Could not load your tasks</AlertTitle>
+                <AlertDescription>The task list did not respond.</AlertDescription>
+                <Button variant="outline" size="sm" className="mt-2 w-fit" onClick={() => void refetchTasks()}>
+                  Retry
+                </Button>
+              </Alert>
             ) : myTasks.length === 0 ? (
               <div className="flex flex-col items-center gap-2 py-6 text-center">
                 <CheckCircle className="size-8 text-muted-foreground/30" />
                 <p className="text-sm text-muted-foreground">All caught up — new tasks appear when quests are assigned.</p>
+                <Button nativeButton={false} render={<Link href="/tasks" />} variant="outline" size="sm">
+                  Browse all tasks
+                </Button>
               </div>
             ) : (
               <div className="space-y-2 mt-3">
@@ -176,7 +193,7 @@ export function RoleDashboardSections() {
                   <Link
                     key={task.id}
                     href={`/tasks/${task.id}`}
-                    className="flex items-center gap-3 rounded-md px-2 py-1.5 hover:bg-muted transition-colors"
+                    className="flex items-center gap-3 rounded-md px-2 py-1.5 transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[var(--focus)]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
                   >
                     <span className="flex-1 text-sm truncate">{task.title}</span>
                     {task.quest && (
@@ -194,7 +211,7 @@ export function RoleDashboardSections() {
                       </span>
                     )}
                     <Badge
-                      className={`text-[10px] shrink-0 ${STATUS_BADGE_CLASSES[task.status] ?? ''}`}
+                      className={`text-[10px] shrink-0 ${getTaskStatusBadge(task.status)}`}
                     >
                       {task.status.replace('_', ' ')}
                     </Badge>
@@ -211,14 +228,25 @@ export function RoleDashboardSections() {
             <span className="text-sm font-bold">Active Quest</span>
             {questsLoading ? (
               <div className="space-y-3 mt-3">
-                <div className="h-5 w-2/3 rounded bg-muted animate-pulse" />
-                <div className="h-2 w-full rounded bg-muted animate-pulse" />
-                <div className="h-4 w-1/4 rounded bg-muted animate-pulse" />
+                <div className="h-5 w-2/3 rounded bg-muted animate-pulse motion-reduce:animate-none" />
+                <div className="h-2 w-full rounded bg-muted animate-pulse motion-reduce:animate-none" />
+                <div className="h-4 w-1/4 rounded bg-muted animate-pulse motion-reduce:animate-none" />
               </div>
+            ) : questsError ? (
+              <Alert variant="destructive" className="mt-3">
+                <AlertTitle>Could not load your quests</AlertTitle>
+                <AlertDescription>The quest list did not respond.</AlertDescription>
+                <Button variant="outline" size="sm" className="mt-2 w-fit" onClick={() => void refetchQuests()}>
+                  Retry
+                </Button>
+              </Alert>
             ) : !activeQuest ? (
               <div className="flex flex-col items-center gap-2 py-6 text-center">
                 <Rocket className="size-8 text-muted-foreground/30" />
                 <p className="text-sm text-muted-foreground">No active quest — check Missions for available quests.</p>
+                <Button nativeButton={false} render={<Link href="/missions" />} variant="outline" size="sm">
+                  Browse missions
+                </Button>
               </div>
             ) : (
               <div className="space-y-3 mt-3">
@@ -266,14 +294,12 @@ export function RoleDashboardSections() {
               Readiness Contributions
             </span>
             {displayMeters.length > 0 ? (
-              <div className="flex items-center gap-6 mt-3">
+              <div className="flex items-center gap-6 mt-3 overflow-x-auto">
                 {displayMeters.map((meter) => (
-                  <div key={meter.id} className="flex flex-col items-center gap-1">
-                    <AnimatedCircularProgressBar
+                  <div key={meter.id} className="flex shrink-0 flex-col items-center gap-1">
+                    <ProgressRing
                       value={meter.current_value}
                       max={meter.target_value || 100}
-                      gaugePrimaryColor="var(--primary)"
-                      gaugeSecondaryColor="var(--muted)"
                       className="size-16 text-xs"
                     />
                     <span className="text-[10px] text-muted-foreground text-center truncate max-w-[80px]">
@@ -306,7 +332,7 @@ export function RoleDashboardSections() {
             </div>
             <Link
               href="/boards/evidence"
-              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+              className="rounded-sm text-xs text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[var(--focus)]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
             >
               View feed
             </Link>

@@ -44,12 +44,12 @@ export default function AdminNoticesPage() {
   const canSend = title.trim().length > 0 && body.trim().length > 0;
 
   return (
-    <div className="p-6 max-w-2xl mx-auto space-y-8">
+    <div className="p-4 sm:p-6 max-w-2xl mx-auto space-y-8">
       {/* Header */}
       <div className="space-y-1">
         <div className="flex items-center gap-3">
-          <div className="size-10 rounded-lg bg-purple-500/10 flex items-center justify-center">
-            <Megaphone className="size-5 text-purple-500" />
+          <div className="size-10 shrink-0 rounded-lg bg-[var(--accent-soft)] flex items-center justify-center">
+            <Megaphone className="size-5 text-brand" />
           </div>
           <div>
             <h1 className="text-xl font-bold tracking-tight">Send Notice</h1>
@@ -110,7 +110,7 @@ export default function AdminNoticesPage() {
         >
           {broadcast.isPending ? (
             <>
-              <Loader2 className="size-4 mr-2 animate-spin" />
+              <Loader2 className="size-4 mr-2 animate-spin motion-reduce:animate-none" />
               Sending to all team members...
             </>
           ) : sent ? (

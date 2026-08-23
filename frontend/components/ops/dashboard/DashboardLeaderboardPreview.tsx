@@ -1,7 +1,9 @@
 'use client';
 
 import Link from 'next/link';
+import { Trophy } from 'lucide-react';
 import { NumberTicker } from '@/components/ui/number-ticker';
+import { Button } from '@/components/ui/button';
 import type { LeaderboardResponse } from '@/lib/types/leaderboard';
 
 interface DashboardLeaderboardPreviewProps {
@@ -21,9 +23,15 @@ export function DashboardLeaderboardPreview({ data }: DashboardLeaderboardPrevie
       <span className="text-sm font-semibold">Leaderboard</span>
 
       {top5.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
-          No rankings yet. Complete and validate tasks to earn XP and appear on the leaderboard.
-        </p>
+        <div className="flex flex-col items-center gap-2 py-4 text-center">
+          <Trophy className="size-8 text-muted-foreground/30" />
+          <p className="text-sm text-muted-foreground">
+            No rankings yet. Complete and validate tasks to earn XP and appear on the leaderboard.
+          </p>
+          <Button nativeButton={false} render={<Link href="/tasks" />} variant="outline" size="sm">
+            Go to tasks
+          </Button>
+        </div>
       ) : (
         <>
           <ol className="space-y-2">
@@ -47,7 +55,7 @@ export function DashboardLeaderboardPreview({ data }: DashboardLeaderboardPrevie
           <div className="flex justify-end">
             <Link
               href="/leaderboard"
-              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+              className="rounded-sm text-xs text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[var(--focus)]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
             >
               View Leaderboard
             </Link>
