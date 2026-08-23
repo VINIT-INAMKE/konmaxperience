@@ -68,6 +68,7 @@ import { UserAwareThrottlerGuard } from './common/guards/user-aware-throttler.gu
 // P5a wave 2 — commerce modules. Kept on their own lines at the end of both
 // blocks so concurrent phases adding imports do not collide with this one.
 import { LoyaltyModule } from './loyalty/loyalty.module';
+import { CheckoutModule } from './checkout/checkout.module';
 
 @Module({
   imports: [
@@ -126,6 +127,7 @@ import { LoyaltyModule } from './loyalty/loyalty.module';
     ActivityModule,
     MissionBridgeModule,
     LoyaltyModule,
+    CheckoutModule,
     RealtimeModule,
     UsageModule,
     MeModule,
