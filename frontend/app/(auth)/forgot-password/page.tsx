@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { ArrowLeft, Loader2, CheckCircle } from 'lucide-react';
 import { forgotPassword } from '@/lib/auth';
@@ -26,6 +27,7 @@ export default function ForgotPasswordPage() {
     formState: { errors },
     getValues,
   } = useForm<ForgotForm>({
+    resolver: zodResolver(forgotSchema),
     defaultValues: { email: '' },
   });
 
@@ -77,7 +79,7 @@ export default function ForgotPasswordPage() {
   if (successEmail) {
     return (
       <div className="w-full max-w-sm space-y-6 text-center">
-        <CheckCircle className="size-10 text-emerald-600 mx-auto" />
+        <CheckCircle className="size-10 text-[var(--status-good)] mx-auto" />
         <div className="space-y-2">
           <h1 className="text-2xl font-bold tracking-tight text-[var(--public-fg)]">Check your email</h1>
           <p className="text-sm text-[var(--public-muted)]">
@@ -88,7 +90,7 @@ export default function ForgotPasswordPage() {
         <button
           onClick={handleResend}
           disabled={resendCountdown > 0 || isLoading}
-          className="w-full h-10 rounded-lg border border-[var(--public-border)] bg-white text-sm font-medium text-[var(--public-fg)] hover:bg-[var(--public-surface)] transition-colors disabled:opacity-50"
+          className="w-full h-10 rounded-lg border border-[var(--public-border)] bg-white text-sm font-medium text-[var(--public-fg)] hover:bg-[var(--public-surface)] transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[var(--focus)]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--public-bg)]"
         >
           {resendCountdown > 0
             ? `Resend email (${resendCountdown}s)`
@@ -122,7 +124,7 @@ export default function ForgotPasswordPage() {
       </div>
 
       {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="rounded-lg border border-[var(--status-serious)]/25 bg-[var(--status-serious)]/10 px-4 py-3 text-sm text-[var(--status-serious)]" role="alert">
           {error}
         </div>
       )}
@@ -139,10 +141,10 @@ export default function ForgotPasswordPage() {
             className="flex h-10 w-full rounded-lg border border-[var(--public-border)] bg-white px-3 py-2 text-sm text-[var(--public-fg)] placeholder:text-[var(--public-muted-stone)] focus:outline-none focus:ring-2 focus:ring-[var(--public-accent)]/30 focus:border-[var(--public-accent)] disabled:opacity-50"
             aria-invalid={!!errors.email}
             aria-describedby={errors.email ? 'email-error' : undefined}
-            {...register('email', { required: 'Email is required' })}
+            {...register('email')}
           />
           {errors.email && (
-            <p id="email-error" className="text-xs text-red-600">
+            <p id="email-error" className="text-xs text-[var(--status-serious)]">
               {errors.email.message}
             </p>
           )}
@@ -150,7 +152,7 @@ export default function ForgotPasswordPage() {
 
         <button
           type="submit"
-          className="w-full h-11 rounded-lg bg-[var(--public-fg)] text-[var(--public-bg)] text-sm font-medium hover:bg-[var(--public-fg-hover)] transition-colors disabled:opacity-50"
+          className="w-full h-11 rounded-lg bg-[var(--public-fg)] text-[var(--public-bg)] text-sm font-medium hover:bg-[var(--public-fg-hover)] transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[var(--focus)]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--public-bg)]"
           disabled={isLoading}
         >
           {isLoading ? (

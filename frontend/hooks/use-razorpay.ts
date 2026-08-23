@@ -19,7 +19,21 @@ interface UseRazorpayOptions {
     razorpay_signature: string;
   }) => void | Promise<void>;
   onDismiss?: () => void;
-  onFailed?: (error: any) => void;
+  onFailed?: (error: RazorpayFailureResponse) => void;
+}
+
+/**
+ * Razorpay's checkout renders inside its own iframe document, so it cannot read
+ * our CSS custom properties — the brand colour has to be handed over as a
+ * resolved literal. Read it from `--public-terracotta` at call time rather than
+ * duplicating the hex here; if it cannot be resolved, Razorpay uses its default.
+ */
+function brandColor(): string | undefined {
+  if (typeof window === 'undefined') return undefined;
+  const resolved = getComputedStyle(document.documentElement)
+    .getPropertyValue('--public-terracotta')
+    .trim();
+  return resolved || undefined;
 }
 
 export function useRazorpay(options: UseRazorpayOptions) {
@@ -68,7 +82,7 @@ export function useRazorpay(options: UseRazorpayOptions) {
             ? { name: 'Walk-in Customer', contact: '9999999999', email: 'pos@konmaxperience.com' }
             : params.prefill,
           theme: {
-            color: '#c2410c',
+            color: brandColor(),
             backdrop_color: 'rgba(28, 25, 23, 0.7)',
           },
           modal: {
@@ -93,7 +107,7 @@ export function useRazorpay(options: UseRazorpayOptions) {
           retry: { enabled: true, max_count: 3 },
         });
 
-        rzp.on('payment.failed', (resp: any) => {
+        rzp.on('payment.failed', (resp) => {
           setState('failed');
           optionsRef.current.onFailed?.(resp);
         });

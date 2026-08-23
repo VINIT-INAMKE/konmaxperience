@@ -4,6 +4,14 @@ import { useState, useCallback, useRef } from 'react';
 import { apiClient } from '@/lib/api-client';
 import { useCartStore } from '@/lib/stores/cart-store';
 import type { Customer, VerifyOtpResponse } from '@/lib/types/customer-auth';
+import type { CartItem } from '@/lib/types/marketplace';
+
+/** Response shape of `POST /customer/cart/sync` — the server-reconciled cart. */
+interface CartSyncResponse {
+  items: CartItem[];
+  channel: 'takeaway' | 'delivery' | null;
+  deliveryAddressId: string | null;
+}
 
 export function useCustomerAuth() {
   const [customer, setCustomer] = useState<Customer | null>(null);
@@ -44,8 +52,8 @@ export function useCustomerAuth() {
     // Sync local cart to Redis (fire-and-forget, per D-02)
     const { items, channel, deliveryAddressId } = useCartStore.getState();
     if (items.length > 0) {
-      apiClient.post('/customer/cart/sync', { items, channel, deliveryAddressId })
-        .then((syncResult: any) => {
+      apiClient.post<CartSyncResponse>('/customer/cart/sync', { items, channel, deliveryAddressId })
+        .then((syncResult) => {
           if (syncResult?.items) {
             useCartStore.getState().replaceCart(syncResult.items, syncResult.channel, syncResult.deliveryAddressId);
           }

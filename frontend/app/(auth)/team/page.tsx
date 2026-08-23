@@ -4,6 +4,7 @@ import { Suspense, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
 // Using native elements + --public-* CSS vars for theme-independent auth pages
@@ -31,6 +32,7 @@ function LoginContent() {
     handleSubmit,
     formState: { errors },
   } = useForm<LoginForm>({
+    resolver: zodResolver(loginSchema),
     defaultValues: { email: '', password: '' },
   });
 
@@ -74,7 +76,7 @@ function LoginContent() {
         </div>
       )}
       {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="rounded-lg border border-[var(--status-serious)]/25 bg-[var(--status-serious)]/10 px-4 py-3 text-sm text-[var(--status-serious)]" role="alert">
           {error}
         </div>
       )}
@@ -92,10 +94,10 @@ function LoginContent() {
             className="flex h-10 w-full rounded-lg border border-[var(--public-border)] bg-white px-3 py-2 text-sm text-[var(--public-fg)] placeholder:text-[var(--public-muted-stone)] focus:outline-none focus:ring-2 focus:ring-[var(--public-accent)]/30 focus:border-[var(--public-accent)] disabled:opacity-50"
             aria-invalid={!!errors.email}
             aria-describedby={errors.email ? 'email-error' : undefined}
-            {...register('email', { required: 'Email is required' })}
+            {...register('email')}
           />
           {errors.email && (
-            <p id="email-error" className="text-xs text-red-600">
+            <p id="email-error" className="text-xs text-[var(--status-serious)]">
               {errors.email.message}
             </p>
           )}
@@ -120,19 +122,19 @@ function LoginContent() {
               className="flex h-10 w-full rounded-lg border border-[var(--public-border)] bg-white px-3 py-2 pr-10 text-sm text-[var(--public-fg)] placeholder:text-[var(--public-muted-stone)] focus:outline-none focus:ring-2 focus:ring-[var(--public-accent)]/30 focus:border-[var(--public-accent)] disabled:opacity-50"
               aria-invalid={!!errors.password}
               aria-describedby={errors.password ? 'password-error' : undefined}
-              {...register('password', { required: 'Password is required' })}
+              {...register('password')}
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-2 top-1/2 -translate-y-1/2 size-8 flex items-center justify-center text-[var(--public-muted)] hover:text-[var(--public-fg)] transition-colors rounded-md"
+              className="absolute right-2 top-1/2 -translate-y-1/2 size-8 flex items-center justify-center text-[var(--public-muted)] hover:text-[var(--public-fg)] transition-colors rounded-md focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[var(--focus)]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--public-bg)]"
               aria-label={showPassword ? 'Hide password' : 'Show password'}
             >
               {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
             </button>
           </div>
           {errors.password && (
-            <p id="password-error" className="text-xs text-red-600">
+            <p id="password-error" className="text-xs text-[var(--status-serious)]">
               {errors.password.message}
             </p>
           )}
@@ -140,7 +142,7 @@ function LoginContent() {
 
         <button
           type="submit"
-          className="w-full h-11 rounded-lg bg-[var(--public-fg)] text-[var(--public-bg)] text-sm font-medium hover:bg-[var(--public-fg-hover)] transition-colors disabled:opacity-50"
+          className="w-full h-11 rounded-lg bg-[var(--public-fg)] text-[var(--public-bg)] text-sm font-medium hover:bg-[var(--public-fg-hover)] transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[var(--focus)]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--public-bg)]"
           disabled={isLoading}
         >
           {isLoading ? (

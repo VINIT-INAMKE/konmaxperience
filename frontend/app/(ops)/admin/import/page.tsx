@@ -15,6 +15,7 @@ import {
   ChefHat,
   LayoutGrid,
   UtensilsCrossed,
+  ClipboardList,
   AlertTriangle,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
@@ -40,6 +41,7 @@ const ICON_MAP: Record<ImportType, React.ReactNode> = {
   recipes: <ChefHat className="size-5" />,
   product_categories: <LayoutGrid className="size-5" />,
   products: <UtensilsCrossed className="size-5" />,
+  purchase_orders: <ClipboardList className="size-5" />,
 };
 
 const TIERS: Array<{
@@ -56,7 +58,7 @@ const TIERS: Array<{
   {
     label: 'Operations \u2014 Independent',
     accentColor: 'border-l-blue-500',
-    types: ['opening_stock', 'missions', 'kpis', 'events'],
+    types: ['opening_stock', 'purchase_orders', 'missions', 'kpis', 'events'],
   },
   {
     label: 'Operations \u2014 Sequenced',

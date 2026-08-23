@@ -66,7 +66,7 @@ export function StarRatingInput({ value, onChange }: StarRatingInputProps) {
               aria-hidden="true"
               className={
                 filled
-                  ? 'size-8 fill-amber-500 text-amber-500'
+                  ? 'size-8 fill-[var(--gold)] text-[var(--gold)]'
                   : 'size-8 fill-none text-muted-foreground/40'
               }
             />

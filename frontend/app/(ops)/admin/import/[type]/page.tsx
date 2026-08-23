@@ -23,6 +23,7 @@ import {
   ChefHat,
   LayoutGrid,
   UtensilsCrossed,
+  ClipboardList,
   ChevronDown,
   ChevronRight,
 } from 'lucide-react';
@@ -72,6 +73,7 @@ const ICON_MAP: Record<ImportType, React.ReactNode> = {
   recipes: <ChefHat className="size-6 text-muted-foreground" />,
   product_categories: <LayoutGrid className="size-6 text-muted-foreground" />,
   products: <UtensilsCrossed className="size-6 text-muted-foreground" />,
+  purchase_orders: <ClipboardList className="size-6 text-muted-foreground" />,
 };
 
 function formatFileSize(bytes: number): string {

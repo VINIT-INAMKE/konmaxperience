@@ -82,7 +82,7 @@ export function ProductOrderCard({ item, available }: ProductOrderCardProps) {
               className={`w-7 h-7 rounded-full flex items-center justify-center text-white shadow-sm ${
                 available
                   ? 'bg-[var(--public-terracotta)] hover:bg-[var(--public-terracotta-hover)] cursor-pointer'
-                  : 'bg-stone-300 cursor-not-allowed'
+                  : 'bg-[var(--public-border-light)] cursor-not-allowed'
               }`}
             >
               <Plus className="size-4" />

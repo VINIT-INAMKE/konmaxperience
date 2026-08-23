@@ -32,9 +32,27 @@ interface RazorpayOptions {
   };
 }
 
+/** Payload Razorpay emits on the `payment.failed` event. */
+interface RazorpayFailureResponse {
+  error: {
+    code: string;
+    description: string;
+    source: string;
+    step: string;
+    reason: string;
+    metadata: {
+      order_id: string;
+      payment_id: string;
+    };
+  };
+}
+
 interface RazorpayInstance {
   open(): void;
-  on(event: string, handler: (response: any) => void): void;
+  on(
+    event: 'payment.failed',
+    handler: (response: RazorpayFailureResponse) => void,
+  ): void;
   close(): void;
 }
 

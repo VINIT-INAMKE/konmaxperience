@@ -42,12 +42,12 @@ export function PaymentStatusPanel({
 
   if (status === 'refunded') {
     return (
-      <div className="rounded-lg border border-red-200 bg-red-50 p-6 text-center space-y-2" role="alert">
-        <AlertTriangle className="size-12 text-[var(--destructive)] mx-auto" />
-        <h3 className="text-base font-semibold text-red-700">
+      <div className="rounded-lg border border-[var(--status-serious)]/25 bg-[var(--status-serious)]/10 p-6 text-center space-y-2" role="alert">
+        <AlertTriangle className="size-12 text-[var(--status-serious)] mx-auto" />
+        <h3 className="text-base font-semibold text-[var(--status-serious)]">
           Event is now full
         </h3>
-        <p className="text-sm text-red-700">
+        <p className="text-sm text-[var(--status-serious)]">
           This event is now full. Your payment
           {refundAmount ? ` of \u20B9${refundAmount}` : ''} has been refunded
           — it may take 5–7 business days to reflect.
@@ -58,12 +58,12 @@ export function PaymentStatusPanel({
 
   // failed
   return (
-    <div className="rounded-lg border border-red-200 bg-red-50 p-6 text-center space-y-3" role="alert">
-      <XCircle className="size-12 text-[var(--destructive)] mx-auto" />
-      <h3 className="text-base font-semibold text-red-700">
+    <div className="rounded-lg border border-[var(--status-serious)]/25 bg-[var(--status-serious)]/10 p-6 text-center space-y-3" role="alert">
+      <XCircle className="size-12 text-[var(--status-serious)] mx-auto" />
+      <h3 className="text-base font-semibold text-[var(--status-serious)]">
         Payment didn&apos;t go through
       </h3>
-      <p className="text-sm text-red-700">
+      <p className="text-sm text-[var(--status-serious)]">
         Payment didn&apos;t go through — try again or use a different method.
       </p>
       {onRetry && (

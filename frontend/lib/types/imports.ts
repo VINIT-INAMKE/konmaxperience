@@ -11,6 +11,7 @@ export const IMPORT_TYPES = [
   'recipes',
   'product_categories',
   'products',
+  'purchase_orders',
 ] as const;
 export type ImportType = (typeof IMPORT_TYPES)[number];
 
@@ -146,5 +147,12 @@ export const IMPORT_TYPE_CONFIG: Record<ImportType, ImportTypeConfig> = {
     description: 'Products linked to approved recipes and categories',
     columns: ['name', 'slug', 'type', 'recipe', 'category', 'brand', 'base_price', 'status'],
     icon: 'UtensilsCrossed',
+  },
+  purchase_orders: {
+    label: 'Purchase Orders',
+    description:
+      'Bulk import PO headers with vendor, zone, and optional task linking. Lines must be added in-app.',
+    columns: ['vendor', 'zone', 'status', 'notes', 'linked_task'],
+    icon: 'ClipboardList',
   },
 };

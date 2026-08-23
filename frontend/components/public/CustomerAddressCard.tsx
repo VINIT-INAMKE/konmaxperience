@@ -9,10 +9,13 @@ interface CustomerAddressCardProps {
   onDelete: (id: string) => void;
 }
 
+/** Address labels carry no status meaning — these are neutral/brand tints, not the status ramp. */
+const LABEL_FALLBACK = 'bg-[var(--public-border-light)] text-[var(--public-fg-subtle)]';
+
 const LABEL_COLORS: Record<string, string> = {
-  Home: 'bg-blue-50 text-blue-700',
-  Work: 'bg-amber-50 text-amber-700',
-  Other: 'bg-stone-100 text-stone-600',
+  Home: 'bg-[var(--status-info)]/12 text-[var(--status-info)]',
+  Work: 'bg-[var(--public-accent)]/12 text-[var(--public-accent)]',
+  Other: LABEL_FALLBACK,
 };
 
 export function CustomerAddressCard({
@@ -21,7 +24,7 @@ export function CustomerAddressCard({
   onEdit,
   onDelete,
 }: CustomerAddressCardProps) {
-  const labelClass = LABEL_COLORS[address.label] ?? 'bg-stone-100 text-stone-600';
+  const labelClass = LABEL_COLORS[address.label] ?? LABEL_FALLBACK;
 
   return (
     <div className="rounded-xl border border-[var(--public-border)] bg-[var(--public-surface)] p-4 space-y-2">
@@ -33,7 +36,7 @@ export function CustomerAddressCard({
           {address.label}
         </span>
         {address.is_default && (
-          <span className="text-xs px-2 py-0.5 rounded-full bg-green-50 text-green-700 font-medium">
+          <span className="text-xs px-2 py-0.5 rounded-full bg-[var(--status-good)]/12 text-[var(--status-good)] font-medium">
             Default
           </span>
         )}

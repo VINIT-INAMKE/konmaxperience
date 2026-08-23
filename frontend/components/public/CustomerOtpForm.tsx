@@ -303,8 +303,8 @@ export function CustomerOtpForm({ onAuthenticated, onCancel }: CustomerOtpFormPr
           role="alert"
           className={
             isRateLimited
-              ? 'rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700'
-              : 'rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700'
+              ? 'rounded-lg border border-[var(--status-warning)]/25 bg-[var(--status-warning)]/10 px-4 py-3 text-sm text-[var(--status-warning)]'
+              : 'rounded-lg border border-[var(--status-serious)]/25 bg-[var(--status-serious)]/10 px-4 py-3 text-sm text-[var(--status-serious)]'
           }
         >
           {error}

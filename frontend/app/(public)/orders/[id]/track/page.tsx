@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback, use } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Loader2, Receipt, ExternalLink } from 'lucide-react';
-import { BlurFade } from '@/components/ui/blur-fade';
 import { Skeleton } from '@/components/ui/skeleton';
 import { OrderTrackingTimeline } from '@/components/public/OrderTrackingTimeline';
 import { useCustomerAuth } from '@/hooks/use-customer-auth';
@@ -154,84 +153,82 @@ export default function OrderTrackingPage({ params }: OrderTrackingPageProps) {
   const channelLabel = channel === 'delivery' ? 'Delivery' : 'Pickup';
 
   return (
-    <BlurFade direction="up">
-      <div className="max-w-md mx-auto px-4 py-8">
-        {/* Header */}
-        <h1 className="text-xl font-semibold text-[var(--public-fg)]">
-          Order #{order.order_number}
-        </h1>
-        <p className="text-sm text-[var(--public-muted)] mt-1">
-          {channelLabel} &middot; {formattedDate}
-        </p>
+    <div className="max-w-md mx-auto px-4 py-8">
+      {/* Header */}
+      <h1 className="text-xl font-semibold text-[var(--public-fg)]">
+        Order #{order.order_number}
+      </h1>
+      <p className="text-sm text-[var(--public-muted)] mt-1">
+        {channelLabel} &middot; {formattedDate}
+      </p>
 
-        {/* Timeline */}
-        <OrderTrackingTimeline
-          channel={channel}
-          status={displayStatus}
-          deliveryStatus={displayDeliveryStatus}
-          timestamps={timestamps}
-        />
+      {/* Timeline */}
+      <OrderTrackingTimeline
+        channel={channel}
+        status={displayStatus}
+        deliveryStatus={displayDeliveryStatus}
+        timestamps={timestamps}
+      />
 
-        {/* Order summary card */}
-        <div className="mt-6 rounded-xl border border-[var(--public-border)] bg-[var(--public-surface)] p-4 space-y-3">
-          <h2 className="text-sm font-semibold text-[var(--public-fg)]">
-            Order Summary
-          </h2>
+      {/* Order summary card */}
+      <div className="mt-6 rounded-xl border border-[var(--public-border)] bg-[var(--public-surface)] p-4 space-y-3">
+        <h2 className="text-sm font-semibold text-[var(--public-fg)]">
+          Order Summary
+        </h2>
 
-          {/* Items list */}
-          <div className="space-y-1">
-            {order.items.map((item) => (
-              <div
-                key={item.id}
-                className="flex items-center justify-between text-sm"
-              >
-                <span className="text-[var(--public-fg-subtle)]">
-                  {item.product.name} x{item.quantity}
-                </span>
-                <span className="text-[var(--public-fg)] font-medium">
-                  {'\u20B9'}
-                  {(item.unit_price * item.quantity).toFixed(2)}
-                </span>
-              </div>
-            ))}
-          </div>
-
-          {/* Divider */}
-          <div className="border-t border-[var(--public-border-warm)]" />
-
-          {/* Total */}
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-semibold text-[var(--public-fg)]">
-              Total
-            </span>
-            <span className="text-base font-semibold text-[var(--public-fg)]">
-              {'\u20B9'}
-              {order.total.toFixed(2)}
-            </span>
-          </div>
-
-          {/* Payment method */}
-          {order.payment && (
-            <p className="text-xs text-[var(--public-muted)]">
-              Paid via {order.payment.method}
-              {order.payment.razorpay_payment_id
-                ? ` (${order.payment.razorpay_payment_id})`
-                : ''}
-            </p>
-          )}
+        {/* Items list */}
+        <div className="space-y-1">
+          {order.items.map((item) => (
+            <div
+              key={item.id}
+              className="flex items-center justify-between text-sm"
+            >
+              <span className="text-[var(--public-fg-subtle)]">
+                {item.product.name} x{item.quantity}
+              </span>
+              <span className="text-[var(--public-fg)] font-medium">
+                {'\u20B9'}
+                {(item.unit_price * item.quantity).toFixed(2)}
+              </span>
+            </div>
+          ))}
         </div>
 
-        {/* Receipt link */}
-        <button
-          type="button"
-          onClick={openReceipt}
-          className="mt-4 flex items-center gap-1.5 text-sm text-[var(--public-terracotta)] hover:underline"
-        >
-          <Receipt className="size-4" />
-          Download receipt
-          <ExternalLink className="size-3" />
-        </button>
+        {/* Divider */}
+        <div className="border-t border-[var(--public-border-warm)]" />
+
+        {/* Total */}
+        <div className="flex items-center justify-between">
+          <span className="text-sm font-semibold text-[var(--public-fg)]">
+            Total
+          </span>
+          <span className="text-base font-semibold text-[var(--public-fg)]">
+            {'\u20B9'}
+            {order.total.toFixed(2)}
+          </span>
+        </div>
+
+        {/* Payment method */}
+        {order.payment && (
+          <p className="text-xs text-[var(--public-muted)]">
+            Paid via {order.payment.method}
+            {order.payment.razorpay_payment_id
+              ? ` (${order.payment.razorpay_payment_id})`
+              : ''}
+          </p>
+        )}
       </div>
-    </BlurFade>
+
+      {/* Receipt link */}
+      <button
+        type="button"
+        onClick={openReceipt}
+        className="mt-4 flex items-center gap-1.5 text-sm text-[var(--public-terracotta)] hover:underline"
+      >
+        <Receipt className="size-4" />
+        Download receipt
+        <ExternalLink className="size-3" />
+      </button>
+    </div>
   );
 }

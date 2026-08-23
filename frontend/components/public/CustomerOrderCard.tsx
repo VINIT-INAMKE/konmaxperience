@@ -11,19 +11,26 @@ interface CustomerOrderCardProps {
   onReorder: (order: CustomerOrder) => void;
 }
 
+const BADGE_INFO = 'bg-[var(--status-info)]/12 text-[var(--status-info)]';
+const BADGE_WARNING = 'bg-[var(--status-warning)]/12 text-[var(--status-warning)]';
+/** "On the way" — the storefront's own active-tracking terracotta, per Rule S4 (no STATUS_BADGE key fits). */
+const BADGE_ACTIVE = 'bg-[var(--public-tracking-active)]/12 text-[var(--public-tracking-active)]';
+const BADGE_GOOD = 'bg-[var(--status-good)]/12 text-[var(--status-good)]';
+const BADGE_NEUTRAL = 'bg-[var(--public-border-light)] text-[var(--public-fg-subtle)]';
+
 /** Exhaustive over Prisma `OrderStatus` so a new member cannot render unstyled. */
 const STATUS_BADGE_CLASSES: Record<OrderStatus, string> = {
-  placed: 'bg-blue-50 text-blue-700',
-  confirmed: 'bg-blue-50 text-blue-700',
-  preparing: 'bg-amber-50 text-amber-700',
-  ready: 'bg-orange-50 text-orange-700',
-  dispatched: 'bg-orange-50 text-orange-700',
-  shipped: 'bg-orange-50 text-orange-700',
-  delivered: 'bg-green-50 text-green-700',
-  served: 'bg-green-50 text-green-700',
-  completed: 'bg-green-50 text-green-700',
-  cancelled: 'bg-stone-100 text-stone-500',
-  refunded: 'bg-stone-100 text-stone-500',
+  placed: BADGE_INFO,
+  confirmed: BADGE_INFO,
+  preparing: BADGE_WARNING,
+  ready: BADGE_ACTIVE,
+  dispatched: BADGE_ACTIVE,
+  shipped: BADGE_ACTIVE,
+  delivered: BADGE_GOOD,
+  served: BADGE_GOOD,
+  completed: BADGE_GOOD,
+  cancelled: BADGE_NEUTRAL,
+  refunded: BADGE_NEUTRAL,
 };
 
 function formatDate(iso: string): string {
@@ -55,7 +62,7 @@ export function CustomerOrderCard({
   onReorder,
 }: CustomerOrderCardProps) {
   const badgeClass =
-    STATUS_BADGE_CLASSES[order.status] ?? 'bg-stone-100 text-stone-500';
+    STATUS_BADGE_CLASSES[order.status] ?? BADGE_NEUTRAL;
 
   const openReceipt = () => {
     window.open(
