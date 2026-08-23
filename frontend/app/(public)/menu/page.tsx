@@ -51,7 +51,12 @@ export default function MenuPage() {
     refetch: refetchItems,
   } = useQuery({
     queryKey: ['public-menu-items'],
-    queryFn: () => apiClient.get<Product[]>('/catalog/products'),
+    queryFn: () =>
+      apiClient
+        .get<{ items: Product[]; next_cursor: string | null }>(
+          '/catalog/products?limit=200',
+        )
+        .then((r) => r.items),
   });
 
   const { data: availability = {} } = useQuery({

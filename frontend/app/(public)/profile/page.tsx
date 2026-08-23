@@ -254,7 +254,11 @@ export default function CustomerProfilePage() {
       // Fetch current products to check availability
       let products: Product[] = [];
       try {
-        products = await apiClient.get<Product[]>('/catalog/products');
+        products = (
+          await apiClient.get<{ items: Product[]; next_cursor: string | null }>(
+            '/catalog/products?limit=200',
+          )
+        ).items;
       } catch {
         toast.error('Could not check item availability');
         return;
@@ -342,7 +346,11 @@ export default function CustomerProfilePage() {
       // Re-fetch availability
       let products: Product[] = [];
       try {
-        products = await apiClient.get<Product[]>('/catalog/products');
+        products = (
+          await apiClient.get<{ items: Product[]; next_cursor: string | null }>(
+            '/catalog/products?limit=200',
+          )
+        ).items;
       } catch {
         toast.error('Could not check item availability');
         return;
