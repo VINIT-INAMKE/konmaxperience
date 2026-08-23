@@ -8,7 +8,14 @@ import {
   UNIT_CONVERSIONS,
   INGREDIENT_CATEGORIES,
 } from './seed-data/reference';
+import {
+  MODULE_ACCESS,
+  resolveModuleRoleCodes,
+} from './seed-data/module-access';
+import { APPROVAL_POLICIES } from './seed-data/approval-policies';
+import { SEED_SETTING_DEFAULTS, SEED_SETTING_KEYS } from './seed-data/settings';
 import { guideSections, computeReadTime } from './seed-data/guide-content';
+import { Permission } from '../src/types/permissions';
 import {
   DEFAULT_NODE_ID,
   DEFAULT_NODE_CODE,
@@ -30,16 +37,21 @@ export async function seedReference(prisma: PrismaClient): Promise<void> {
   await prisma.$transaction(
     async (tx: Tx) => {
       // The single Node must exist before anything else — every aggregate's
-      // `node_id` @default points at it (full seed rewrite lands in Task 14).
-      await tx.node.upsert({
+      // `node_id` @default points at it. `status` is never reset on re-run.
+      const node = await tx.node.upsert({
         where: { id: DEFAULT_NODE_ID },
-        update: {},
+        update: {
+          name: DEFAULT_NODE_NAME,
+          timezone: DEFAULT_NODE_TIMEZONE,
+          currency: DEFAULT_NODE_CURRENCY,
+        },
         create: {
           id: DEFAULT_NODE_ID,
           code: DEFAULT_NODE_CODE,
           name: DEFAULT_NODE_NAME,
           timezone: DEFAULT_NODE_TIMEZONE,
           currency: DEFAULT_NODE_CURRENCY,
+          status: 'active',
         },
       });
 
@@ -56,15 +68,70 @@ export async function seedReference(prisma: PrismaClient): Promise<void> {
         });
       }
 
-      for (const meter of READINESS_METERS) {
-        const data = { name: meter.name, description: meter.description };
-        await tx.readinessMeter.upsert({
-          where: {
-            node_id_code: { node_id: DEFAULT_NODE_ID, code: meter.code },
+      // SPEC §6.3 — ModuleAccess is global (no node_id). `APPROVERS` resolves to
+      // every role that can approve evidence.
+      const approverRoleCodes = ROLE_SEEDS.filter((r) =>
+        r.permissions.includes(Permission.APPROVE_EVIDENCE),
+      ).map((r) => r.code as string);
+
+      for (const m of MODULE_ACCESS) {
+        const role_codes = resolveModuleRoleCodes(m, approverRoleCodes);
+        await tx.moduleAccess.upsert({
+          where: { module_key: m.module_key },
+          // `enabled` is operator-controlled at /admin/modules — never reset it.
+          update: { role_codes, sort_order: m.sort_order },
+          create: {
+            module_key: m.module_key,
+            role_codes,
+            sort_order: m.sort_order,
+            enabled: true,
           },
-          update: data,
-          create: { node_id: DEFAULT_NODE_ID, code: meter.code, ...data },
         });
+      }
+
+      // SPEC §4.3 — mode/formula_key drive derived and hybrid readiness.
+      for (const meter of READINESS_METERS) {
+        const data = {
+          name: meter.name,
+          description: meter.description,
+          mode: meter.mode,
+          formula_key: meter.formula_key,
+        };
+        await tx.readinessMeter.upsert({
+          where: { node_id_code: { node_id: node.id, code: meter.code } },
+          update: data,
+          create: { node_id: node.id, code: meter.code, ...data },
+        });
+      }
+
+      // SPEC §4.4 — blueprint approval gates.
+      for (const p of APPROVAL_POLICIES) {
+        const data = {
+          required_role_codes: p.required_role_codes,
+          min_approvals: p.min_approvals,
+          mode: p.mode,
+          is_default: p.is_default,
+        };
+        // `@@unique([node_id, scope, domain])` cannot key an upsert here: Prisma
+        // types the compound-unique input's `domain` as non-nullable, and
+        // Postgres treats NULLs as distinct, so the `domain: null` fallback row
+        // would never dedupe. Match-then-write keeps every row idempotent.
+        const existing = await tx.approvalPolicy.findFirst({
+          where: { node_id: node.id, scope: p.scope, domain: p.domain },
+          select: { id: true },
+        });
+        if (existing) {
+          await tx.approvalPolicy.update({ where: { id: existing.id }, data });
+        } else {
+          await tx.approvalPolicy.create({
+            data: {
+              node_id: node.id,
+              scope: p.scope,
+              domain: p.domain,
+              ...data,
+            },
+          });
+        }
       }
 
       // Zone/Brand/Channel have no unique on name (schema) — match by name, never reset status.
@@ -143,19 +210,22 @@ export async function seedReference(prisma: PrismaClient): Promise<void> {
         });
       }
 
-      await tx.systemSetting.upsert({
-        where: { key: 'leaderboard_enabled' },
-        update: {},
-        create: { key: 'leaderboard_enabled', value: 'true' },
-      });
-      if (mainKitchenId) {
+      // SystemSetting.value is Json (SPEC §3.1) — seed every allow-listed key at
+      // its real JSON default (boolean/string/array/object), never stringified.
+      for (const key of SEED_SETTING_KEYS) {
+        const isZoneKey = key === 'marketplace_fulfilment_zone_id';
+        const raw =
+          isZoneKey && mainKitchenId
+            ? mainKitchenId
+            : SEED_SETTING_DEFAULTS[key];
+        const value: Prisma.SystemSettingCreateInput['value'] =
+          raw === null ? Prisma.JsonNull : (raw as Prisma.InputJsonValue);
         await tx.systemSetting.upsert({
-          where: { key: 'marketplace_fulfilment_zone_id' },
-          update: { value: mainKitchenId },
-          create: {
-            key: 'marketplace_fulfilment_zone_id',
-            value: mainKitchenId,
-          },
+          where: { key },
+          // Operator-edited settings are never clobbered; the marketplace zone
+          // is the one derived value the seed keeps pointing at Main Kitchen.
+          update: isZoneKey && mainKitchenId ? { value } : {},
+          create: { key, value },
         });
       }
 
@@ -185,10 +255,12 @@ export async function seedReference(prisma: PrismaClient): Promise<void> {
   );
 
   console.log(
-    `[seed:reference] done — ${ROLE_SEEDS.length} roles, ${READINESS_METERS.length} meters, ` +
-      `${ZONES.length} zones, ${BRANDS.length} brands, ${CHANNELS.length} channels, ` +
+    `[seed:reference] done — 1 node, ${ROLE_SEEDS.length} roles, ` +
+      `${MODULE_ACCESS.length} modules, ${READINESS_METERS.length} meters, ` +
+      `${APPROVAL_POLICIES.length} approval policies, ${ZONES.length} zones, ` +
+      `${BRANDS.length} brands, ${CHANNELS.length} channels, ` +
       `${UNIT_CONVERSIONS.length} unit conversions, ${INGREDIENT_CATEGORIES.length} categories, ` +
-      `${guideSections.length} guide sections`,
+      `${SEED_SETTING_KEYS.length} settings, ${guideSections.length} guide sections`,
   );
 }
 
