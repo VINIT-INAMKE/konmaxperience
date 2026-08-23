@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ReadinessController } from './readiness.controller';
 import { ReadinessService } from './readiness.service';
 import { ReadinessDerivationService } from './readiness-derivation.service';
+import { ReadinessCron } from './readiness.cron';
 import { SettingsModule } from '../settings/settings.module';
 
 /**
@@ -12,7 +13,7 @@ import { SettingsModule } from '../settings/settings.module';
 @Module({
   imports: [SettingsModule],
   controllers: [ReadinessController],
-  providers: [ReadinessService, ReadinessDerivationService],
+  providers: [ReadinessService, ReadinessDerivationService, ReadinessCron],
   exports: [ReadinessService, ReadinessDerivationService],
 })
 export class ReadinessModule {}
