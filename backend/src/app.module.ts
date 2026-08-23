@@ -61,6 +61,9 @@ import { PermissionsGuard } from './auth/permissions.guard';
 import { validate } from './config/env.validation';
 import { THROTTLER_CONFIG } from './config/throttler.config';
 import { UserAwareThrottlerGuard } from './common/guards/user-aware-throttler.guard';
+// P5a wave 2 — commerce modules. Kept on their own lines at the end of both
+// blocks so concurrent phases adding imports do not collide with this one.
+import { LoyaltyModule } from './loyalty/loyalty.module';
 
 @Module({
   imports: [
@@ -118,6 +121,7 @@ import { UserAwareThrottlerGuard } from './common/guards/user-aware-throttler.gu
     CustomerOrdersModule,
     ActivityModule,
     MissionBridgeModule,
+    LoyaltyModule,
   ],
   controllers: [AppController],
   providers: [
