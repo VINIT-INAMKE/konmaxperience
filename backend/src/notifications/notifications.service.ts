@@ -3,10 +3,18 @@ import { NotificationType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationQueryDto } from './dto/notification-query.dto';
 import { isEnumValue } from '../common/utils/parse-enum';
+import { RealtimeService } from '../realtime/realtime.service';
+import {
+  REALTIME_EVENTS,
+  userChannel,
+} from '../realtime/realtime.channels';
 
 @Injectable()
 export class NotificationsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly realtime: RealtimeService,
+  ) {}
 
   async create(data: {
     user_id: string;
@@ -18,7 +26,17 @@ export class NotificationsService {
     reference_type?: string;
     is_email_sent?: boolean;
   }) {
-    return this.prisma.notification.create({ data });
+    const notification = await this.prisma.notification.create({ data });
+
+    // SPEC §6.4 — the bell lights up without waiting for the 30 s poll. `emit`
+    // swallows its own failures, so a Pusher outage never fails the write.
+    void this.realtime.emit(
+      userChannel(notification.user_id),
+      REALTIME_EVENTS.NOTIFICATION_CREATED,
+      { id: notification.id },
+    );
+
+    return notification;
   }
 
   async broadcast(data: {
@@ -42,7 +60,20 @@ export class NotificationsService {
       reference_type: 'admin_broadcast',
     }));
 
-    return this.prisma.notification.createMany({ data: notifications });
+    const result = await this.prisma.notification.createMany({
+      data: notifications,
+    });
+
+    // `createMany` returns no ids, so the push carries none — the client refetches.
+    for (const user of activeUsers) {
+      void this.realtime.emit(
+        userChannel(user.id),
+        REALTIME_EVENTS.NOTIFICATION_CREATED,
+        { id: null },
+      );
+    }
+
+    return result;
   }
 
   async findForUser(userId: string, query: NotificationQueryDto) {

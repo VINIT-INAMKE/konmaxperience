@@ -19,6 +19,8 @@ import {
   domainEventBase,
   emitDomainEvent,
 } from '../../common/events/domain-events';
+import { RealtimeService } from '../../realtime/realtime.service';
+import { REALTIME_EVENTS } from '../../realtime/realtime.channels';
 
 export interface KdsOrderItem {
   id: string;
@@ -51,6 +53,7 @@ export class KdsService {
     private readonly prisma: PrismaService,
     private readonly fulfilmentService: FulfilmentService,
     private readonly eventEmitter: EventEmitter2,
+    private readonly realtime: RealtimeService,
   ) {}
 
   async getActiveOrders(): Promise<KdsZoneData[]> {
@@ -241,6 +244,13 @@ export class KdsService {
         });
       }
 
+      // SPEC §6.4 — the board refetches on this push; the payload carries no
+      // board state so it can never be stale. `emit` swallows its own failures.
+      void this.realtime.emit('private-kds', REALTIME_EVENTS.KDS_ORDER_UPDATED, {
+        item_id: result.id,
+        status: result.status,
+      });
+
       return result;
     }
 
@@ -278,6 +288,11 @@ export class KdsService {
         ready_at: updatedItem.ready_at,
       };
     }, SERIALIZABLE_TX_OPTIONS);
+
+    void this.realtime.emit('private-kds', REALTIME_EVENTS.KDS_ORDER_UPDATED, {
+      item_id: result.id,
+      status: result.status,
+    });
 
     return result;
   }

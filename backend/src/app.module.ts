@@ -56,6 +56,10 @@ import { WebhooksModule } from './webhooks/webhooks.module';
 import { CustomerOrdersModule } from './customer-orders/customer-orders.module';
 import { ActivityModule } from './activity/activity.module';
 import { MissionBridgeModule } from './mission-bridge/mission-bridge.module';
+import { RealtimeModule } from './realtime/realtime.module';
+import { UsageModule } from './usage/usage.module';
+import { MeModule } from './me/me.module';
+import { SearchModule } from './search/search.module';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { PermissionsGuard } from './auth/permissions.guard';
 import { validate } from './config/env.validation';
@@ -118,6 +122,10 @@ import { UserAwareThrottlerGuard } from './common/guards/user-aware-throttler.gu
     CustomerOrdersModule,
     ActivityModule,
     MissionBridgeModule,
+    RealtimeModule,
+    UsageModule,
+    MeModule,
+    SearchModule,
   ],
   controllers: [AppController],
   providers: [
