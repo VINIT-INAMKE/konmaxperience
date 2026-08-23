@@ -13,6 +13,8 @@ import { IsEnum } from 'class-validator';
 import { OrderStatus } from '@prisma/client';
 import { Throttle } from '@nestjs/throttler';
 import { OrdersService } from './orders.service';
+import { NodeService } from '../node/node.service';
+import { nodeDayKey } from '../common/utils/node-time';
 import { RequiresPermission } from '../common/decorators/permissions.decorator';
 import { Permission } from '../types/permissions';
 import { CreateOrderDto } from './dto/create-order.dto';
@@ -28,7 +30,10 @@ export class UpdateOrderStatusDto {
 
 @Controller('orders')
 export class OrdersController {
-  constructor(private readonly ordersService: OrdersService) {}
+  constructor(
+    private readonly ordersService: OrdersService,
+    private readonly nodeService: NodeService,
+  ) {}
 
   @Post()
   @RequiresPermission(Permission.MANAGE_POS)
@@ -46,8 +51,9 @@ export class OrdersController {
   @Get('daily-summary')
   @RequiresPermission(Permission.MANAGE_POS)
   async getDailySummary(@Query('date') date?: string) {
+    // "Today" is the node's today, not UTC's — after 18:30 UTC those differ in IST.
     const targetDate =
-      date || new Date().toISOString().split('T')[0];
+      date || nodeDayKey(await this.nodeService.timezone(), new Date());
     return this.ordersService.getDailySummary(targetDate);
   }
 

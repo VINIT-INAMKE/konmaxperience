@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { CustomerOrdersService } from './customer-orders.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { NodeService } from '../node/node.service';
 import { RedisService } from '../customer-auth/redis.service';
 import { RazorpayService } from '../razorpay/razorpay.service';
 import { PusherService } from '../chat/pusher.service';
@@ -85,6 +86,10 @@ describe('CustomerOrdersService', () => {
       providers: [
         CustomerOrdersService,
         { provide: PrismaService, useValue: prisma },
+        {
+          provide: NodeService,
+          useValue: { timezone: jest.fn().mockResolvedValue('Asia/Kolkata') },
+        },
         { provide: RedisService, useValue: redisService },
         { provide: RazorpayService, useValue: razorpayService },
         { provide: PusherService, useValue: pusherService },

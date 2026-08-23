@@ -3,6 +3,7 @@ import { BadRequestException, ConflictException } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { OrdersService } from './orders.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { NodeService } from '../node/node.service';
 import { RazorpayService } from '../razorpay/razorpay.service';
 import { PusherService } from '../chat/pusher.service';
 import { FulfilmentService } from '../fulfilment/fulfilment.service';
@@ -13,6 +14,15 @@ import {
 
 /** Mock Prisma Decimal -- supports Number() via valueOf() */
 const dec = (n: number) => ({ valueOf: () => n, toNumber: () => n });
+
+/**
+ * Day boundaries come from Node.timezone, never from the process TZ. The default
+ * implementation survives `jest.clearAllMocks()`; a test that needs another zone
+ * overrides it with `mockResolvedValueOnce`.
+ */
+const mockNode = {
+  timezone: jest.fn(async () => 'Asia/Kolkata'),
+};
 
 const mockFulfilment = {
   applyPrepTypeOnCreate: jest.fn().mockResolvedValue(undefined),
@@ -65,6 +75,7 @@ describe('OrdersService', () => {
       providers: [
         OrdersService,
         { provide: PrismaService, useValue: mockPrisma },
+        { provide: NodeService, useValue: mockNode },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
         {
           provide: RazorpayService,
@@ -310,8 +321,31 @@ describe('OrdersService', () => {
 
       const call = mockPrisma.order.findMany.mock.calls[0][0];
       expect(call.where.created_at).toBeDefined();
-      expect(call.where.created_at.gte).toBeDefined();
-      expect(call.where.created_at.lte).toBeDefined();
+      // Node-local (IST) day boundaries: 18:30 UTC the day before each date.
+      expect(call.where.created_at.gte.toISOString()).toBe(
+        '2026-03-19T18:30:00.000Z',
+      );
+      expect(call.where.created_at.lt.toISOString()).toBe(
+        '2026-03-21T18:30:00.000Z',
+      );
+    });
+
+    it('takes the day boundaries from Node.timezone, not the process TZ', async () => {
+      mockNode.timezone.mockResolvedValueOnce('Europe/London');
+      mockPrisma.order.findMany.mockResolvedValue([]);
+
+      await service.getOrders({
+        date_from: '2026-08-23',
+        date_to: '2026-08-23',
+      });
+
+      const call = mockPrisma.order.findMany.mock.calls[0][0];
+      expect(call.where.created_at.gte.toISOString()).toBe(
+        '2026-08-22T23:00:00.000Z',
+      );
+      expect(call.where.created_at.lt.toISOString()).toBe(
+        '2026-08-23T23:00:00.000Z',
+      );
     });
 
     it('filters by payment_method', async () => {
@@ -587,6 +621,35 @@ describe('OrdersService', () => {
       // Revenue only counts paid orders
       const aggCall = mockPrisma.order.aggregate.mock.calls[0][0];
       expect(aggCall.where.payment).toEqual({ status: 'paid' });
+    });
+
+    it('bounds the day by Node.timezone — 18:30 UTC either side for IST', async () => {
+      mockPrisma.order.count.mockResolvedValue(0);
+      mockPrisma.order.aggregate.mockResolvedValue({
+        _sum: { total: null },
+        _count: { id: 0 },
+      });
+
+      await service.getDailySummary('2026-08-23');
+
+      const { created_at } = mockPrisma.order.count.mock.calls[0][0].where;
+      expect(created_at.gte.toISOString()).toBe('2026-08-22T18:30:00.000Z');
+      expect(created_at.lt.toISOString()).toBe('2026-08-23T18:30:00.000Z');
+    });
+
+    it('follows the node to another zone instead of the process TZ', async () => {
+      mockNode.timezone.mockResolvedValueOnce('Europe/London');
+      mockPrisma.order.count.mockResolvedValue(0);
+      mockPrisma.order.aggregate.mockResolvedValue({
+        _sum: { total: null },
+        _count: { id: 0 },
+      });
+
+      await service.getDailySummary('2026-08-23');
+
+      const { created_at } = mockPrisma.order.count.mock.calls[0][0].where;
+      expect(created_at.gte.toISOString()).toBe('2026-08-22T23:00:00.000Z');
+      expect(created_at.lt.toISOString()).toBe('2026-08-23T23:00:00.000Z');
     });
   });
 });

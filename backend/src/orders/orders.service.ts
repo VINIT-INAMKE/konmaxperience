@@ -17,6 +17,8 @@ import {
 } from '@prisma/client';
 import * as QRCode from 'qrcode';
 import { PrismaService } from '../prisma/prisma.service';
+import { NodeService } from '../node/node.service';
+import { nodeDayRange } from '../common/utils/node-time';
 import { RazorpayService } from '../razorpay/razorpay.service';
 import { PusherService } from '../chat/pusher.service';
 import { CreateOrderDto } from './dto/create-order.dto';
@@ -66,6 +68,7 @@ const DELIVERY_STATUS_ORDER: (DeliveryStatus | null)[] = [
 export class OrdersService {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly nodeService: NodeService,
     private readonly eventEmitter: EventEmitter2,
     private readonly razorpayService: RazorpayService,
     private readonly pusherService: PusherService,
@@ -208,14 +211,15 @@ export class OrdersService {
     }
 
     if (filters.date_from || filters.date_to) {
+      // Day boundaries are the node's, not the server's (SPEC 3.1 Node.timezone).
+      const timeZone = await this.nodeService.timezone();
       const createdAt: Record<string, unknown> = {};
       if (filters.date_from) {
-        createdAt.gte = new Date(filters.date_from);
+        createdAt.gte = nodeDayRange(timeZone, filters.date_from).start;
       }
       if (filters.date_to) {
-        const endDate = new Date(filters.date_to);
-        endDate.setHours(23, 59, 59, 999);
-        createdAt.lte = endDate;
+        // Exclusive: the node-local midnight that ends `date_to`.
+        createdAt.lt = nodeDayRange(timeZone, filters.date_to).end;
       }
       where.created_at = createdAt;
     }
@@ -265,14 +269,15 @@ export class OrdersService {
     }
 
     if (filters.dateFrom || filters.dateTo) {
+      // Day boundaries are the node's, not the server's (SPEC 3.1 Node.timezone).
+      const timeZone = await this.nodeService.timezone();
       const createdAt: Record<string, unknown> = {};
       if (filters.dateFrom) {
-        createdAt.gte = new Date(filters.dateFrom);
+        createdAt.gte = nodeDayRange(timeZone, filters.dateFrom).start;
       }
       if (filters.dateTo) {
-        const endDate = new Date(filters.dateTo);
-        endDate.setHours(23, 59, 59, 999);
-        createdAt.lte = endDate;
+        // Exclusive: the node-local midnight that ends `dateTo`.
+        createdAt.lt = nodeDayRange(timeZone, filters.dateTo).end;
       }
       where.created_at = createdAt;
     }
@@ -539,9 +544,12 @@ export class OrdersService {
   // Daily Summary
   // ---------------------------------------------------------------
   async getDailySummary(date: string) {
-    // Parse as IST (UTC+05:30) per Research Pitfall 6
-    const start = new Date(`${date}T00:00:00+05:30`);
-    const end = new Date(start.getTime() + 24 * 60 * 60 * 1000);
+    // The business day is the node's local day (SPEC 3.1 Node.timezone), so a
+    // 23:30 IST order still counts against the day it was placed on.
+    const { start, end } = nodeDayRange(
+      await this.nodeService.timezone(),
+      date,
+    );
 
     const dateFilter = {
       created_at: { gte: start, lt: end },

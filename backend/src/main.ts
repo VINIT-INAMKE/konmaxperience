@@ -1,6 +1,6 @@
-// Force IST timezone — server is in Singapore but business operates in India
-process.env.TZ = 'Asia/Kolkata';
-
+// NOTE: the process timezone is deliberately NOT forced here. Business day
+// boundaries come from `Node.timezone` (SPEC 3.1) via `NodeService.timezone()`
+// and `src/common/utils/node-time.ts`, so the server's own zone is irrelevant.
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { json, urlencoded } from 'express';

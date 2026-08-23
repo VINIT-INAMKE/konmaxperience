@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { OrderItemStatus, OrderStatus, PrepBatchStatus } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { NodeService } from '../../node/node.service';
+import { nodeDayKey, nodeDayRange } from '../../common/utils/node-time';
 
 export interface ZoneUtilization {
   zone_name: string;
@@ -19,11 +21,19 @@ export interface KitchenMetrics {
 
 @Injectable()
 export class KitchenMetricsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly nodeService: NodeService,
+  ) {}
 
   async getSummary(): Promise<KitchenMetrics> {
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
+    // "Today" is the node's day (SPEC 3.1 Node.timezone), not the server's:
+    // `setHours(0,0,0,0)` used to depend on the forced process TZ.
+    const timeZone = await this.nodeService.timezone();
+    const todayStart = nodeDayRange(
+      timeZone,
+      nodeDayKey(timeZone, new Date()),
+    ).start;
 
     // Run ALL independent DB queries in a single parallel batch
     const [
