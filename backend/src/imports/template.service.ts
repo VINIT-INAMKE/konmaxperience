@@ -102,18 +102,20 @@ const SAMPLE_DATA: Record<ImportType, Record<string, string>> = {
     brand: 'Konma Food',
     zone: 'Main Kitchen',
   },
-  menu_categories: {
+  product_categories: {
     name: 'Mains',
     brand: 'Konma Food',
     sort_order: '1',
   },
-  menu_items: {
+  products: {
     name: 'Dal Tadka Bowl',
+    slug: 'dal-tadka-bowl',
+    type: 'prepared_food',
     recipe: 'Dal Tadka',
     category: 'Mains',
     brand: 'Konma Food',
     base_price: '350',
-    available: 'true',
+    status: 'draft',
   },
   purchase_orders: {
     vendor: 'Fresh Farms Ltd',
@@ -445,7 +447,7 @@ const INSTRUCTIONS: Record<ImportType, string[][]> = {
       'WARNING',
       '',
       '',
-      'Recipes are imported as "draft". Approve them in the app before linking to menu items.',
+      'Recipes are imported as "draft". Approve them in the app before linking to products.',
     ],
     [
       'WARNING',
@@ -472,9 +474,9 @@ const INSTRUCTIONS: Record<ImportType, string[][]> = {
       'Approved recipes CANNOT be updated via import.',
     ],
   ],
-  menu_categories: [
+  product_categories: [
     ['Field Name', 'Required', 'Type', 'Description'],
-    ['name', 'Yes', 'Text', 'Category name'],
+    ['name', 'Yes', 'Text', 'Category name. The URL slug is derived from it.'],
     ['brand', 'Yes', 'Text', 'Must match an existing brand name'],
     [
       'sort_order',
@@ -487,33 +489,50 @@ const INSTRUCTIONS: Record<ImportType, string[][]> = {
       'NOTE',
       '',
       '',
-      'When updating, the brand cannot be changed (it would move all linked menu items).',
+      'When updating, the brand cannot be changed (it would move all linked products).',
     ],
   ],
-  menu_items: [
+  products: [
     ['Field Name', 'Required', 'Type', 'Description'],
-    ['name', 'Yes', 'Text', 'Menu item name'],
+    ['name', 'Yes', 'Text', 'Product name'],
     [
-      'recipe',
+      'slug',
+      'No',
+      'Text',
+      'URL slug, unique across the catalog. Derived from the name if blank.',
+    ],
+    [
+      'type',
       'Yes',
       'Text',
-      'Must match an APPROVED recipe name. Draft recipes are rejected.',
+      'One of: prepared_food, packaged, experience, merchandise',
+    ],
+    [
+      'recipe',
+      'Conditional',
+      'Text',
+      'Required for prepared_food and packaged. Must match an APPROVED recipe name; draft recipes are rejected.',
     ],
     [
       'category',
       'Yes',
       'Text',
-      'Must match a menu category name within the specified brand',
+      'Must match a product category name within the specified brand',
     ],
     ['brand', 'Yes', 'Text', 'Used to find the correct category'],
     ['base_price', 'Yes', 'Number', 'Price in INR (>= 0.01)'],
-    ['available', 'No', 'Boolean', 'true or false. Defaults to true.'],
+    [
+      'status',
+      'No',
+      'Text',
+      'One of: draft, active, archived. Defaults to draft — publish in the app.',
+    ],
     ['', '', '', ''],
     [
       'NOTE',
       '',
       '',
-      'Workflow: 1) Import recipes 2) Approve recipes in app 3) Import menu categories 4) Import menu items',
+      'Workflow: 1) Import recipes 2) Approve recipes in app 3) Import product categories 4) Import products',
     ],
     [
       'NOTE',

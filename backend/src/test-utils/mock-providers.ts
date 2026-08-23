@@ -16,7 +16,6 @@ export const PRISMA_MODELS = [
   'order',
   'orderItem',
   'payment',
-  'menuItem',
   'product',
   'productCategory',
   'productVariant',

@@ -877,7 +877,6 @@ model Brand {
   notes              String?
   assets             Asset[]
   recipes            Recipe[]
-  menu_categories    MenuCategory[]
   events             Event[]
   products           Product[]
   product_categories ProductCategory[]
@@ -939,7 +938,6 @@ model Recipe {
   versions         Recipe[]        @relation("RecipeVersions")
   RecipeLines      RecipeLine[]    @relation("RecipeLines")
   SourceLines      RecipeLine[]    @relation("SourceRecipeLines")
-  MenuItems        MenuItem[]
   products         Product[]
   linked_assets    Asset[]
   prepBatches      PrepBatch[]
@@ -1030,40 +1028,6 @@ model VendorPrice {
   @@index([ingredient_id, effective_date(sort: Desc)])
   // Optimizes: vendor price lookups by vendor
   @@index([vendor_id])
-}
-
-model MenuCategory {
-  id         String     @id @default(uuid())
-  name       String
-  brand_id   String
-  sort_order Int        @default(0)
-  status     String     @default("active")
-  brand      Brand      @relation(fields: [brand_id], references: [id])
-  MenuItems  MenuItem[]
-
-  // Optimizes: findCategories by brand_id
-  @@index([brand_id])
-}
-
-model MenuItem {
-  id          String       @id @default(uuid())
-  recipe_id   String
-  category_id String
-  name        String
-  base_price  Decimal      @db.Decimal(12, 2)
-  image_url   String?
-  available   Boolean      @default(true)
-  status      String       @default("active")
-  created_at  DateTime     @default(now()) @db.Timestamptz(3)
-  updated_at  DateTime     @updatedAt @db.Timestamptz(3)
-  recipe      Recipe       @relation(fields: [recipe_id], references: [id])
-  category    MenuCategory @relation(fields: [category_id], references: [id])
-  orderItems  OrderItem[]
-
-  // Optimizes: findItems by category_id
-  @@index([category_id])
-  // Optimizes: getAllServingsAvailable (active items), findItems filtered by status
-  @@index([status])
 }
 
 model ProductCategory {
@@ -1388,33 +1352,27 @@ model Order {
 }
 
 model OrderItem {
-  id           String          @id @default(uuid())
-  order_id     String
-  menu_item_id String
-  quantity     Int
-  unit_price   Decimal         @db.Decimal(12, 2)
-  item_notes   String?
-  status       OrderItemStatus @default(pending)
-  fulfilment   FulfilmentType  @default(local)
-  tax_rate     Decimal         @default(0) @db.Decimal(5, 2)
-  ready_at     DateTime?       @db.Timestamptz(3)
-  created_at   DateTime        @default(now()) @db.Timestamptz(3)
-  order        Order           @relation(fields: [order_id], references: [id], onDelete: Cascade)
-  menu_item    MenuItem        @relation(fields: [menu_item_id], references: [id])
-  // Nullable while MenuItem is still the source of truth; Task 11 makes product_id
-  // required and drops menu_item_id.
-  product_id   String?
-  product      Product?        @relation(fields: [product_id], references: [id])
-  variant_id   String?
-  variant      ProductVariant? @relation(fields: [variant_id], references: [id])
+  id         String          @id @default(uuid())
+  order_id   String
+  product_id String
+  variant_id String?
+  quantity   Int
+  unit_price Decimal         @db.Decimal(12, 2)
+  item_notes String?
+  status     OrderItemStatus @default(pending)
+  fulfilment FulfilmentType  @default(local)
+  tax_rate   Decimal         @default(0) @db.Decimal(5, 2)
+  ready_at   DateTime?       @db.Timestamptz(3)
+  created_at DateTime        @default(now()) @db.Timestamptz(3)
+  order      Order           @relation(fields: [order_id], references: [id], onDelete: Cascade)
+  product    Product         @relation(fields: [product_id], references: [id])
+  variant    ProductVariant? @relation(fields: [variant_id], references: [id])
 
   // Optimizes: KDS findMany by order_id, all-items-ready check
   @@index([order_id])
   // Optimizes: kitchen-metrics items_completed_today (status + ready_at filter)
   @@index([status, ready_at])
-  // Optimizes: analytics getTopItems groupBy menu_item_id
-  @@index([menu_item_id])
-  // Optimizes: analytics getTopItems groupBy product_id (Task 11 onward)
+  // Optimizes: analytics getTopItems groupBy product_id
   @@index([product_id])
 }
 

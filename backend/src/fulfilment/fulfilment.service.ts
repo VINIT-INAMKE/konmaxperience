@@ -38,7 +38,7 @@ export interface FulfilmentActor {
 export interface FulfilmentOrderItem {
   id: string;
   order_id: string;
-  menu_item_id: string;
+  product_id: string;
   quantity: number;
 }
 
@@ -52,7 +52,8 @@ export interface PendingOrderData {
   customerId: string;
   cart: {
     items: Array<{
-      menuItemId: string;
+      productId: string;
+      variantId?: string | null;
       name: string;
       quantity: number;
       unitPrice: number;
@@ -76,7 +77,7 @@ export interface ConfirmPaidOrderInput {
 }
 
 export const CONFIRMED_ORDER_INCLUDE = {
-  items: { include: { menu_item: { select: { id: true, name: true } } } },
+  items: { include: { product: { select: { id: true, name: true } } } },
   payment: true,
 } satisfies Prisma.OrderInclude;
 
@@ -142,18 +143,18 @@ export class FulfilmentService {
       throw new BadRequestException('Order has no fulfilment zone');
     const zoneId = order.zone_id;
 
-    const menuItems = await tx.menuItem.findMany({
-      where: { id: { in: [...new Set(items.map((i) => i.menu_item_id))] } },
+    const products = await tx.product.findMany({
+      where: { id: { in: [...new Set(items.map((i) => i.product_id))] } },
       select: {
         id: true,
         recipe: { select: { id: true, preparation_type: true } },
       },
     });
-    const recipeByMenuItem = new Map(menuItems.map((m) => [m.id, m.recipe]));
+    const recipeByProduct = new Map(products.map((p) => [p.id, p.recipe]));
     const readyAt = new Date();
 
     for (const item of items) {
-      const recipe = recipeByMenuItem.get(item.menu_item_id);
+      const recipe = recipeByProduct.get(item.product_id);
       const prepType = recipe?.preparation_type ?? 'scratch';
       if (!recipe || prepType === 'scratch') continue;
 
@@ -221,8 +222,8 @@ export class FulfilmentService {
     actor: FulfilmentActor,
     zoneId: string,
   ): Promise<void> {
-    const menuItem = await tx.menuItem.findUniqueOrThrow({
-      where: { id: orderItem.menu_item_id },
+    const product = await tx.product.findUniqueOrThrow({
+      where: { id: orderItem.product_id },
       select: {
         recipe: {
           select: {
@@ -245,7 +246,9 @@ export class FulfilmentService {
     // Multiply per-serving needs by quantity so N servings cost one stock lookup.
     const servings = orderItem.quantity;
 
-    for (const line of menuItem.recipe.RecipeLines) {
+    // `Product.recipe` is optional (merchandise/experience products carry no BOM);
+    // such a product has nothing to deduct.
+    for (const line of product.recipe?.RecipeLines ?? []) {
       const totalNeeded = Number(line.quantity) * servings;
 
       if (
@@ -387,7 +390,8 @@ export class FulfilmentService {
               zone_id: zoneId,
               items: {
                 create: pending.cart.items.map((item) => ({
-                  menu_item_id: item.menuItemId,
+                  product_id: item.productId,
+                  variant_id: item.variantId ?? null,
                   quantity: item.quantity,
                   unit_price: item.unitPrice,
                 })),

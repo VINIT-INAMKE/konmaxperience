@@ -19,7 +19,7 @@ const makeTx = (opts: { notReadyCount: number; zone_id?: string | null }) => ({
       id: 'oi-1',
       status: 'preparing',
       order_id: 'order-1',
-      menu_item_id: 'mi-1',
+      product_id: 'mi-1',
       quantity: 2,
     }),
     update: jest.fn().mockResolvedValue({
@@ -68,7 +68,7 @@ describe('KdsService', () => {
       id: 'oi-1',
       status: 'pending',
       order_id: 'order-1',
-      menu_item_id: 'mi-1',
+      product_id: 'mi-1',
       quantity: 1,
     });
     tx.orderItem.update.mockResolvedValue({
@@ -109,7 +109,7 @@ describe('KdsService', () => {
     expect(result.status).toBe('ready');
     expect(mockFulfilment.deductItemIngredients).toHaveBeenCalledWith(
       tx,
-      { id: 'oi-1', order_id: 'order-1', menu_item_id: 'mi-1', quantity: 2 },
+      { id: 'oi-1', order_id: 'order-1', product_id: 'mi-1', quantity: 2 },
       { actor_type: 'user', actor_id: 'user-1' },
       'zone-1',
     );

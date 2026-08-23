@@ -1,8 +1,8 @@
 import { PrismaService } from '../../prisma/prisma.service';
 import type { CellError, ImportRow } from '../import-types';
-import { sanitizeNumber } from '../import-types';
+import { sanitizeNumber, slugify } from '../import-types';
 
-export async function validateMenuCategoryRow(
+export async function validateProductCategoryRow(
   raw: Record<string, string>,
   rowIndex: number,
   prisma: PrismaService,
@@ -16,6 +16,17 @@ export async function validateMenuCategoryRow(
     errors.push({ field: 'name', message: 'Required' });
   } else {
     validated.name = name;
+    // `ProductCategory.slug` is required and unique per node; the sheet has no
+    // slug column, so it is derived from the name.
+    const slug = slugify(name);
+    if (!slug) {
+      errors.push({
+        field: 'name',
+        message: 'Name must contain at least one letter or digit',
+      });
+    } else {
+      validated.slug = slug;
+    }
   }
 
   // brand — required, findMany ambiguity pattern (D-04)
@@ -63,7 +74,7 @@ export async function validateMenuCategoryRow(
   let status: ImportRow['status'] = errors.length > 0 ? 'invalid' : 'valid';
 
   if (errors.length === 0 && validated.brand_id && validated.name) {
-    const existing = await prisma.menuCategory.findFirst({
+    const existing = await prisma.productCategory.findFirst({
       where: {
         name: { equals: validated.name as string, mode: 'insensitive' },
       },
@@ -81,6 +92,22 @@ export async function validateMenuCategoryRow(
       } else {
         status = 'duplicate';
       }
+    }
+  }
+
+  // `ProductCategory.slug` is unique per node. Catching a collision here turns
+  // what would otherwise roll back the whole import into one cell error.
+  if (errors.length === 0 && validated.slug) {
+    const slugOwner = await prisma.productCategory.findFirst({
+      where: { slug: validated.slug as string },
+      select: { id: true, name: true },
+    });
+    if (slugOwner && slugOwner.id !== existingId) {
+      errors.push({
+        field: 'name',
+        message: `Slug '${validated.slug as string}' is already used by '${slugOwner.name}'`,
+      });
+      status = 'invalid';
     }
   }
 

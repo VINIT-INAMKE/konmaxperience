@@ -18,8 +18,8 @@ import {
 export interface KdsOrderItem {
   id: string;
   status: string;
-  menu_item_id: string;
-  menu_item_name: string;
+  product_id: string;
+  product_name: string;
   quantity: number;
   item_notes: string | null;
 }
@@ -57,14 +57,14 @@ export class KdsService {
       include: {
         items: {
           where: {
-            menu_item: {
+            product: {
               recipe: {
                 preparation_type: 'scratch',
               },
             },
           },
           include: {
-            menu_item: { select: { id: true, name: true } },
+            product: { select: { id: true, name: true } },
           },
         },
         zone: { select: { id: true, name: true } },
@@ -98,8 +98,8 @@ export class KdsService {
         items: order.items.map((item) => ({
           id: item.id,
           status: item.status,
-          menu_item_id: item.menu_item_id,
-          menu_item_name: item.menu_item.name,
+          product_id: item.product_id,
+          product_name: item.product.name,
           quantity: item.quantity,
           item_notes: item.item_notes,
         })),
@@ -187,7 +187,7 @@ export class KdsService {
             {
               id: item.id,
               order_id: item.order_id,
-              menu_item_id: item.menu_item_id,
+              product_id: item.product_id,
               quantity: item.quantity,
             },
             actorForOrder(order),

@@ -15,7 +15,11 @@ import { OrderChannel } from '@prisma/client';
 
 export class CartItemDto {
   @IsUUID()
-  menuItemId: string;
+  productId: string;
+
+  @IsOptional()
+  @IsUUID()
+  variantId?: string | null;
 
   @IsString()
   name: string;

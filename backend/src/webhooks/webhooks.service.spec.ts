@@ -302,7 +302,7 @@ describe('WebhooksService', () => {
       cart: {
         items: [
           {
-            menuItemId: 'm1',
+            productId: 'm1',
             name: 'Burger',
             quantity: 1,
             unitPrice: 300,

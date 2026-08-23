@@ -285,13 +285,13 @@ export class RecipesService {
       );
     }
 
-    // Check if referenced by any MenuItem
-    const menuUsage = await this.prisma.menuItem.count({
+    // Check if referenced by any Product
+    const productUsage = await this.prisma.product.count({
       where: { recipe_id: id },
     });
-    if (menuUsage > 0) {
+    if (productUsage > 0) {
       throw new BadRequestException(
-        `Cannot delete recipe — it is referenced by ${menuUsage} menu item(s). Remove those menu items first.`,
+        `Cannot delete: recipe is referenced by ${productUsage} product(s)`,
       );
     }
 

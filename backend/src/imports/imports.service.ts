@@ -1,5 +1,6 @@
 import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { createHash } from 'crypto';
+import { ProductStatus, ProductType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { InventoryService } from '../inventory/inventory.service';
 import { CostCalculatorService } from '../recipes/cost-calculator.service';
@@ -19,8 +20,8 @@ import {
   validateRecipeHeaderRow,
   validateRecipeBomRow,
 } from './validators/recipes.validator';
-import { validateMenuCategoryRow } from './validators/menu-categories.validator';
-import { validateMenuItemRow } from './validators/menu-items.validator';
+import { validateProductCategoryRow } from './validators/product-categories.validator';
+import { validateProductRow } from './validators/products.validator';
 import { validatePurchaseOrderRow } from './validators/purchase-orders.validator';
 import {
   IMPORT_TYPE_CONFIG,
@@ -269,10 +270,10 @@ export class ImportsService {
       case 'recipes':
         // Recipe headers are validated via parseRecipeFile, not here
         return validateRecipeHeaderRow(raw, rowIndex, this.prisma);
-      case 'menu_categories':
-        return validateMenuCategoryRow(raw, rowIndex, this.prisma);
-      case 'menu_items':
-        return validateMenuItemRow(raw, rowIndex, this.prisma);
+      case 'product_categories':
+        return validateProductCategoryRow(raw, rowIndex, this.prisma);
+      case 'products':
+        return validateProductRow(raw, rowIndex, this.prisma);
       case 'purchase_orders':
         return validatePurchaseOrderRow(raw, rowIndex, this.prisma);
       default:
@@ -399,7 +400,7 @@ export class ImportsService {
       missions,
       quests,
       approvedRecipes,
-      menuCategories,
+      productCategories,
     ] = await Promise.all([
       this.prisma.ingredient.count(),
       this.prisma.vendor.count(),
@@ -408,7 +409,7 @@ export class ImportsService {
       this.prisma.mission.count(),
       this.prisma.quest.count(),
       this.prisma.recipe.count({ where: { status: 'approved' } }),
-      this.prisma.menuCategory.count(),
+      this.prisma.productCategory.count(),
     ]);
     return {
       ingredients,
@@ -418,7 +419,7 @@ export class ImportsService {
       missions,
       quests,
       approved_recipes: approvedRecipes,
-      menu_categories: menuCategories,
+      product_categories: productCategories,
     };
   }
 
@@ -845,23 +846,29 @@ export class ImportsService {
           },
         });
         break;
-      case 'menu_categories':
-        await tx.menuCategory.create({
+      case 'product_categories':
+        await tx.productCategory.create({
           data: {
             name: v.name as string,
+            slug: v.slug as string,
             brand_id: v.brand_id as string,
             sort_order: (v.sort_order as number) ?? 0,
           },
         });
         break;
-      case 'menu_items':
-        await tx.menuItem.create({
+      case 'products':
+        await tx.product.create({
           data: {
             name: v.name as string,
-            recipe_id: v.recipe_id as string,
+            slug: v.slug as string,
+            type: v.type as ProductType,
+            brand_id: v.brand_id as string,
             category_id: v.category_id as string,
+            recipe_id: v.recipe_id ? (v.recipe_id as string) : undefined,
             base_price: v.base_price as number,
-            available: (v.available as boolean) ?? true,
+            status: (v.status as ProductStatus) ?? ProductStatus.draft,
+            created_by: userId,
+            updated_by: userId,
           },
         });
         break;
@@ -1011,27 +1018,30 @@ export class ImportsService {
           },
         });
         break;
-      case 'menu_categories':
+      case 'product_categories':
         // D-02: Validator blocks brand_id change (status='blocked')
-        await tx.menuCategory.update({
+        await tx.productCategory.update({
           where: { id },
           data: {
             name: v.name as string,
+            slug: v.slug as string,
             sort_order: (v.sort_order as number) ?? 0,
             // NEVER: status. BLOCKED: brand_id (caught by validator)
           },
         });
         break;
-      case 'menu_items':
-        await tx.menuItem.update({
+      case 'products':
+        await tx.product.update({
           where: { id },
           data: {
             name: v.name as string,
-            recipe_id: v.recipe_id as string,
+            slug: v.slug as string,
+            type: v.type as ProductType,
+            recipe_id: v.recipe_id ? (v.recipe_id as string) : undefined,
             category_id: v.category_id as string,
             base_price: v.base_price as number,
-            available: (v.available as boolean) ?? true,
-            // NEVER: status
+            updated_by: userId,
+            // NEVER: status — publishing stays a deliberate catalog action
           },
         });
         break;

@@ -20,7 +20,7 @@ const mockConvertUnit = convertUnit as jest.MockedFunction<typeof convertUnit>;
 const dec = (n: number) => ({ valueOf: () => n, toNumber: () => n });
 
 const makeTx = () => ({
-  menuItem: { findMany: jest.fn(), findUniqueOrThrow: jest.fn() },
+  product: { findMany: jest.fn(), findUniqueOrThrow: jest.fn() },
   orderItem: { update: jest.fn() },
   order: { create: jest.fn(), findUniqueOrThrow: jest.fn() },
   ingredientStock: { findFirst: jest.fn(), update: jest.fn() },
@@ -42,7 +42,7 @@ const userActor = { actor_type: 'user' as const, actor_id: 'user-1' };
 const orderItem = {
   id: 'oi-1',
   order_id: 'order-1',
-  menu_item_id: 'mi-1',
+  product_id: 'mi-1',
   quantity: 1,
 };
 
@@ -119,7 +119,7 @@ describe('FulfilmentService', () => {
   describe('applyPrepTypeOnCreate', () => {
     it('leaves scratch items pending and deducts nothing', async () => {
       const tx = makeTx();
-      tx.menuItem.findMany.mockResolvedValue([
+      tx.product.findMany.mockResolvedValue([
         { id: 'mi-1', recipe: { id: 'r-1', preparation_type: 'scratch' } },
       ]);
       await service.applyPrepTypeOnCreate(
@@ -134,7 +134,7 @@ describe('FulfilmentService', () => {
 
     it('batch_prepared: FIFO by expires_at within the zone and sets item ready', async () => {
       const tx = makeTx();
-      tx.menuItem.findMany.mockResolvedValue([
+      tx.product.findMany.mockResolvedValue([
         {
           id: 'mi-1',
           recipe: { id: 'r-1', preparation_type: 'batch_prepared' },
@@ -176,7 +176,7 @@ describe('FulfilmentService', () => {
 
     it('batch_prepared: throws BadRequestException on shortfall', async () => {
       const tx = makeTx();
-      tx.menuItem.findMany.mockResolvedValue([
+      tx.product.findMany.mockResolvedValue([
         {
           id: 'mi-1',
           recipe: { id: 'r-1', preparation_type: 'batch_prepared' },
@@ -199,13 +199,13 @@ describe('FulfilmentService', () => {
     it('ready_to_sell: BOM deduction writes a StockMovement with actor fields', async () => {
       const tx = makeTx();
       mockConvertUnit.mockResolvedValue(100);
-      tx.menuItem.findMany.mockResolvedValue([
+      tx.product.findMany.mockResolvedValue([
         {
           id: 'mi-1',
           recipe: { id: 'r-1', preparation_type: 'ready_to_sell' },
         },
       ]);
-      tx.menuItem.findUniqueOrThrow.mockResolvedValue({
+      tx.product.findUniqueOrThrow.mockResolvedValue({
         recipe: {
           RecipeLines: [
             {
@@ -272,7 +272,7 @@ describe('FulfilmentService', () => {
       const tx = makeTx();
       mockConvertUnit.mockResolvedValue(100); // 100g
 
-      tx.menuItem.findUniqueOrThrow.mockResolvedValue({
+      tx.product.findUniqueOrThrow.mockResolvedValue({
         id: 'mi-1',
         recipe: {
           id: 'recipe-1',
@@ -311,7 +311,7 @@ describe('FulfilmentService', () => {
       const tx = makeTx();
       mockConvertUnit.mockResolvedValue(2); // 2 yield units
 
-      tx.menuItem.findUniqueOrThrow.mockResolvedValue({
+      tx.product.findUniqueOrThrow.mockResolvedValue({
         id: 'mi-1',
         recipe: {
           id: 'recipe-1',
@@ -369,7 +369,7 @@ describe('FulfilmentService', () => {
       const tx = makeTx();
       mockConvertUnit.mockResolvedValue(5); // need exactly 5
 
-      tx.menuItem.findUniqueOrThrow.mockResolvedValue({
+      tx.product.findUniqueOrThrow.mockResolvedValue({
         id: 'mi-1',
         recipe: {
           id: 'recipe-1',
@@ -415,7 +415,7 @@ describe('FulfilmentService', () => {
       const tx = makeTx();
       mockConvertUnit.mockResolvedValue(200);
 
-      tx.menuItem.findUniqueOrThrow.mockResolvedValue({
+      tx.product.findUniqueOrThrow.mockResolvedValue({
         id: 'mi-1',
         recipe: {
           id: 'recipe-1',
@@ -465,7 +465,7 @@ describe('FulfilmentService', () => {
       const tx = makeTx();
       mockConvertUnit.mockResolvedValue(500);
 
-      tx.menuItem.findUniqueOrThrow.mockResolvedValue({
+      tx.product.findUniqueOrThrow.mockResolvedValue({
         id: 'mi-1',
         recipe: {
           id: 'recipe-1',
@@ -497,7 +497,7 @@ describe('FulfilmentService', () => {
       const tx = makeTx();
       mockConvertUnit.mockResolvedValue(10); // need 10 portions
 
-      tx.menuItem.findUniqueOrThrow.mockResolvedValue({
+      tx.product.findUniqueOrThrow.mockResolvedValue({
         id: 'mi-1',
         recipe: {
           id: 'recipe-1',
@@ -536,7 +536,7 @@ describe('FulfilmentService', () => {
       const tx = makeTx();
       mockConvertUnit.mockResolvedValue(150); // 50g per serving x 3
 
-      tx.menuItem.findUniqueOrThrow.mockResolvedValue({
+      tx.product.findUniqueOrThrow.mockResolvedValue({
         id: 'mi-1',
         recipe: {
           id: 'recipe-1',
@@ -590,7 +590,7 @@ describe('FulfilmentService', () => {
       cart: {
         items: [
           {
-            menuItemId: 'mi-1',
+            productId: 'mi-1',
             name: 'Burger',
             quantity: 2,
             unitPrice: 150,
@@ -621,7 +621,7 @@ describe('FulfilmentService', () => {
         zone_id: 'zone-1',
         items: [orderItem],
       });
-      tx.menuItem.findMany.mockResolvedValue([
+      tx.product.findMany.mockResolvedValue([
         { id: 'mi-1', recipe: { id: 'r-1', preparation_type: 'scratch' } },
       ]);
       tx.order.findUniqueOrThrow.mockResolvedValue({

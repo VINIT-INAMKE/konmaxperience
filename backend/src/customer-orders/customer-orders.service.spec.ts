@@ -48,7 +48,7 @@ describe('CustomerOrdersService', () => {
         updateMany: jest.fn(),
         delete: jest.fn(),
       },
-      menuItem: {
+      product: {
         findMany: jest.fn(),
       },
       channelModifier: {
@@ -104,7 +104,7 @@ describe('CustomerOrdersService', () => {
       const cart = {
         items: [
           {
-            menuItemId: 'm1',
+            productId: 'm1',
             name: 'Burger',
             quantity: 2,
             unitPrice: 150,
@@ -120,6 +120,36 @@ describe('CustomerOrdersService', () => {
       const result = await service.getCart(customerId);
       expect(result).toEqual(cart);
       expect(redisClient.get).toHaveBeenCalledWith(`cart:${customerId}`);
+    });
+
+    it('should drop pre-P2-11 lines that carry no productId', async () => {
+      // Pre-P2-11 carts keyed their lines on the old catalog id, never on
+      // `productId`; the filter is shape-based, so any foreign key stands in.
+      const legacyLine = {
+        legacyItemId: 'legacy-1',
+        name: 'Old Burger',
+        quantity: 1,
+        unitPrice: 150,
+        imageUrl: null,
+      };
+      const currentLine = {
+        productId: 'p1',
+        name: 'Burger',
+        quantity: 2,
+        unitPrice: 150,
+        imageUrl: null,
+      };
+      redisClient.get.mockResolvedValue(
+        JSON.stringify({
+          items: [legacyLine, currentLine],
+          channel: 'takeaway',
+          deliveryAddressId: null,
+          updatedAt: '2026-01-01T00:00:00Z',
+        }),
+      );
+
+      const result = await service.getCart(customerId);
+      expect(result?.items).toEqual([currentLine]);
     });
 
     it('should return null when key missing', async () => {
@@ -165,14 +195,14 @@ describe('CustomerOrdersService', () => {
       const existing = {
         items: [
           {
-            menuItemId: 'm1',
+            productId: 'm1',
             name: 'A',
             quantity: 1,
             unitPrice: 100,
             imageUrl: null,
           },
           {
-            menuItemId: 'm2',
+            productId: 'm2',
             name: 'B',
             quantity: 1,
             unitPrice: 200,
@@ -186,7 +216,7 @@ describe('CustomerOrdersService', () => {
       redisClient.get.mockResolvedValue(JSON.stringify(existing));
 
       const local = {
-        items: [{ menuItemId: 'm1', name: 'A', quantity: 1, unitPrice: 100 }],
+        items: [{ productId: 'm1', name: 'A', quantity: 1, unitPrice: 100 }],
         channel: 'takeaway' as const,
         deliveryAddressId: null,
       };
@@ -199,7 +229,7 @@ describe('CustomerOrdersService', () => {
       const existing = {
         items: [
           {
-            menuItemId: 'm1',
+            productId: 'm1',
             name: 'A',
             quantity: 1,
             unitPrice: 100,
@@ -214,9 +244,9 @@ describe('CustomerOrdersService', () => {
 
       const local = {
         items: [
-          { menuItemId: 'm1', name: 'A', quantity: 1, unitPrice: 100 },
-          { menuItemId: 'm2', name: 'B', quantity: 1, unitPrice: 200 },
-          { menuItemId: 'm3', name: 'C', quantity: 1, unitPrice: 300 },
+          { productId: 'm1', name: 'A', quantity: 1, unitPrice: 100 },
+          { productId: 'm2', name: 'B', quantity: 1, unitPrice: 200 },
+          { productId: 'm3', name: 'C', quantity: 1, unitPrice: 300 },
         ],
         channel: 'delivery' as const,
         deliveryAddressId: 'addr-1',
@@ -296,7 +326,7 @@ describe('CustomerOrdersService', () => {
         JSON.stringify({
           items: [
             {
-              menuItemId: 'm1',
+              productId: 'm1',
               name: 'A',
               quantity: 1,
               unitPrice: 100,
@@ -328,7 +358,7 @@ describe('CustomerOrdersService', () => {
         JSON.stringify({
           items: [
             {
-              menuItemId: 'm1',
+              productId: 'm1',
               name: 'Burger',
               quantity: 2,
               unitPrice: 999,
@@ -342,7 +372,7 @@ describe('CustomerOrdersService', () => {
       );
 
       // Server price is 150, not the untrusted cart price of 999
-      prisma.menuItem.findMany.mockResolvedValue([
+      prisma.product.findMany.mockResolvedValue([
         { id: 'm1', base_price: 150 },
       ]);
       prisma.channelModifier.findFirst.mockResolvedValue(null);
@@ -368,12 +398,12 @@ describe('CustomerOrdersService', () => {
       );
     });
 
-    it('should throw when menu item no longer available', async () => {
+    it('should throw when product no longer available', async () => {
       redisClient.get.mockResolvedValue(
         JSON.stringify({
           items: [
             {
-              menuItemId: 'm1',
+              productId: 'm1',
               name: 'Gone Item',
               quantity: 1,
               unitPrice: 100,
@@ -386,7 +416,7 @@ describe('CustomerOrdersService', () => {
         }),
       );
 
-      prisma.menuItem.findMany.mockResolvedValue([]); // no items found
+      prisma.product.findMany.mockResolvedValue([]); // no items found
 
       await expect(service.checkoutCart(customerId)).rejects.toThrow(
         BadRequestException,
@@ -398,7 +428,7 @@ describe('CustomerOrdersService', () => {
         JSON.stringify({
           items: [
             {
-              menuItemId: 'm1',
+              productId: 'm1',
               name: 'Burger',
               quantity: 1,
               unitPrice: 150,
@@ -410,7 +440,7 @@ describe('CustomerOrdersService', () => {
           updatedAt: '',
         }),
       );
-      prisma.menuItem.findMany.mockResolvedValue([
+      prisma.product.findMany.mockResolvedValue([
         { id: 'm1', base_price: 150 },
       ]);
       prisma.channelModifier.findFirst.mockResolvedValue(null);
@@ -442,7 +472,7 @@ describe('CustomerOrdersService', () => {
       cart: {
         items: [
           {
-            menuItemId: 'm1',
+            productId: 'm1',
             name: 'Burger',
             quantity: 2,
             unitPrice: 150,
@@ -764,7 +794,7 @@ describe('CustomerOrdersService', () => {
         total: 300,
         delivery_address: null,
         items: [
-          { menu_item: { name: 'Burger' }, quantity: 2, unit_price: 150 },
+          { product: { name: 'Burger' }, quantity: 2, unit_price: 150 },
         ],
         payment: { method: 'razorpay', razorpay_payment_id: 'pay_123' },
         customer: { name: 'Test User', phone: '9876543210' },

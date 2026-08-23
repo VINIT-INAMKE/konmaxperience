@@ -18,7 +18,7 @@ const createMockTx = () => ({
   channelModifier: {
     findFirst: jest.fn(),
   },
-  menuItem: {
+  product: {
     findMany: jest.fn().mockResolvedValue([
       { id: 'mi-1', base_price: dec(150) },
       { id: 'mi-2', base_price: dec(200) },
@@ -84,8 +84,8 @@ describe('OrdersService', () => {
       channel: 'dine_in' as const,
       zone_id: 'zone-1',
       items: [
-        { menu_item_id: 'mi-1', quantity: 2, unit_price: 150 },
-        { menu_item_id: 'mi-2', quantity: 1, unit_price: 200 },
+        { product_id: 'mi-1', quantity: 2, unit_price: 150 },
+        { product_id: 'mi-2', quantity: 1, unit_price: 200 },
       ],
       table_number: 'T5',
     };
