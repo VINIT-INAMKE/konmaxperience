@@ -3,9 +3,16 @@ import {
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { MovementType, Prisma, PurchaseOrderStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
+import {
+  DomainEvent,
+  domainEventBase,
+  emitDomainEvent,
+  userActor,
+} from '../common/events/domain-events';
 import { CreatePurchaseOrderDto } from './dto/create-purchase-order.dto';
 import { ReceivePurchaseOrderDto } from './dto/receive-purchase-order.dto';
 import { convertUnit } from '../common/utils/unit-conversion';
@@ -28,6 +35,7 @@ export class PurchaseOrdersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditService: AuditService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async findAll(status?: string) {
@@ -155,7 +163,7 @@ export class PurchaseOrdersService {
     dto: ReceivePurchaseOrderDto,
     userId: string,
   ) {
-    return this.prisma.$transaction(async (tx) => {
+    const updated = await this.prisma.$transaction(async (tx) => {
       const po = await tx.purchaseOrder.findUniqueOrThrow({
         where: { id: poId },
         include: {
@@ -277,6 +285,20 @@ export class PurchaseOrdersService {
 
       return updated;
     });
+
+    // Emit AFTER the receive transaction commits (SPEC §4.1).
+    emitDomainEvent(this.eventEmitter, DomainEvent.PURCHASE_ORDER_RECEIVED, {
+      ...domainEventBase(updated.node_id, userActor(userId)),
+      purchaseOrderId: poId,
+      vendorId: updated.vendor_id,
+      vendorName: updated.vendor?.name ?? '',
+      linkedTaskId: updated.linked_task_id ?? null,
+      lineCount: dto.lines.length,
+      totalAmount: String(updated.total_amount),
+      fullyReceived: updated.status === PurchaseOrderStatus.received,
+    });
+
+    return updated;
   }
 
   async findAllForExport(dateFrom?: string, dateTo?: string) {

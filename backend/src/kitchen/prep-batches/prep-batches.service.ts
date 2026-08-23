@@ -1,9 +1,28 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { MovementType, PrepBatchStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreatePrepBatchDto } from './dto/create-prep-batch.dto';
 import { PreviewDeductionsDto } from './dto/preview-deductions.dto';
 import { convertUnit } from '../../common/utils/unit-conversion';
+import {
+  DomainEvent,
+  domainEventBase,
+  emitDomainEvent,
+  userActor,
+} from '../../common/events/domain-events';
+
+/**
+ * One `prep_batch.depleted` event, collected inside the transaction and emitted
+ * only once it commits (SPEC §4.1 — nothing is emitted from inside `tx`).
+ */
+interface DepletedBatch {
+  prepBatchId: string;
+  nodeId: string;
+  recipeId: string;
+  recipeName: string;
+  zoneId: string;
+}
 
 const RECIPE_INCLUDE = {
   RecipeLines: {
@@ -29,9 +48,17 @@ function activeBatchWhere(recipeId: string, zoneId?: string) {
 
 @Injectable()
 export class PrepBatchesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly eventEmitter: EventEmitter2,
+  ) {}
 
-  async findAll(zoneId?: string, status?: string, page?: number, limit?: number) {
+  async findAll(
+    zoneId?: string,
+    status?: string,
+    page?: number,
+    limit?: number,
+  ) {
     const where: Record<string, unknown> = {};
     if (zoneId) where.zone_id = zoneId;
     if (status) where.status = status;
@@ -211,66 +238,98 @@ export class PrepBatchesService {
    * Uses $transaction — all deductions roll back on any failure.
    */
   async createPrepBatch(dto: CreatePrepBatchDto, userId: string) {
-    return this.prisma.$transaction(async (tx) => {
-      const recipe = await tx.recipe.findUnique({
-        where: { id: dto.recipe_id },
-        include: RECIPE_INCLUDE,
-      });
-      if (!recipe) {
-        throw new BadRequestException(`Recipe ${dto.recipe_id} not found`);
-      }
+    const depleted: DepletedBatch[] = [];
 
-      const multiplier = dto.quantity_to_prep / Number(recipe.yield_qty);
-
-      // Create PrepBatch first to get its ID for StockMovement references
-      const prepBatch = await tx.prepBatch.create({
-        data: {
-          recipe_id: dto.recipe_id,
-          zone_id: dto.zone_id,
-          quantity_produced: dto.quantity_to_prep,
-          quantity_remaining: dto.quantity_to_prep,
-          unit: recipe.yield_unit,
-          prepared_by: userId,
-          expires_at: recipe.shelf_life_hours
-            ? new Date(Date.now() + recipe.shelf_life_hours * 3600000)
-            : null,
-          status: PrepBatchStatus.active,
-        },
-        include: {
-          recipe: { select: { name: true } },
-          zone: { select: { name: true } },
-        },
-      });
-
-      // Deduct inputs for each BOM line
-      for (const line of recipe.RecipeLines) {
-        const needed = Number(line.quantity) * multiplier;
-
-        if (line.input_type === 'ingredient' && line.ingredient) {
-          await this.deductIngredient(tx, {
-            ingredientId: line.ingredient.id,
-            ingredientName: line.ingredient.name,
-            baseUnit: line.ingredient.base_unit,
-            lineUnit: line.unit,
-            needed,
-            zoneId: dto.zone_id,
-            prepBatchId: prepBatch.id,
-            userId,
-          });
-        } else if (line.input_type === 'recipe' && line.source_recipe) {
-          await this.deductSubRecipeBatches(tx, {
-            sourceRecipeId: line.source_recipe.id,
-            sourceRecipeName: line.source_recipe.name,
-            sourceYieldUnit: line.source_recipe.yield_unit,
-            lineUnit: line.unit,
-            needed,
-            zoneId: dto.zone_id,
-          });
+    const prepBatch = await this.prisma.$transaction(
+      async (tx) => {
+        const recipe = await tx.recipe.findUnique({
+          where: { id: dto.recipe_id },
+          include: RECIPE_INCLUDE,
+        });
+        if (!recipe) {
+          throw new BadRequestException(`Recipe ${dto.recipe_id} not found`);
         }
-      }
 
-      return prepBatch;
-    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+        const multiplier = dto.quantity_to_prep / Number(recipe.yield_qty);
+
+        // Create PrepBatch first to get its ID for StockMovement references
+        const prepBatch = await tx.prepBatch.create({
+          data: {
+            recipe_id: dto.recipe_id,
+            zone_id: dto.zone_id,
+            quantity_produced: dto.quantity_to_prep,
+            quantity_remaining: dto.quantity_to_prep,
+            unit: recipe.yield_unit,
+            prepared_by: userId,
+            expires_at: recipe.shelf_life_hours
+              ? new Date(Date.now() + recipe.shelf_life_hours * 3600000)
+              : null,
+            status: PrepBatchStatus.active,
+          },
+          include: {
+            recipe: { select: { name: true } },
+            zone: { select: { name: true } },
+          },
+        });
+
+        // Deduct inputs for each BOM line
+        for (const line of recipe.RecipeLines) {
+          const needed = Number(line.quantity) * multiplier;
+
+          if (line.input_type === 'ingredient' && line.ingredient) {
+            await this.deductIngredient(tx, {
+              ingredientId: line.ingredient.id,
+              ingredientName: line.ingredient.name,
+              baseUnit: line.ingredient.base_unit,
+              lineUnit: line.unit,
+              needed,
+              zoneId: dto.zone_id,
+              prepBatchId: prepBatch.id,
+              userId,
+            });
+          } else if (line.input_type === 'recipe' && line.source_recipe) {
+            await this.deductSubRecipeBatches(
+              tx,
+              {
+                sourceRecipeId: line.source_recipe.id,
+                sourceRecipeName: line.source_recipe.name,
+                sourceYieldUnit: line.source_recipe.yield_unit,
+                lineUnit: line.unit,
+                needed,
+                zoneId: dto.zone_id,
+              },
+              depleted,
+            );
+          }
+        }
+
+        return prepBatch;
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
+
+    // Emit AFTER the transaction commits (SPEC §4.1).
+    emitDomainEvent(this.eventEmitter, DomainEvent.PREP_BATCH_CREATED, {
+      ...domainEventBase(prepBatch.node_id, userActor(userId)),
+      prepBatchId: prepBatch.id,
+      recipeId: prepBatch.recipe_id,
+      recipeName: prepBatch.recipe?.name ?? '',
+      zoneId: prepBatch.zone_id,
+      quantityProduced: String(prepBatch.quantity_produced),
+      unit: prepBatch.unit,
+    });
+
+    for (const batch of depleted) {
+      emitDomainEvent(this.eventEmitter, DomainEvent.PREP_BATCH_DEPLETED, {
+        ...domainEventBase(batch.nodeId, userActor(userId)),
+        prepBatchId: batch.prepBatchId,
+        recipeId: batch.recipeId,
+        recipeName: batch.recipeName,
+        zoneId: batch.zoneId,
+      });
+    }
+
+    return prepBatch;
   }
 
   /**
@@ -356,6 +415,7 @@ export class PrepBatchesService {
       needed: number;
       zoneId: string;
     },
+    depleted: DepletedBatch[],
   ) {
     // Fetch active, non-expired batches in FIFO order (oldest first), filtered by zone
     const batches = await tx.prepBatch.findMany({
@@ -390,6 +450,17 @@ export class PrepBatchesService {
           ...(newRemaining <= 0 ? { status: PrepBatchStatus.depleted } : {}),
         },
       });
+
+      // Recorded, not emitted — the caller fires these once the tx commits.
+      if (newRemaining <= 0) {
+        depleted.push({
+          prepBatchId: batch.id,
+          nodeId: batch.node_id,
+          recipeId: params.sourceRecipeId,
+          recipeName: params.sourceRecipeName,
+          zoneId: params.zoneId,
+        });
+      }
 
       remainingNeed -= deduct;
     }

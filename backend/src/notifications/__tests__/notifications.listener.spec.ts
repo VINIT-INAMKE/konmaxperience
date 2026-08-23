@@ -1,5 +1,10 @@
 import { NotificationsListener } from '../notifications.listener';
 import { mockQstash } from '../../test-utils/mock-providers';
+import { domainEventBase, userActor } from '../../common/events/domain-events';
+
+/** Every typed domain-event payload carries `{ node_id, actor, occurred_at }`. */
+const base = () =>
+  domainEventBase('11111111-1111-4111-8111-111111111111', userActor('user-1'));
 
 describe('NotificationsListener', () => {
   let listener: NotificationsListener;
@@ -12,6 +17,7 @@ describe('NotificationsListener', () => {
 
   it('publishes notify-new-order with the event payload', async () => {
     const payload = {
+      ...base(),
       orderId: 'ord-1',
       channel: 'dine_in',
       itemCount: 3,
@@ -26,7 +32,12 @@ describe('NotificationsListener', () => {
   });
 
   it('publishes notify-order-ready with the event payload', async () => {
-    const payload = { orderId: 'ord-2', channel: 'takeaway', createdBy: 'user-2' };
+    const payload = {
+      ...base(),
+      orderId: 'ord-2',
+      channel: 'takeaway',
+      createdBy: 'user-2',
+    };
 
     await listener.handleOrderReady(payload);
 
@@ -36,6 +47,7 @@ describe('NotificationsListener', () => {
 
   it('publishes notify-delivery-update with the event payload', async () => {
     const payload = {
+      ...base(),
       orderId: 'ord-3',
       deliveryStatus: 'picked_up',
       deliveryAddress: '123 Main St',
@@ -45,11 +57,15 @@ describe('NotificationsListener', () => {
     await listener.handleDeliveryUpdated(payload);
 
     expect(qstash.publish).toHaveBeenCalledTimes(1);
-    expect(qstash.publish).toHaveBeenCalledWith('notify-delivery-update', payload);
+    expect(qstash.publish).toHaveBeenCalledWith(
+      'notify-delivery-update',
+      payload,
+    );
   });
 
   it('publishes notify-low-stock with the event payload', async () => {
     const payload = {
+      ...base(),
       ingredientId: 'ing-1',
       ingredientName: 'Salt',
       currentQty: 2,
@@ -66,6 +82,7 @@ describe('NotificationsListener', () => {
 
   it('publishes notify-task-blocked with the processor field names', async () => {
     await listener.handleTaskBlocked({
+      ...base(),
       taskId: 'task-1',
       taskTitle: 'Fix widget',
       ownerUserId: 'user-1',
@@ -89,6 +106,7 @@ describe('NotificationsListener', () => {
     it('does not re-throw for order.placed', async () => {
       await expect(
         listener.handleOrderPlaced({
+          ...base(),
           orderId: 'ord-fail',
           channel: 'delivery',
           itemCount: 1,
@@ -100,13 +118,19 @@ describe('NotificationsListener', () => {
 
     it('does not re-throw for order.ready', async () => {
       await expect(
-        listener.handleOrderReady({ orderId: 'ord-fail', channel: 'takeaway', createdBy: 'user-x' }),
+        listener.handleOrderReady({
+          ...base(),
+          orderId: 'ord-fail',
+          channel: 'takeaway',
+          createdBy: 'user-x',
+        }),
       ).resolves.toBeUndefined();
     });
 
     it('does not re-throw for delivery.updated', async () => {
       await expect(
         listener.handleDeliveryUpdated({
+          ...base(),
           orderId: 'ord-fail',
           deliveryStatus: 'delivered',
           deliveryAddress: null,
@@ -118,6 +142,7 @@ describe('NotificationsListener', () => {
     it('does not re-throw for stock.low', async () => {
       await expect(
         listener.handleStockLow({
+          ...base(),
           ingredientId: 'ing-2',
           ingredientName: 'Flour',
           currentQty: 1,
@@ -131,6 +156,7 @@ describe('NotificationsListener', () => {
     it('does not re-throw for task.blocked', async () => {
       await expect(
         listener.handleTaskBlocked({
+          ...base(),
           taskId: 'task-fail',
           taskTitle: 'Some task',
           ownerUserId: 'user-fail',

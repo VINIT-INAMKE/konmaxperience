@@ -1,13 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import { QStashService } from './qstash.service';
-import {
-  OrderPlacedEvent,
-  StockLowEvent,
-  OrderReadyEvent,
-  DeliveryUpdatedEvent,
-  TaskBlockedEvent,
-} from './events/notification-events';
+import type { DomainEventPayloads } from '../common/events/domain-events';
+import { DomainEvent } from '../common/events/domain-events';
 
 @Injectable()
 export class NotificationsListener {
@@ -15,44 +10,58 @@ export class NotificationsListener {
 
   constructor(private readonly qstash: QStashService) {}
 
-  @OnEvent('order.placed')
-  async handleOrderPlaced(payload: OrderPlacedEvent) {
+  @OnEvent(DomainEvent.ORDER_PLACED)
+  async handleOrderPlaced(payload: DomainEventPayloads['order.placed']) {
     try {
       await this.qstash.publish('notify-new-order', payload as any);
     } catch (error) {
-      this.logger.warn('Failed to dispatch order.placed notification', String(error));
+      this.logger.warn(
+        'Failed to dispatch order.placed notification',
+        String(error),
+      );
     }
   }
 
-  @OnEvent('order.ready')
-  async handleOrderReady(payload: OrderReadyEvent) {
+  @OnEvent(DomainEvent.ORDER_READY)
+  async handleOrderReady(payload: DomainEventPayloads['order.ready']) {
     try {
       await this.qstash.publish('notify-order-ready', payload as any);
     } catch (error) {
-      this.logger.warn('Failed to dispatch order.ready notification', String(error));
+      this.logger.warn(
+        'Failed to dispatch order.ready notification',
+        String(error),
+      );
     }
   }
 
-  @OnEvent('delivery.updated')
-  async handleDeliveryUpdated(payload: DeliveryUpdatedEvent) {
+  @OnEvent(DomainEvent.DELIVERY_UPDATED)
+  async handleDeliveryUpdated(
+    payload: DomainEventPayloads['delivery.updated'],
+  ) {
     try {
       await this.qstash.publish('notify-delivery-update', payload as any);
     } catch (error) {
-      this.logger.warn('Failed to dispatch delivery.updated notification', String(error));
+      this.logger.warn(
+        'Failed to dispatch delivery.updated notification',
+        String(error),
+      );
     }
   }
 
-  @OnEvent('stock.low')
-  async handleStockLow(payload: StockLowEvent) {
+  @OnEvent(DomainEvent.STOCK_LOW)
+  async handleStockLow(payload: DomainEventPayloads['stock.low']) {
     try {
       await this.qstash.publish('notify-low-stock', payload as any);
     } catch (error) {
-      this.logger.warn('Failed to dispatch stock.low notification', String(error));
+      this.logger.warn(
+        'Failed to dispatch stock.low notification',
+        String(error),
+      );
     }
   }
 
-  @OnEvent('task.blocked')
-  async handleTaskBlocked(payload: TaskBlockedEvent) {
+  @OnEvent(DomainEvent.TASK_BLOCKED)
+  async handleTaskBlocked(payload: DomainEventPayloads['task.blocked']) {
     try {
       await this.qstash.publish('notify-task-blocked', {
         userId: payload.ownerUserId,
@@ -61,7 +70,10 @@ export class NotificationsListener {
         reason: payload.blockedReason,
       });
     } catch (error) {
-      this.logger.warn('Failed to dispatch task.blocked notification', String(error));
+      this.logger.warn(
+        'Failed to dispatch task.blocked notification',
+        String(error),
+      );
     }
   }
 }

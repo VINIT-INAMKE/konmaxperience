@@ -4,6 +4,7 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { KdsService } from './kds.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { FulfilmentService } from '../../fulfilment/fulfilment.service';
+import { DomainEvent } from '../../common/events/domain-events';
 
 const mockPrisma = {
   orderItem: { findUnique: jest.fn(), update: jest.fn() },
@@ -32,6 +33,7 @@ const makeTx = (opts: { notReadyCount: number; zone_id?: string | null }) => ({
   order: {
     findUniqueOrThrow: jest.fn().mockResolvedValue({
       id: 'order-1',
+      node_id: 'node-1',
       channel: 'dine_in',
       created_by: 'user-1',
       customer_id: null,
@@ -56,6 +58,7 @@ describe('KdsService', () => {
 
     service = module.get<KdsService>(KdsService);
     jest.clearAllMocks();
+    mockEmitter.emit.mockImplementation(() => true);
     mockFulfilment.deductItemIngredients.mockResolvedValue(undefined);
   });
 
@@ -127,9 +130,19 @@ describe('KdsService', () => {
 
   it('ready: auto-transitions the order and emits order.ready when all items are ready', async () => {
     const tx = makeTx({ notReadyCount: 0 });
+    let txResolved = false;
     mockPrisma.$transaction.mockImplementation(
-      async (cb: (t: unknown) => unknown) => cb(tx),
+      async (cb: (t: unknown) => unknown) => {
+        const out = await cb(tx);
+        txResolved = true;
+        return out;
+      },
     );
+    mockEmitter.emit.mockImplementation(() => {
+      // The event must never be dispatched from inside the transaction.
+      expect(txResolved).toBe(true);
+      return true;
+    });
 
     await service.updateItemStatus('oi-1', 'ready');
 
@@ -137,11 +150,32 @@ describe('KdsService', () => {
       where: { id: 'order-1' },
       data: { status: 'ready' },
     });
-    expect(mockEmitter.emit).toHaveBeenCalledWith('order.ready', {
-      orderId: 'order-1',
-      channel: 'dine_in',
-      createdBy: 'user-1',
+    expect(mockEmitter.emit).toHaveBeenCalledTimes(1);
+    expect(mockEmitter.emit).toHaveBeenCalledWith(
+      DomainEvent.ORDER_READY,
+      expect.objectContaining({
+        node_id: 'node-1',
+        actor: { actor_type: 'user', actor_id: 'user-1' },
+        occurred_at: expect.any(String),
+        orderId: 'order-1',
+        channel: 'dine_in',
+        createdBy: 'user-1',
+      }),
+    );
+  });
+
+  it('ready: a throwing listener does not fail the status change', async () => {
+    const tx = makeTx({ notReadyCount: 0 });
+    mockPrisma.$transaction.mockImplementation(
+      async (cb: (t: unknown) => unknown) => cb(tx),
+    );
+    mockEmitter.emit.mockImplementation(() => {
+      throw new Error('listener exploded');
     });
+
+    await expect(
+      service.updateItemStatus('oi-1', 'ready'),
+    ).resolves.toMatchObject({ id: 'oi-1', status: 'ready' });
   });
 
   it('ready: propagates deduction failure so the transaction rolls back', async () => {

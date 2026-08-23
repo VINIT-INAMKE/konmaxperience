@@ -14,6 +14,11 @@ import {
   SERIALIZABLE_TX_OPTIONS,
   withSerializableRetry,
 } from '../../common/utils/transaction-retry';
+import {
+  DomainEvent,
+  domainEventBase,
+  emitDomainEvent,
+} from '../../common/events/domain-events';
 
 export interface KdsOrderItem {
   id: string;
@@ -134,14 +139,9 @@ export class KdsService {
 
     // When status is 'ready' — wrap in $transaction with deduction and Serializable isolation
     if (newStatus === OrderItemStatus.ready) {
-      let wasAllReady = false;
-      let orderData: {
-        id: string;
-        channel: string;
-        created_by: string | null;
-      } | null = null;
-
-      const result = await withSerializableRetry(() =>
+      // The order row is carried OUT of the transaction rather than emitted from
+      // inside it: `order.ready` only fires once the commit has landed.
+      const { item: result, readyOrder } = await withSerializableRetry(() =>
         this.prisma.$transaction(async (tx) => {
           // Fetch item INSIDE transaction to prevent concurrent status race
           const item = await tx.orderItem.findUnique({
@@ -171,6 +171,7 @@ export class KdsService {
             where: { id: item.order_id },
             select: {
               id: true,
+              node_id: true,
               channel: true,
               created_by: true,
               customer_id: true,
@@ -215,39 +216,29 @@ export class KdsService {
               where: { id: item.order_id },
               data: { status: OrderStatus.ready },
             });
-            wasAllReady = true;
-            orderData = {
-              id: order.id,
-              channel: order.channel,
-              created_by: order.created_by,
-            };
           }
 
           return {
-            id: updated.id,
-            status: updated.status,
-            ready_at: updated.ready_at,
+            item: {
+              id: updated.id,
+              status: updated.status,
+              ready_at: updated.ready_at,
+            },
+            readyOrder: allReady ? order : null,
           };
         }, SERIALIZABLE_TX_OPTIONS),
       );
 
-      // Emit AFTER transaction commits (Pitfall 1 compliance)
-      if (wasAllReady && orderData) {
-        try {
-          this.eventEmitter.emit('order.ready', {
-            orderId: (
-              orderData as { id: string; channel: string; created_by: string }
-            ).id,
-            channel: (
-              orderData as { id: string; channel: string; created_by: string }
-            ).channel,
-            createdBy: (
-              orderData as { id: string; channel: string; created_by: string }
-            ).created_by,
-          });
-        } catch (e) {
-          /* event emission failed - non-critical */
-        }
+      // Emit AFTER the transaction commits (SPEC §4.1). `updateItemStatus` is
+      // not threaded a user id, so the actor is derived from the order the way
+      // the stock-movement audit rows already do it.
+      if (readyOrder) {
+        emitDomainEvent(this.eventEmitter, DomainEvent.ORDER_READY, {
+          ...domainEventBase(readyOrder.node_id, actorForOrder(readyOrder)),
+          orderId: readyOrder.id,
+          channel: readyOrder.channel,
+          createdBy: readyOrder.created_by,
+        });
       }
 
       return result;

@@ -4,6 +4,7 @@ import { EventsService } from './events.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { RazorpayService } from '../razorpay/razorpay.service';
 import { Prisma } from '@prisma/client';
+import { provideEventEmitter } from '../test-utils/mock-providers';
 
 describe('EventsService — Checkout & Confirm', () => {
   let service: EventsService;
@@ -55,6 +56,7 @@ describe('EventsService — Checkout & Confirm', () => {
         EventsService,
         { provide: PrismaService, useValue: prisma },
         { provide: RazorpayService, useValue: razorpay },
+        provideEventEmitter(),
       ],
     }).compile();
 

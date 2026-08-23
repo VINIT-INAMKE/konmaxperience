@@ -14,8 +14,15 @@ import {
   RecipeStatus,
   StockMode,
 } from '@prisma/client';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma/prisma.service';
 import { DEFAULT_NODE_ID } from '../node/node.constants';
+import {
+  DomainEvent,
+  domainEventBase,
+  emitDomainEvent,
+  userActor,
+} from '../common/events/domain-events';
 import { convertUnit } from '../common/utils/unit-conversion';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
@@ -96,7 +103,10 @@ export interface ProductAvailability {
 export class CatalogService {
   private readonly logger = new Logger(CatalogService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly eventEmitter: EventEmitter2,
+  ) {}
 
   // ----------------------------------------------------------------
   // Categories
@@ -267,11 +277,34 @@ export class CatalogService {
 
   /** Publish/unpublish — SPEC §9 `catalog/products/:id/publish`. */
   async setStatus(id: string, status: ProductStatus, userId: string) {
-    return this.prisma.product.update({
+    // Read the status first so `product.published` fires only on the real
+    // draft|archived → active transition, never on a re-save of a live product.
+    const before = await this.prisma.product.findUnique({
+      where: { id },
+      select: { status: true },
+    });
+
+    const product = await this.prisma.product.update({
       where: { id },
       data: { status, updated_by: userId },
       include: STAFF_INCLUDE,
     });
+
+    // Emit AFTER the update resolves (SPEC §4.1).
+    if (
+      status === ProductStatus.active &&
+      before?.status !== ProductStatus.active
+    ) {
+      emitDomainEvent(this.eventEmitter, DomainEvent.PRODUCT_PUBLISHED, {
+        ...domainEventBase(product.node_id, userActor(userId)),
+        productId: product.id,
+        name: product.name,
+        slug: product.slug,
+        type: product.type,
+      });
+    }
+
+    return product;
   }
 
   /** Archives rather than deletes: OrderItem.product_id is a hard FK. */

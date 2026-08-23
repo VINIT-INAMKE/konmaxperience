@@ -1,6 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { CatalogService } from './catalog.service';
 import { PrismaService } from '../prisma/prisma.service';
+import {
+  mockEventEmitter,
+  provideEventEmitter,
+} from '../test-utils/mock-providers';
+import { DomainEvent } from '../common/events/domain-events';
+
+const emitter = mockEventEmitter();
 
 jest.mock('../common/utils/unit-conversion', () => ({
   convertUnit: jest.fn((qty: number, from: string, to: string) => {
@@ -53,7 +60,11 @@ describe('CatalogService.computeServings (assemble)', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [CatalogService, { provide: PrismaService, useValue: prisma }],
+      providers: [
+        CatalogService,
+        { provide: PrismaService, useValue: prisma },
+        provideEventEmitter(emitter),
+      ],
     }).compile();
     service = module.get(CatalogService);
     jest.clearAllMocks();
@@ -178,7 +189,11 @@ describe('CatalogService product queries', () => {
   beforeEach(async () => {
     prisma = { product: { findMany: jest.fn().mockResolvedValue([]) } };
     const module: TestingModule = await Test.createTestingModule({
-      providers: [CatalogService, { provide: PrismaService, useValue: prisma }],
+      providers: [
+        CatalogService,
+        { provide: PrismaService, useValue: prisma },
+        provideEventEmitter(emitter),
+      ],
     }).compile();
     service = module.get(CatalogService);
   });
@@ -238,7 +253,11 @@ describe('CatalogService write guards', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [CatalogService, { provide: PrismaService, useValue: prisma }],
+      providers: [
+        CatalogService,
+        { provide: PrismaService, useValue: prisma },
+        provideEventEmitter(emitter),
+      ],
     }).compile();
     service = module.get(CatalogService);
     jest.clearAllMocks();
@@ -292,5 +311,98 @@ describe('CatalogService write guards', () => {
       status: 'active',
       updated_by: 'u-1',
     });
+  });
+});
+
+// -----------------------------------------------------------------
+// setStatus — product.published domain event (SPEC §4.1)
+// -----------------------------------------------------------------
+describe('CatalogService.setStatus — product.published', () => {
+  let service: CatalogService;
+  const prisma = {
+    product: { update: jest.fn(), findUnique: jest.fn() },
+  };
+  const published = {
+    id: 'p-1',
+    node_id: 'node-1',
+    name: 'Masala Chai',
+    slug: 'masala-chai',
+    type: 'prepared_food',
+    status: 'active',
+  };
+
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        CatalogService,
+        { provide: PrismaService, useValue: prisma },
+        provideEventEmitter(emitter),
+      ],
+    }).compile();
+    service = module.get(CatalogService);
+    jest.clearAllMocks();
+    emitter.emit.mockReturnValue(true);
+  });
+
+  it('emits once, after the update resolves, on draft -> active', async () => {
+    prisma.product.findUnique.mockResolvedValue({ status: 'draft' });
+    let updateResolved = false;
+    prisma.product.update.mockImplementation(async () => {
+      updateResolved = true;
+      return published;
+    });
+    emitter.emit.mockImplementation(() => {
+      expect(updateResolved).toBe(true);
+      return true;
+    });
+
+    await service.setStatus('p-1', 'active' as never, 'u-1');
+
+    expect(emitter.emit).toHaveBeenCalledTimes(1);
+    expect(emitter.emit).toHaveBeenCalledWith(
+      DomainEvent.PRODUCT_PUBLISHED,
+      expect.objectContaining({
+        node_id: 'node-1',
+        actor: { actor_type: 'user', actor_id: 'u-1' },
+        occurred_at: expect.any(String),
+        productId: 'p-1',
+        name: 'Masala Chai',
+        slug: 'masala-chai',
+        type: 'prepared_food',
+      }),
+    );
+  });
+
+  it('does not re-emit when the product is already active', async () => {
+    prisma.product.findUnique.mockResolvedValue({ status: 'active' });
+    prisma.product.update.mockResolvedValue(published);
+
+    await service.setStatus('p-1', 'active' as never, 'u-1');
+
+    expect(emitter.emit).not.toHaveBeenCalled();
+  });
+
+  it('does not emit when archiving', async () => {
+    prisma.product.findUnique.mockResolvedValue({ status: 'active' });
+    prisma.product.update.mockResolvedValue({
+      ...published,
+      status: 'archived',
+    });
+
+    await service.archiveProduct('p-1', 'u-1');
+
+    expect(emitter.emit).not.toHaveBeenCalled();
+  });
+
+  it('still resolves when the emitter throws', async () => {
+    prisma.product.findUnique.mockResolvedValue({ status: 'draft' });
+    prisma.product.update.mockResolvedValue(published);
+    emitter.emit.mockImplementation(() => {
+      throw new Error('listener exploded');
+    });
+
+    await expect(
+      service.setStatus('p-1', 'active' as never, 'u-1'),
+    ).resolves.toEqual(published);
   });
 });

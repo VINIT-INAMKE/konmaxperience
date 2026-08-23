@@ -1,26 +1,37 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateFeedbackDto } from './dto/create-feedback.dto';
 import { FeedbackFiltersDto } from './dto/feedback-filters.dto';
+import { DEFAULT_NODE_ID } from '../node/node.constants';
+import {
+  DomainEvent,
+  domainEventBase,
+  emitDomainEvent,
+  systemActor,
+} from '../common/events/domain-events';
 
 @Injectable()
 export class FeedbackService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly eventEmitter: EventEmitter2,
+  ) {}
 
   async submit(dto: CreateFeedbackDto) {
     // If order_id provided, verify order exists
+    let nodeId = DEFAULT_NODE_ID;
     if (dto.order_id) {
       const order = await this.prisma.order.findUnique({
         where: { id: dto.order_id },
       });
       if (!order) {
-        throw new NotFoundException(
-          `Order with ID ${dto.order_id} not found`,
-        );
+        throw new NotFoundException(`Order with ID ${dto.order_id} not found`);
       }
+      nodeId = order.node_id ?? DEFAULT_NODE_ID;
     }
 
-    return this.prisma.feedback.create({
+    const feedback = await this.prisma.feedback.create({
       data: {
         order_id: dto.order_id,
         rating: dto.rating,
@@ -29,6 +40,18 @@ export class FeedbackService {
         customer_phone: dto.customer_phone,
       },
     });
+
+    // Emit AFTER the row is created (SPEC §4.1). `POST /feedback` is public and
+    // unauthenticated, so the actor is system rather than a user or customer.
+    emitDomainEvent(this.eventEmitter, DomainEvent.FEEDBACK_RECEIVED, {
+      ...domainEventBase(nodeId, systemActor()),
+      feedbackId: feedback.id,
+      orderId: feedback.order_id ?? null,
+      rating: feedback.rating,
+      comment: feedback.comment ?? null,
+    });
+
+    return feedback;
   }
 
   async findAll(filters: FeedbackFiltersDto) {

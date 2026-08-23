@@ -3,11 +3,18 @@ import {
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateVendorDto } from './dto/create-vendor.dto';
 import { UpdateVendorDto } from './dto/update-vendor.dto';
 import { CreateVendorPriceDto } from './dto/create-vendor-price.dto';
 import { CostCalculatorService } from '../recipes/cost-calculator.service';
+import {
+  DomainEvent,
+  domainEventBase,
+  emitDomainEvent,
+  systemActor,
+} from '../common/events/domain-events';
 
 const VENDOR_INCLUDE = {
   VendorPrices: {
@@ -21,6 +28,7 @@ export class VendorsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly costCalculatorService: CostCalculatorService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async findAll(status?: string) {
@@ -109,10 +117,24 @@ export class VendorsService {
       },
       include: {
         ingredient: { select: { id: true, name: true, base_unit: true } },
-        vendor: { select: { id: true, name: true } },
+        vendor: { select: { id: true, name: true, node_id: true } },
       },
     });
     await this.recalculateCostsForIngredient(dto.ingredient_id);
+
+    // Emit AFTER the price row and the recipe-cost recalculation have landed
+    // (SPEC §4.1). `VendorPrice` has no `node_id` — the vendor's node owns it.
+    // `POST /vendors/prices` is not threaded a user id, so the actor is system.
+    emitDomainEvent(this.eventEmitter, DomainEvent.VENDOR_PRICE_UPDATED, {
+      ...domainEventBase(result.vendor.node_id, systemActor()),
+      vendorPriceId: result.id,
+      vendorId: result.vendor_id,
+      ingredientId: result.ingredient_id,
+      ingredientName: result.ingredient.name,
+      price: String(result.price),
+      unit: result.unit,
+    });
+
     return result;
   }
 

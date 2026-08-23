@@ -1,5 +1,9 @@
 import { NotFoundException } from '@nestjs/common';
 import { FeedbackService } from './feedback.service';
+import { DomainEvent } from '../common/events/domain-events';
+import { DEFAULT_NODE_ID } from '../node/node.constants';
+
+const mockEmitter = { emit: jest.fn() };
 
 const mockPrisma = {
   feedback: {
@@ -16,8 +20,9 @@ describe('FeedbackService', () => {
   let service: FeedbackService;
 
   beforeEach(() => {
-    service = new FeedbackService(mockPrisma as any);
+    service = new FeedbackService(mockPrisma as any, mockEmitter as any);
     jest.clearAllMocks();
+    mockEmitter.emit.mockImplementation(() => true);
   });
 
   // ---------------------------------------------------------------
@@ -61,6 +66,73 @@ describe('FeedbackService', () => {
       mockPrisma.order.findUnique.mockResolvedValue(null);
 
       await expect(service.submit(dto)).rejects.toThrow(NotFoundException);
+      expect(mockEmitter.emit).not.toHaveBeenCalled();
+    });
+
+    // -------------------------------------------------------------
+    // feedback.received domain event (SPEC §4.1)
+    // -------------------------------------------------------------
+    it('emits feedback.received once, after the row is created', async () => {
+      let createResolved = false;
+      mockPrisma.feedback.create.mockImplementation(async () => {
+        createResolved = true;
+        return {
+          id: 'f9',
+          order_id: null,
+          rating: 5,
+          comment: 'Great food!',
+        };
+      });
+      mockEmitter.emit.mockImplementation(() => {
+        expect(createResolved).toBe(true);
+        return true;
+      });
+
+      await service.submit({ rating: 5, comment: 'Great food!' });
+
+      expect(mockEmitter.emit).toHaveBeenCalledTimes(1);
+      expect(mockEmitter.emit).toHaveBeenCalledWith(
+        DomainEvent.FEEDBACK_RECEIVED,
+        expect.objectContaining({
+          node_id: DEFAULT_NODE_ID,
+          actor: { actor_type: 'system', actor_id: null },
+          occurred_at: expect.any(String),
+          feedbackId: 'f9',
+          orderId: null,
+          rating: 5,
+          comment: 'Great food!',
+        }),
+      );
+    });
+
+    it('takes the node from the linked order when one is given', async () => {
+      mockPrisma.order.findUnique.mockResolvedValue({
+        id: 'order-1',
+        node_id: 'node-7',
+      });
+      mockPrisma.feedback.create.mockResolvedValue({
+        id: 'f10',
+        order_id: 'order-1',
+        rating: 4,
+        comment: null,
+      });
+
+      await service.submit({ rating: 4, order_id: 'order-1' });
+
+      expect(mockEmitter.emit).toHaveBeenCalledWith(
+        DomainEvent.FEEDBACK_RECEIVED,
+        expect.objectContaining({ node_id: 'node-7', orderId: 'order-1' }),
+      );
+    });
+
+    it('still resolves when the emitter throws', async () => {
+      const created = { id: 'f11', order_id: null, rating: 2, comment: null };
+      mockPrisma.feedback.create.mockResolvedValue(created);
+      mockEmitter.emit.mockImplementation(() => {
+        throw new Error('listener exploded');
+      });
+
+      await expect(service.submit({ rating: 2 })).resolves.toEqual(created);
     });
   });
 
