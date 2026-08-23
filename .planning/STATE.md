@@ -2,8 +2,8 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Mission OS + Marketplace
-status: "Phase 30 (P2 platform foundation) complete — Phase 31 (P3 mission bridge) next"
-stopped_at: P2 complete at fc49c19 — single baseline migration applied, seeded and smoke-tested; see .planning/phases/30-p2-platform-foundation/30-01-SUMMARY.md
+status: "Phase 31 (P3 mission bridge) complete pending the frontend gate re-run — Phases 32 and 33 next, in parallel"
+stopped_at: P3 complete at 080a664 — migration 20260823180000_p3_mission_bridge applied, seeded, drift-gated and smoke-tested end to end; see .planning/phases/31-p3-mission-bridge/31-01-SUMMARY.md
 last_updated: "2026-08-23"
 progress:
   total_phases: 7
@@ -23,10 +23,24 @@ See: .planning/PROJECT.md (updated 2026-08-22) and /SPEC.md (canonical v2.0 spec
 ## Current Position
 
 Milestone: v2.0 Mission OS + Marketplace (Phases 29–35 on branch `v2-os-marketplace`)
-Phase: 30 (Platform Foundation, P2) — **COMPLETE** at `fc49c19` (record: `.planning/phases/30-p2-platform-foundation/30-01-SUMMARY.md`)
-Next phase: 31 (Mission Bridge, P3) — not started
-Previous phase: 29 (Stop the Bleeding, P1) — complete at `139d032` + P1-B closure
+Phase: 31 (Mission Bridge, P3) — **COMPLETE pending the frontend gate re-run** at `080a664` (record: `.planning/phases/31-p3-mission-bridge/31-01-SUMMARY.md`)
+Next phases: 32 (Role-Aware IA + Identity, P4) and 33 (Marketplace Backend, P5a) — can proceed in parallel
+Previous phase: 30 (Platform Foundation, P2) — complete at `fc49c19` (record: `.planning/phases/30-p2-platform-foundation/30-01-SUMMARY.md`)
 Previous milestone: v1.1 complete 2026-03-27 (Phases 14–24, 27, 28 shipped; Phases 25 and 26 were never built — see ROADMAP.md notes)
+
+P3 shipped all 17 tasks of `docs/superpowers/plans/2026-08-23-p3-mission-bridge.md`: the typed after-commit
+domain-event catalogue (`common/events/domain-events.ts`), `MissionBridgeService` + `mission-bridge.rules.ts`
++ the `BridgeDispatch` exactly-once ledger, bridge evidence written as the seeded `SYSTEM` actor, four derived
+meters as pure functions plus 50/50 hybrids, `ReadinessSignal`/`ReadinessSnapshot` finally consumed, the nightly
+snapshot job under an advisory lock, the history + signals APIs, policy-generated `Approval` rows on tasks and
+recipes with a validation cascade that now actually gates on them, and decision tiers with voting. One additive
+migration `20260823180000_p3_mission_bridge` (enum + `BridgeDispatch` + 3 meter columns + 3 indexes, zero DROPs).
+Gates at `080a664`: backend 75/75 suites · 974 tests · tsc clean · 0 lint errors · build clean · drift gate
+`No difference detected.`
+
+**Outstanding before Phase 31 is closed end to end:** re-run the frontend gates
+(`cd frontend && npx tsc --noEmit && npm run lint && npm run build`) on the merged tree — Tasks 15 and 16 were
+verified in their own worktrees, not after the merge.
 
 P2 shipped all 16 tasks of `docs/superpowers/plans/2026-08-23-p2-platform-foundation.md`: 50 Prisma enums,
 `Node` + `node_id` on 24 aggregates, `AuditEvent` + `AuditService`, `Task.subject`, `ApprovalPolicy`,
@@ -273,16 +287,34 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-08-23
-Stopped at: Phase 30 (P2 platform foundation) complete at `fc49c19` — single baseline migration
-`20260823120000_p2_platform_foundation` committed, applied to Postgres, seeded, drift-checked and
-smoke-tested. Record: `.planning/phases/30-p2-platform-foundation/30-01-SUMMARY.md`
+Stopped at: Phase 31 (P3 mission bridge) complete at `080a664` — migration
+`20260823180000_p3_mission_bridge` committed, applied to Postgres, seeded, drift-checked and smoke-tested
+end to end against `dist/src/main.js`. Record: `.planning/phases/31-p3-mission-bridge/31-01-SUMMARY.md`
 Resume file: None
-Next action: `/gsd:plan-phase 31` (P3 mission bridge — domain events, `MissionBridgeService`, derived meters +
-snapshots + history, policy-generated approvals, recipe approval via policy, decision votes)
+Next action: `/gsd:plan-phase 32` and `/gsd:plan-phase 33` — they are independent and can run in parallel.
 
-Carry into Phase 31:
+Carry into Phases 32/33:
+- **Re-run the frontend gates on the merged tree** (`cd frontend && npx tsc --noEmit && npm run lint &&
+  npm run build`). Tasks 15/16 were verified in their worktrees only.
+- `QA-03` (Playwright smoke test 1) → **Phase 32**. The six-step flow is proven by the recorded curl smoke in
+  the Phase 31 summary; only the browser automation moves.
+- `QA-02` (Postgres-backed integration harness) → **Phase 33**. P3 delivers unit coverage plus the runtime
+  smoke, so `QA-02` is partially met, not fully.
+- Phase 33 also owns the deferred emitters (`shipment.status_changed`, `shipment.delivered`,
+  `review.published`, `coupon.redeemed`, `booking.attended` — declared with `emitter: 'P5'` in
+  `mission-bridge.rules.ts`, one `emitDomainEvent` call each) and swapping `Review` in for `Feedback.rating`
+  behind the `ratingSource` seam in the `QUALITY` formula.
+- Phase 32 owns `/admin/approval-policies`, the header approvals badge, the spine nav, `/tasks`, the Mission
+  Control §6.5 layout, and the `Notification.is_email_sent` removal.
+- **Decision 4 is a live behaviour change**: `requires_approval: true` with zero `Approval` rows now blocks
+  validation. On a populated database, affected tasks stop being `valid` on their next cascade. No backfill was
+  written.
+- `PATCH /tasks/:id {"status":"done"}` does not re-run the validation cascade (pre-existing v1 behaviour;
+  `evidence.service.ts:334` is the only validator and `TasksService` never calls it). Fixing it means crossing
+  the `TasksModule ↔ EvidenceModule` edge P3 deliberately avoided.
 - P2 deferred `Shipment*`/`Refund`/`Coupon*`/`Loyalty*`/`Review`/`UsageEvent` **models** to Phase 33 (P5);
   their enums and the `Order` money columns already exist. ROADMAP Phase 30 criterion 4 corrected accordingly.
 - Six frontend follow-ups are listed at the end of the Phase 30 summary (variant selection UI, `purchase_orders`
   import type, `AdminAdHocInjectorWidget`, `OrderItem.fulfilment` derivation, explicit-UTC day filters,
   product media upload UI).
+- Demo passwords were rotated during Phase 31 Task 17 — the current set is in the Phase 31 summary, §6.

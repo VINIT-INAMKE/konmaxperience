@@ -52,7 +52,7 @@
 
 - [ ] **Phase 29: Stop the Bleeding (P1)** - 14 Critical/High defects fixed with regression tests, config validation, safe seeds, error boundaries, test suite green, CI enforcing
 - [x] **Phase 30: Platform Foundation (P2)** - Fresh migration baseline: Node, Prisma enums, AuditEvent, Task.subject, ApprovalPolicy, timestamptz, CHECKs, Product replacing MenuItem, new seeds *(complete 2026-08-23 at `fc49c19`)*
-- [ ] **Phase 31: Mission Bridge (P3)** - Domain events, MissionBridgeService, derived meters + snapshots + history, policy-generated approvals, recipe approval via policy, decision votes
+- [x] **Phase 31: Mission Bridge (P3)** - Domain events, MissionBridgeService, derived meters + snapshots + history, policy-generated approvals, recipe approval via policy, decision votes *(complete 2026-08-23 at `080a664`, range `ced2385..080a664`)*
 - [ ] **Phase 32: Role-Aware IA + Identity (P4)** - Persistent header, spine nav, ModuleAccess, /tasks, My Quests, sheets, chips, motion allowlist, brand tokens light + dark, Pusher on kitchen screens, usage events
 - [ ] **Phase 33: Marketplace Backend (P5a)** - Catalog, mixed-fulfilment quote/checkout/confirm, FulfilmentService, Shiprocket + shipments, coupons, loyalty, reviews, search, refunds
 - [ ] **Phase 34: Marketplace Storefront + Staff Commerce (P5b)** - Storefront routes (desktop + SEO), cart/checkout UI, account, staff Catalog/Promotions/Reviews/Shipments/Orders/Experiences/Customers screens
@@ -127,6 +127,7 @@ Plans:
 **Execution Order:**
 v1.1 (done): 14 -> 15 -> 16 -> 17 -> 18 -> 19 -> 20 -> 21 -> 22 -> 23 -> 24 -> 27 -> 28 (25, 26 never executed).
 v2.0: 29 -> 30 -> 31 -> 32 -> 33 -> 34 -> 35. Phase 33 may run in parallel with Phase 32 once Phase 31 is complete; Phase 34 needs both.
+**Phase 31 completed 2026-08-23 — Phases 32 and 33 are now unblocked and should run in parallel.**
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -145,9 +146,9 @@ v2.0: 29 -> 30 -> 31 -> 32 -> 33 -> 34 -> 35. Phase 33 may run in parallel with 
 | 26. Order Detail Page | v1.1 | 0/0 | Not built (folded into Phase 34) | — |
 | 27. Mission Flow & Assessment Gap Closure | v1.1 | 5/5 | Complete    | 2026-03-27 |
 | 28. Recipe preparation_type | v1.1 | 5/5 | Complete    | 2026-03-27 |
-| 29. Stop the Bleeding (P1) | v2.0 | 0/? | Not started | — |
-| 30. Platform Foundation (P2) | v2.0 | 0/? | Not started | — |
-| 31. Mission Bridge (P3) | v2.0 | 0/? | Not started | — |
+| 29. Stop the Bleeding (P1) | v2.0 | 1/1 | Complete    | 2026-08-23 |
+| 30. Platform Foundation (P2) | v2.0 | 1/1 | Complete    | 2026-08-23 |
+| 31. Mission Bridge (P3) | v2.0 | 1/1 | Complete (frontend gates to re-run) | 2026-08-23 |
 | 32. Role-Aware IA + Identity (P4) | v2.0 | 0/? | Not started | — |
 | 33. Marketplace Backend (P5a) | v2.0 | 0/? | Not started | — |
 | 34. Marketplace Storefront + Staff Commerce (P5b) | v2.0 | 0/? | Not started | — |
@@ -443,7 +444,7 @@ P0 (canonical spec + planning sync) has no phase number: `SPEC.md` was committed
 Plans:
 - [x] 30-01 — `docs/superpowers/plans/2026-08-23-p2-platform-foundation.md` (16 tasks, `a6c454c..fc49c19`); record at `.planning/phases/30-p2-platform-foundation/30-01-SUMMARY.md`
 
-### Phase 31: Mission Bridge (P3)
+### Phase 31: Mission Bridge (P3) — ✅ COMPLETE (2026-08-23, `080a664`)
 **Goal**: Operational events automatically become bridge evidence and readiness signals, four meters are derived from ops state with daily snapshots and a history API, and approval gates and decision votes execute from policy tables.
 **Depends on**: Phase 30
 **Requirements**: BRIDGE-01 … BRIDGE-04, READY-01 … READY-03, GOV-01 … GOV-04, QA-02, QA-03
@@ -454,8 +455,11 @@ Plans:
   4. A task with `requires_approval` gets one pending `Approval` per policy role; validation requires all of them (or a `FOUNDER_ADMIN` override with reason); self-approval is blocked and delegation is honoured
   5. Recipe approval flows through the `food` policy (legacy direct status flip removed); decisions run tier 1 (auto-approve by domain lead), tier 2 (`DecisionVote` 2+1 → `aligned` → `approved`), tier 3 (founder), with reject → `rejected` and founder `reopen`
   6. Smoke test 1 (`login → create task → upload evidence → approve → meter moves`) passes in CI
+     — **Corrected 2026-08-23:** criteria 1–5 all shipped and were verified end to end against `dist/src/main.js` (evidence recorded verbatim in the phase summary). Criterion 6 shipped as a **recorded curl smoke, not a CI job**: `QA-03` (the Playwright automation on a built preview) moves to **Phase 32**, where the header, spine and `/tasks` selectors it would target actually exist. `QA-02` is **partially** met — unit coverage for every multi-write path plus this runtime smoke — with the Postgres-backed integration harness moving to **Phase 33**, alongside the order-confirm/shipment transactions that make it earn its keep.
 **Spec sections**: §3.2, §4.1–§4.4, §9, §10, §11 P3
-**Plans**: TBD
+**Plans**: `docs/superpowers/plans/2026-08-23-p3-mission-bridge.md` (17 tasks) — record: `.planning/phases/31-p3-mission-bridge/31-01-SUMMARY.md`
+**Migration**: `20260823180000_p3_mission_bridge` — `BridgeOutcome` enum, `BridgeDispatch` table, 3 `ReadinessMeter` columns, 3 indexes; additive only, zero DROPs. Drift gate: `No difference detected.`
+**Gates at `080a664`**: backend 75/75 suites · 974 tests · `tsc` exit 0 · 0 lint errors · build clean. Frontend gates still to be re-run on the merged tree.
 
 ### Phase 32: Role-Aware IA + Identity (P4)
 **Goal**: Every role lands on "what I must move today" through a persistent mission header, a fixed navigation spine scoped by `ModuleAccess`, a real `/tasks`, and one brand token system validated in light and dark.
