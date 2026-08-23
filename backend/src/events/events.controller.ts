@@ -17,6 +17,7 @@ import { UpdateEventDto } from './dto/update-event.dto';
 import { CreateBookingDto } from './dto/create-booking.dto';
 import { CheckoutEventDto } from './dto/checkout-event.dto';
 import { ConfirmBookingDto } from './dto/confirm-booking.dto';
+import { MarkAttendanceDto } from './dto/mark-attendance.dto';
 import { Public } from '../common/decorators/public.decorator';
 import { RequiresPermission } from '../common/decorators/permissions.decorator';
 import { Permission } from '../types/permissions';
@@ -107,5 +108,20 @@ export class EventsController {
   @RequiresPermission(Permission.MANAGE_OPS)
   async getBookings(@Param('id', ParseUUIDPipe) id: string) {
     return this.eventsService.getBookings(id);
+  }
+
+  /**
+   * OPS-04 — the host marks a booking `attended` or `no_show` on the day.
+   * `attended` opens the review gate on the linked order item and fires
+   * `booking.attended`.
+   */
+  @Post(':id/attendance')
+  @RequiresPermission(Permission.MANAGE_OPS)
+  async markAttendance(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: MarkAttendanceDto,
+    @Req() req: any,
+  ) {
+    return this.eventsService.markAttendance(id, dto, req.user?.id ?? null);
   }
 }
