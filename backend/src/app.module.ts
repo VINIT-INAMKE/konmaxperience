@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -74,6 +74,11 @@ import { ShippingModule } from './shipping/shipping.module';
 import { PromotionsModule } from './promotions/promotions.module';
 import { RefundsModule } from './refunds/refunds.module';
 import { ReviewsModule } from './reviews/reviews.module';
+// P5a wave 5 — staff customers screen. `CustomerPresenceInterceptor` is bound
+// globally below so every customer-authenticated request refreshes
+// `Customer.last_seen_at` (throttled to one write per customer per 15 minutes).
+import { CustomersModule } from './customers/customers.module';
+import { CustomerPresenceInterceptor } from './customers/customer-presence.interceptor';
 
 @Module({
   imports: [
@@ -142,6 +147,7 @@ import { ReviewsModule } from './reviews/reviews.module';
     MeModule,
     SearchModule,
     ReviewsModule,
+    CustomersModule,
   ],
   controllers: [AppController],
   providers: [
@@ -149,6 +155,8 @@ import { ReviewsModule } from './reviews/reviews.module';
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: PermissionsGuard },
     { provide: APP_GUARD, useClass: UserAwareThrottlerGuard },
+    // Guards run before interceptors, so `req.user` is already decoded here.
+    { provide: APP_INTERCEPTOR, useClass: CustomerPresenceInterceptor },
   ],
 })
 export class AppModule {}
