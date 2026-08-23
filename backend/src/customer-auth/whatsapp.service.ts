@@ -14,17 +14,58 @@ export class WhatsAppService {
     // Dev fallback -- log to console if WhatsApp not configured
     if (!this.token || !this.phoneId) {
       if (process.env.NODE_ENV === 'production') {
-        throw new Error('WhatsApp not configured in production — set WHATSAPP_TOKEN and WHATSAPP_PHONE_ID');
+        throw new Error(
+          'WhatsApp not configured in production — set WHATSAPP_TOKEN and WHATSAPP_PHONE_ID',
+        );
       }
       console.log(`[DEV] OTP for ${recipientPhone}: ${otp}`);
       return;
     }
 
-    // Normalize phone: ensure 91 prefix, no +
-    const normalized = recipientPhone.startsWith('91')
+    await this.postTemplate(recipientPhone, 'otp_verification', [otp], 'OTP');
+  }
+
+  /**
+   * P5a SHIP-05 — a parameterised template send (shipment updates, and any
+   * later transactional template). Same Graph API call as {@link sendOtp}.
+   *
+   * Unlike `sendOtp` this never throws when WhatsApp is unconfigured: its
+   * callers are notification side-effects of a committed write, so a missing
+   * credential must degrade to a log line rather than surface as an error.
+   */
+  async sendTemplate(
+    recipientPhone: string,
+    templateName: string,
+    bodyParams: string[] = [],
+  ): Promise<void> {
+    if (!this.token || !this.phoneId) {
+      console.log(
+        `[DEV] WhatsApp template "${templateName}" for ${recipientPhone}: ${bodyParams.join(' | ')}`,
+      );
+      return;
+    }
+
+    await this.postTemplate(
+      recipientPhone,
+      templateName,
+      bodyParams,
+      `template ${templateName}`,
+    );
+  }
+
+  /** Normalize phone: ensure 91 prefix, no + */
+  private normalize(recipientPhone: string): string {
+    return recipientPhone.startsWith('91')
       ? recipientPhone
       : `91${recipientPhone}`;
+  }
 
+  private async postTemplate(
+    recipientPhone: string,
+    templateName: string,
+    bodyParams: string[],
+    label: string,
+  ): Promise<void> {
     const url = `https://graph.facebook.com/v18.0/${this.phoneId}/messages`;
     const res = await fetch(url, {
       method: 'POST',
@@ -34,15 +75,15 @@ export class WhatsAppService {
       },
       body: JSON.stringify({
         messaging_product: 'whatsapp',
-        to: normalized,
+        to: this.normalize(recipientPhone),
         type: 'template',
         template: {
-          name: 'otp_verification',
+          name: templateName,
           language: { code: 'en' },
           components: [
             {
               type: 'body',
-              parameters: [{ type: 'text', text: otp }],
+              parameters: bodyParams.map((text) => ({ type: 'text', text })),
             },
           ],
         },
@@ -51,7 +92,9 @@ export class WhatsAppService {
 
     if (!res.ok) {
       const body = await res.text();
-      console.error(`[WhatsApp] Failed to send OTP: ${res.status} ${body}`);
+      console.error(
+        `[WhatsApp] Failed to send ${label}: ${res.status} ${body}`,
+      );
       throw new Error(`WhatsApp API error: ${res.status}`);
     }
   }

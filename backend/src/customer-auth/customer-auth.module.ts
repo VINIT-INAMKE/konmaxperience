@@ -22,6 +22,8 @@ import { RedisService } from './redis.service';
   ],
   controllers: [CustomerAuthController],
   providers: [CustomerAuthService, WhatsAppService, RedisService],
-  exports: [CustomerAuthService, RedisService],
+  // `WhatsAppService` is exported for the Shiprocket webhook's customer
+  // notification (P5a SHIP-05); it stays the single instance of the sender.
+  exports: [CustomerAuthService, RedisService, WhatsAppService],
 })
 export class CustomerAuthModule {}
