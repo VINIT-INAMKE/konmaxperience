@@ -2,6 +2,8 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { NotificationType } from '@prisma/client';
 import { NotificationsService } from '../notifications.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import { RealtimeService } from '../../realtime/realtime.service';
+import { REALTIME_EVENTS } from '../../realtime/realtime.channels';
 
 describe('NotificationsService', () => {
   let service: NotificationsService;
@@ -18,6 +20,7 @@ describe('NotificationsService', () => {
       findMany: jest.Mock;
     };
   };
+  let realtime: { emit: jest.Mock };
 
   beforeEach(async () => {
     prisma = {
@@ -34,14 +37,37 @@ describe('NotificationsService', () => {
       },
     };
 
+    realtime = { emit: jest.fn().mockResolvedValue(undefined) };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         NotificationsService,
         { provide: PrismaService, useValue: prisma },
+        { provide: RealtimeService, useValue: realtime },
       ],
     }).compile();
 
     service = module.get<NotificationsService>(NotificationsService);
+  });
+
+  it('pushes notification.created to the recipient own channel', async () => {
+    prisma.notification.create.mockResolvedValue({
+      id: 'notif-1',
+      user_id: 'user-1',
+    });
+
+    await service.create({
+      user_id: 'user-1',
+      type: NotificationType.task_due,
+      title: 'Task due',
+      body: 'Your task is due soon',
+    });
+
+    expect(realtime.emit).toHaveBeenCalledWith(
+      'private-user-user-1',
+      REALTIME_EVENTS.NOTIFICATION_CREATED,
+      { id: 'notif-1' },
+    );
   });
 
   describe('create', () => {

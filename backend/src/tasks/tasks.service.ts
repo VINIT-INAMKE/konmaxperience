@@ -27,6 +27,52 @@ import {
   userActor,
 } from '../common/events/domain-events';
 import { SERIALIZABLE_TX_OPTIONS } from '../common/utils/transaction-retry';
+import { isEnumValue } from '../common/utils/parse-enum';
+
+/** Page size used when a caller sends `cursor` but no `limit`. */
+export const DEFAULT_TASK_PAGE_SIZE = 50;
+/** Hard cap kept for the legacy unpaginated array response. */
+export const LEGACY_TASK_CAP = 200;
+
+/** The relations every `GET /tasks` row carries, in both response shapes. */
+const TASK_LIST_INCLUDE = {
+  owner: { select: { id: true, name: true } },
+  creator: { select: { id: true, name: true } },
+  depends_on: { select: { id: true, title: true, status: true } },
+  quest: {
+    select: {
+      id: true,
+      title: true,
+      mission: { select: { id: true, title: true } },
+    },
+  },
+  readiness_meter: { select: { id: true, name: true } },
+} as const satisfies Prisma.TaskInclude;
+
+export type TaskListItem = Prisma.TaskGetPayload<{
+  include: typeof TASK_LIST_INCLUDE;
+}> & {
+  is_own: boolean;
+  pending_approvals: number;
+};
+
+/** `IA-04` cursor page. `next_cursor` is the id of the last row on this page. */
+export interface TaskListPage {
+  items: TaskListItem[];
+  next_cursor: string | null;
+  has_more: boolean;
+}
+
+export interface TaskListFilters {
+  questId?: string;
+  missionId?: string;
+  status?: string;
+  taskType?: string;
+  viewAs?: string;
+  mine?: boolean;
+  cursor?: string;
+  limit?: number;
+}
 
 @Injectable()
 export class TasksService {
@@ -37,16 +83,24 @@ export class TasksService {
     private readonly approvalPolicy: ApprovalPolicyService,
   ) {}
 
+  /**
+   * `IA-04`. Additive and backwards-compatible: when the caller asks for neither
+   * `cursor` nor `limit` the response keeps its legacy bare-array shape, so the
+   * six existing callers are untouched. Ask for either and the response becomes
+   * `{ items, next_cursor, has_more }`.
+   */
   async findAll(
     requestingUser: { id: string; roleCode: string },
-    filters: {
-      questId?: string;
-      missionId?: string;
-      status?: string;
-      taskType?: string;
-      viewAs?: string;
-    },
-  ) {
+    filters: TaskListFilters & { cursor?: undefined; limit?: undefined },
+  ): Promise<TaskListItem[]>;
+  async findAll(
+    requestingUser: { id: string; roleCode: string },
+    filters: TaskListFilters,
+  ): Promise<TaskListItem[] | TaskListPage>;
+  async findAll(
+    requestingUser: { id: string; roleCode: string },
+    filters: TaskListFilters,
+  ): Promise<TaskListItem[] | TaskListPage> {
     const perms = await getPermissionsForRole(
       requestingUser.roleCode,
       this.prisma,
@@ -76,44 +130,72 @@ export class TasksService {
       where.mission_id = filters.missionId;
     }
     if (filters.status) {
-      where.status = filters.status;
+      // `status` accepts a comma-separated list so the board can ask for
+      // "todo,doing" in one call. Every value is validated against the enum.
+      const values = filters.status
+        .split(',')
+        .map((value) => value.trim())
+        .filter(Boolean);
+      for (const value of values) {
+        if (!isEnumValue(TaskStatus, value)) {
+          throw new BadRequestException(
+            `Invalid status: "${value}". Allowed: ${Object.values(TaskStatus).join(', ')}`,
+          );
+        }
+      }
+      if (values.length > 0) {
+        where.status = values.length > 1 ? { in: values } : values[0];
+      }
     }
     if (filters.taskType) {
       where.task_type = filters.taskType;
     }
 
-    const tasks = await this.prisma.task.findMany({
+    // `mine` is applied last so it can only ever narrow the role scope, never widen it.
+    if (filters.mine) {
+      where.owner_user_id = requestingUser.id;
+    }
+
+    const paginated = filters.cursor !== undefined || filters.limit !== undefined;
+    const limit = filters.limit ?? DEFAULT_TASK_PAGE_SIZE;
+
+    const rows = await this.prisma.task.findMany({
       where,
-      include: {
-        owner: { select: { id: true, name: true } },
-        creator: { select: { id: true, name: true } },
-        depends_on: { select: { id: true, title: true, status: true } },
-        quest: {
-          select: {
-            id: true,
-            title: true,
-            mission: { select: { id: true, title: true } },
-          },
-        },
-        readiness_meter: { select: { id: true, name: true } },
-      },
-      orderBy: [{ priority: 'desc' }, { created_at: 'desc' }],
-      take: 200,
+      include: TASK_LIST_INCLUDE,
+      // `id` is the tiebreaker that makes the cursor stable; the two leading keys
+      // are the legacy ordering, so unpaginated callers see no change.
+      orderBy: [{ priority: 'desc' }, { created_at: 'desc' }, { id: 'desc' }],
+      take: paginated ? limit + 1 : LEGACY_TASK_CAP,
+      ...(filters.cursor
+        ? { cursor: { id: filters.cursor }, skip: 1 }
+        : {}),
     });
+
+    const hasMore = paginated && rows.length > limit;
+    const page = hasMore ? rows.slice(0, limit) : rows;
 
     // Pending-approval count per task, so the board can render the gate chip
     // without a second round trip. Approvals are polymorphic, so `_count` on the
     // relation is not available — one groupBy over the page of ids instead.
     const pendingByTask = await this.countPendingApprovals(
-      tasks.map((task) => task.id),
+      page.map((task) => task.id),
     );
 
     // Add is_own boolean: admin sees all as is_own=true (can edit anything)
-    return tasks.map((task) => ({
+    const items = page.map((task) => ({
       ...task,
       is_own: isAdmin || task.owner_user_id === requestingUser.id,
       pending_approvals: pendingByTask.get(task.id) ?? 0,
     }));
+
+    // Legacy shape preserved when the caller asks for neither cursor nor limit.
+    if (!paginated) return items;
+
+    return {
+      items,
+      next_cursor: hasMore ? items[items.length - 1].id : null,
+      has_more: hasMore,
+    };
   }
 
   private async countPendingApprovals(

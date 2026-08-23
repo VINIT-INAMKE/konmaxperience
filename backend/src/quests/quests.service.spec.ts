@@ -102,6 +102,30 @@ describe('QuestsService', () => {
         { tasks: { some: { owner_user_id: 'user-9' } } },
       ]);
     });
+
+    it('narrows an admin to their own quests when mine is true (IA-04)', async () => {
+      prisma.quest.findMany.mockResolvedValue([]);
+
+      await service.findAll(adminUser, { mine: true });
+
+      const callArgs = prisma.quest.findMany.mock.calls[0][0];
+      expect(callArgs.where.owner_user_id).toBe('user-1');
+      expect(callArgs.where.OR).toBeUndefined();
+    });
+
+    it('replaces the wider non-admin OR scope when mine is true', async () => {
+      mockGetPermissions.mockResolvedValue([]);
+      prisma.quest.findMany.mockResolvedValue([]);
+
+      await service.findAll(
+        { id: 'user-9', roleCode: 'BACKEND_LEAD' },
+        { mine: true },
+      );
+
+      const callArgs = prisma.quest.findMany.mock.calls[0][0];
+      expect(callArgs.where.OR).toBeUndefined();
+      expect(callArgs.where.owner_user_id).toBe('user-9');
+    });
   });
 
   describe('create', () => {

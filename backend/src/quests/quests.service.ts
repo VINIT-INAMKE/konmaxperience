@@ -13,7 +13,12 @@ export class QuestsService {
 
   async findAll(
     requestingUser: { id: string; roleCode: string },
-    filters: { missionId?: string; page?: number; limit?: number },
+    filters: {
+      missionId?: string;
+      page?: number;
+      limit?: number;
+      mine?: boolean;
+    },
   ) {
     const perms = await getPermissionsForRole(requestingUser.roleCode, this.prisma);
     const isAdmin = perms.includes(Permission.VIEW_ALL);
@@ -28,6 +33,13 @@ export class QuestsService {
         { owner_user_id: requestingUser.id },
         { tasks: { some: { owner_user_id: requestingUser.id } } },
       ];
+    }
+
+    // `mine=1` (IA-04) narrows to quests the caller owns. Applied after the role
+    // scope and, for a non-admin, it replaces the wider "owns a task in it" arm.
+    if (filters.mine) {
+      delete where.OR;
+      where.owner_user_id = requestingUser.id;
     }
 
     const take = Math.min(Number(filters.limit) || 50, 100);

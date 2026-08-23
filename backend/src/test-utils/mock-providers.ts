@@ -20,6 +20,7 @@ import { WhatsAppService } from '../customer-auth/whatsapp.service';
 
 export const PRISMA_MODELS = [
   'auditEvent',
+  'usageEvent',
   'bridgeDispatch',
   'node',
   'zone',

@@ -27,6 +27,10 @@ export class TasksController {
     private readonly prisma: PrismaService,
   ) {}
 
+  /**
+   * `IA-04`. `mine`, `cursor` and `limit` are additive: with neither `cursor` nor
+   * `limit` the response keeps its legacy bare-array shape.
+   */
   @Get()
   async findAll(
     @Req() req: express.Request,
@@ -35,11 +39,27 @@ export class TasksController {
     @Query('status') status?: string,
     @Query('task_type') taskType?: string,
     @Query('view_as') viewAs?: string,
+    @Query('mine') mine?: string,
+    @Query('cursor') cursor?: string,
+    @Query('limit') limit?: string,
   ) {
     const user = (req as any).user;
+    const parsedLimit =
+      limit === undefined
+        ? undefined
+        : Math.min(Math.max(Number(limit) || 50, 1), 200);
     return this.tasksService.findAll(
       { id: user.id, roleCode: user.roleCode },
-      { questId, missionId, status, taskType, viewAs },
+      {
+        questId,
+        missionId,
+        status,
+        taskType,
+        viewAs,
+        mine: mine === '1' || mine === 'true',
+        cursor,
+        limit: parsedLimit,
+      },
     );
   }
 

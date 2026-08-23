@@ -1,9 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { RealtimeService } from '../../realtime/realtime.service';
+import { REALTIME_EVENTS } from '../../realtime/realtime.channels';
 
 @Injectable()
 export class PickAndPackService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly realtime: RealtimeService,
+  ) {}
 
   async getActiveOrders() {
     // Fetch orders that have at least one non-scratch item not yet complete.
@@ -93,9 +98,18 @@ export class PickAndPackService {
   async markItemPicked(itemId: string) {
     // Mark a non-scratch order item as physically picked
     // Sets ready_at timestamp to record when the item was picked
-    return this.prisma.orderItem.update({
+    const item = await this.prisma.orderItem.update({
       where: { id: itemId },
       data: { ready_at: new Date() },
     });
+
+    // SPEC §6.4 — the board refetches on this push; no board state in the payload.
+    void this.realtime.emit(
+      'private-pick-pack',
+      REALTIME_EVENTS.PICK_PACK_ORDER_UPDATED,
+      { item_id: item.id, order_id: item.order_id },
+    );
+
+    return item;
   }
 }

@@ -5,6 +5,8 @@ import { KdsService } from './kds.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { FulfilmentService } from '../../fulfilment/fulfilment.service';
 import { DomainEvent } from '../../common/events/domain-events';
+import { RealtimeService } from '../../realtime/realtime.service';
+import { REALTIME_EVENTS } from '../../realtime/realtime.channels';
 
 const mockPrisma = {
   orderItem: { findUnique: jest.fn(), update: jest.fn() },
@@ -13,6 +15,7 @@ const mockPrisma = {
 };
 const mockFulfilment = { deductItemIngredients: jest.fn() };
 const mockEmitter = { emit: jest.fn() };
+const mockRealtime = { emit: jest.fn().mockResolvedValue(undefined) };
 
 const makeTx = (opts: { notReadyCount: number; zone_id?: string | null }) => ({
   orderItem: {
@@ -53,6 +56,7 @@ describe('KdsService', () => {
         { provide: PrismaService, useValue: mockPrisma },
         { provide: FulfilmentService, useValue: mockFulfilment },
         { provide: EventEmitter2, useValue: mockEmitter },
+        { provide: RealtimeService, useValue: mockRealtime },
       ],
     }).compile();
 
@@ -88,6 +92,27 @@ describe('KdsService', () => {
     expect(result.status).toBe('preparing');
     expect(result.ready_at).toBeNull();
     expect(mockFulfilment.deductItemIngredients).not.toHaveBeenCalled();
+    // SPEC §6.4 — the board is pushed to instead of waiting for the 30 s poll.
+    expect(mockRealtime.emit).toHaveBeenCalledWith(
+      'private-kds',
+      REALTIME_EVENTS.KDS_ORDER_UPDATED,
+      { item_id: 'oi-1', status: 'preparing' },
+    );
+  });
+
+  it('pushes kds.order.updated after a ready transition commits', async () => {
+    const tx = makeTx({ notReadyCount: 1 });
+    mockPrisma.$transaction.mockImplementation(
+      async (cb: (t: unknown) => unknown) => cb(tx),
+    );
+
+    await service.updateItemStatus('oi-1', 'ready');
+
+    expect(mockRealtime.emit).toHaveBeenCalledWith(
+      'private-kds',
+      REALTIME_EVENTS.KDS_ORDER_UPDATED,
+      { item_id: 'oi-1', status: 'ready' },
+    );
   });
 
   it('rejects a status the KDS board cannot set', async () => {
