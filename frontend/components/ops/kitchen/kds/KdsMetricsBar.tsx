@@ -3,6 +3,15 @@
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import type { KitchenMetrics } from '@/lib/types/kds';
+import {
+  POLL_FLOOR_MS,
+  useRealtimeChannel,
+} from '@/lib/hooks/use-realtime-channel';
+
+const METRICS_QUERY_KEY = ['kitchen-metrics'] as const;
+/** Same channel as `KdsBoard` — `acquireChannel` reference-counts the socket. */
+const KDS_EVENTS = ['kds.order.new', 'kds.order.updated'] as const;
+const METRICS_INVALIDATE = [METRICS_QUERY_KEY] as const;
 
 function wasteColor(pct: number): string {
   if (pct < 5) return 'text-good';
@@ -11,10 +20,16 @@ function wasteColor(pct: number): string {
 }
 
 export function KdsMetricsBar() {
+  const { live } = useRealtimeChannel(
+    'private-kds',
+    KDS_EVENTS,
+    METRICS_INVALIDATE,
+  );
+
   const { data: metrics } = useQuery({
-    queryKey: ['kitchen-metrics'],
+    queryKey: METRICS_QUERY_KEY,
     queryFn: () => apiClient.get<KitchenMetrics>('/kitchen/metrics'),
-    refetchInterval: 10000,
+    refetchInterval: live ? false : POLL_FLOOR_MS,
   });
 
   if (!metrics) return null;

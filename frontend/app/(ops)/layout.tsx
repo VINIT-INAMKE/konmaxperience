@@ -6,6 +6,7 @@ import { Loader2 } from 'lucide-react';
 import { SpineNav } from '@/components/ops/nav/SpineNav';
 import { AppHeader } from '@/components/ops/header/AppHeader';
 import { ErrorBoundary } from '@/components/ops/ErrorBoundary';
+import { UsageTracker } from '@/components/ops/UsageTracker';
 import { useAuthStore } from '@/lib/stores/auth-store';
 import { apiClient } from '@/lib/api-client';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
@@ -86,6 +87,7 @@ export default function OpsLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <ErrorBoundary>
+      <UsageTracker />
       <div className="flex h-screen overflow-hidden bg-bg">
         {/* Desktop rail */}
         <div className="hidden w-[248px] shrink-0 lg:flex">

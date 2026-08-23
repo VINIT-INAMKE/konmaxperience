@@ -54,6 +54,8 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { apiClient } from '@/lib/api-client';
+import { useUsageEvent } from '@/lib/hooks/use-usage-event';
+import { USAGE_ACTIONS } from '@/lib/types/usage';
 import { STATUS_BADGE } from '@/lib/status-styles';
 import {
   IMPORT_TYPES,
@@ -109,6 +111,7 @@ export default function ImportTypePage() {
   const router = useRouter();
   const importType = params.type as ImportType;
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { trackAction } = useUsageEvent();
 
   // Validate import type
   const isValidType = IMPORT_TYPES.includes(importType);
@@ -404,6 +407,12 @@ export default function ImportTypePage() {
       setCommitResult(result);
 
       const total = result.imported + result.updated;
+      trackAction(USAGE_ACTIONS.IMPORT_RUN, {
+        import_type: importType,
+        imported: result.imported,
+        updated: result.updated,
+        errors: result.errors,
+      });
       if (total > 0 && result.errors === 0) {
         toast.success(`${total} records imported successfully`);
       } else if (total > 0 && result.errors > 0) {
@@ -416,7 +425,14 @@ export default function ImportTypePage() {
     } finally {
       setIsCommitting(false);
     }
-  }, [importType, rows, updateExisting, importableCount, recipeParseResult]);
+  }, [
+    importType,
+    rows,
+    updateExisting,
+    importableCount,
+    recipeParseResult,
+    trackAction,
+  ]);
 
   // ── Row status helpers ──
   const renderStatusBadge = (row: ImportRow) => {

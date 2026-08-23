@@ -8,19 +8,35 @@ import { Button } from '@/components/ui/button';
 import { apiClient } from '@/lib/api-client';
 import type { KdsZoneData, OrderItemStatus } from '@/lib/types/kds';
 import { ORDER_ITEM_STATUS_LABELS } from '@/lib/types/kds';
+import {
+  POLL_FLOOR_MS,
+  useRealtimeChannel,
+} from '@/lib/hooks/use-realtime-channel';
+import { useUsageEvent } from '@/lib/hooks/use-usage-event';
+import { USAGE_ACTIONS } from '@/lib/types/usage';
 import { KdsZoneColumn } from './KdsZoneColumn';
 
 /** SPEC §6.4: BorderBeam marks an order that arrived in the last minute. */
 const NEW_ORDER_WINDOW_MS = 60_000;
 
+export const KDS_QUERY_KEY = ['kds-orders'] as const;
+/** Module-level so `useRealtimeChannel`'s effect does not resubscribe per render. */
+const KDS_EVENTS = ['kds.order.new', 'kds.order.updated'] as const;
+const KDS_INVALIDATE = [KDS_QUERY_KEY] as const;
+
 export function KdsBoard() {
   const queryClient = useQueryClient();
+  const { trackAction } = useUsageEvent();
+
+  // SPEC §6.4: the socket carries the board; polling is only the fallback and
+  // never runs faster than 30 s — a kitchen screen left open in a background tab
+  // must not hammer the API.
+  const { live } = useRealtimeChannel('private-kds', KDS_EVENTS, KDS_INVALIDATE);
 
   const { data: zones, isError, isLoading, refetch } = useQuery({
-    queryKey: ['kds-orders'],
+    queryKey: KDS_QUERY_KEY,
     queryFn: () => apiClient.get<KdsZoneData[]>('/kitchen/kds'),
-    refetchInterval: 5000,
-    refetchIntervalInBackground: true,
+    refetchInterval: live ? false : POLL_FLOOR_MS,
   });
 
   // An order is "new" while it is under a minute old — recomputed on every poll.
@@ -40,7 +56,10 @@ export function KdsBoard() {
       apiClient.patch(`/kitchen/kds/items/${itemId}/status`, { status: newStatus }),
     onSuccess: (_data, variables) => {
       toast.success(`${variables.itemName} \u2014 ${ORDER_ITEM_STATUS_LABELS[variables.newStatus]}`);
-      void queryClient.invalidateQueries({ queryKey: ['kds-orders'] });
+      if (variables.newStatus === 'ready') {
+        trackAction(USAGE_ACTIONS.KDS_ITEM_READY);
+      }
+      void queryClient.invalidateQueries({ queryKey: KDS_QUERY_KEY });
     },
     onError: () => {
       toast.error('Failed to update status. Try again.');
