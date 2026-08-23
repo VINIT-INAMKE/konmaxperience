@@ -1,4 +1,5 @@
 import {
+  IsBoolean,
   IsDateString,
   IsEnum,
   IsOptional,
@@ -6,7 +7,12 @@ import {
   IsUUID,
   MinLength,
 } from 'class-validator';
-import { TaskPriority, TaskStatus } from '@prisma/client';
+import {
+  TaskDomain,
+  TaskPriority,
+  TaskStatus,
+  TaskSubjectType,
+} from '@prisma/client';
 
 export class UpdateTaskDto {
   @IsOptional()
@@ -33,4 +39,29 @@ export class UpdateTaskDto {
   @IsOptional()
   @IsDateString()
   due_date?: string;
+
+  /**
+   * SPEC §4.4 — flipping this to `true`, or changing `domain` while it is true,
+   * re-runs policy materialisation inside the update transaction. Flipping it to
+   * `false` deletes the still-pending rows (decided rows are never deleted).
+   */
+  @IsOptional()
+  @IsBoolean()
+  requires_approval?: boolean;
+
+  @IsOptional()
+  @IsEnum(TaskDomain)
+  domain?: TaskDomain;
+
+  @IsOptional()
+  @IsUUID()
+  owner_user_id?: string;
+
+  @IsOptional()
+  @IsEnum(TaskSubjectType)
+  subject_type?: TaskSubjectType;
+
+  @IsOptional()
+  @IsUUID()
+  subject_id?: string;
 }

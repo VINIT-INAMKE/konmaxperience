@@ -1,10 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ForbiddenException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { TasksService } from './tasks.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { ApprovalPolicyService } from '../approvals/approval-policy.service';
 import { Permission } from '../types/permissions';
 import {
+  mockApprovalPolicyService,
   mockAuditService,
+  mockEventEmitter,
   provideAuditService,
   provideEventEmitter,
 } from '../test-utils/mock-providers';
@@ -26,6 +29,8 @@ describe('TasksService', () => {
   let prisma: any;
   let txMock: any;
   let audit: ReturnType<typeof mockAuditService>;
+  let approvalPolicy: ReturnType<typeof mockApprovalPolicyService>;
+  let emitter: ReturnType<typeof mockEventEmitter>;
 
   const adminUser = { id: 'admin-1', roleCode: 'FOUNDER_ADMIN' };
   const regularUser = { id: 'user-1', roleCode: 'FRONTEND_LEAD' };
@@ -51,6 +56,7 @@ describe('TasksService', () => {
     blocked: false,
     blocked_reason: null,
     depends_on_task_id: null,
+    node_id: 'node-1',
     created_at: new Date(),
     updated_at: new Date(),
     owner: { id: 'user-1', name: 'Test User' },
@@ -61,6 +67,7 @@ describe('TasksService', () => {
   beforeEach(async () => {
     txMock = {
       task: {
+        create: jest.fn(),
         update: jest.fn(),
         groupBy: jest.fn(),
       },
@@ -70,6 +77,12 @@ describe('TasksService', () => {
       },
       mission: {
         update: jest.fn(),
+      },
+      approval: {
+        findMany: jest.fn().mockResolvedValue([]),
+        createMany: jest.fn(),
+        deleteMany: jest.fn(),
+        groupBy: jest.fn().mockResolvedValue([]),
       },
       auditEvent: {
         create: jest.fn(),
@@ -94,17 +107,23 @@ describe('TasksService', () => {
       role: {
         findUnique: jest.fn(),
       },
+      approval: {
+        groupBy: jest.fn().mockResolvedValue([]),
+      },
       $transaction: jest.fn((cb: any) => cb(txMock)),
     };
 
     audit = mockAuditService();
+    approvalPolicy = mockApprovalPolicyService();
+    emitter = mockEventEmitter();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         TasksService,
         { provide: PrismaService, useValue: prisma },
-        provideEventEmitter(),
+        provideEventEmitter(emitter),
         provideAuditService(audit),
+        { provide: ApprovalPolicyService, useValue: approvalPolicy },
       ],
     }).compile();
 
@@ -187,30 +206,82 @@ describe('TasksService', () => {
         }),
       );
     });
+
+    it('attaches pending_approvals per task from one grouped count', async () => {
+      mockGetPermissions.mockResolvedValue([
+        Permission.VIEW_ALL,
+        Permission.UPDATE_ANY_TASK,
+      ]);
+      prisma.task.findMany.mockResolvedValue([
+        mockTask,
+        { ...mockTask, id: 'task-2' },
+      ]);
+      prisma.approval.groupBy.mockResolvedValue([
+        { entity_id: 'task-1', _count: { id: 2 } },
+      ]);
+
+      const result = await service.findAll(adminUser, {});
+
+      expect(prisma.approval.groupBy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          by: ['entity_id'],
+          where: expect.objectContaining({
+            entity_type: 'task',
+            entity_id: { in: ['task-1', 'task-2'] },
+            status: 'pending',
+          }),
+        }),
+      );
+      expect(result[0].pending_approvals).toBe(2);
+      expect(result[1].pending_approvals).toBe(0);
+    });
+
+    it('skips the approval count query when no tasks match', async () => {
+      mockGetPermissions.mockResolvedValue([Permission.VIEW_ALL]);
+      prisma.task.findMany.mockResolvedValue([]);
+
+      await service.findAll(adminUser, {});
+
+      expect(prisma.approval.groupBy).not.toHaveBeenCalled();
+    });
   });
 
   describe('create', () => {
-    it('creates task with correct task_type including adhoc', async () => {
-      const dto = {
-        mission_id: 'mission-1',
-        quest_id: 'quest-1',
-        title: 'Ad-hoc fix',
-        description: 'Quick fix needed',
-        task_type: 'adhoc',
-        domain: 'tech',
-        owner_user_id: 'user-1',
-        priority: 'high',
-      };
-      prisma.task.create.mockResolvedValue({
-        id: 'task-new',
-        ...dto,
-        created_by: 'admin-1',
-      });
+    const createDto = {
+      mission_id: 'mission-1',
+      quest_id: 'quest-1',
+      title: 'Ad-hoc fix',
+      description: 'Quick fix needed',
+      task_type: 'adhoc',
+      domain: 'tech',
+      owner_user_id: 'user-1',
+      priority: 'high',
+    };
 
-      const result = await service.create(dto as any, 'admin-1');
+    /** The row `tx.task.create` resolves with, merged with per-test overrides. */
+    const mockCreated = (overrides: Record<string, unknown> = {}) => {
+      const created = {
+        id: 'task-new',
+        node_id: 'node-1',
+        status: 'todo',
+        requires_approval: true,
+        subject_type: null,
+        subject_id: null,
+        ...createDto,
+        created_by: 'admin-1',
+        ...overrides,
+      };
+      txMock.task.create.mockResolvedValue(created);
+      return created;
+    };
+
+    it('creates task with correct task_type including adhoc', async () => {
+      mockCreated();
+
+      const result = await service.create(createDto as any, 'admin-1');
 
       expect(result.task_type).toBe('adhoc');
-      expect(prisma.task.create).toHaveBeenCalledWith(
+      expect(txMock.task.create).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
             task_type: 'adhoc',
@@ -218,6 +289,90 @@ describe('TasksService', () => {
           }),
         }),
       );
+    });
+
+    it('materialises policy approvals for the default requires_approval=true', async () => {
+      mockCreated();
+
+      await service.create(createDto as any, 'admin-1');
+
+      expect(txMock.task.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ requires_approval: true }),
+        }),
+      );
+      expect(approvalPolicy.materialise).toHaveBeenCalledWith(
+        txMock,
+        {
+          entity_type: 'task',
+          entity_id: 'task-new',
+          scope: 'task',
+          domain: 'tech',
+        },
+        'node-1',
+      );
+    });
+
+    it('does not materialise approvals when requires_approval is false', async () => {
+      mockCreated({ requires_approval: false });
+
+      await service.create(
+        { ...createDto, requires_approval: false } as any,
+        'admin-1',
+      );
+
+      expect(approvalPolicy.materialise).not.toHaveBeenCalled();
+    });
+
+    it('throws BadRequestException when only subject_type is provided', async () => {
+      await expect(
+        service.create(
+          { ...createDto, subject_type: 'recipe' } as any,
+          'admin-1',
+        ),
+      ).rejects.toThrow(BadRequestException);
+      expect(prisma.$transaction).not.toHaveBeenCalled();
+    });
+
+    it('writes subject_type and subject_id through to task.create', async () => {
+      mockCreated({ subject_type: 'recipe', subject_id: 'recipe-1' });
+
+      await service.create(
+        {
+          ...createDto,
+          subject_type: 'recipe',
+          subject_id: 'recipe-1',
+        } as any,
+        'admin-1',
+      );
+
+      expect(txMock.task.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            subject_type: 'recipe',
+            subject_id: 'recipe-1',
+          }),
+        }),
+      );
+    });
+
+    it('records a task.created AuditEvent inside the transaction', async () => {
+      mockCreated();
+
+      await service.create(createDto as any, 'admin-1');
+
+      expect(audit.record).toHaveBeenCalledWith(txMock, {
+        entity_type: 'task',
+        entity_id: 'task-new',
+        action: 'task.created',
+        actor_type: 'user',
+        actor_id: 'admin-1',
+        after: {
+          status: 'todo',
+          domain: 'tech',
+          requires_approval: true,
+        },
+      });
     });
   });
 
@@ -278,6 +433,35 @@ describe('TasksService', () => {
           blocked_reason: 'Waiting for design assets',
         },
       });
+    });
+
+    it('emits the typed task.blocked domain event after the transaction', async () => {
+      prisma.task.findUnique.mockResolvedValue(mockTask);
+      mockGetPermissions.mockResolvedValue([Permission.UPDATE_OWN_TASK]);
+      txMock.task.update.mockResolvedValue({
+        ...mockTask,
+        status: 'blocked',
+        blocked: true,
+        blocked_reason: 'Waiting for design assets',
+      });
+      txMock.quest.findUnique.mockResolvedValue(null);
+      mockGroupBy([], []);
+      txMock.mission.update.mockResolvedValue({});
+
+      await service.block('task-1', 'Waiting for design assets', regularUser);
+
+      expect(emitter.emit).toHaveBeenCalledWith(
+        'task.blocked',
+        expect.objectContaining({
+          node_id: 'node-1',
+          actor: { actor_type: 'user', actor_id: 'user-1' },
+          occurred_at: expect.any(String),
+          taskId: 'task-1',
+          taskTitle: 'Design homepage',
+          ownerUserId: 'user-1',
+          blockedReason: 'Waiting for design assets',
+        }),
+      );
     });
 
     it('throws ForbiddenException for non-owner without UPDATE_ANY_TASK', async () => {
@@ -362,6 +546,130 @@ describe('TasksService', () => {
       await service.update('task-1', { title: 'Renamed' }, regularUser);
 
       expect(audit.record).not.toHaveBeenCalled();
+    });
+
+    it('stamps updated_by with the requesting user', async () => {
+      prisma.task.findUnique.mockResolvedValue(mockTask);
+      mockGetPermissions.mockResolvedValue([Permission.UPDATE_OWN_TASK]);
+      txMock.task.update.mockResolvedValue(mockTask);
+
+      await service.update('task-1', { title: 'Renamed' }, regularUser);
+
+      expect(txMock.task.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ updated_by: 'user-1' }),
+        }),
+      );
+    });
+
+    it('materialises approvals when requires_approval flips false → true', async () => {
+      prisma.task.findUnique.mockResolvedValue({
+        ...mockTask,
+        requires_approval: false,
+      });
+      mockGetPermissions.mockResolvedValue([Permission.UPDATE_ANY_TASK]);
+      txMock.task.update.mockResolvedValue({
+        ...mockTask,
+        requires_approval: true,
+      });
+
+      await service.update('task-1', { requires_approval: true }, adminUser);
+
+      expect(approvalPolicy.materialise).toHaveBeenCalledWith(
+        txMock,
+        {
+          entity_type: 'task',
+          entity_id: 'task-1',
+          scope: 'task',
+          domain: 'tech',
+        },
+        'node-1',
+      );
+      expect(txMock.approval.deleteMany).not.toHaveBeenCalled();
+    });
+
+    it('clears pending approvals and audits when requires_approval flips true → false', async () => {
+      prisma.task.findUnique.mockResolvedValue(mockTask); // requires_approval: true
+      mockGetPermissions.mockResolvedValue([Permission.UPDATE_ANY_TASK]);
+      txMock.task.update.mockResolvedValue({
+        ...mockTask,
+        requires_approval: false,
+      });
+
+      await service.update('task-1', { requires_approval: false }, adminUser);
+
+      expect(txMock.approval.deleteMany).toHaveBeenCalledWith({
+        where: {
+          entity_type: 'task',
+          entity_id: 'task-1',
+          status: 'pending',
+        },
+      });
+      expect(approvalPolicy.materialise).not.toHaveBeenCalled();
+      expect(audit.record).toHaveBeenCalledWith(txMock, {
+        entity_type: 'task',
+        entity_id: 'task-1',
+        action: 'task.approvals_cleared',
+        actor_type: 'user',
+        actor_id: 'admin-1',
+        before: { requires_approval: true },
+        after: { requires_approval: false },
+      });
+    });
+
+    it('re-materialises with the new domain when domain changes on a gated task', async () => {
+      prisma.task.findUnique.mockResolvedValue(mockTask); // domain: 'tech'
+      mockGetPermissions.mockResolvedValue([Permission.UPDATE_ANY_TASK]);
+      txMock.task.update.mockResolvedValue({ ...mockTask, domain: 'food' });
+
+      await service.update('task-1', { domain: 'food' } as any, adminUser);
+
+      // Rows generated under the OLD domain go first, then the new policy runs.
+      expect(txMock.approval.deleteMany).toHaveBeenCalledWith({
+        where: {
+          entity_type: 'task',
+          entity_id: 'task-1',
+          status: 'pending',
+        },
+      });
+      expect(approvalPolicy.materialise).toHaveBeenCalledWith(
+        txMock,
+        {
+          entity_type: 'task',
+          entity_id: 'task-1',
+          scope: 'task',
+          domain: 'food',
+        },
+        'node-1',
+      );
+    });
+
+    it('leaves approvals alone when domain changes on an ungated task', async () => {
+      prisma.task.findUnique.mockResolvedValue({
+        ...mockTask,
+        requires_approval: false,
+      });
+      mockGetPermissions.mockResolvedValue([Permission.UPDATE_ANY_TASK]);
+      txMock.task.update.mockResolvedValue({
+        ...mockTask,
+        requires_approval: false,
+        domain: 'food',
+      });
+
+      await service.update('task-1', { domain: 'food' } as any, adminUser);
+
+      expect(approvalPolicy.materialise).not.toHaveBeenCalled();
+      expect(txMock.approval.deleteMany).not.toHaveBeenCalled();
+    });
+
+    it('throws BadRequestException when only subject_id is provided', async () => {
+      prisma.task.findUnique.mockResolvedValue(mockTask);
+      mockGetPermissions.mockResolvedValue([Permission.UPDATE_ANY_TASK]);
+
+      await expect(
+        service.update('task-1', { subject_id: 'recipe-1' } as any, adminUser),
+      ).rejects.toThrow(BadRequestException);
+      expect(prisma.$transaction).not.toHaveBeenCalled();
     });
   });
 
