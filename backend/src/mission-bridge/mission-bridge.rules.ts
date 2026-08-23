@@ -5,11 +5,33 @@ import {
   type DomainEventPayloads,
 } from '../common/events/domain-events';
 
-/** Meter codes the rules target (SPEC §4.3). */
-export type MeterCode = 'STANDARDIZATION' | 'PROCUREMENT' | 'SALES' | 'QUALITY';
+/**
+ * Meter codes the rules target (SPEC §4.3) — the four `derived` meters, kept as
+ * a runtime tuple so `mission-bridge.rules.spec.ts` can check the table against
+ * `DERIVED_FORMULAS` instead of trusting a hand-written union.
+ */
+export const METER_CODES = [
+  'STANDARDIZATION',
+  'PROCUREMENT',
+  'SALES',
+  'QUALITY',
+] as const;
 
-/** SPEC §4.2 "task spawn". Only `feedback.received` uses one today (Task 12). */
+export type MeterCode = (typeof METER_CODES)[number];
+
+/** SPEC §4.2 "task spawn". Only `feedback.received` uses one today. */
 export type BridgeSpawn = 'low_rating_improvement';
+
+/**
+ * SPEC §4.2 "signal" — the meter a rule contributes to and the size of the
+ * contribution. `value` is written verbatim into `ReadinessSignal.value`
+ * (`Decimal(14,4)`); negative values record a regression (stock ran low, a
+ * recipe was archived, waste was logged).
+ */
+export interface BridgeSignal {
+  meter: MeterCode;
+  value: number;
+}
 
 /** What a rule pulls out of its typed payload for the bridge to act on. */
 export interface BridgeSelection {
@@ -34,8 +56,8 @@ export interface BridgeRuleFor<K extends DomainEventName> {
   note_template: string;
   evidence: boolean;
   /** SPEC §4.2 "signal" — meter and contribution value; omit for no signal. */
-  signal?: { meter: MeterCode; value: number };
-  /** SPEC §4.2 "task spawn" — see Task 12. */
+  signal?: BridgeSignal;
+  /** SPEC §4.2 "task spawn" — the improvement task the rule creates, if any. */
   spawn?: BridgeSpawn;
   /** 'P3' = an emitter exists in this phase; 'P5' = declared, wired in Phase 33. */
   emitter: 'P3' | 'P5';

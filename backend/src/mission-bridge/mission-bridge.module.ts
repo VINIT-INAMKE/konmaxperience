@@ -5,10 +5,14 @@ import { MissionBridgeListener } from './mission-bridge.listener';
 import { MissionBridgeService } from './mission-bridge.service';
 
 /**
- * SPEC §4.2. `ReadinessModule` is imported here because Task 12 consumes
- * `ReadinessDerivationService` from it to recompute a derived meter after a
- * signal lands; nothing in this task uses it yet. The dependency is
- * one-directional — `ReadinessModule` never imports the bridge.
+ * SPEC §4.2. `ReadinessModule` is imported for `ReadinessDerivationService`,
+ * which `MissionBridgeService` calls after a signal lands to recompute the
+ * derived meter and its hybrids. The dependency is one-directional —
+ * `ReadinessModule` never imports the bridge.
+ *
+ * `ApprovalPolicyService` and `AuditService` — both needed by the improvement-
+ * task spawn — come from `@Global()` modules (`ApprovalPolicyModule`,
+ * `AuditModule`) and so need no import here.
  */
 @Module({
   imports: [ReadinessModule],
