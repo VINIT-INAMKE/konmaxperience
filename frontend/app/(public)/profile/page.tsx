@@ -12,7 +12,6 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { BlurFade } from '@/components/ui/blur-fade';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -446,11 +445,9 @@ export default function CustomerProfilePage() {
 
   if (!customer || loggedOut) {
     return (
-      <BlurFade direction="up">
-        <div className="max-w-sm mx-auto px-4 py-8">
-          <CustomerOtpForm onAuthenticated={handleAuthenticated} />
-        </div>
-      </BlurFade>
+      <div className="max-w-sm mx-auto px-4 py-8">
+        <CustomerOtpForm onAuthenticated={handleAuthenticated} />
+      </div>
     );
   }
 
@@ -464,7 +461,7 @@ export default function CustomerProfilePage() {
     : customer.phone.slice(-2);
 
   return (
-    <BlurFade direction="up">
+    <>
       <div className="max-w-2xl mx-auto px-4 py-8 space-y-6">
         <h1 className="text-2xl font-semibold text-[var(--public-fg)]">
           Your account
@@ -763,10 +760,10 @@ export default function CustomerProfilePage() {
                     <span
                       className={`text-xs px-2 py-0.5 rounded-full font-medium ${
                         booking.status === 'confirmed' || booking.status === 'attended'
-                          ? 'bg-green-50 text-green-700'
+                          ? 'bg-[var(--status-good)]/12 text-[var(--status-good)]'
                           : booking.status === 'cancelled' || booking.status === 'no_show'
-                            ? 'bg-red-50 text-red-700'
-                            : 'bg-amber-50 text-amber-700'
+                            ? 'bg-[var(--status-serious)]/12 text-[var(--status-serious)]'
+                            : 'bg-[var(--status-warning)]/12 text-[var(--status-warning)]'
                       }`}
                     >
                       {BOOKING_STATUS_LABELS[booking.status] ?? booking.status}
@@ -961,6 +958,6 @@ export default function CustomerProfilePage() {
           </div>
         </DialogContent>
       </Dialog>
-    </BlurFade>
+    </>
   );
 }

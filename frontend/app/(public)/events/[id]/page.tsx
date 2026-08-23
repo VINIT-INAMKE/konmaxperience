@@ -4,7 +4,6 @@ import { useParams } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import Image from 'next/image';
 import { Loader2, CalendarX2 } from 'lucide-react';
-import { BlurFade } from '@/components/ui/blur-fade';
 import { Badge } from '@/components/ui/badge';
 import { CapacityBadge } from '@/components/public/CapacityBadge';
 import { EventCheckoutForm } from '@/components/public/EventCheckoutForm';
@@ -61,70 +60,68 @@ export default function EventDetailPage() {
   };
 
   return (
-    <BlurFade direction="up">
-      <div className="max-w-4xl mx-auto px-4 py-8">
-        <div className="grid gap-8 md:grid-cols-2">
-          {/* Image or placeholder */}
-          <div className="relative aspect-square rounded-xl overflow-hidden bg-muted">
-            {event.image_url ? (
-              <Image
-                src={event.image_url}
-                alt={event.title}
-                fill
-                className="object-cover"
-                sizes="(max-width: 768px) 100vw, 50vw"
+    <div className="max-w-4xl mx-auto px-4 py-8">
+      <div className="grid gap-8 md:grid-cols-2">
+        {/* Image or placeholder */}
+        <div className="relative aspect-square rounded-xl overflow-hidden bg-muted">
+          {event.image_url ? (
+            <Image
+              src={event.image_url}
+              alt={event.title}
+              fill
+              className="object-cover"
+              sizes="(max-width: 768px) 100vw, 50vw"
+            />
+          ) : (
+            <div className="flex items-center justify-center h-full">
+              <span className="text-lg font-semibold text-muted-foreground">
+                {EVENT_TYPE_LABELS[event.event_type]}
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Event details + booking */}
+        <div className="space-y-6">
+          <div className="space-y-3">
+            <h1 className="text-3xl font-semibold">{event.title}</h1>
+            <p className="text-sm text-muted-foreground">{formattedDate}</p>
+            <div className="flex items-center gap-2 flex-wrap">
+              <Badge variant="secondary">
+                {EVENT_TYPE_LABELS[event.event_type]}
+              </Badge>
+              <span className="text-sm font-normal">
+                ₹{event.price}
+              </span>
+              <CapacityBadge
+                spotsRemaining={event.spots_remaining ?? 0}
               />
-            ) : (
-              <div className="flex items-center justify-center h-full">
-                <span className="text-lg font-semibold text-muted-foreground">
-                  {EVENT_TYPE_LABELS[event.event_type]}
-                </span>
+            </div>
+            {event.description && (
+              <p className="text-base text-muted-foreground">{event.description}</p>
+            )}
+            {(event.zone || event.brand) && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                {event.zone && <span>{event.zone.name}</span>}
+                {event.zone && event.brand && <span>&middot;</span>}
+                {event.brand && <span>{event.brand.name}</span>}
               </div>
             )}
           </div>
 
-          {/* Event details + booking */}
-          <div className="space-y-6">
-            <div className="space-y-3">
-              <h1 className="text-3xl font-semibold">{event.title}</h1>
-              <p className="text-sm text-muted-foreground">{formattedDate}</p>
-              <div className="flex items-center gap-2 flex-wrap">
-                <Badge variant="secondary">
-                  {EVENT_TYPE_LABELS[event.event_type]}
-                </Badge>
-                <span className="text-sm font-normal">
-                  ₹{event.price}
-                </span>
-                <CapacityBadge
-                  spotsRemaining={event.spots_remaining ?? 0}
-                />
-              </div>
-              {event.description && (
-                <p className="text-base text-muted-foreground">{event.description}</p>
-              )}
-              {(event.zone || event.brand) && (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  {event.zone && <span>{event.zone.name}</span>}
-                  {event.zone && event.brand && <span>&middot;</span>}
-                  {event.brand && <span>{event.brand.name}</span>}
-                </div>
-              )}
-            </div>
-
-            <div className="space-y-3">
-              <h2 className="text-xl font-semibold">Book Your Spot</h2>
-              <EventCheckoutForm
-                eventId={event.id}
-                eventDate={event.date}
-                eventPrice={Number(event.price)}
-                eventTitle={event.title}
-                spotsRemaining={event.spots_remaining ?? 0}
-                onBooked={handleBooked}
-              />
-            </div>
+          <div className="space-y-3">
+            <h2 className="text-xl font-semibold">Book Your Spot</h2>
+            <EventCheckoutForm
+              eventId={event.id}
+              eventDate={event.date}
+              eventPrice={Number(event.price)}
+              eventTitle={event.title}
+              spotsRemaining={event.spots_remaining ?? 0}
+              onBooked={handleBooked}
+            />
           </div>
         </div>
       </div>
-    </BlurFade>
+    </div>
   );
 }

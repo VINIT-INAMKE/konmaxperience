@@ -1,7 +1,5 @@
 'use client';
 
-import { BlurFade } from '@/components/ui/blur-fade';
-
 interface OrderTrackingTimelineProps {
   channel: 'takeaway' | 'delivery';
   status: string;
@@ -116,58 +114,57 @@ export function OrderTrackingTimeline({
         const isLast = index === steps.length - 1;
 
         return (
-          <BlurFade key={step.key} direction="up" delay={index * 0.05}>
-            <div
-              role="listitem"
-              className="flex items-start gap-4"
-              {...(step.status === 'active'
-                ? { 'aria-current': 'step' as const }
-                : {})}
-            >
-              {/* Left column: dot + connector */}
-              <div className="w-8 flex flex-col items-center">
-                {/* Dot */}
-                {step.status === 'completed' && (
-                  <div className="w-4 h-4 rounded-full bg-[var(--public-tracking-done)]" />
-                )}
-                {step.status === 'active' && (
-                  <div className="w-4 h-4 rounded-full bg-[var(--public-tracking-active)] ring-2 ring-[var(--public-tracking-active)]/30 animate-pulse" />
-                )}
-                {step.status === 'pending' && (
-                  <div className="w-4 h-4 rounded-full bg-[var(--public-tracking-pending)] border-2 border-[var(--public-border)]" />
-                )}
+          <div
+            key={step.key}
+            role="listitem"
+            className="flex items-start gap-4"
+            {...(step.status === 'active'
+              ? { 'aria-current': 'step' as const }
+              : {})}
+          >
+            {/* Left column: dot + connector */}
+            <div className="w-8 flex flex-col items-center">
+              {/* Dot */}
+              {step.status === 'completed' && (
+                <div className="w-4 h-4 rounded-full bg-[var(--public-tracking-done)]" />
+              )}
+              {step.status === 'active' && (
+                <div className="w-4 h-4 rounded-full bg-[var(--public-tracking-active)] ring-2 ring-[var(--public-tracking-active)]/30 animate-pulse motion-reduce:animate-none" />
+              )}
+              {step.status === 'pending' && (
+                <div className="w-4 h-4 rounded-full bg-[var(--public-tracking-pending)] border-2 border-[var(--public-border)]" />
+              )}
 
-                {/* Connector line */}
-                {!isLast && (
-                  <div
-                    className={`flex-1 w-0.5 min-h-[40px] ${
-                      step.status === 'completed'
-                        ? 'bg-[var(--public-tracking-done)]'
-                        : 'bg-[var(--public-border)]'
-                    }`}
-                  />
-                )}
-              </div>
-
-              {/* Right column: label + timestamp */}
-              <div className={isLast ? '' : 'pb-8'}>
-                <p
-                  className={
-                    step.status === 'pending'
-                      ? 'text-sm text-[var(--public-muted)]'
-                      : 'text-sm font-semibold text-[var(--public-fg)]'
-                  }
-                >
-                  {step.label}
-                </p>
-                {step.status === 'completed' && step.timestamp && (
-                  <p className="text-xs text-[var(--public-muted)] mt-1">
-                    {formatTimestamp(step.timestamp)}
-                  </p>
-                )}
-              </div>
+              {/* Connector line */}
+              {!isLast && (
+                <div
+                  className={`flex-1 w-0.5 min-h-[40px] ${
+                    step.status === 'completed'
+                      ? 'bg-[var(--public-tracking-done)]'
+                      : 'bg-[var(--public-border)]'
+                  }`}
+                />
+              )}
             </div>
-          </BlurFade>
+
+            {/* Right column: label + timestamp */}
+            <div className={isLast ? '' : 'pb-8'}>
+              <p
+                className={
+                  step.status === 'pending'
+                    ? 'text-sm text-[var(--public-muted)]'
+                    : 'text-sm font-semibold text-[var(--public-fg)]'
+                }
+              >
+                {step.label}
+              </p>
+              {step.status === 'completed' && step.timestamp && (
+                <p className="text-xs text-[var(--public-muted)] mt-1">
+                  {formatTimestamp(step.timestamp)}
+                </p>
+              )}
+            </div>
+          </div>
         );
       })}
     </div>

@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { MagicCard } from '@/components/ui/magic-card';
+import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { CapacityBadge } from '@/components/public/CapacityBadge';
 import type { Event } from '@/lib/types/events';
@@ -22,7 +22,7 @@ export function EventCard({ event }: EventCardProps) {
 
   return (
     <Link href={`/events/${event.id}`}>
-      <MagicCard className="rounded-xl cursor-pointer">
+      <Card className="rounded-xl gap-0 py-0 cursor-pointer transition-colors hover:bg-[var(--muted)]">
         <div className="p-4 space-y-3">
           <h3 className="text-xl font-semibold line-clamp-2">{event.title}</h3>
           <p className="text-sm text-muted-foreground">{formattedDate}</p>
@@ -41,7 +41,7 @@ export function EventCard({ event }: EventCardProps) {
             </div>
           )}
         </div>
-      </MagicCard>
+      </Card>
     </Link>
   );
 }

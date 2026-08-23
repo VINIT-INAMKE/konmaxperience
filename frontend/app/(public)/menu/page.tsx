@@ -3,7 +3,6 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { UtensilsCrossed } from 'lucide-react';
-import { BlurFade } from '@/components/ui/blur-fade';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { MenuBrandTabs } from '@/components/public/MenuBrandTabs';
@@ -153,7 +152,7 @@ export default function MenuPage() {
   };
 
   return (
-    <BlurFade direction="up">
+    <>
       <div className="max-w-2xl mx-auto px-4 py-8 pb-16">
         <h1 className="text-3xl font-semibold mb-6 text-[var(--public-fg)]">Our Menu</h1>
 
@@ -268,6 +267,6 @@ export default function MenuPage() {
 
       {/* Cart bottom sheet */}
       <CartBottomSheet open={cartSheetOpen} onOpenChange={setCartSheetOpen} />
-    </BlurFade>
+    </>
   );
 }

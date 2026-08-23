@@ -22,15 +22,19 @@ export default function AuthLayout({
 
   return (
     <div className="min-h-screen flex" style={{ colorScheme: 'light' }}>
-      {/* Left brand panel */}
+      {/*
+        Left brand panel. `dark` scopes the semantic tokens to this permanently
+        near-black surface so --gold / --status-* resolve to their on-dark values
+        whatever theme the rest of the app is in.
+      */}
       <div
         ref={panelRef}
         onMouseMove={handleMouseMove}
-        className="hidden lg:flex lg:w-[45%] bg-[var(--public-fg)] relative overflow-hidden flex-col justify-between p-12"
+        className="dark hidden lg:flex lg:w-[45%] bg-[var(--public-fg)] relative overflow-hidden flex-col justify-between p-12"
       >
         {/* Warm gradient orbs — mouse-reactive */}
         <div
-          className="orb-drift absolute top-0 right-0 w-[400px] h-[400px] bg-gradient-to-bl from-amber-500/10 to-transparent rounded-full blur-3xl pointer-events-none"
+          className="orb-drift absolute top-0 right-0 w-[400px] h-[400px] bg-gradient-to-bl from-[var(--gold)]/10 to-transparent rounded-full blur-3xl pointer-events-none"
           style={{
             animation: 'orb-drift-1 25s ease-in-out infinite',
             transform: 'translate(var(--mouse-x, 0px), var(--mouse-y, 0px))',
@@ -38,7 +42,7 @@ export default function AuthLayout({
           }}
         />
         <div
-          className="orb-drift absolute bottom-0 left-0 w-[300px] h-[300px] bg-gradient-to-tr from-orange-500/5 to-transparent rounded-full blur-3xl pointer-events-none"
+          className="orb-drift absolute bottom-0 left-0 w-[300px] h-[300px] bg-gradient-to-tr from-[var(--accent)]/5 to-transparent rounded-full blur-3xl pointer-events-none"
           style={{
             animation: 'orb-drift-2 30s ease-in-out infinite',
             transform: 'translate(calc(var(--mouse-x, 0px) * -0.7), calc(var(--mouse-y, 0px) * -0.7))',
@@ -50,7 +54,7 @@ export default function AuthLayout({
         <div
           className="dot-drift absolute inset-0 opacity-[0.03] pointer-events-none"
           style={{
-            backgroundImage: 'radial-gradient(circle, #fbbf24 1px, transparent 1px)',
+            backgroundImage: 'radial-gradient(circle, var(--gold) 1px, transparent 1px)',
             backgroundSize: '32px 32px',
             animation: 'dot-drift 60s linear infinite',
           }}
@@ -71,10 +75,10 @@ export default function AuthLayout({
             <br />
             meets{' '}
             <span className="relative inline-block">
-              <span className="italic font-normal text-amber-400">mission</span>
-              <span className="absolute -bottom-1 left-0 w-full h-2.5 bg-amber-500/20 -z-10 rounded-sm" />
+              <span className="italic font-normal text-[var(--gold)]">mission</span>
+              <span className="absolute -bottom-1 left-0 w-full h-2.5 bg-[var(--gold)]/20 -z-10 rounded-sm" />
             </span>
-            <span className="italic font-normal text-amber-400">.</span>
+            <span className="italic font-normal text-[var(--gold)]">.</span>
           </h1>
           <p className="text-base text-[var(--public-muted)] max-w-sm leading-relaxed">
             A villa ecosystem where every meal, every event, and every team member
@@ -86,7 +90,7 @@ export default function AuthLayout({
         <div className="relative z-10 flex items-center gap-6">
           <div className="flex items-center gap-2">
             <div
-              className="glow-pulse-dot size-1.5 rounded-full bg-emerald-400 text-emerald-400"
+              className="glow-pulse-dot size-1.5 rounded-full bg-[var(--status-good)] text-[var(--status-good)] motion-reduce:animate-none"
               style={{ animation: 'glow-pulse 2.5s ease-in-out infinite' }}
             />
             <span className="text-xs text-[var(--public-muted)] font-medium">Systems online</span>

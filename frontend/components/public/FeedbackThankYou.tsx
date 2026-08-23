@@ -1,29 +1,15 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
-import { BlurFade } from '@/components/ui/blur-fade';
-import { Confetti, type ConfettiRef } from '@/components/ui/confetti';
+import { CheckCircle2 } from 'lucide-react';
 
 export function FeedbackThankYou() {
-  const confettiRef = useRef<ConfettiRef>(null);
-
-  useEffect(() => {
-    confettiRef.current?.fire();
-  }, []);
-
   return (
-    <BlurFade direction="up">
-      <div className="flex flex-col items-center justify-center py-16 space-y-4">
-        <h2 className="text-3xl font-semibold">Thank you!</h2>
-        <p className="text-base text-muted-foreground">
-          Your feedback makes every meal better.
-        </p>
-        <Confetti
-          ref={confettiRef}
-          manualstart
-          className="pointer-events-none fixed inset-0 z-50 size-full"
-        />
-      </div>
-    </BlurFade>
+    <div className="flex flex-col items-center justify-center py-16 space-y-4">
+      <CheckCircle2 aria-hidden="true" className="size-12 text-[var(--status-good)]" />
+      <h2 className="text-3xl font-semibold">Thank you!</h2>
+      <p className="text-base text-muted-foreground">
+        Your feedback makes every meal better.
+      </p>
+    </div>
   );
 }

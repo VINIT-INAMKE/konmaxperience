@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { MagicCard } from '@/components/ui/magic-card';
+import { Card } from '@/components/ui/card';
 import { AvailabilityBadge } from '@/components/public/AvailabilityBadge';
 import { productImage } from '@/lib/types/catalog';
 import type { Product } from '@/lib/types/catalog';
@@ -15,7 +15,7 @@ export function ProductPublicCard({ item, available }: ProductPublicCardProps) {
   const imageUrl = productImage(item);
 
   return (
-    <MagicCard className="rounded-xl overflow-hidden">
+    <Card className="rounded-xl gap-0 py-0">
       <div className="relative aspect-square bg-muted">
         {imageUrl ? (
           <Image
@@ -40,6 +40,6 @@ export function ProductPublicCard({ item, available }: ProductPublicCardProps) {
           <AvailabilityBadge available={available} />
         </div>
       </div>
-    </MagicCard>
+    </Card>
   );
 }

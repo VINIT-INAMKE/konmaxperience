@@ -128,7 +128,7 @@ export function AddressSelector({
 
       {/* Serviceability error */}
       {serviceabilityError && (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+        <div className="rounded-lg border border-[var(--status-warning)]/25 bg-[var(--status-warning)]/10 px-4 py-3 text-sm text-[var(--status-warning)]">
           {serviceabilityError}
         </div>
       )}
