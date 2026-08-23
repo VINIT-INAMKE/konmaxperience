@@ -73,6 +73,7 @@ import { ShipmentsModule } from './shipments/shipments.module';
 import { ShippingModule } from './shipping/shipping.module';
 import { PromotionsModule } from './promotions/promotions.module';
 import { RefundsModule } from './refunds/refunds.module';
+import { ReviewsModule } from './reviews/reviews.module';
 
 @Module({
   imports: [
@@ -140,6 +141,7 @@ import { RefundsModule } from './refunds/refunds.module';
     UsageModule,
     MeModule,
     SearchModule,
+    ReviewsModule,
   ],
   controllers: [AppController],
   providers: [
