@@ -3,8 +3,13 @@
 import { cn } from '@/lib/utils';
 import { AnimatedCircularProgressBar } from '@/components/ui/animated-circular-progress-bar';
 import { NumberTicker } from '@/components/ui/number-ticker';
-import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button';
-import { getMeterColors } from '@/lib/types/gamification';
+import { MeterModeBadge } from './MeterModeBadge';
+import {
+  METER_TONE_TEXT,
+  METER_TONE_VAR,
+  METER_TRACK_VAR,
+  meterTone,
+} from './meter-tone';
 import type { ReadinessMeter } from '@/lib/types/readiness';
 
 interface ReadinessMeterRingProps {
@@ -20,53 +25,63 @@ export function ReadinessMeterRing({
   selected = false,
   onClick,
 }: ReadinessMeterRingProps) {
-  const colors = getMeterColors(meter.current_value);
+  const tone = meterTone(meter.current_value);
+  const interactive = Boolean(onClick);
 
-  return (
-    <div
-      className={cn(
-        'group flex flex-col items-center gap-2 cursor-pointer hover:scale-105 transition-transform duration-200',
-        selected && 'ring-2 ring-primary rounded-xl p-1',
-      )}
-      onClick={onClick}
-      role="button"
-      tabIndex={0}
-      aria-label={`${meter.name}: ${Math.round(meter.current_value)}% ready`}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          onClick?.();
-        }
-      }}
-    >
+  const body = (
+    <>
       <div className="relative">
         <AnimatedCircularProgressBar
           value={meter.current_value}
-          gaugePrimaryColor={colors.primary}
-          gaugeSecondaryColor={colors.secondary}
+          gaugePrimaryColor={METER_TONE_VAR[tone]}
+          gaugeSecondaryColor={METER_TRACK_VAR}
           className={mini ? 'size-16' : 'size-40'}
           showValue={false}
         />
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <span className={cn('font-semibold', colors.textClass, mini ? 'text-xs' : 'text-lg')}>
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+          <span
+            className={cn(
+              'font-semibold tabular-nums',
+              METER_TONE_TEXT[tone],
+              mini ? 'text-xs' : 'text-lg',
+            )}
+          >
             <NumberTicker
               value={meter.current_value}
-              className={cn('font-semibold', colors.textClass)}
+              className={cn('font-semibold', METER_TONE_TEXT[tone])}
             />
             %
           </span>
         </div>
-        {!mini && (
-          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none group-hover:pointer-events-auto">
-            <InteractiveHoverButton className="text-xs px-3 py-1">
-              View Tasks
-            </InteractiveHoverButton>
-          </div>
-        )}
       </div>
-      <span className="text-sm text-muted-foreground text-center max-w-[120px] leading-tight">
+
+      <span className="max-w-[130px] text-center text-sm leading-tight text-ink-muted">
         {meter.name}
       </span>
-    </div>
+
+      {!mini && <MeterModeBadge mode={meter.mode} />}
+    </>
+  );
+
+  if (!interactive) {
+    return (
+      <div className="flex flex-col items-center gap-2">{body}</div>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={selected}
+      aria-label={`${meter.name}: ${Math.round(meter.current_value)}% ready`}
+      className={cn(
+        'flex cursor-pointer flex-col items-center gap-2 rounded-xl p-2 transition-colors duration-200',
+        'hover:bg-surface-raised focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus)]',
+        selected && 'bg-surface-raised ring-2 ring-brand',
+      )}
+    >
+      {body}
+    </button>
   );
 }
