@@ -24,6 +24,7 @@ import {
   userActor,
 } from '../common/events/domain-events';
 import { convertUnit } from '../common/utils/unit-conversion';
+import { CatalogCacheService } from './catalog-cache.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { CreateProductCategoryDto } from './dto/create-product-category.dto';
@@ -99,12 +100,51 @@ export interface ProductAvailability {
   preparation_type: string;
 }
 
+/**
+ * Every public list route answers with this envelope (API appendix §A).
+ * `next_cursor` is the `id` of the **last row on this page** — the caller passes
+ * it straight back as `cursor` and Prisma's `skip: 1` steps past it.
+ */
+export interface CursorPage<T> {
+  items: T[];
+  next_cursor: string | null;
+}
+
+export interface SearchHit {
+  id: string;
+  name: string;
+  slug: string;
+  type: ProductType;
+  /** Rupees as a JSON number — `CatalogCacheService` normalises the Decimal. */
+  base_price: number;
+  rating_avg: number | null;
+  rating_count: number;
+  rank: number;
+}
+
+export interface SearchFacets {
+  types: Array<{ type: ProductType; count: number }>;
+  categories: Array<{ category_id: string; name: string; count: number }>;
+}
+
+export interface SearchResult extends CursorPage<SearchHit> {
+  facets: SearchFacets;
+}
+
+/** Default and ceiling for the list routes (API appendix "Conventions"). */
+const LIST_LIMIT_DEFAULT = 50;
+const LIST_LIMIT_MAX = 200;
+/** Search pages are smaller — ranking degrades fast past the first screen. */
+const SEARCH_LIMIT_DEFAULT = 20;
+const SEARCH_LIMIT_MAX = 50;
+
 @Injectable()
 export class CatalogService {
   private readonly logger = new Logger(CatalogService.name);
 
   constructor(
     private readonly prisma: PrismaService,
+    private readonly cache: CatalogCacheService,
     private readonly eventEmitter: EventEmitter2,
   ) {}
 
@@ -118,33 +158,41 @@ export class CatalogService {
    * gone.
    */
   async findCategories(brandId?: string) {
-    return this.prisma.productCategory.findMany({
-      where: {
-        ...(brandId ? { brand_id: brandId } : {}),
-        status: { not: ProductStatus.archived },
-      },
-      include: { _count: { select: { products: true } } },
-      orderBy: { sort_order: 'asc' },
-    });
+    return this.cache.wrap(`categories:${brandId ?? ''}`, () =>
+      this.prisma.productCategory.findMany({
+        where: {
+          ...(brandId ? { brand_id: brandId } : {}),
+          status: { not: ProductStatus.archived },
+        },
+        include: { _count: { select: { products: true } } },
+        orderBy: { sort_order: 'asc' },
+      }),
+    );
   }
 
   async createCategory(dto: CreateProductCategoryDto) {
     // node_id comes from the Prisma-level @default until Task 5 lands `Node`.
-    return this.prisma.productCategory.create({ data: { ...dto } });
+    const category = await this.prisma.productCategory.create({
+      data: { ...dto },
+    });
+    await this.cache.invalidate();
+    return category;
   }
 
   async updateCategory(id: string, dto: UpdateProductCategoryDto) {
     await this.getCategoryOrThrow(id);
-    return this.prisma.productCategory.update({
+    const category = await this.prisma.productCategory.update({
       where: { id },
       data: { ...dto },
     });
+    await this.cache.invalidate();
+    return category;
   }
 
   /** Archives the category's products rather than deleting them — orders reference products. */
   async removeCategory(id: string) {
     await this.getCategoryOrThrow(id);
-    return this.prisma.$transaction(async (tx) => {
+    const category = await this.prisma.$transaction(async (tx) => {
       await tx.product.updateMany({
         where: { category_id: id },
         data: { status: ProductStatus.archived },
@@ -154,6 +202,8 @@ export class CatalogService {
         data: { status: ProductStatus.archived },
       });
     });
+    await this.cache.invalidate();
+    return category;
   }
 
   private async getCategoryOrThrow(id: string) {
@@ -170,14 +220,20 @@ export class CatalogService {
   // Products
   // ----------------------------------------------------------------
 
+  /**
+   * Cursor pagination, not offset: `cursor` is the `id` of the last row the
+   * caller already has, and `skip: 1` steps past it. `orderBy` carries `id` as
+   * a tiebreak because two products may share a name — without it the cursor
+   * row is not uniquely placed in the ordering and pages can repeat or skip.
+   */
   private listArgs(
     categoryId?: string,
     brandId?: string,
     type?: ProductType,
-    page?: number,
+    cursor?: string,
     limit?: number,
   ) {
-    const take = Math.min(Number(limit) || 50, 200);
+    const take = Math.min(Number(limit) || LIST_LIMIT_DEFAULT, LIST_LIMIT_MAX);
     return {
       where: {
         ...(categoryId ? { category_id: categoryId } : {}),
@@ -185,38 +241,70 @@ export class CatalogService {
         ...(type ? { type } : {}),
       },
       take,
-      skip: ((Number(page) || 1) - 1) * take,
-      orderBy: { name: 'asc' as const },
+      ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+      orderBy: [{ name: 'asc' as const }, { id: 'asc' as const }],
     };
   }
 
+  /**
+   * Splits a `take + 1` fetch into the page plus the cursor for the next one.
+   * The cursor is the **last row of this page**, never the peeked row — handing
+   * back the peeked id would make the next request's `skip: 1` swallow it.
+   */
+  private toPage<T extends { id: string }>(
+    rows: T[],
+    take: number,
+  ): CursorPage<T> {
+    const hasMore = rows.length > take;
+    const items = hasMore ? rows.slice(0, take) : rows;
+    return {
+      items,
+      next_cursor: hasMore ? items[items.length - 1].id : null,
+    };
+  }
+
+  /**
+   * Public storefront list. **Returns `{ items, next_cursor }`, not a bare
+   * array** (API appendix §A / §E.1) — cached 60 s and invalidated by every
+   * catalog write.
+   */
   async findProductsPublic(
     categoryId?: string,
     brandId?: string,
     type?: ProductType,
-    page?: number,
+    cursor?: string,
     limit?: number,
   ) {
-    const args = this.listArgs(categoryId, brandId, type, page, limit);
-    return this.prisma.product.findMany({
-      ...args,
-      where: { ...args.where, status: ProductStatus.active },
-      include: PUBLIC_INCLUDE,
+    const key = `products:${categoryId ?? ''}:${brandId ?? ''}:${type ?? ''}:${cursor ?? ''}:${limit ?? ''}`;
+    return this.cache.wrap(key, async () => {
+      const args = this.listArgs(categoryId, brandId, type, cursor, limit);
+      const rows = await this.prisma.product.findMany({
+        ...args,
+        take: args.take + 1,
+        where: { ...args.where, status: ProductStatus.active },
+        include: PUBLIC_INCLUDE,
+      });
+      return this.toPage(rows, args.take);
     });
   }
 
   /**
    * Staff list — drafts included (the ops screen publishes from here), archived
    * withheld so `DELETE /catalog/products/:id` reads as a removal.
+   *
+   * Deliberately still a **bare array** and deliberately **uncached**: it is
+   * authenticated, it must show an edit the instant it is saved, and the ops
+   * menu + POS grids read it as `Product[]`. Only the public surface moved to
+   * the envelope.
    */
   async findProductsStaff(
     categoryId?: string,
     brandId?: string,
     type?: ProductType,
-    page?: number,
+    cursor?: string,
     limit?: number,
   ) {
-    const args = this.listArgs(categoryId, brandId, type, page, limit);
+    const args = this.listArgs(categoryId, brandId, type, cursor, limit);
     return this.prisma.product.findMany({
       ...args,
       where: { ...args.where, status: { not: ProductStatus.archived } },
@@ -225,37 +313,134 @@ export class CatalogService {
   }
 
   async findProductBySlug(slug: string) {
-    const product = await this.prisma.product.findUnique({
-      where: { node_id_slug: { node_id: DEFAULT_NODE_ID, slug } },
-      include: PUBLIC_INCLUDE,
+    return this.cache.wrap(`product:slug:${slug}`, async () => {
+      const product = await this.prisma.product.findUnique({
+        where: { node_id_slug: { node_id: DEFAULT_NODE_ID, slug } },
+        include: PUBLIC_INCLUDE,
+      });
+      if (!product || product.status !== ProductStatus.active) {
+        // Throwing from inside `wrap` caches nothing — a 404 must not stick.
+        throw new NotFoundException(`Product "${slug}" not found`);
+      }
+      return product;
     });
-    if (!product || product.status !== ProductStatus.active) {
-      throw new NotFoundException(`Product "${slug}" not found`);
-    }
-    return product;
   }
 
-  /** Postgres full-text search over Product.search_text (GIN index + trigger, Task 15). */
-  async search(q: string, type?: ProductType, limit = 20) {
-    if (!q.trim()) return [];
+  /**
+   * SRCH-01 — Postgres full-text search over `Product.search_text`.
+   *
+   * The predicate stays byte-identical to the P2 GIN index expression
+   * (`to_tsvector('simple', search_text)`); change one character and Postgres
+   * silently stops using the index. Facets are one extra grouped query over the
+   * *same* predicate but **without** the `type`/`category_id` filters, so the
+   * counts describe what the caller could still narrow to.
+   */
+  async search(
+    q: string,
+    type?: ProductType,
+    categoryId?: string,
+    cursor?: string,
+    limit?: number,
+  ): Promise<SearchResult> {
+    const term = q.trim();
+    if (!term)
+      return {
+        items: [],
+        facets: { types: [], categories: [] },
+        next_cursor: null,
+      };
+
+    const take = Math.min(
+      Number(limit) || SEARCH_LIMIT_DEFAULT,
+      SEARCH_LIMIT_MAX,
+    );
+    // Ranked results have no stable row key to page on, so the search cursor is
+    // an opaque base64 offset rather than an id.
+    const offset = Math.max(0, this.decodeSearchCursor(cursor));
     const typeFilter: string | null = type ?? null;
-    return this.prisma.$queryRaw`
-      SELECT p.id, p.name, p.slug, p.type, p.base_price
-      FROM "Product" p
-      WHERE p.status = 'active'
-        AND (${typeFilter}::text IS NULL OR p.type::text = ${typeFilter}::text)
-        AND to_tsvector('simple', p.search_text) @@ plainto_tsquery('simple', ${q})
-      ORDER BY ts_rank(to_tsvector('simple', p.search_text), plainto_tsquery('simple', ${q})) DESC
-      LIMIT ${Math.min(limit, 50)}`;
+    const categoryFilter: string | null = categoryId ?? null;
+    const key = `search:${term}:${typeFilter ?? ''}:${categoryFilter ?? ''}:${offset}:${take}`;
+
+    return this.cache.wrap(key, async () => {
+      const rows = await this.prisma.$queryRaw<SearchHit[]>`
+        SELECT p.id, p.name, p.slug, p.type, p.base_price, p.rating_avg, p.rating_count,
+               ts_rank(to_tsvector('simple', p.search_text), plainto_tsquery('simple', ${term})) AS rank
+        FROM "Product" p
+        WHERE p.status = 'active'
+          AND (${typeFilter}::text IS NULL OR p.type::text = ${typeFilter}::text)
+          AND (${categoryFilter}::text IS NULL OR p.category_id = ${categoryFilter}::text)
+          AND to_tsvector('simple', p.search_text) @@ plainto_tsquery('simple', ${term})
+        ORDER BY rank DESC, p.name ASC, p.id ASC
+        LIMIT ${take + 1} OFFSET ${offset}`;
+
+      const items = rows.slice(0, take);
+      const next_cursor =
+        rows.length > take
+          ? Buffer.from(String(offset + take), 'utf8').toString('base64')
+          : null;
+
+      const facetRows = await this.prisma.$queryRaw<
+        Array<{
+          type: ProductType;
+          category_id: string;
+          name: string;
+          count: bigint;
+        }>
+      >`
+        SELECT p.type, p.category_id, c.name, count(*)::bigint AS count
+        FROM "Product" p
+        JOIN "ProductCategory" c ON c.id = p.category_id
+        WHERE p.status = 'active'
+          AND to_tsvector('simple', p.search_text) @@ plainto_tsquery('simple', ${term})
+        GROUP BY p.type, p.category_id, c.name`;
+
+      const types = new Map<ProductType, number>();
+      const categories = new Map<
+        string,
+        { category_id: string; name: string; count: number }
+      >();
+      for (const row of facetRows) {
+        const n = Number(row.count);
+        types.set(row.type, (types.get(row.type) ?? 0) + n);
+        const existing = categories.get(row.category_id);
+        categories.set(row.category_id, {
+          category_id: row.category_id,
+          name: row.name,
+          count: (existing?.count ?? 0) + n,
+        });
+      }
+
+      return {
+        items,
+        facets: {
+          types: [...types].map(([t, count]) => ({ type: t, count })),
+          categories: [...categories.values()],
+        },
+        next_cursor,
+      };
+    });
+  }
+
+  /** A malformed or hostile cursor degrades to "first page", never to a crash. */
+  private decodeSearchCursor(cursor?: string): number {
+    if (!cursor) return 0;
+    try {
+      const decoded = Number(Buffer.from(cursor, 'base64').toString('utf8'));
+      return Number.isSafeInteger(decoded) && decoded >= 0 ? decoded : 0;
+    } catch {
+      return 0;
+    }
   }
 
   async createProduct(dto: CreateProductDto, userId: string) {
     await this.assertRecipeUsable(dto.type, dto.recipe_id);
-    return this.prisma.product.create({
+    const product = await this.prisma.product.create({
       // node_id comes from the Prisma-level @default until Task 5 lands `Node`.
       data: { ...dto, created_by: userId, updated_by: userId },
       include: STAFF_INCLUDE,
     });
+    await this.cache.invalidate();
+    return product;
   }
 
   async updateProduct(id: string, dto: UpdateProductDto, userId: string) {
@@ -268,11 +453,13 @@ export class CatalogService {
         dto.recipe_id ?? existing.recipe_id,
       );
     }
-    return this.prisma.product.update({
+    const product = await this.prisma.product.update({
       where: { id },
       data: { ...dto, updated_by: userId },
       include: STAFF_INCLUDE,
     });
+    await this.cache.invalidate();
+    return product;
   }
 
   /** Publish/unpublish — SPEC §9 `catalog/products/:id/publish`. */
@@ -289,6 +476,10 @@ export class CatalogService {
       data: { status, updated_by: userId },
       include: STAFF_INCLUDE,
     });
+
+    // A publish or an archive must be visible on the storefront immediately,
+    // not up to 60 s later.
+    await this.cache.invalidate();
 
     // Emit AFTER the update resolves (SPEC §4.1).
     if (
@@ -345,32 +536,92 @@ export class CatalogService {
   // Variants and media
   // ----------------------------------------------------------------
 
-  async upsertVariant(dto: UpsertProductVariantDto) {
-    return this.prisma.productVariant.upsert({
+  /**
+   * CAT-02 — the low-stock signal. Emitted **after** the write, never inside
+   * it, and only when the variant actually carries a threshold.
+   */
+  async upsertVariant(dto: UpsertProductVariantDto, userId?: string) {
+    const variant = await this.prisma.productVariant.upsert({
       where: { sku: dto.sku },
       create: { ...dto },
       update: { ...dto },
+      include: {
+        product: { select: { id: true, node_id: true, name: true } },
+      },
+    });
+
+    await this.cache.invalidate();
+    this.emitIfLowStock(variant, userId);
+
+    return variant;
+  }
+
+  /**
+   * `stock.low` is the SPEC §4.1 name and it already has two live consumers —
+   * `mission-bridge.rules.ts` (`stock_low_v1`, which moves the PROCUREMENT
+   * meter) and `notifications.listener.ts` (which publishes `notify-low-stock`).
+   * The catalog signal therefore reuses that registered payload instead of
+   * inventing a parallel event nothing subscribes to.
+   *
+   * For a variant, the "ingredient" slot carries the variant: `stock_low_v1`
+   * declares `evidence: false`, so the id is never rendered as a deep link, and
+   * both `ReadinessSignal.source_id` and `BridgeDispatch.source_id` are
+   * polymorphic `String` columns with no foreign key. `zoneId` is empty because
+   * a catalog variant is not zoned — the field exists for the inventory emitter
+   * (`inventory.service.ts:165`).
+   */
+  private emitIfLowStock(
+    variant: {
+      id: string;
+      name: string;
+      sku: string;
+      stock_on_hand: unknown;
+      low_stock_threshold: unknown;
+      product: { node_id: string; name: string };
+    },
+    userId?: string,
+  ): void {
+    if (variant.low_stock_threshold === null) return;
+    const onHand = Number(variant.stock_on_hand);
+    const threshold = Number(variant.low_stock_threshold);
+    if (!Number.isFinite(onHand) || !Number.isFinite(threshold)) return;
+    if (onHand > threshold) return;
+
+    emitDomainEvent(this.eventEmitter, DomainEvent.STOCK_LOW, {
+      ...domainEventBase(variant.product.node_id, userActor(userId)),
+      ingredientId: variant.id,
+      ingredientName: `${variant.product.name} — ${variant.name} (${variant.sku})`,
+      currentQty: onHand,
+      minQty: threshold,
+      unit: 'unit',
+      zoneId: '',
     });
   }
 
   async removeVariant(id: string) {
-    return this.prisma.productVariant.update({
+    const variant = await this.prisma.productVariant.update({
       where: { id },
       data: { status: ProductStatus.archived },
     });
+    await this.cache.invalidate();
+    return variant;
   }
 
   async addMedia(
     productId: string,
     data: { url: string; alt?: string; sort_order?: number; kind?: MediaKind },
   ) {
-    return this.prisma.productMedia.create({
+    const media = await this.prisma.productMedia.create({
       data: { product_id: productId, ...data },
     });
+    await this.cache.invalidate();
+    return media;
   }
 
   async removeMedia(id: string) {
-    return this.prisma.productMedia.delete({ where: { id } });
+    const media = await this.prisma.productMedia.delete({ where: { id } });
+    await this.cache.invalidate();
+    return media;
   }
 
   // ----------------------------------------------------------------
