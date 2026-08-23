@@ -22,6 +22,15 @@ enum ActorType {
   system
 }
 
+/// Outcome of one MissionBridge rule application (SPEC §4.2).
+enum BridgeOutcome {
+  applied
+  skipped_no_task
+  skipped_no_mission
+  skipped_no_owner
+  failed
+}
+
 // ─── Mission layer ───────────────────────────────────────────────────────────
 enum MissionPhase {
   setup
@@ -426,6 +435,7 @@ model Node {
   products            Product[]
   product_categories  ProductCategory[]
   audit_events        AuditEvent[]
+  bridge_dispatches   BridgeDispatch[]
 }
 
 /// SPEC §3: every mutating write that changes state also writes an AuditEvent inside
@@ -657,6 +667,8 @@ model Evidence {
   @@index([task_id])
   // Optimizes: getFeed filtered by approval_status, ordered by created_at
   @@index([approval_status, created_at(sort: Desc)])
+  // Optimizes: bridge evidence per task (task_id + source)
+  @@index([task_id, source])
 }
 
 model Approval {
@@ -687,6 +699,8 @@ model Approval {
   @@index([status, created_at])
   // Optimizes: entity lookups (approval by entity_type + entity_id)
   @@index([entity_type, entity_id])
+  // Optimizes: the "approvals waiting on me" inbox (required_role_code + status)
+  @@index([required_role_code, status])
 }
 
 model Decision {
@@ -712,6 +726,9 @@ model Decision {
   created_at          DateTime       @default(now()) @db.Timestamptz(3)
   updated_at          DateTime       @updatedAt @db.Timestamptz(3)
   votes               DecisionVote[]
+
+  // Optimizes: the decisions inbox and stale-decision counts (status + created_at)
+  @@index([status, created_at(sort: Desc)])
 }
 
 model ApprovalPolicy {
@@ -776,6 +793,29 @@ model ReadinessSnapshot {
   @@index([node_id, date])
 }
 
+/// SPEC §4.2 — the bridge's exactly-once ledger. One row per (rule, source entity);
+/// a replayed domain event hits the unique constraint and becomes a no-op.
+/// `task_id`/`evidence_id` are recorded without FK relations for the same reason
+/// `Approval.entity_id` has none: the bridge must never block a delete.
+model BridgeDispatch {
+  id          String        @id @default(uuid())
+  node_id     String        @default("11111111-1111-4111-8111-111111111111")
+  node        Node          @relation(fields: [node_id], references: [id], onDelete: Restrict)
+  rule_key    String
+  event       String
+  source_type String
+  source_id   String
+  task_id     String?
+  evidence_id String?
+  outcome     BridgeOutcome @default(applied)
+  detail      String?
+  created_at  DateTime      @default(now()) @db.Timestamptz(3)
+
+  @@unique([rule_key, source_type, source_id])
+  @@index([node_id, created_at(sort: Desc)])
+  @@index([event, created_at(sort: Desc)])
+}
+
 model ApprovalDelegation {
   id           String   @id @default(uuid())
   from_user_id String
@@ -797,22 +837,27 @@ model ApprovalDelegation {
 }
 
 model ReadinessMeter {
-  id            String               @id @default(uuid())
-  node_id       String               @default("11111111-1111-4111-8111-111111111111")
-  node          Node                 @relation(fields: [node_id], references: [id], onDelete: Restrict)
-  code          String
-  name          String
-  description   String
-  current_value Float                @default(0)
-  target_value  Float                @default(100)
-  weight        Float                @default(1.0)
-  mode          MeterMode            @default(task_driven)
-  formula_key   String?
-  updated_at    DateTime             @updatedAt @db.Timestamptz(3)
-  tasks         Task[]
-  events        TaskReadinessEvent[]
-  signals       ReadinessSignal[]
-  snapshots     ReadinessSnapshot[]
+  id               String               @id @default(uuid())
+  node_id          String               @default("11111111-1111-4111-8111-111111111111")
+  node             Node                 @relation(fields: [node_id], references: [id], onDelete: Restrict)
+  code             String
+  name             String
+  description      String
+  current_value    Float                @default(0)
+  target_value     Float                @default(100)
+  weight           Float                @default(1.0)
+  mode             MeterMode            @default(task_driven)
+  formula_key      String?
+  /// SPEC §4.3 — task-driven contribution (Σ active TaskReadinessEvent.value, clamped 0-100).
+  task_value       Float                @default(0)
+  /// SPEC §4.3 — formula output for `derived`/`hybrid` meters; null until first computed.
+  derived_value    Float?
+  last_computed_at DateTime?            @db.Timestamptz(3)
+  updated_at       DateTime             @updatedAt @db.Timestamptz(3)
+  tasks            Task[]
+  events           TaskReadinessEvent[]
+  signals          ReadinessSignal[]
+  snapshots        ReadinessSnapshot[]
 
   @@unique([node_id, code])
 }

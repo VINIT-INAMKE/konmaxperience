@@ -15,6 +15,9 @@ import { AuditService } from '../audit/audit.service';
 
 export const PRISMA_MODELS = [
   'auditEvent',
+  'bridgeDispatch',
+  'node',
+  'zone',
   'order',
   'orderItem',
   'payment',
@@ -35,18 +38,28 @@ export const PRISMA_MODELS = [
   'role',
   'evidence',
   'approval',
+  'approvalPolicy',
+  'decision',
+  'decisionVote',
   'taskReadinessEvent',
   'readinessMeter',
+  'readinessSignal',
+  'readinessSnapshot',
   'kpi',
   'notification',
   'systemSetting',
   'refreshToken',
   'passwordResetToken',
   'recipe',
+  'recipeLine',
   'prepBatch',
+  'wasteLog',
   'ingredientStock',
   'stockMovement',
   'ingredient',
+  'ingredientCategory',
+  'purchaseOrder',
+  'vendorPrice',
   'guideSection',
   'guidePage',
 ] as const;
@@ -181,6 +194,42 @@ export function mockTasksService() {
   return {
     recalculateQuestProgress: jest.fn().mockResolvedValue(undefined),
     recalculateMissionProgress: jest.fn().mockResolvedValue(undefined),
+  };
+}
+
+/** A NodeService stand-in — `current()`/`currentId()`/`timezone()` are all the bridge needs. */
+export function mockNodeService(
+  nodeId = '11111111-1111-4111-8111-111111111111',
+) {
+  return {
+    current: jest.fn().mockResolvedValue({
+      id: nodeId,
+      code: 'KX-VILLA-1',
+      timezone: 'Asia/Kolkata',
+      currency: 'INR',
+    }),
+    currentId: jest.fn().mockResolvedValue(nodeId),
+    timezone: jest.fn().mockResolvedValue('Asia/Kolkata'),
+  };
+}
+
+/**
+ * An ApprovalPolicyService stand-in. Wire it in a spec with an explicit token:
+ * `{ provide: ApprovalPolicyService, useValue: mockApprovalPolicyService() }`.
+ * Declared here (not importing the class) so this file stays dependency-free.
+ */
+export function mockApprovalPolicyService() {
+  return {
+    resolve: jest.fn().mockResolvedValue({
+      policy_id: null,
+      scope: 'task',
+      domain: null,
+      required_role_codes: ['BACKEND_LEAD'],
+      min_approvals: 1,
+      mode: 'all',
+    }),
+    materialise: jest.fn().mockResolvedValue(1),
+    isSatisfied: jest.fn().mockResolvedValue(true),
   };
 }
 

@@ -34,6 +34,20 @@ export const SETTING_DEFAULTS = {
     redeem_value_per_point: 0.25,
     tiers: { member: 0, regular: 500, insider: 2000 },
   },
+  readiness: {
+    /** SPEC §4.3 — trailing window for the SALES and QUALITY formulas. */
+    trailing_days: 7,
+    /** SALES: points per channel with >= 1 completed order in the window. */
+    sales_points_per_channel: 25,
+    /** SALES: flat bonus when the window carries >= this many completed orders. */
+    sales_volume_threshold: 10,
+    sales_volume_bonus: 10,
+    /** QUALITY: multiplier applied to waste_cost / COGS before the 0-100 clamp. */
+    quality_waste_multiplier: 5,
+    /** History API default and hard cap. */
+    history_default_days: 90,
+    history_max_days: 365,
+  },
 };
 
 export type SettingKey = keyof typeof SETTING_DEFAULTS;
