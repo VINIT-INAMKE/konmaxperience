@@ -83,6 +83,17 @@ export class OrdersController {
     );
   }
 
+  /**
+   * SPEC §5.2 step 6 close-out. Legal from `served` and `delivered`; re-completing
+   * a completed order is a no-op rather than a 400, so a double-tapped till button
+   * is harmless.
+   */
+  @Post(':id/complete')
+  @RequiresPermission(Permission.MANAGE_POS)
+  async completeOrder(@Param('id', ParseUUIDPipe) id: string, @Req() req: any) {
+    return this.ordersService.completeOrder(id, req.user?.id ?? null);
+  }
+
   @Post(':id/payment')
   @RequiresPermission(Permission.MANAGE_POS)
   async recordPayment(
