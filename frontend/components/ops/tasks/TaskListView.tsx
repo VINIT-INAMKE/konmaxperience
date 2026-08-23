@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { Fragment, useState, useMemo } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { format, isPast, parseISO } from 'date-fns';
 import { Link as LinkIcon, AlertTriangle, ClipboardList, Plus, SearchX } from 'lucide-react';
@@ -41,10 +42,28 @@ interface TaskListViewProps {
   onStatusChange: (taskId: string, newStatus: TaskStatus) => void;
   currentUserId: string;
   isAdmin: boolean;
+  /**
+   * Break the rows into one section per `TaskStatus`. `/quests/[id]` leaves this
+   * off — one quest's tasks read fine as a flat sortable table — while `/tasks`
+   * turns it on so a cross-quest list still says what stage each row is at.
+   */
+  groupByStatus?: boolean;
 }
 
 type SortField = 'title' | 'status' | 'priority' | 'due_date';
 type SortDir = 'asc' | 'desc';
+
+/** Section order when grouping: what needs moving first, retired last. */
+const LIST_STATUS_ORDER: TaskStatus[] = [
+  'todo',
+  'doing',
+  'blocked',
+  'done',
+  'cancelled',
+];
+
+/** Columns in the header row — the group heading spans all of them. */
+const COLUMN_COUNT = 9;
 
 const priorityOrder: Record<string, number> = {
   critical: 4,
@@ -65,6 +84,7 @@ export function TaskListView({
   onStatusChange,
   currentUserId,
   isAdmin,
+  groupByStatus = false,
 }: TaskListViewProps) {
   const router = useRouter();
   const [filter, setFilter] = useState('');
@@ -110,6 +130,19 @@ export function TaskListView({
     });
   }, [tasks, filter, sortField, sortDir]);
 
+  const groups = useMemo(() => {
+    if (!groupByStatus) return [];
+    const byStatus = new Map<TaskStatus, Task[]>();
+    for (const task of filteredAndSorted) {
+      const bucket = byStatus.get(task.status);
+      if (bucket) bucket.push(task);
+      else byStatus.set(task.status, [task]);
+    }
+    return LIST_STATUS_ORDER.filter((status) => byStatus.has(status)).map(
+      (status) => ({ status, rows: byStatus.get(status) as Task[] }),
+    );
+  }, [filteredAndSorted, groupByStatus]);
+
   const canChangeStatus = (task: Task) => task.is_own === true || isAdmin;
 
   const sortIndicator = (field: SortField) =>
@@ -126,6 +159,119 @@ export function TaskListView({
       {sortIndicator(field)}
     </button>
   );
+
+  const renderRow = (task: Task) => {
+    const isOverdue =
+      task.due_date && !task.completed_at && isPast(parseISO(task.due_date));
+    return (
+      <TableRow
+        key={task.id}
+        className={`cursor-pointer hover:bg-muted/50 ${task.valid ? 'bg-[var(--status-good)]/5' : ''}`}
+        onClick={() => router.push(`/tasks/${task.id}`)}
+      >
+        <TableCell>
+          <div className="flex items-center gap-2">
+            <span className="truncate max-w-[200px]">{task.title}</span>
+            <Badge
+              variant="secondary"
+              className={getTypeBadgeClass(task.task_type)}
+            >
+              {TASK_TYPE_LABELS[task.task_type]}
+            </Badge>
+            {task.depends_on && (
+              <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                <LinkIcon className="size-3" />
+                {task.depends_on.status !== 'done' && (
+                  <AlertTriangle className="size-3 text-destructive" />
+                )}
+              </span>
+            )}
+          </div>
+        </TableCell>
+        <TableCell onClick={(e) => e.stopPropagation()}>
+          {canChangeStatus(task) ? (
+            <Select
+              value={task.status}
+              onValueChange={(val: unknown) =>
+                onStatusChange(task.id, val as TaskStatus)
+              }
+            >
+              <SelectTrigger className="h-7 w-24" size="sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {selectableStatuses.map((s) => (
+                  <SelectItem key={s} value={s}>
+                    {TASK_STATUS_LABELS[s]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <Badge
+              variant="secondary"
+              className={getStatusBadgeClass(task.status)}
+            >
+              {TASK_STATUS_LABELS[task.status]}
+            </Badge>
+          )}
+        </TableCell>
+        <TableCell>
+          <Badge
+            variant="secondary"
+            className={getPriorityBadgeClass(task.priority)}
+          >
+            {TASK_PRIORITY_LABELS[task.priority]}
+          </Badge>
+        </TableCell>
+        <TableCell className="text-xs text-muted-foreground">
+          {task.owner?.name || 'Unassigned'}
+        </TableCell>
+        <TableCell
+          className={`text-xs ${isOverdue ? 'text-destructive' : 'text-muted-foreground'}`}
+        >
+          {task.due_date
+            ? `${format(parseISO(task.due_date), 'MMM d')}${isOverdue ? ' · Overdue' : ''}`
+            : '-'}
+        </TableCell>
+        {/* Cross-quest lists live here, so the quest is a real link, not a label. */}
+        <TableCell
+          className="hidden md:table-cell text-xs text-muted-foreground"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {task.quest ? (
+            <Link
+              href={`/quests/${task.quest.id}`}
+              className="block max-w-[140px] truncate rounded-sm transition-colors hover:text-brand focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[var(--focus)]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
+            >
+              {task.quest.title}
+            </Link>
+          ) : (
+            <span className="block max-w-[140px] truncate">-</span>
+          )}
+        </TableCell>
+        <TableCell className="hidden md:table-cell text-xs text-muted-foreground">
+          <span className="truncate max-w-[140px] block">
+            {task.quest?.mission?.title ?? task.mission?.title ?? '-'}
+          </span>
+        </TableCell>
+        <TableCell className="text-xs">
+          {task.valid ? (
+            <span className="text-[var(--status-good)] font-medium">
+              {task.valid_xp} XP
+            </span>
+          ) : (
+            <span className="text-muted-foreground">
+              +{Math.floor(task.xp * (TASK_TYPE_XP_WEIGHT[task.task_type] ?? 1))} XP
+            </span>
+          )}
+        </TableCell>
+        <TableCell>
+          {task.blocked && <Badge variant="destructive">Blocked</Badge>}
+        </TableCell>
+      </TableRow>
+    );
+  };
 
   return (
     <div className="space-y-4">
@@ -156,7 +302,7 @@ export function TaskListView({
         ) : (
           <div className="flex flex-col items-center justify-center py-16 space-y-2 text-center">
             <ClipboardList className="size-6 text-muted-foreground" />
-            <h3 className="text-xl font-semibold">No tasks in this quest</h3>
+            <h3 className="text-xl font-semibold">No tasks to show</h3>
             <p className="text-sm text-muted-foreground">
               Add the first task or inject an ad-hoc task to begin tracking work.
             </p>
@@ -175,7 +321,8 @@ export function TaskListView({
                 {sortButton('title', 'Title')}
               </TableHead>
               <TableHead className="w-[10%]">
-                {sortButton('status', 'Status')}
+                {/* Sorting by status is meaningless once the rows are sectioned by it. */}
+                {groupByStatus ? 'Status' : sortButton('status', 'Status')}
               </TableHead>
               <TableHead className="w-[10%]">
                 {sortButton('priority', 'Priority')}
@@ -191,113 +338,24 @@ export function TaskListView({
             </TableRow>
           </TableHeader>
           <TableBody>
-              {filteredAndSorted.map((task) => {
-                const isOverdue =
-                  task.due_date &&
-                  !task.completed_at &&
-                  isPast(parseISO(task.due_date));
-                return (
-                    <TableRow
-                      key={task.id}
-                      className={`cursor-pointer hover:bg-muted/50 ${task.valid ? 'bg-[var(--status-good)]/5' : ''}`}
-                      onClick={() => router.push(`/tasks/${task.id}`)}
-                    >
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <span className="truncate max-w-[200px]">
-                            {task.title}
-                          </span>
-                          <Badge
-                            variant="secondary"
-                            className={getTypeBadgeClass(task.task_type)}
-                          >
-                            {TASK_TYPE_LABELS[task.task_type]}
-                          </Badge>
-                          {task.depends_on && (
-                            <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                              <LinkIcon className="size-3" />
-                              {task.depends_on.status !== 'done' && (
-                                <AlertTriangle className="size-3 text-destructive" />
-                              )}
-                            </span>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell onClick={(e) => e.stopPropagation()}>
-                        {canChangeStatus(task) ? (
-                          <Select
-                            value={task.status}
-                            onValueChange={(val: unknown) =>
-                              onStatusChange(task.id, val as TaskStatus)
-                            }
-                          >
-                            <SelectTrigger className="h-7 w-24" size="sm">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {selectableStatuses.map((s) => (
-                                <SelectItem key={s} value={s}>
-                                  {TASK_STATUS_LABELS[s]}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        ) : (
-                          <Badge
-                            variant="secondary"
-                            className={getStatusBadgeClass(task.status)}
-                          >
-                            {TASK_STATUS_LABELS[task.status]}
-                          </Badge>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant="secondary"
-                          className={getPriorityBadgeClass(task.priority)}
-                        >
-                          {TASK_PRIORITY_LABELS[task.priority]}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-xs text-muted-foreground">
-                        {task.owner?.name || 'Unassigned'}
-                      </TableCell>
+            {groupByStatus
+              ? groups.map(({ status, rows }) => (
+                  <Fragment key={status}>
+                    <TableRow className="hover:bg-transparent">
                       <TableCell
-                        className={`text-xs ${isOverdue ? 'text-destructive' : 'text-muted-foreground'}`}
+                        colSpan={COLUMN_COUNT}
+                        className="bg-surface-sunken py-1.5 text-xs font-semibold tracking-wide text-ink-muted uppercase"
                       >
-                        {task.due_date
-                          ? `${format(parseISO(task.due_date), 'MMM d')}${isOverdue ? ' \u00b7 Overdue' : ''}`
-                          : '-'}
-                      </TableCell>
-                      <TableCell className="hidden md:table-cell text-xs text-muted-foreground">
-                        <span className="truncate max-w-[140px] block">
-                          {task.quest?.title ?? '-'}
+                        {TASK_STATUS_LABELS[status]}
+                        <span className="ml-2 font-normal tabular-nums normal-case">
+                          {rows.length}
                         </span>
-                      </TableCell>
-                      <TableCell className="hidden md:table-cell text-xs text-muted-foreground">
-                        <span className="truncate max-w-[140px] block">
-                          {task.quest?.mission?.title ?? task.mission?.title ?? '-'}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-xs">
-                        {task.valid ? (
-                          <span className="text-[var(--status-good)] font-medium">
-                            {task.valid_xp} XP
-                          </span>
-                        ) : (
-                          <span className="text-muted-foreground">
-                            +{Math.floor(task.xp * (TASK_TYPE_XP_WEIGHT[task.task_type] ?? 1))} XP
-                          </span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {task.blocked && (
-                          <Badge variant="destructive">Blocked</Badge>
-                        )}
                       </TableCell>
                     </TableRow>
-                );
-              })}
+                    {rows.map(renderRow)}
+                  </Fragment>
+                ))
+              : filteredAndSorted.map(renderRow)}
           </TableBody>
         </Table>
         </div>
