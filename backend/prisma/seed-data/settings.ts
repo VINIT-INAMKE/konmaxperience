@@ -34,6 +34,15 @@ export const SEED_SETTING_DEFAULTS: typeof SETTING_DEFAULTS = {
     redeem_value_per_point: 0.25,
     tiers: { member: 0, regular: 500, insider: 2000 },
   },
+  readiness: {
+    trailing_days: 7,
+    sales_points_per_channel: 25,
+    sales_volume_threshold: 10,
+    sales_volume_bonus: 10,
+    quality_waste_multiplier: 5,
+    history_default_days: 90,
+    history_max_days: 365,
+  },
 };
 
 export type SeedSettingKey = keyof typeof SEED_SETTING_DEFAULTS;
