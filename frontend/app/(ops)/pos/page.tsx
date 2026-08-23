@@ -11,6 +11,8 @@ import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { PosProductGrid } from '@/components/ops/pos/PosProductGrid';
 import { PosCartSidebar } from '@/components/ops/pos/PosCartSidebar';
 import { apiClient } from '@/lib/api-client';
+import { useUsageEvent } from '@/lib/hooks/use-usage-event';
+import { USAGE_ACTIONS } from '@/lib/types/usage';
 import type { Brand } from '@/lib/types/brand';
 import type { ProductCategory, Product } from '@/lib/types/catalog';
 import type { Zone } from '@/lib/types/zone';
@@ -30,6 +32,7 @@ interface CartItem {
 
 export default function PosPage() {
   const queryClient = useQueryClient();
+  const { trackAction } = useUsageEvent();
 
   // Cart state
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
@@ -81,8 +84,10 @@ export default function PosPage() {
   const { data: availability = {} } = useQuery({
     queryKey: ['menu', 'availability-batch'],
     queryFn: () => apiClient.get<AvailabilityMap>('/catalog/availability'),
-    refetchInterval: 10000,
-    staleTime: 8000,
+    // SPEC §6.4 polling floor. There is no `private-catalog` channel, so this is
+    // a genuine poll — 30 s is as fast as it may run.
+    refetchInterval: 30_000,
+    staleTime: 25_000,
   });
 
   const { data: zones = [] } = useQuery({
@@ -99,6 +104,7 @@ export default function PosPage() {
     mutationFn: (payload: CreateOrderPayload) =>
       apiClient.post<Order>('/orders', payload),
     onSuccess: (order) => {
+      trackAction(USAGE_ACTIONS.ORDER_PLACE, { channel });
       toast.success(`Order #${order.order_number} placed`);
       setCartItems([]);
       setTableNumber('');

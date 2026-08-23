@@ -6,6 +6,8 @@ import { FileText, FileSpreadsheet, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { apiClient } from '@/lib/api-client';
+import { useUsageEvent } from '@/lib/hooks/use-usage-event';
+import { USAGE_ACTIONS } from '@/lib/types/usage';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -53,6 +55,7 @@ export function ExportDialog({
   onExportingChange,
 }: ExportDialogProps) {
   const queryClient = useQueryClient();
+  const { trackAction } = useUsageEvent();
   const config = EXPORT_TYPE_CONFIG[reportType];
 
   const [format, setFormat] = useState<'csv' | 'xlsx'>('xlsx');
@@ -68,7 +71,11 @@ export function ExportDialog({
   const { mutate, isPending: isGenerating } = useMutation({
     mutationFn: (payload: GenerateExportPayload) =>
       apiClient.post<GenerateExportResponse>('/exports/generate', payload),
-    onSuccess: (data) => {
+    onSuccess: (data, variables) => {
+      trackAction(USAGE_ACTIONS.EXPORT_RUN, {
+        report_type: variables.reportType,
+        format: variables.format,
+      });
       onOpenChange(false);
       onExportingChange?.(false);
       queryClient.invalidateQueries({ queryKey: ['exports', 'history'] });

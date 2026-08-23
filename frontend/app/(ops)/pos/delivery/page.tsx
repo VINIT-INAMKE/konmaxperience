@@ -12,7 +12,9 @@ export default function DeliveryQueuePage() {
   const { data: allDeliveryOrders = [], isLoading } = useQuery({
     queryKey: ['orders', 'delivery-queue'],
     queryFn: () => apiClient.get<Order[]>('/orders?channel=delivery'),
-    refetchInterval: 15000,
+    // SPEC §6.4 polling floor. `private-shipments` exists on the backend but
+    // carries no events yet, so the delivery queue is still poll-driven.
+    refetchInterval: 30_000,
   });
 
   // Filter active deliveries client-side (small subset)

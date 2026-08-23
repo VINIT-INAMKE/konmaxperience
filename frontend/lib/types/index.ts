@@ -21,3 +21,4 @@ export * from './settings';
 export * from './modules';
 export * from './nodes';
 export * from './header';
+export * from './usage';

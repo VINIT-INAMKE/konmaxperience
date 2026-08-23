@@ -15,17 +15,37 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  POLL_FLOOR_MS,
+  useRealtimeChannel,
+} from '@/lib/hooks/use-realtime-channel';
+import { HEADER_CONTEXT_QUERY_KEY } from '@/lib/hooks/use-header-context';
+import { useAuthStore } from '@/lib/stores/auth-store';
 import { NotificationItem } from './NotificationItem';
+
+const NOTIFICATION_EVENTS = ['notification.created'] as const;
+const NOTIFICATION_INVALIDATE = [
+  ['notifications'],
+  HEADER_CONTEXT_QUERY_KEY,
+] as const;
 
 export function NotificationBell() {
   const [open, setOpen] = useState(false);
   const queryClient = useQueryClient();
+  const userId = useAuthStore((s) => s.user?.id ?? null);
 
-  // Poll unread count every 30 seconds (D-09)
+  // `private-user-{id}` carries `notification.created`; the 30 s poll (D-09) is
+  // the SPEC §6.4 floor and only runs when the socket is not up.
+  const { live } = useRealtimeChannel(
+    userId ? `private-user-${userId}` : null,
+    NOTIFICATION_EVENTS,
+    NOTIFICATION_INVALIDATE,
+  );
+
   const { data: unreadData } = useQuery<NotificationUnreadCount>({
     queryKey: ['notifications', 'unread-count'],
     queryFn: () => apiClient.get<NotificationUnreadCount>('/notifications/unread-count'),
-    refetchInterval: 30_000,
+    refetchInterval: live ? false : POLL_FLOOR_MS,
     staleTime: 25_000,
   });
   const unreadCount = unreadData?.count ?? 0;

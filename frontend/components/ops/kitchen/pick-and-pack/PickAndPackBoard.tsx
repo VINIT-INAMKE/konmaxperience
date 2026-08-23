@@ -9,19 +9,38 @@ import type { PickAndPackOrder } from '@/lib/types/kitchen';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  POLL_FLOOR_MS,
+  useRealtimeChannel,
+} from '@/lib/hooks/use-realtime-channel';
 import { PickAndPackOrderCard } from './PickAndPackOrderCard';
 
 /** SPEC §6.4: BorderBeam marks an order that arrived in the last minute. */
 const NEW_ORDER_WINDOW_MS = 60_000;
 
+const PICK_PACK_QUERY_KEY = ['pick-and-pack'] as const;
+/** Module-level so `useRealtimeChannel`'s effect does not resubscribe per render. */
+const PICK_PACK_EVENTS = [
+  'pickpack.order.new',
+  'pickpack.order.updated',
+] as const;
+const PICK_PACK_INVALIDATE = [PICK_PACK_QUERY_KEY] as const;
+
 export function PickAndPackBoard() {
   const queryClient = useQueryClient();
 
+  // SPEC §6.4: realtime carries the queue; the poll is the ≥ 30 s fallback and
+  // is off entirely while the socket is up.
+  const { live } = useRealtimeChannel(
+    'private-pick-pack',
+    PICK_PACK_EVENTS,
+    PICK_PACK_INVALIDATE,
+  );
+
   const { data: orders, isLoading, isError, refetch } = useQuery({
-    queryKey: ['pick-and-pack'],
+    queryKey: PICK_PACK_QUERY_KEY,
     queryFn: () => apiClient.get<PickAndPackOrder[]>('/kitchen/pick-and-pack'),
-    refetchInterval: 5000,
-    refetchIntervalInBackground: true,
+    refetchInterval: live ? false : POLL_FLOOR_MS,
   });
 
   // An order is "new" while it is under a minute old — recomputed on every poll.
@@ -39,7 +58,7 @@ export function PickAndPackBoard() {
     mutationFn: (itemId: string) =>
       apiClient.patch(`/kitchen/pick-and-pack/items/${itemId}/picked`, {}),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['pick-and-pack'] });
+      void queryClient.invalidateQueries({ queryKey: PICK_PACK_QUERY_KEY });
     },
     onError: () => {
       toast.error('Failed to mark item as picked. Try again.');

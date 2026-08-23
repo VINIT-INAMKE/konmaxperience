@@ -16,7 +16,6 @@ import { AlertBadges } from './AlertBadges';
 import { XpChip } from './XpChip';
 import { CommandPalette } from './CommandPalette';
 import { HeaderUserMenu } from './HeaderUserMenu';
-import { useHeaderRealtime } from './use-header-realtime';
 
 export interface AppHeaderProps {
   /** Opens the navigation sheet. Only rendered below `lg`, where the rail is hidden. */
@@ -63,13 +62,12 @@ export function AppHeader({ onOpenNav }: AppHeaderProps) {
   );
 
   // Backend double-gates `private-approvals` on APPROVE_EVIDENCE *and* the
-  // `approvals` module; ask for the socket only when both hold.
-  useHeaderRealtime({
-    userId: ctx.user?.id ?? null,
-    canWatchApprovals:
-      ctx.module_keys.includes('approvals') &&
-      permissions.includes('APPROVE_EVIDENCE'),
-  });
+  // `approvals` module; ask for the socket only when both hold. The subscription
+  // itself lives in `AlertBadges` (approvals) and `NotificationBell`
+  // (`private-user-{id}`), both on the one shared client in `lib/pusher-client`.
+  const canWatchApprovals =
+    ctx.module_keys.includes('approvals') &&
+    permissions.includes('APPROVE_EVIDENCE');
 
   const navButton = onOpenNav ? (
     <button
@@ -115,6 +113,7 @@ export function AppHeader({ onOpenNav }: AppHeaderProps) {
         <AlertBadges
           approvalsWaiting={ctx.approvals_waiting}
           myBlockers={ctx.my_blockers}
+          canWatchApprovals={canWatchApprovals}
         />
 
         <div className="hidden md:block">

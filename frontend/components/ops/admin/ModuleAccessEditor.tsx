@@ -34,6 +34,8 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { apiClient, ApiError } from '@/lib/api-client';
+import { useUsageEvent } from '@/lib/hooks/use-usage-event';
+import { USAGE_ACTIONS } from '@/lib/types/usage';
 import { ROLE_DISPLAY_NAMES, RoleCode } from '@/lib/types/roles';
 import type {
   ModuleAccess,
@@ -89,6 +91,7 @@ function isIntegerText(value: string): boolean {
 
 export function ModuleAccessEditor() {
   const queryClient = useQueryClient();
+  const { trackAction } = useUsageEvent();
 
   const {
     data: modules,
@@ -180,6 +183,9 @@ export function ModuleAccessEditor() {
       );
     },
     onSuccess: (_data, variables) => {
+      trackAction(USAGE_ACTIONS.MODULE_ACCESS_UPDATE, {
+        module_key: variables.key,
+      });
       toast.success(variables.message);
     },
     onSettled: (_data, _error, variables) => {
