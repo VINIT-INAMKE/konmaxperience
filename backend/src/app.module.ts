@@ -7,6 +7,7 @@ import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
 import { NodeModule } from './node/node.module';
 import { AuditModule } from './audit/audit.module';
+import { ApprovalPolicyModule } from './approvals/approval-policy.module';
 import { AuthModule } from './auth/auth.module';
 import { PermissionsModule } from './permissions/permissions.module';
 import { UsersModule } from './users/users.module';
@@ -69,6 +70,7 @@ import { UserAwareThrottlerGuard } from './common/guards/user-aware-throttler.gu
     PrismaModule,
     NodeModule,
     AuditModule,
+    ApprovalPolicyModule,
     AuthModule,
     PermissionsModule,
     UsersModule,
