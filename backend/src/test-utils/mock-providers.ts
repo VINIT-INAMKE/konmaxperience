@@ -15,6 +15,7 @@ import { AuditService } from '../audit/audit.service';
 
 export const PRISMA_MODELS = [
   'auditEvent',
+  'usageEvent',
   'bridgeDispatch',
   'node',
   'zone',
