@@ -2,14 +2,13 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Image from 'next/image';
-import { Loader2, Menu } from 'lucide-react';
-import { Sidebar } from '@/components/ops/Sidebar';
+import { Loader2 } from 'lucide-react';
+import { SpineNav } from '@/components/ops/nav/SpineNav';
+import { AppHeader } from '@/components/ops/header/AppHeader';
 import { ErrorBoundary } from '@/components/ops/ErrorBoundary';
 import { useAuthStore } from '@/lib/stores/auth-store';
 import { apiClient } from '@/lib/api-client';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
-import { AnimatedThemeToggler } from '@/components/ui/animated-theme-toggler';
 
 interface MeResponse {
   id: string;
@@ -24,21 +23,28 @@ interface MeResponse {
   createdAt: string;
 }
 
-export default function OpsLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+/**
+ * The ops shell: navigation spine (SPEC §6.2) on the left, persistent mission
+ * header (SPEC §6.1) across the top, page in the middle.
+ *
+ * The header is mounted **outside** any breakpoint condition — the old layout
+ * had a `lg:hidden` mobile-only bar, which meant desktop users had no mission
+ * context at all. Every ops page now carries the header at every width, and the
+ * spine is a fixed rail from `lg` up and a sheet below it.
+ */
+export default function OpsLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const setUser = useAuthStore((s) => s.setUser);
   const [ready, setReady] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [navOpen, setNavOpen] = useState(false);
 
-  // Lock body scroll — ops layout handles its own scrolling via overflow-y-auto on main
+  // Lock body scroll — the ops shell scrolls <main>, not the document.
   useEffect(() => {
     document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = ''; };
+    return () => {
+      document.body.style.overflow = '';
+    };
   }, []);
 
   useEffect(() => {
@@ -69,46 +75,42 @@ export default function OpsLayout({
 
   if (!ready) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="size-6 animate-spin motion-reduce:animate-none text-muted-foreground" />
+      <div className="flex min-h-screen items-center justify-center bg-bg">
+        <Loader2
+          className="size-6 animate-spin text-ink-muted motion-reduce:animate-none"
+          aria-label="Loading"
+        />
       </div>
     );
   }
 
   return (
     <ErrorBoundary>
-      <div className="flex h-screen overflow-hidden bg-background">
-        {/* Desktop sidebar */}
-        <div className="hidden lg:flex w-[240px] shrink-0">
-          <Sidebar />
+      <div className="flex h-screen overflow-hidden bg-bg">
+        {/* Desktop rail */}
+        <div className="hidden w-[248px] shrink-0 lg:flex">
+          <SpineNav />
         </div>
 
-        {/* Mobile sidebar drawer */}
-        <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
-          <SheetContent side="left" className="w-[280px] p-0" showCloseButton={false}>
-            <Sidebar onNavigate={() => setSidebarOpen(false)} />
+        {/* Mobile drawer — the same spine, closing itself on navigate. */}
+        <Sheet open={navOpen} onOpenChange={setNavOpen}>
+          <SheetContent
+            side="left"
+            className="w-[288px] p-0"
+            showCloseButton={false}
+            aria-label="Navigation"
+          >
+            <SpineNav onNavigate={() => setNavOpen(false)} />
           </SheetContent>
         </Sheet>
 
-        <div className="flex-1 flex flex-col min-w-0">
-          {/* Mobile header */}
-          <header className="flex lg:hidden items-center gap-3 h-14 px-4 border-b bg-card shrink-0">
-            <button
-              onClick={() => setSidebarOpen(true)}
-              aria-label="Open menu"
-              className="flex items-center justify-center size-9 rounded-md hover:bg-muted transition-colors"
-            >
-              <Menu className="size-5" />
-            </button>
-            <div className="flex items-center gap-2 flex-1">
-              <Image src="/logo.png" alt="Konma Xperience" width={28} height={28} style={{ height: '1.75rem', width: 'auto' }} />
-              <span className="text-sm font-semibold tracking-tight">Konma Xperience</span>
-            </div>
-            <AnimatedThemeToggler />
-          </header>
+        <div className="flex min-w-0 flex-1 flex-col">
+          <AppHeader onOpenNav={() => setNavOpen(true)} />
 
           <main className="flex-1 overflow-y-auto">
-            <div className="p-4 sm:p-6 max-w-[1200px] mx-auto w-full">{children}</div>
+            <div className="mx-auto w-full max-w-[1200px] p-4 sm:p-6">
+              {children}
+            </div>
           </main>
         </div>
       </div>
