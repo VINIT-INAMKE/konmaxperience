@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Mission OS + Marketplace
-status: "Phase 29 (P1) complete — Phase 30 (P2 platform foundation) next"
-stopped_at: P0 planning sync complete (SPEC.md at cd04779; PROJECT/ROADMAP/REQUIREMENTS synced)
-last_updated: "2026-08-22"
+status: "Phase 30 (P2 platform foundation) complete — Phase 31 (P3 mission bridge) next"
+stopped_at: P2 complete at fc49c19 — single baseline migration applied, seeded and smoke-tested; see .planning/phases/30-p2-platform-foundation/30-01-SUMMARY.md
+last_updated: "2026-08-23"
 progress:
   total_phases: 7
   completed_phases: 0
@@ -23,8 +23,22 @@ See: .planning/PROJECT.md (updated 2026-08-22) and /SPEC.md (canonical v2.0 spec
 ## Current Position
 
 Milestone: v2.0 Mission OS + Marketplace (Phases 29–35 on branch `v2-os-marketplace`)
-Phase: 29 (Stop the Bleeding, P1) — NOT STARTED (no plans written yet)
+Phase: 30 (Platform Foundation, P2) — **COMPLETE** at `fc49c19` (record: `.planning/phases/30-p2-platform-foundation/30-01-SUMMARY.md`)
+Next phase: 31 (Mission Bridge, P3) — not started
+Previous phase: 29 (Stop the Bleeding, P1) — complete at `139d032` + P1-B closure
 Previous milestone: v1.1 complete 2026-03-27 (Phases 14–24, 27, 28 shipped; Phases 25 and 26 were never built — see ROADMAP.md notes)
+
+P2 shipped all 16 tasks of `docs/superpowers/plans/2026-08-23-p2-platform-foundation.md`: 50 Prisma enums,
+`Node` + `node_id` on 24 aggregates, `AuditEvent` + `AuditService`, `Task.subject`, `ApprovalPolicy`,
+`DecisionVote`, readiness signals/snapshots, timestamptz(3)/Decimal precision, `Product`* replacing
+`MenuItem`/`MenuCategory`, `ModuleAccess`, Json `SystemSetting.value`, `Node.timezone` replacing the hardcoded
+IST offset, new seeds, and one baseline migration `20260823120000_p2_platform_foundation` (1,845 lines) with
+hand-written CHECKs and search triggers. Gates: backend 60/60 suites · 603 tests · tsc clean · 0 lint errors ·
+frontend tsc + build clean · drift gate `No difference detected.`
+
+Open environment action (needs the user — Prisma's AI-agent guard reserves the command): run
+`cd backend && npx prisma migrate reset --force` to rebuild the canonical local `konma` database from the
+baseline, then `DROP DATABASE konma_p2_verify;` (the scratch database P2 verification ran against).
 
 ## Performance Metrics
 
@@ -258,7 +272,19 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-08-22
-Stopped at: P0 planning sync complete — SPEC.md committed (cd04779), planning docs synced, contextdocs marked historical
+Last session: 2026-08-23
+Stopped at: Phase 30 (P2 platform foundation) complete at `fc49c19` — single baseline migration
+`20260823120000_p2_platform_foundation` committed, applied to Postgres, seeded, drift-checked and
+smoke-tested. Record: `.planning/phases/30-p2-platform-foundation/30-01-SUMMARY.md`
 Resume file: None
-Next action: `/gsd:plan-phase 29`
+Next action: `/gsd:plan-phase 31` (P3 mission bridge — domain events, `MissionBridgeService`, derived meters +
+snapshots + history, policy-generated approvals, recipe approval via policy, decision votes)
+
+Carry into Phase 31:
+- Run `cd backend && npx prisma migrate reset --force` once to rebuild the canonical local `konma` database
+  from the baseline (it still holds the v1 schema), then drop the `konma_p2_verify` scratch database.
+- P2 deferred `Shipment*`/`Refund`/`Coupon*`/`Loyalty*`/`Review`/`UsageEvent` **models** to Phase 33 (P5);
+  their enums and the `Order` money columns already exist. ROADMAP Phase 30 criterion 4 corrected accordingly.
+- Six frontend follow-ups are listed at the end of the Phase 30 summary (variant selection UI, `purchase_orders`
+  import type, `AdminAdHocInjectorWidget`, `OrderItem.fulfilment` derivation, explicit-UTC day filters,
+  product media upload UI).

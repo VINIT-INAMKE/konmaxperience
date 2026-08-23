@@ -51,7 +51,7 @@
 - Branch: `v2-os-marketplace`. Each phase: plan → parallel subagents by module → CI green → walk-through → summary.
 
 - [ ] **Phase 29: Stop the Bleeding (P1)** - 14 Critical/High defects fixed with regression tests, config validation, safe seeds, error boundaries, test suite green, CI enforcing
-- [ ] **Phase 30: Platform Foundation (P2)** - Fresh migration baseline: Node, Prisma enums, AuditEvent, Task.subject, ApprovalPolicy, timestamptz, CHECKs, Product replacing MenuItem, new seeds
+- [x] **Phase 30: Platform Foundation (P2)** - Fresh migration baseline: Node, Prisma enums, AuditEvent, Task.subject, ApprovalPolicy, timestamptz, CHECKs, Product replacing MenuItem, new seeds *(complete 2026-08-23 at `fc49c19`)*
 - [ ] **Phase 31: Mission Bridge (P3)** - Domain events, MissionBridgeService, derived meters + snapshots + history, policy-generated approvals, recipe approval via policy, decision votes
 - [ ] **Phase 32: Role-Aware IA + Identity (P4)** - Persistent header, spine nav, ModuleAccess, /tasks, My Quests, sheets, chips, motion allowlist, brand tokens light + dark, Pusher on kitchen screens, usage events
 - [ ] **Phase 33: Marketplace Backend (P5a)** - Catalog, mixed-fulfilment quote/checkout/confirm, FulfilmentService, Shiprocket + shipments, coupons, loyalty, reviews, search, refunds
@@ -425,7 +425,7 @@ P0 (canonical spec + planning sync) has no phase number: `SPEC.md` was committed
 **Spec sections**: §1.1 (goals 4–5), §5.2 step 4, §8, §10, §11 P1
 **Plans**: TBD
 
-### Phase 30: Platform Foundation (P2)
+### Phase 30: Platform Foundation (P2) — ✅ COMPLETE (2026-08-23, `fc49c19`)
 **Goal**: The schema is reset to one fresh migration baseline — `Node`, Prisma enums, `AuditEvent`, `Task.subject`, `ApprovalPolicy`, timestamptz, CHECK constraints and `Product` replacing `MenuItem` — with every v1 flow green against it.
 **Depends on**: Phase 29
 **Requirements**: PLAT-01 … PLAT-09
@@ -434,10 +434,14 @@ P0 (canonical spec + planning sync) has no phase number: `SPEC.md` was committed
   2. Every enum-like field is a Prisma enum, every `DateTime` is `@db.Timestamptz(3)`, money is `Decimal(12,2)`, quantities `Decimal(14,4)`; CHECKs exist on `RecipeLine` (input XOR), `IngredientStock` (`current_quantity >= 0`) and `WasteLog`
   3. `MenuItem`/`MenuCategory` are gone; `Product`, `ProductCategory`, `ProductVariant`, `ProductMedia` exist and POS, KDS, Pick & Pack, exports, imports and analytics read products
   4. Every mutating transaction writes an `AuditEvent`; `SystemSetting.value` is JSON with allowlisted keys; `ModuleAccess` exists with the §6.3 defaults; `Task.subject_type/subject_id`, `ApprovalPolicy`, `Approval.entity_type/entity_id`, `DecisionVote`, `ReadinessSignal/Snapshot`, `Shipment*`, `Coupon*`, `Loyalty*`, `Review`, `Refund` are in the schema
+     — **Corrected 2026-08-23:** for `Shipment*`, `Coupon*`, `Loyalty*`, `Review`, `Refund` and `UsageEvent` this phase delivers **enums declared only; the models land in Phase 33 (P5)** together with the services that write them (the `Order` money columns they populate did ship in P2). Everything else in this criterion shipped in Phase 30.
   5. `seed:reference` (idempotent, prod-safe) and `seed:demo` (guarded) both run clean on an empty database; migrations run in a release step, not the build
   6. All v1 flows (login → task → evidence → approve; PO receive; prep batch; POS → KDS → deduction; marketplace order) pass integration tests against the new schema, and every item in SPEC §3.5 is removed from the codebase
 **Spec sections**: §3.1–§3.5, §8 (data safety), §11 P2, §12
-**Plans**: TBD
+**Plans**: 1 plan — complete
+
+Plans:
+- [x] 30-01 — `docs/superpowers/plans/2026-08-23-p2-platform-foundation.md` (16 tasks, `a6c454c..fc49c19`); record at `.planning/phases/30-p2-platform-foundation/30-01-SUMMARY.md`
 
 ### Phase 31: Mission Bridge (P3)
 **Goal**: Operational events automatically become bridge evidence and readiness signals, four meters are derived from ops state with daily snapshots and a history API, and approval gates and decision votes execute from policy tables.
