@@ -69,6 +69,9 @@ import { UserAwareThrottlerGuard } from './common/guards/user-aware-throttler.gu
 // blocks so concurrent phases adding imports do not collide with this one.
 import { LoyaltyModule } from './loyalty/loyalty.module';
 import { CheckoutModule } from './checkout/checkout.module';
+import { ShipmentsModule } from './shipments/shipments.module';
+import { ShippingModule } from './shipping/shipping.module';
+import { PromotionsModule } from './promotions/promotions.module';
 
 @Module({
   imports: [
@@ -128,6 +131,9 @@ import { CheckoutModule } from './checkout/checkout.module';
     MissionBridgeModule,
     LoyaltyModule,
     CheckoutModule,
+    ShipmentsModule,
+    ShippingModule,
+    PromotionsModule,
     RealtimeModule,
     UsageModule,
     MeModule,
