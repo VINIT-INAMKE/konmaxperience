@@ -46,7 +46,7 @@ const TASK_LIST_INCLUDE = {
       mission: { select: { id: true, title: true } },
     },
   },
-  readiness_meter: { select: { id: true, name: true } },
+  readiness_meter: { select: { id: true, name: true, code: true } },
 } as const satisfies Prisma.TaskInclude;
 
 export type TaskListItem = Prisma.TaskGetPayload<{
@@ -231,7 +231,7 @@ export class TasksService {
           },
         },
         mission: { select: { id: true, title: true } },
-        readiness_meter: { select: { id: true, name: true } },
+        readiness_meter: { select: { id: true, name: true, code: true } },
         linked_assets: {
           select: { id: true, name: true, asset_type: true },
         },

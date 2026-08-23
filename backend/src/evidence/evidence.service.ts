@@ -69,7 +69,13 @@ export class EvidenceService {
     return this.prisma.evidence.findMany({
       where,
       include: {
-        task: { select: { title: true } },
+        task: {
+          select: {
+            id: true,
+            title: true,
+            quest: { select: { id: true, title: true } },
+          },
+        },
         uploader: { select: { id: true, name: true } },
       },
       orderBy: { created_at: 'desc' },

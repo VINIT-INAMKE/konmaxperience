@@ -27,7 +27,13 @@ const PO_INCLUDE = {
       ingredient: { select: { id: true, name: true, base_unit: true } },
     },
   },
-  linked_task: { select: { id: true, title: true } },
+  linked_task: {
+    select: {
+      id: true,
+      title: true,
+      quest: { select: { id: true, title: true } },
+    },
+  },
 } as const;
 
 @Injectable()
@@ -48,7 +54,13 @@ export class PurchaseOrdersService {
       include: {
         vendor: { select: { id: true, name: true } },
         zone: { select: { id: true, name: true } },
-        linked_task: { select: { id: true, title: true } },
+        linked_task: {
+    select: {
+      id: true,
+      title: true,
+      quest: { select: { id: true, title: true } },
+    },
+  },
         _count: { select: { lines: true } },
       },
       orderBy: { created_at: 'desc' },
