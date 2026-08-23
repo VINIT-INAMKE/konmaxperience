@@ -12,10 +12,13 @@ export const STATUS_BADGE = {
   blue: 'text-blue-400 bg-blue-950 border-blue-500/20',
   green: 'text-green-400 bg-green-950 border-green-500/20',
   red: 'text-red-400 bg-red-950 border-red-500/20',
+  /** Retired/abandoned states — present but no longer live. */
+  muted: 'text-muted-foreground bg-muted border-transparent line-through',
 } as const;
 
 // --- Domain-specific mappings ---
 
+/** Prisma `TaskStatus` — `todo` is the neutral default and gets no badge tint. */
 export function getTaskStatusBadge(status: string): string {
   switch (status) {
     case 'doing':
@@ -24,6 +27,8 @@ export function getTaskStatusBadge(status: string): string {
       return STATUS_BADGE.green;
     case 'blocked':
       return STATUS_BADGE.red;
+    case 'cancelled':
+      return STATUS_BADGE.muted;
     default:
       return '';
   }

@@ -49,6 +49,7 @@ function getTypeBadgeClass(type: string) {
   }
 }
 
+/** Prisma `TaskStatus` — `todo` is the neutral default and gets no badge tint. */
 function getStatusBadgeClass(status: string) {
   switch (status) {
     case 'doing':
@@ -57,6 +58,8 @@ function getStatusBadgeClass(status: string) {
       return 'text-green-400 bg-green-950 border-green-500/20';
     case 'blocked':
       return 'text-red-400 bg-red-950 border-red-500/20';
+    case 'cancelled':
+      return 'text-muted-foreground bg-muted border-transparent line-through';
     default:
       return '';
   }
