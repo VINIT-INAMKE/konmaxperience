@@ -58,12 +58,6 @@ export const PREP_BATCH_STATUS_LABELS: Record<PrepBatchStatus, string> = {
   expired: 'Expired',
 };
 
-export const PREP_BATCH_STATUS_BADGE_CLASSES: Record<PrepBatchStatus, string> = {
-  active: 'text-green-600 bg-green-50 dark:text-green-400 dark:bg-green-950',
-  depleted: 'text-muted-foreground bg-muted',
-  expired: 'text-destructive bg-destructive/10',
-};
-
 export const WASTE_REASONS: WasteReason[] = ['spoilage', 'over_prep', 'cooking_error', 'expired', 'other'];
 
 export const WASTE_REASON_LABELS: Record<WasteReason, string> = {
@@ -72,14 +66,6 @@ export const WASTE_REASON_LABELS: Record<WasteReason, string> = {
   cooking_error: 'Cooking Error',
   expired: 'Expired',
   other: 'Other',
-};
-
-export const WASTE_REASON_BADGE_CLASSES: Record<WasteReason, string> = {
-  spoilage: 'text-amber-600 bg-amber-50 dark:text-amber-400 dark:bg-amber-950',
-  over_prep: 'text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-950',
-  cooking_error: 'text-orange-600 bg-orange-50 dark:text-orange-400 dark:bg-orange-950',
-  expired: 'text-destructive bg-destructive/10',
-  other: 'text-muted-foreground bg-muted',
 };
 
 export const WASTE_TYPE_LABELS: Record<WasteType, string> = {

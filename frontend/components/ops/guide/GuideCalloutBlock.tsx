@@ -16,9 +16,9 @@ const CALLOUT_STYLES = {
     role: 'note' as const,
   },
   warning: {
-    bg: 'bg-amber-500/10',
-    border: 'border-amber-500',
-    iconColor: 'text-amber-500',
+    bg: 'bg-[var(--status-warning)]/10',
+    border: 'border-[var(--status-warning)]',
+    iconColor: 'text-warning',
     Icon: AlertTriangle,
     role: 'alert' as const,
   },

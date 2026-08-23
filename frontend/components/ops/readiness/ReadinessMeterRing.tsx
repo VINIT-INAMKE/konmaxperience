@@ -1,9 +1,9 @@
 'use client';
 
 import { cn } from '@/lib/utils';
-import { AnimatedCircularProgressBar } from '@/components/ui/animated-circular-progress-bar';
 import { NumberTicker } from '@/components/ui/number-ticker';
 import { MeterModeBadge } from './MeterModeBadge';
+import { MeterRing } from './MeterRing';
 import {
   METER_TONE_TEXT,
   METER_TONE_VAR,
@@ -27,18 +27,22 @@ export function ReadinessMeterRing({
 }: ReadinessMeterRingProps) {
   const tone = meterTone(meter.current_value);
   const interactive = Boolean(onClick);
+  const rounded = Math.round(meter.current_value);
 
   const body = (
     <>
-      <div className="relative">
-        <AnimatedCircularProgressBar
+      <div className={cn('relative', mini ? 'size-16' : 'size-40')}>
+        <MeterRing
           value={meter.current_value}
-          gaugePrimaryColor={METER_TONE_VAR[tone]}
-          gaugeSecondaryColor={METER_TRACK_VAR}
-          className={mini ? 'size-16' : 'size-40'}
-          showValue={false}
+          toneVar={METER_TONE_VAR[tone]}
+          trackVar={METER_TRACK_VAR}
+          strokeWidth={mini ? 10 : 8}
+          label={`${meter.name}: ${rounded} percent`}
         />
-        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+        <div
+          className="pointer-events-none absolute inset-0 flex items-center justify-center"
+          aria-hidden="true"
+        >
           <span
             className={cn(
               'font-semibold tabular-nums',
@@ -74,10 +78,10 @@ export function ReadinessMeterRing({
       type="button"
       onClick={onClick}
       aria-pressed={selected}
-      aria-label={`${meter.name}: ${Math.round(meter.current_value)}% ready`}
+      aria-label={`${meter.name}: ${rounded}% ready`}
       className={cn(
         'flex cursor-pointer flex-col items-center gap-2 rounded-xl p-2 transition-colors duration-200',
-        'hover:bg-surface-raised focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus)]',
+        'hover:bg-surface-raised focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[var(--focus)]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]',
         selected && 'bg-surface-raised ring-2 ring-brand',
       )}
     >

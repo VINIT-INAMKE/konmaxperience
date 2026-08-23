@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import {
   ChevronUp,
   ChevronDown,
@@ -11,12 +10,12 @@ import {
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { BorderBeam } from '@/components/ui/border-beam';
 import { DynamicIcon } from '@/components/ops/guide/DynamicIcon';
+import { STATUS_BADGE } from '@/lib/status-styles';
 import { ROLE_DISPLAY_NAMES, RoleCode } from '@/lib/types/roles';
 import type { GuideSection, GuideSectionPage } from '@/lib/types/guides';
 
-interface GuideSectionCardProps {
+interface GuideSectionAdminRowProps {
   section: GuideSection;
   isExpanded: boolean;
   onToggle: () => void;
@@ -32,7 +31,7 @@ interface GuideSectionCardProps {
   onMovePage: (page: GuideSectionPage, dir: 'up' | 'down', pages: GuideSectionPage[]) => void;
 }
 
-export function GuideSectionCard({
+export function GuideSectionAdminRow({
   section,
   isExpanded,
   onToggle,
@@ -46,9 +45,7 @@ export function GuideSectionCard({
   onEditPage,
   onDeletePage,
   onMovePage,
-}: GuideSectionCardProps) {
-  const [isHovered, setIsHovered] = useState(false);
-
+}: GuideSectionAdminRowProps) {
   const sortedPages = [...section.pages].sort((a, b) => a.sort_order - b.sort_order);
   const roleDisplayNames = section.role_codes.map(
     (code) => ROLE_DISPLAY_NAMES[code as RoleCode] || code,
@@ -60,11 +57,16 @@ export function GuideSectionCard({
     <div>
       {/* Section row */}
       <div
-        className="group relative flex items-center gap-3 px-4 py-3 rounded-xl border bg-card hover:bg-muted/50 cursor-pointer overflow-hidden"
+        className="group relative flex items-center gap-3 px-4 py-3 rounded-xl border bg-card hover:bg-muted/50 cursor-pointer overflow-hidden focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[var(--focus)]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
         onClick={onToggle}
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            onToggle();
+          }
+        }}
         role="button"
+        tabIndex={0}
         aria-expanded={isExpanded}
       >
         {/* Section icon */}
@@ -95,11 +97,11 @@ export function GuideSectionCard({
 
         {/* Status badge */}
         {section.status === 'draft' ? (
-          <Badge className="bg-amber-500/10 text-amber-600 border-amber-500/20 text-[12px] shrink-0">
+          <Badge className={`text-[12px] shrink-0 ${STATUS_BADGE.warning}`}>
             Draft
           </Badge>
         ) : (
-          <Badge className="bg-green-500/10 text-green-600 border-green-500/20 text-[12px] shrink-0">
+          <Badge className={`text-[12px] shrink-0 ${STATUS_BADGE.good}`}>
             Published
           </Badge>
         )}
@@ -166,9 +168,6 @@ export function GuideSectionCard({
             {isExpanded ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
           </Button>
         </div>
-
-        {/* BorderBeam on hover */}
-        {isHovered && <BorderBeam size={50} duration={6} />}
       </div>
 
       {/* Expanded page list */}
@@ -189,11 +188,11 @@ export function GuideSectionCard({
 
               {/* Page status badge */}
               {page.status === 'draft' ? (
-                <Badge className="bg-amber-500/10 text-amber-600 border-amber-500/20 text-[12px] shrink-0">
+                <Badge className={`text-[12px] shrink-0 ${STATUS_BADGE.warning}`}>
                   Draft
                 </Badge>
               ) : (
-                <Badge className="bg-green-500/10 text-green-600 border-green-500/20 text-[12px] shrink-0">
+                <Badge className={`text-[12px] shrink-0 ${STATUS_BADGE.good}`}>
                   Published
                 </Badge>
               )}

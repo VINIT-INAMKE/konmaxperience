@@ -162,7 +162,7 @@ export const GuideEditorToolbar = React.memo(function GuideEditorToolbar({
         disabled={!editor}
         label="Insert warning callout"
       >
-        <AlertTriangle className="size-4 text-amber-500" />
+        <AlertTriangle className="size-4 text-warning" />
       </ToolbarButton>
       <ToolbarButton
         onClick={() =>

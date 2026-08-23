@@ -5,6 +5,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import type { Notification, NotificationType } from '@/lib/types/notifications';
 import { cn } from '@/lib/utils';
+import { STATUS_BADGE } from '@/lib/status-styles';
 import {
   Clock,
   ShieldAlert,
@@ -15,17 +16,27 @@ import {
   Truck,
   Megaphone,
   Check,
+  type LucideIcon,
 } from 'lucide-react';
 
-const TYPE_ICONS: Record<NotificationType, { icon: typeof Clock; className: string }> = {
-  task_due: { icon: Clock, className: 'text-amber-400' },
-  task_blocked: { icon: ShieldAlert, className: 'text-amber-400' },
-  approval_pending: { icon: ClipboardCheck, className: 'text-amber-400' },
-  low_stock: { icon: PackageX, className: 'text-orange-400' },
-  new_order: { icon: ChefHat, className: 'text-blue-400' },
-  order_ready: { icon: Bell, className: 'text-green-400' },
-  delivery_update: { icon: Truck, className: 'text-blue-400' },
-  admin_notice: { icon: Megaphone, className: 'text-purple-400' },
+/**
+ * One place where a notification type becomes a colour and a glyph. `badge` is a
+ * `STATUS_BADGE` key's class string — types carry *meaning*, so none of them
+ * declares its own colour (SPEC §7). `admin_notice` has no status meaning, so it
+ * falls to `neutral` rather than inventing a pair.
+ */
+export const NOTIFICATION_STYLE: Record<
+  NotificationType,
+  { badge: string; icon: LucideIcon }
+> = {
+  task_due: { badge: STATUS_BADGE.warning, icon: Clock },
+  task_blocked: { badge: STATUS_BADGE.serious, icon: ShieldAlert },
+  approval_pending: { badge: STATUS_BADGE.warning, icon: ClipboardCheck },
+  low_stock: { badge: STATUS_BADGE.warning, icon: PackageX },
+  new_order: { badge: STATUS_BADGE.info, icon: ChefHat },
+  order_ready: { badge: STATUS_BADGE.good, icon: Bell },
+  delivery_update: { badge: STATUS_BADGE.info, icon: Truck },
+  admin_notice: { badge: STATUS_BADGE.neutral, icon: Megaphone },
 };
 
 function formatRelativeTime(dateStr: string): string {
@@ -81,8 +92,9 @@ export function NotificationItem({ item, onNavigate }: NotificationItemProps) {
     }
   };
 
-  const TypeIcon = TYPE_ICONS[item.type]?.icon ?? Bell;
-  const iconClassName = TYPE_ICONS[item.type]?.className ?? 'text-muted-foreground';
+  const style = NOTIFICATION_STYLE[item.type];
+  const TypeIcon = style?.icon ?? Bell;
+  const badgeClassName = style?.badge ?? STATUS_BADGE.neutral;
 
   return (
     <div
@@ -91,13 +103,19 @@ export function NotificationItem({ item, onNavigate }: NotificationItemProps) {
       onClick={handleClick}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleClick(); }}
       className={cn(
-        'flex items-start gap-3 px-4 py-3 cursor-pointer hover:bg-muted transition-colors',
+        'flex items-start gap-3 px-4 py-3 cursor-pointer hover:bg-muted transition-colors motion-reduce:transition-none',
+        'focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[var(--focus)]/50 focus-visible:ring-inset',
         !item.is_read && 'bg-primary/5',
       )}
     >
-      <div className="mt-0.5 shrink-0">
-        <TypeIcon className={cn('size-4', iconClassName)} aria-hidden="true" />
-      </div>
+      <span
+        className={cn(
+          'mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-md border',
+          badgeClassName,
+        )}
+      >
+        <TypeIcon className="size-4" aria-hidden="true" />
+      </span>
       <div className="flex-1 min-w-0">
         <p className="text-sm font-bold truncate">{item.title}</p>
         <p className="text-sm text-muted-foreground line-clamp-2">{item.body}</p>
@@ -106,7 +124,7 @@ export function NotificationItem({ item, onNavigate }: NotificationItemProps) {
       {!item.is_read && (
         <button
           aria-label="Mark as read"
-          className="mt-1 size-4 shrink-0 rounded-full flex items-center justify-center hover:bg-muted"
+          className="mt-1 size-4 shrink-0 rounded-full flex items-center justify-center hover:bg-muted focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[var(--focus)]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
           onClick={handleMarkRead}
         >
           <Check className="size-3" />

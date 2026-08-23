@@ -21,7 +21,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { ShimmerButton } from '@/components/ui/shimmer-button';
 import { apiClient } from '@/lib/api-client';
 import type { Decision, DecisionType } from '@/lib/types/decisions';
 import type { Mission } from '@/lib/types/missions';
@@ -172,8 +171,7 @@ export function DecisionForm({ open, onOpenChange, onCreated }: DecisionFormProp
 
           {/* Actions */}
           <div className="flex items-center gap-3 pt-2">
-            <ShimmerButton
-              shimmerColor="#4ade80"
+            <Button
               type="submit"
               disabled={isSubmitting || !title.trim() || !decisionType || !context.trim()}
               className="h-9 text-sm px-4"
@@ -186,7 +184,7 @@ export function DecisionForm({ open, onOpenChange, onCreated }: DecisionFormProp
               ) : (
                 'Log Decision'
               )}
-            </ShimmerButton>
+            </Button>
             <Button
               type="button"
               variant="ghost"

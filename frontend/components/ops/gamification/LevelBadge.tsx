@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
-import { BorderBeam } from '@/components/ui/border-beam';
 import { LEVEL_COLORS } from '@/lib/types/gamification';
 
 interface LevelBadgeProps {
@@ -29,18 +28,16 @@ export function LevelBadge({ level, showGlow = false, className }: LevelBadgePro
       <span
         aria-label={`Level ${level}`}
         className={cn(
-          'inline-flex items-center rounded-full px-1.5 py-0.5 text-xs font-semibold text-white',
-          colors.bg,
+          'inline-flex items-center rounded-full px-1.5 py-0.5 text-xs font-semibold',
+          colors.fill,
+          // SPEC §6.4 — the level-up moment is a 3-second ring, not a BorderBeam.
+          glowActive &&
+            'ring-2 ring-brand ring-offset-2 ring-offset-[var(--bg)] animate-pulse motion-reduce:animate-none',
           className,
         )}
       >
         Lvl {level}
       </span>
-      {glowActive && (
-        <span className="pointer-events-none absolute inset-0 rounded-full overflow-hidden">
-          <BorderBeam duration={3} colorFrom={colors.hex} colorTo="#ffffff" />
-        </span>
-      )}
     </span>
   );
 }

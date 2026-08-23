@@ -1,11 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { MagicCard } from '@/components/ui/magic-card';
-import { BorderBeam } from '@/components/ui/border-beam';
-import { BEAM_FROM, BEAM_TO } from '@/lib/brand-colors';
+import { Card } from '@/components/ui/card';
 import type { GuideSection } from '@/lib/types/guides';
 import { DynamicIcon } from '@/components/ops/guide/DynamicIcon';
+import { guideAccentTint } from '@/components/ops/guide/accent';
 
 interface GuideSectionCardProps {
   section: GuideSection;
@@ -18,26 +17,16 @@ export function GuideSectionCard({ section }: GuideSectionCardProps) {
   );
 
   return (
-    <Link href={'/guide/' + section.slug}>
-      <MagicCard
-        mode="gradient"
-        className="rounded-xl cursor-pointer relative overflow-hidden"
-      >
-        <BorderBeam
-          size={50}
-          duration={6}
-          colorFrom={BEAM_FROM}
-          colorTo={BEAM_TO}
-        />
+    <Link
+      href={'/guide/' + section.slug}
+      className="block rounded-xl focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[var(--focus)]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
+    >
+      <Card className="rounded-xl cursor-pointer transition-colors hover:bg-surface-raised motion-reduce:transition-none">
         <div className="p-6 flex flex-col gap-3">
           <div className="flex items-center gap-3">
             <div
               className="size-10 rounded-lg flex items-center justify-center"
-              style={{
-                backgroundColor: section.accent_color
-                  ? section.accent_color + '20'
-                  : undefined,
-              }}
+              style={{ backgroundColor: guideAccentTint(section.accent_color) }}
             >
               <DynamicIcon
                 name={section.icon ?? 'BookOpen'}
@@ -60,7 +49,7 @@ export function GuideSectionCard({ section }: GuideSectionCardProps) {
             {section.pages.length} pages &middot; ~{totalMinutes} min read
           </span>
         </div>
-      </MagicCard>
+      </Card>
     </Link>
   );
 }

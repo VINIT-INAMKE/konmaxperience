@@ -5,8 +5,8 @@ import { FileQuestion } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import confetti from 'canvas-confetti';
-import { AnimatedList } from '@/components/ui/animated-list';
 import { Card, CardContent } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import { ValidationStatus } from './ValidationStatus';
 import { EvidenceUploadZone } from './EvidenceUploadZone';
 import { EvidenceItem } from './EvidenceItem';
@@ -151,10 +151,7 @@ export function EvidenceSection({ task, isOwn, isAdmin }: EvidenceSectionProps) 
         {evidenceLoading ? (
           <div className="space-y-2">
             {Array.from({ length: 3 }).map((_, i) => (
-              <div
-                key={i}
-                className="min-h-[48px] rounded-md bg-muted/50 animate-pulse"
-              />
+              <Skeleton key={i} className="min-h-[48px]" />
             ))}
           </div>
         ) : !evidence || evidence.length === 0 ? (
@@ -166,7 +163,7 @@ export function EvidenceSection({ task, isOwn, isAdmin }: EvidenceSectionProps) 
           </div>
         ) : (
           <div aria-live="polite">
-            <AnimatedList delay={50} className="gap-1">
+            <div className="flex flex-col gap-1">
               {evidence.map((item) => (
                 <EvidenceItem
                   key={item.id}
@@ -180,7 +177,7 @@ export function EvidenceSection({ task, isOwn, isAdmin }: EvidenceSectionProps) 
                   onXpUpdate={handleXpUpdate}
                 />
               ))}
-            </AnimatedList>
+            </div>
           </div>
         )}
       </CardContent>

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { apiClient } from '@/lib/api-client';
-import { GuideSectionCard } from '@/components/ops/guide/admin/GuideSectionCard';
+import { GuideSectionAdminRow } from '@/components/ops/guide/admin/GuideSectionAdminRow';
 import type { GuideSection, GuideSectionPage } from '@/lib/types/guides';
 
 interface GuideSectionListProps {
@@ -82,7 +82,7 @@ export function GuideSectionList({
   return (
     <div className="space-y-3">
       {sortedSections.map((section, idx) => (
-        <GuideSectionCard
+        <GuideSectionAdminRow
           key={section.id}
           section={section}
           isExpanded={expandedSections.has(section.id)}

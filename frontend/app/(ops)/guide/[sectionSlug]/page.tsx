@@ -10,6 +10,7 @@ import { apiClient } from '@/lib/api-client';
 import type { GuideSection } from '@/lib/types/guides';
 import { DynamicIcon } from '@/components/ops/guide/DynamicIcon';
 import { GuideSidebarSheet } from '@/components/ops/guide/GuideSidebarSheet';
+import { guideAccentTint } from '@/components/ops/guide/accent';
 
 export default function SectionPage({
   params,
@@ -111,11 +112,7 @@ export default function SectionPage({
       <div className="flex items-center gap-3">
         <div
           className="size-10 rounded-lg flex items-center justify-center"
-          style={{
-            backgroundColor: section.accent_color
-              ? section.accent_color + '20'
-              : undefined,
-          }}
+          style={{ backgroundColor: guideAccentTint(section.accent_color) }}
         >
           <DynamicIcon
             name={section.icon ?? 'BookOpen'}

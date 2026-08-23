@@ -57,19 +57,22 @@ export function ingredientCategoryName(
 }
 
 /**
- * Categories are DB rows now, so badge colours are derived from the category id
- * instead of a hardcoded token map. Class strings stay literal so Tailwind's
- * scanner still emits them.
+ * Categories are DB rows, so a badge tint is derived from the category id rather
+ * than a hand-maintained map. The ramp is **decorative, not semantic** — a
+ * category carries no status meaning — so it is drawn from the brand/status token
+ * layer in `app/tokens.css` and never from a raw Tailwind hue (SPEC §7). Class
+ * strings stay literal so Tailwind's scanner still emits them, and every pair is
+ * a tint + matching text token that resolves in both themes.
  */
 const CATEGORY_BADGE_PALETTE = [
-  'bg-blue-500/15 text-blue-400',
-  'bg-green-500/15 text-green-400',
-  'bg-orange-500/15 text-orange-400',
-  'bg-yellow-500/15 text-yellow-600',
-  'bg-red-500/15 text-red-400',
-  'bg-purple-500/15 text-purple-400',
-  'bg-cyan-500/15 text-cyan-400',
-  'bg-pink-500/15 text-pink-400',
+  'bg-brand-soft text-brand',
+  'bg-[var(--leaf)]/15 text-leaf',
+  'bg-[var(--gold)]/15 text-gold-text',
+  'bg-[var(--status-info)]/12 text-[var(--status-info)]',
+  'bg-[var(--status-good)]/12 text-[var(--status-good)]',
+  'bg-[var(--status-warning)]/12 text-[var(--status-warning)]',
+  'bg-[var(--status-serious)]/12 text-[var(--status-serious)]',
+  'bg-surface-raised text-ink-subtle',
 ] as const;
 
 export function ingredientCategoryBadgeClass(
