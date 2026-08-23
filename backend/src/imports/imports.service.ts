@@ -2,6 +2,8 @@ import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { createHash } from 'crypto';
 import { ProductStatus, ProductType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { NodeService } from '../node/node.service';
+import { formatDateInNodeTz } from '../common/utils/node-time';
 import { InventoryService } from '../inventory/inventory.service';
 import { CostCalculatorService } from '../recipes/cost-calculator.service';
 import { parseCSV } from './parsers/csv.parser';
@@ -38,6 +40,7 @@ export class ImportsService {
 
   constructor(
     private readonly prisma: PrismaService,
+    private readonly nodeService: NodeService,
     private readonly inventoryService: InventoryService,
     private readonly costCalculatorService: CostCalculatorService,
   ) {}
@@ -109,7 +112,11 @@ export class ImportsService {
         select: { created_at: true },
       });
       if (existingImport) {
-        warning = `This file was already imported on ${existingImport.created_at.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })}. Re-importing will create duplicate stock movements.`;
+        const importedOn = formatDateInNodeTz(
+          await this.nodeService.timezone(),
+          existingImport.created_at,
+        );
+        warning = `This file was already imported on ${importedOn}. Re-importing will create duplicate stock movements.`;
       }
       // Pass fileHash through first row for commitStockImport (D-22)
       if (validatedRows.length > 0) {

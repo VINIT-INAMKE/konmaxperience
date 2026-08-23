@@ -25,6 +25,7 @@ import { UpdateAddressDto } from './dto/update-address.dto';
 import { SyncCartDto } from './dto/sync-cart.dto';
 import { ConfirmOrderDto } from './dto/confirm-order.dto';
 import { renderOrderReceipt, renderBookingReceipt } from './receipt.template';
+import { NodeService } from '../node/node.service';
 
 // ---------------------------------------------------------------
 // Cart data shape (stored as JSON in Redis)
@@ -56,6 +57,7 @@ const PENDING_ORDER_TTL = 1800; // 30 minutes
 export class CustomerOrdersService {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly nodeService: NodeService,
     private readonly redisService: RedisService,
     private readonly razorpayService: RazorpayService,
     private readonly pusherService: PusherService,
@@ -510,7 +512,7 @@ export class CustomerOrdersService {
       throw new ForbiddenException('You do not have access to this order');
     }
 
-    return renderOrderReceipt({
+    return renderOrderReceipt(await this.nodeService.timezone(), {
       order_number: order.order_number,
       channel: order.channel,
       created_at: order.created_at,
@@ -552,7 +554,7 @@ export class CustomerOrdersService {
       throw new ForbiddenException('You do not have access to this booking');
     }
 
-    return renderBookingReceipt({
+    return renderBookingReceipt(await this.nodeService.timezone(), {
       id: booking.id,
       customer_name: booking.customer_name,
       customer_phone: booking.customer_phone,

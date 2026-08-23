@@ -1,27 +1,33 @@
 import { Injectable } from '@nestjs/common';
 import { OrderStatus, PaymentStatus, QuestStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { NodeService } from '../node/node.service';
+import { nodeDateRange, nodeDayKey } from '../common/utils/node-time';
 
 @Injectable()
 export class AnalyticsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly nodeService: NodeService,
+  ) {}
 
   /**
-   * Parse a date range from YYYY-MM-DD strings into IST-aware Date objects.
+   * Parse a date range from YYYY-MM-DD strings into UTC instants bounding those
+   * days in the node's timezone. `end` is the start of the day after `to`, so no
+   * millisecond of the last day is missed.
    */
-  private parseDateRange(from: string, to: string): { start: Date; end: Date } {
-    const start = new Date(`${from}T00:00:00+05:30`);
-    // Use start of next day instead of 23:59:59 to avoid missing the last second's milliseconds
-    const endDate = new Date(`${to}T00:00:00+05:30`);
-    const end = new Date(endDate.getTime() + 24 * 60 * 60 * 1000);
-    return { start, end };
+  private async parseDateRange(
+    from: string,
+    to: string,
+  ): Promise<{ start: Date; end: Date }> {
+    return nodeDateRange(await this.nodeService.timezone(), from, to);
   }
 
   // ---------------------------------------------------------------
   // Summary KPIs
   // ---------------------------------------------------------------
   async getSummary(from: string, to: string) {
-    const { start, end } = this.parseDateRange(from, to);
+    const { start, end } = await this.parseDateRange(from, to);
 
     const dateFilter = {
       created_at: { gte: start, lt: end },
@@ -79,7 +85,8 @@ export class AnalyticsService {
   // Revenue Time Series
   // ---------------------------------------------------------------
   async getRevenueSeries(from: string, to: string) {
-    const { start, end } = this.parseDateRange(from, to);
+    const timeZone = await this.nodeService.timezone();
+    const { start, end } = await this.parseDateRange(from, to);
 
     const orders = await this.prisma.order.findMany({
       where: {
@@ -95,9 +102,7 @@ export class AnalyticsService {
 
     const dateMap = new Map<string, number>();
     for (const order of orders) {
-      const dateKey = order.created_at.toLocaleDateString('en-CA', {
-        timeZone: 'Asia/Kolkata',
-      });
+      const dateKey = nodeDayKey(timeZone, order.created_at);
       dateMap.set(dateKey, (dateMap.get(dateKey) || 0) + Number(order.total));
     }
 
@@ -110,7 +115,7 @@ export class AnalyticsService {
   // Top Items by Quantity Sold
   // ---------------------------------------------------------------
   async getTopItems(from: string, to: string) {
-    const { start, end } = this.parseDateRange(from, to);
+    const { start, end } = await this.parseDateRange(from, to);
 
     // Fetch individual order items to use actual unit_price for revenue
     const orderItems = await this.prisma.orderItem.findMany({
@@ -161,7 +166,7 @@ export class AnalyticsService {
   // Channel Breakdown
   // ---------------------------------------------------------------
   async getChannelBreakdown(from: string, to: string) {
-    const { start, end } = this.parseDateRange(from, to);
+    const { start, end } = await this.parseDateRange(from, to);
 
     const orders = await this.prisma.order.findMany({
       where: {
@@ -200,7 +205,7 @@ export class AnalyticsService {
   // Recipe Costs
   // ---------------------------------------------------------------
   async getRecipeCosts(from: string, to: string) {
-    const { start, end } = this.parseDateRange(from, to);
+    const { start, end } = await this.parseDateRange(from, to);
 
     const grouped = await this.prisma.orderItem.groupBy({
       by: ['product_id'],

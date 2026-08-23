@@ -3,6 +3,7 @@ import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { OrdersService } from './orders.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { NodeService } from '../node/node.service';
 import { RazorpayService } from '../razorpay/razorpay.service';
 import { PusherService } from '../chat/pusher.service';
 import { FulfilmentService } from '../fulfilment/fulfilment.service';
@@ -45,6 +46,10 @@ describe('OrdersService — Razorpay', () => {
       providers: [
         OrdersService,
         { provide: PrismaService, useValue: prisma },
+        {
+          provide: NodeService,
+          useValue: { timezone: jest.fn().mockResolvedValue('Asia/Kolkata') },
+        },
         { provide: RazorpayService, useValue: razorpay },
         { provide: EventEmitter2, useValue: mockEventEmitter },
         {

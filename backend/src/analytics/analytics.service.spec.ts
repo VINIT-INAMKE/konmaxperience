@@ -26,10 +26,42 @@ const mockPrisma = {
 
 describe('AnalyticsService', () => {
   let service: AnalyticsService;
+  let mockNode: { timezone: jest.Mock };
 
   beforeEach(() => {
-    service = new AnalyticsService(mockPrisma as any);
+    mockNode = { timezone: jest.fn().mockResolvedValue('Asia/Kolkata') };
+    service = new AnalyticsService(mockPrisma as any, mockNode as any);
     jest.clearAllMocks();
+    mockNode.timezone.mockResolvedValue('Asia/Kolkata');
+  });
+
+  // ---------------------------------------------------------------
+  // parseDateRange -- day boundaries come from Node.timezone
+  // ---------------------------------------------------------------
+  describe('parseDateRange', () => {
+    /** `parseDateRange` is private; reach it through a typed cast. */
+    const rangeOf = (svc: AnalyticsService, from: string, to: string) =>
+      (
+        svc as unknown as {
+          parseDateRange: (
+            a: string,
+            b: string,
+          ) => Promise<{ start: Date; end: Date }>;
+        }
+      ).parseDateRange(from, to);
+
+    it('bounds an IST day at 18:30 UTC either side', async () => {
+      const range = await rangeOf(service, '2026-03-20', '2026-03-20');
+      expect(range.start.toISOString()).toBe('2026-03-19T18:30:00.000Z');
+      expect(range.end.toISOString()).toBe('2026-03-20T18:30:00.000Z');
+    });
+
+    it('day boundaries come from Node.timezone, not the process TZ', async () => {
+      mockNode.timezone.mockResolvedValue('Europe/London');
+      const range = await rangeOf(service, '2026-08-23', '2026-08-23');
+      expect(range.start.toISOString()).toBe('2026-08-22T23:00:00.000Z');
+      expect(range.end.toISOString()).toBe('2026-08-23T23:00:00.000Z');
+    });
   });
 
   // ---------------------------------------------------------------
@@ -96,6 +128,26 @@ describe('AnalyticsService', () => {
       expect(result[0].revenue).toBe(800); // o1 + o2
       expect(result[1].date).toBe('2026-03-21');
       expect(result[1].revenue).toBe(200); // o3
+    });
+
+    it('buckets by the node timezone, so a late-evening IST order lands on its IST day', async () => {
+      // 20:00 UTC is 01:30 IST the next day, and still the same day in London.
+      const lateEvening = new Date('2026-03-20T20:00:00Z');
+      mockPrisma.order.findMany.mockResolvedValue([
+        {
+          id: 'o1',
+          total: dec(100),
+          created_at: lateEvening,
+          payment: { status: 'paid' },
+        },
+      ]);
+
+      const ist = await service.getRevenueSeries('2026-03-20', '2026-03-21');
+      expect(ist[0].date).toBe('2026-03-21');
+
+      mockNode.timezone.mockResolvedValue('Europe/London');
+      const london = await service.getRevenueSeries('2026-03-20', '2026-03-21');
+      expect(london[0].date).toBe('2026-03-20');
     });
   });
 

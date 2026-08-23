@@ -3,15 +3,24 @@ import { Injectable } from '@nestjs/common';
 import ExcelJS from 'exceljs';
 import { writeToBuffer } from '@fast-csv/format';
 import { AnalyticsService } from '../../analytics/analytics.service';
+import { NodeService } from '../../node/node.service';
+import { nodeDayKey } from '../../common/utils/node-time';
 import { ExportBuilder } from '../exports.service';
 
-/** Default date range: last 30 days */
-function defaultDateRange(): { from: string; to: string } {
-  const to = new Date().toISOString().slice(0, 10);
-  const from = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
-    .toISOString()
-    .slice(0, 10);
-  return { from, to };
+/**
+ * Default date range: the last 30 node-local days, ending today in the node's
+ * timezone. Using UTC here shifted the window by a day for anything exported
+ * after 18:30 UTC in IST.
+ */
+async function defaultDateRange(
+  nodeService: NodeService,
+): Promise<{ from: string; to: string }> {
+  const timeZone = await nodeService.timezone();
+  const now = Date.now();
+  return {
+    from: nodeDayKey(timeZone, new Date(now - 30 * 24 * 60 * 60 * 1000)),
+    to: nodeDayKey(timeZone, new Date(now)),
+  };
 }
 
 // ---------------------------------------------------------------
@@ -19,10 +28,13 @@ function defaultDateRange(): { from: string; to: string } {
 // ---------------------------------------------------------------
 @Injectable()
 export class RevenueExportBuilder implements ExportBuilder {
-  constructor(private readonly analyticsService: AnalyticsService) {}
+  constructor(
+    private readonly analyticsService: AnalyticsService,
+    private readonly nodeService: NodeService,
+  ) {}
 
   async fetchData(dateFrom?: string, dateTo?: string): Promise<unknown[]> {
-    const range = defaultDateRange();
+    const range = await defaultDateRange(this.nodeService);
     return this.analyticsService.getRevenueSeries(
       dateFrom || range.from,
       dateTo || range.to,
@@ -71,10 +83,13 @@ export class RevenueExportBuilder implements ExportBuilder {
 // ---------------------------------------------------------------
 @Injectable()
 export class TopItemsExportBuilder implements ExportBuilder {
-  constructor(private readonly analyticsService: AnalyticsService) {}
+  constructor(
+    private readonly analyticsService: AnalyticsService,
+    private readonly nodeService: NodeService,
+  ) {}
 
   async fetchData(dateFrom?: string, dateTo?: string): Promise<unknown[]> {
-    const range = defaultDateRange();
+    const range = await defaultDateRange(this.nodeService);
     return this.analyticsService.getTopItems(
       dateFrom || range.from,
       dateTo || range.to,
@@ -130,10 +145,13 @@ export class TopItemsExportBuilder implements ExportBuilder {
 // ---------------------------------------------------------------
 @Injectable()
 export class ChannelBreakdownExportBuilder implements ExportBuilder {
-  constructor(private readonly analyticsService: AnalyticsService) {}
+  constructor(
+    private readonly analyticsService: AnalyticsService,
+    private readonly nodeService: NodeService,
+  ) {}
 
   async fetchData(dateFrom?: string, dateTo?: string): Promise<unknown[]> {
-    const range = defaultDateRange();
+    const range = await defaultDateRange(this.nodeService);
     return this.analyticsService.getChannelBreakdown(
       dateFrom || range.from,
       dateTo || range.to,
@@ -193,10 +211,13 @@ export class ChannelBreakdownExportBuilder implements ExportBuilder {
 // ---------------------------------------------------------------
 @Injectable()
 export class RecipeCostsExportBuilder implements ExportBuilder {
-  constructor(private readonly analyticsService: AnalyticsService) {}
+  constructor(
+    private readonly analyticsService: AnalyticsService,
+    private readonly nodeService: NodeService,
+  ) {}
 
   async fetchData(dateFrom?: string, dateTo?: string): Promise<unknown[]> {
-    const range = defaultDateRange();
+    const range = await defaultDateRange(this.nodeService);
     return this.analyticsService.getRecipeCosts(
       dateFrom || range.from,
       dateTo || range.to,

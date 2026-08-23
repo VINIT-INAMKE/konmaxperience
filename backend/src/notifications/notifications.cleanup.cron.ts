@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { PrismaService } from '../prisma/prisma.service';
+import { DEFAULT_NODE_TIMEZONE } from '../node/node.constants';
 
 @Injectable()
 export class NotificationsCleanupCron {
@@ -8,7 +9,9 @@ export class NotificationsCleanupCron {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  @Cron('0 3 * * 0') // Sunday 3:00 AM -- D-13
+  // Sunday 3:00 AM -- D-13. A decorator cannot await NodeService, so the zone is
+  // pinned to the seeded default; the process TZ is no longer forced in main.ts.
+  @Cron('0 3 * * 0', { timeZone: DEFAULT_NODE_TIMEZONE })
   async cleanupOldNotifications() {
     try {
       const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);

@@ -1,17 +1,23 @@
 import { Injectable } from '@nestjs/common';
 import { PurchaseOrderStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { NodeService } from '../node/node.service';
+import { nodeMonthStart } from '../common/utils/node-time';
 import { loadConversions } from '../common/utils/unit-conversion';
 
 @Injectable()
 export class ProcurementService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly nodeService: NodeService,
+  ) {}
 
   async getSummary() {
-    const monthStart = new Date(
-      new Date().getFullYear(),
-      new Date().getMonth(),
-      1,
+    // "This month" is the node's month (SPEC 3.1 Node.timezone); the previous
+    // `new Date(y, m, 1)` form read the server's local calendar.
+    const monthStart = nodeMonthStart(
+      await this.nodeService.timezone(),
+      new Date(),
     );
 
     // Run all independent queries in parallel

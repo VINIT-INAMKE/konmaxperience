@@ -2,7 +2,12 @@
  * Pure HTML template functions for order and booking receipts.
  * These return complete HTML documents suitable for direct browser rendering
  * with print-optimized CSS.
+ *
+ * Timestamps render in the node's timezone, which the caller resolves from
+ * `NodeService.timezone()` and passes in — these functions stay pure and never
+ * read the process timezone.
  */
+import { formatInNodeTz } from '../common/utils/node-time';
 
 function escapeHtml(str: string | null | undefined): string {
   if (!str) return '';
@@ -17,17 +22,8 @@ function formatCurrency(amount: number | string): string {
   return Number(amount).toFixed(2);
 }
 
-function formatDate(date: Date | string): string {
-  const d = new Date(date);
-  return d.toLocaleString('en-IN', {
-    timeZone: 'Asia/Kolkata',
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: true,
-  });
+function formatDate(timeZone: string, date: Date | string): string {
+  return formatInNodeTz(timeZone, date);
 }
 
 function channelLabel(channel: string): string {
@@ -75,28 +71,31 @@ const baseStyles = `
   .footer { text-align: center; margin-top: 20px; color: #666; font-size: 12px; page-break-inside: avoid; }
 `;
 
-export function renderOrderReceipt(order: {
-  order_number: number;
-  channel: string;
-  created_at: Date | string;
-  subtotal: number | string;
-  channel_modifier_amount: number | string;
-  total: number | string;
-  delivery_address?: string | null;
-  items: Array<{
-    product?: { name: string } | null;
-    quantity: number;
-    unit_price: number | string;
-  }>;
-  payment?: {
-    method: string;
-    razorpay_payment_id?: string | null;
-  } | null;
-  customer?: {
-    name?: string | null;
-    phone: string;
-  } | null;
-}): string {
+export function renderOrderReceipt(
+  timeZone: string,
+  order: {
+    order_number: number;
+    channel: string;
+    created_at: Date | string;
+    subtotal: number | string;
+    channel_modifier_amount: number | string;
+    total: number | string;
+    delivery_address?: string | null;
+    items: Array<{
+      product?: { name: string } | null;
+      quantity: number;
+      unit_price: number | string;
+    }>;
+    payment?: {
+      method: string;
+      razorpay_payment_id?: string | null;
+    } | null;
+    customer?: {
+      name?: string | null;
+      phone: string;
+    } | null;
+  },
+): string {
   const modifierAmount = Number(order.channel_modifier_amount);
 
   const itemRows = order.items
@@ -128,7 +127,7 @@ export function renderOrderReceipt(order: {
 
   <div class="meta">
     <p><strong>Order #${order.order_number}</strong></p>
-    <p>${formatDate(order.created_at)}</p>
+    <p>${formatDate(timeZone, order.created_at)}</p>
     <p>Channel: ${channelLabel(order.channel)}</p>
     ${order.customer?.name ? `<p>Customer: ${escapeHtml(order.customer.name)}</p>` : ''}
     ${order.customer?.phone ? `<p>Phone: ${escapeHtml(order.customer.phone)}</p>` : ''}
@@ -173,20 +172,23 @@ export function renderOrderReceipt(order: {
 </html>`;
 }
 
-export function renderBookingReceipt(booking: {
-  id: string;
-  customer_name: string;
-  customer_phone: string;
-  guests: number;
-  payment_status: string;
-  payment_amount?: number | string | null;
-  razorpay_payment_id?: string | null;
-  created_at: Date | string;
-  event: {
-    title: string;
-    date: Date | string;
-  };
-}): string {
+export function renderBookingReceipt(
+  timeZone: string,
+  booking: {
+    id: string;
+    customer_name: string;
+    customer_phone: string;
+    guests: number;
+    payment_status: string;
+    payment_amount?: number | string | null;
+    razorpay_payment_id?: string | null;
+    created_at: Date | string;
+    event: {
+      title: string;
+      date: Date | string;
+    };
+  },
+): string {
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -203,8 +205,8 @@ export function renderBookingReceipt(booking: {
 
   <div class="meta">
     <p><strong>${escapeHtml(booking.event.title)}</strong></p>
-    <p>Event Date: ${formatDate(booking.event.date)}</p>
-    <p>Booked On: ${formatDate(booking.created_at)}</p>
+    <p>Event Date: ${formatDate(timeZone, booking.event.date)}</p>
+    <p>Booked On: ${formatDate(timeZone, booking.created_at)}</p>
   </div>
 
   <h2>Guest Details</h2>
