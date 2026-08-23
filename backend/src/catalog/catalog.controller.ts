@@ -76,20 +76,42 @@ export class CatalogController {
 
   // Literal segments (`/staff`, `/search`, `/slug/:slug`) are declared before
   // any parameterised sibling so they cannot be shadowed.
+  /** Bare `Product[]` — the ops menu and POS grids read it that way. */
   @Get(['catalog/products/staff', 'menu/items/staff'])
   async findStaff(
     @Query('category_id') category_id?: string,
     @Query('brand_id') brand_id?: string,
     @Query('type') type?: ProductType,
+    @Query('cursor') cursor?: string,
+    @Query('limit') limit?: string,
   ) {
-    return this.catalog.findProductsStaff(category_id, brand_id, type);
+    return this.catalog.findProductsStaff(
+      category_id,
+      brand_id,
+      type,
+      cursor,
+      Number(limit) || undefined,
+    );
   }
 
+  /** `{ items, facets, next_cursor }` — SRCH-01. */
   @Get('catalog/search')
   @Public()
   @Throttle({ default: { limit: 30, ttl: 60000 } })
-  async search(@Query('q') q?: string, @Query('type') type?: ProductType) {
-    return this.catalog.search(q ?? '', type);
+  async search(
+    @Query('q') q?: string,
+    @Query('type') type?: ProductType,
+    @Query('category_id') category_id?: string,
+    @Query('cursor') cursor?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.catalog.search(
+      q ?? '',
+      type,
+      category_id,
+      cursor,
+      Number(limit) || undefined,
+    );
   }
 
   @Get('catalog/products/slug/:slug')
@@ -99,6 +121,10 @@ export class CatalogController {
     return this.catalog.findProductBySlug(slug);
   }
 
+  /**
+   * BREAKING (API appendix §E.1): answers `{ items, next_cursor }`, not a bare
+   * array. The `menu/items` alias changes with it — same handler.
+   */
   @Get(['catalog/products', 'menu/items'])
   @Public()
   @Throttle({ default: { limit: 30, ttl: 60000 } })
@@ -106,8 +132,16 @@ export class CatalogController {
     @Query('category_id') category_id?: string,
     @Query('brand_id') brand_id?: string,
     @Query('type') type?: ProductType,
+    @Query('cursor') cursor?: string,
+    @Query('limit') limit?: string,
   ) {
-    return this.catalog.findProductsPublic(category_id, brand_id, type);
+    return this.catalog.findProductsPublic(
+      category_id,
+      brand_id,
+      type,
+      cursor,
+      Number(limit) || undefined,
+    );
   }
 
   @Post('catalog/products')
@@ -151,8 +185,13 @@ export class CatalogController {
 
   @Patch('catalog/variants')
   @RequiresPermission(Permission.MANAGE_OPS)
-  async upsertVariant(@Body() dto: UpsertProductVariantDto) {
-    return this.catalog.upsertVariant(dto);
+  async upsertVariant(
+    @Body() dto: UpsertProductVariantDto,
+    @Req() req: express.Request,
+  ) {
+    // The actor rides along so a `stock.low` raised by this edit is attributed
+    // to the person who made it rather than to `system`.
+    return this.catalog.upsertVariant(dto, userId(req));
   }
 
   @Delete('catalog/variants/:id')
