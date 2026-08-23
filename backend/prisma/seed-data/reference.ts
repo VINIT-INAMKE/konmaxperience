@@ -1,14 +1,28 @@
-export const READINESS_METERS = [
-  { code: 'VILLA', name: 'Villa Readiness', description: 'Overall villa setup and space readiness' },
-  { code: 'BACKEND', name: 'Backend Readiness', description: 'Food production, R&D, and standardization readiness' },
-  { code: 'FRONTEND', name: 'Frontend Readiness', description: 'Customer-facing service and experience readiness' },
-  { code: 'PROCUREMENT', name: 'Procurement Readiness', description: 'Vendor sourcing and inventory readiness' },
-  { code: 'STANDARDIZATION', name: 'Standardization Readiness', description: 'SOPs, recipes, and process documentation readiness' },
-  { code: 'SALES', name: 'Sales Readiness', description: 'Sales channels and revenue pipeline readiness' },
-  { code: 'TECH', name: 'Tech Readiness', description: 'Dashboard, automation, and system infrastructure readiness' },
-  { code: 'TALENT', name: 'Talent Readiness', description: 'Team hiring, training, and onboarding readiness' },
-  { code: 'ART_EXPERIENCE', name: 'Art Experience Readiness', description: 'Art program and experience design readiness' },
-  { code: 'LIFESTYLE_EXPERIENCE', name: 'Lifestyle Experience Readiness', description: 'Lifestyle program and experience design readiness' },
+import type { MeterMode } from '@prisma/client';
+
+export interface ReadinessMeterSeed {
+  code: string;
+  name: string;
+  description: string;
+  /** SPEC §4.3 — `derived` meters are computed, `hybrid` blends 50/50 with the task-driven score. */
+  mode: MeterMode;
+  /** Formula registry key for `derived`/`hybrid` meters; null for pure `task_driven`. */
+  formula_key: string | null;
+}
+
+export const READINESS_METERS: ReadinessMeterSeed[] = [
+  { code: 'VILLA', name: 'Villa Readiness', description: 'Overall villa setup and space readiness', mode: 'task_driven', formula_key: null },
+  { code: 'BACKEND', name: 'Backend Readiness', description: 'Food production, R&D, and standardization readiness', mode: 'hybrid', formula_key: 'hybrid_backend_v1' },
+  { code: 'FRONTEND', name: 'Frontend Readiness', description: 'Customer-facing service and experience readiness', mode: 'hybrid', formula_key: 'hybrid_frontend_v1' },
+  { code: 'PROCUREMENT', name: 'Procurement Readiness', description: 'Vendor sourcing and inventory readiness', mode: 'derived', formula_key: 'procurement_v1' },
+  { code: 'STANDARDIZATION', name: 'Standardization Readiness', description: 'SOPs, recipes, and process documentation readiness', mode: 'derived', formula_key: 'standardization_v1' },
+  { code: 'SALES', name: 'Sales Readiness', description: 'Sales channels and revenue pipeline readiness', mode: 'derived', formula_key: 'sales_v1' },
+  { code: 'QUALITY', name: 'Quality Readiness', description: 'Waste, food-cost variance and guest ratings', mode: 'derived', formula_key: 'quality_v1' },
+  { code: 'BI', name: 'BI Readiness', description: 'Costing, pricing and KPI instrumentation readiness', mode: 'task_driven', formula_key: null },
+  { code: 'TECH', name: 'Tech Readiness', description: 'Dashboard, automation, and system infrastructure readiness', mode: 'task_driven', formula_key: null },
+  { code: 'TALENT', name: 'Talent Readiness', description: 'Team hiring, training, and onboarding readiness', mode: 'task_driven', formula_key: null },
+  { code: 'ART_EXPERIENCE', name: 'Art Experience Readiness', description: 'Art program and experience design readiness', mode: 'task_driven', formula_key: null },
+  { code: 'LIFESTYLE_EXPERIENCE', name: 'Lifestyle Experience Readiness', description: 'Lifestyle program and experience design readiness', mode: 'task_driven', formula_key: null },
 ];
 
 export const ZONES = [
