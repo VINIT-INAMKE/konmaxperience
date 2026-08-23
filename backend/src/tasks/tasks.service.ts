@@ -12,12 +12,14 @@ import { getPermissionsForRole } from '../permissions/permissions.cache';
 import { Permission } from '../types/permissions';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
+import { AuditService } from '../audit/audit.service';
 
 @Injectable()
 export class TasksService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly eventEmitter: EventEmitter2,
+    private readonly auditService: AuditService,
   ) {}
 
   async findAll(
@@ -229,6 +231,15 @@ export class TasksService {
           this.recalculateQuestProgress(existing.quest_id, tx),
           this.recalculateMissionProgress(existing.mission_id, tx),
         ]);
+
+        await this.auditService.record(tx, {
+          entity_type: 'task',
+          entity_id: id,
+          action: 'task.status_changed',
+          ...AuditService.user(requestingUser.id),
+          before: { status: existing.status },
+          after: { status: updated.status },
+        });
       }
 
       return updated;
@@ -280,6 +291,15 @@ export class TasksService {
         this.recalculateQuestProgress(existing.quest_id, tx),
         this.recalculateMissionProgress(existing.mission_id, tx),
       ]);
+
+      await this.auditService.record(tx, {
+        entity_type: 'task',
+        entity_id: id,
+        action: 'task.blocked',
+        ...AuditService.user(requestingUser.id),
+        before: { status: existing.status },
+        after: { status: TaskStatus.blocked, blocked_reason: reason },
+      });
 
       return updated;
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
@@ -341,6 +361,15 @@ export class TasksService {
         this.recalculateQuestProgress(existing.quest_id, tx),
         this.recalculateMissionProgress(existing.mission_id, tx),
       ]);
+
+      await this.auditService.record(tx, {
+        entity_type: 'task',
+        entity_id: id,
+        action: 'task.unblocked',
+        ...AuditService.user(requestingUser.id),
+        before: { status: existing.status, blocked_reason: existing.blocked_reason },
+        after: { status: TaskStatus.todo, blocked_reason: null },
+      });
 
       return updated;
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });

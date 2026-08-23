@@ -5,6 +5,10 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { EvidenceService } from '../../evidence/evidence.service';
 import { DelegationsService } from '../../delegations/delegations.service';
 import { Permission } from '../../types/permissions';
+import {
+  mockAuditService,
+  provideAuditService,
+} from '../../test-utils/mock-providers';
 
 const mockGetPermissionsForRole = jest.fn();
 
@@ -18,6 +22,7 @@ describe('ApprovalsService', () => {
   let txMock: any;
   let evidenceService: any;
   let delegationsService: any;
+  let audit: ReturnType<typeof mockAuditService>;
 
   const mockApproval = {
     id: 'approval-1',
@@ -56,6 +61,9 @@ describe('ApprovalsService', () => {
         update: jest.fn(),
         findUnique: jest.fn(),
       },
+      auditEvent: {
+        create: jest.fn(),
+      },
     };
 
     prisma = {
@@ -74,12 +82,15 @@ describe('ApprovalsService', () => {
       getActiveDelegationForUser: jest.fn(),
     };
 
+    audit = mockAuditService();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ApprovalsService,
         { provide: PrismaService, useValue: prisma },
         { provide: EvidenceService, useValue: evidenceService },
         { provide: DelegationsService, useValue: delegationsService },
+        provideAuditService(audit),
       ],
     }).compile();
 
@@ -137,6 +148,25 @@ describe('ApprovalsService', () => {
       await expect(
         service.overrideApproval('missing-1', 'admin-1', 'Override reason here'),
       ).rejects.toThrow(NotFoundException);
+      expect(audit.record).not.toHaveBeenCalled();
+    });
+
+    it('records an approval.overridden AuditEvent inside the transaction', async () => {
+      const taskApproval = { ...mockApproval, entity_type: 'task', entity_id: 'task-1' };
+      txMock.approval.findFirst.mockResolvedValue(taskApproval);
+      txMock.approval.update.mockResolvedValue({ ...taskApproval, status: 'approved' });
+
+      await service.overrideApproval('approval-1', 'admin-1', 'Override reason text');
+
+      expect(audit.record).toHaveBeenCalledWith(txMock, {
+        entity_type: 'approval',
+        entity_id: 'approval-1',
+        action: 'approval.overridden',
+        actor_type: 'user',
+        actor_id: 'admin-1',
+        before: { status: 'pending' },
+        after: { status: 'approved', override_reason: 'Override reason text' },
+      });
     });
   });
 
@@ -184,6 +214,27 @@ describe('ApprovalsService', () => {
       await expect(
         service.approveWithDelegation('approval-1', 'user-b', 'FOOD_LEAD'),
       ).rejects.toThrow('No permission to approve and no active delegation');
+      expect(audit.record).not.toHaveBeenCalled();
+    });
+
+    it('records an approval.decided AuditEvent carrying the delegation source', async () => {
+      mockGetPermissionsForRole.mockResolvedValue([]);
+      delegationsService.getActiveDelegationForUser.mockResolvedValue(mockDelegation);
+      txMock.approval.findUnique.mockResolvedValue(mockApproval);
+      txMock.approval.update.mockResolvedValue({ ...mockApproval, status: 'approved' });
+      txMock.evidence.update.mockResolvedValue(mockEvidence);
+
+      await service.approveWithDelegation('approval-1', 'user-b', 'FOOD_LEAD');
+
+      expect(audit.record).toHaveBeenCalledWith(txMock, {
+        entity_type: 'approval',
+        entity_id: 'approval-1',
+        action: 'approval.decided',
+        actor_type: 'user',
+        actor_id: 'user-b',
+        before: { status: 'pending' },
+        after: { status: 'approved', delegated_from: 'user-a' },
+      });
     });
   });
 });

@@ -9,6 +9,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateRecipeDto } from './dto/create-recipe.dto';
 import { UpdateRecipeDto } from './dto/update-recipe.dto';
 import { CostCalculatorService } from './cost-calculator.service';
+import { AuditService } from '../audit/audit.service';
 import { convertUnit } from '../common/utils/unit-conversion';
 
 const RECIPE_INCLUDE = {
@@ -61,6 +62,7 @@ export class RecipesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly costCalculatorService: CostCalculatorService,
+    private readonly auditService: AuditService,
   ) {}
 
   async findAll(filters: {
@@ -213,6 +215,9 @@ export class RecipesService {
       }
     }
 
+    const statusChanged =
+      dto.status !== undefined && dto.status !== existing.status;
+
     await this.prisma.$transaction(async (tx) => {
       await tx.recipe.update({
         where: { id },
@@ -265,6 +270,17 @@ export class RecipesService {
             })),
           });
         }
+      }
+
+      if (statusChanged) {
+        await this.auditService.record(tx, {
+          entity_type: 'recipe',
+          entity_id: id,
+          action: 'recipe.status_changed',
+          ...AuditService.user(userId),
+          before: { status: existing.status, version: existing.version },
+          after: { status: dto.status!, version: existing.version },
+        });
       }
     });
 
@@ -350,6 +366,24 @@ export class RecipesService {
           })),
         });
       }
+
+      await this.auditService.record(tx, {
+        entity_type: 'recipe',
+        entity_id: clone.id,
+        action: 'recipe.version_created',
+        ...AuditService.user(userId),
+        before: {
+          recipe_id: current.id,
+          status: current.status,
+          version: current.version,
+        },
+        after: {
+          recipe_id: clone.id,
+          status: RecipeStatus.draft,
+          version: clone.version,
+        },
+      });
+
       return clone;
     });
     // Recalculate cost for clone (outside tx for performance)

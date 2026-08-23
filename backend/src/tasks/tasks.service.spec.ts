@@ -3,7 +3,11 @@ import { ForbiddenException } from '@nestjs/common';
 import { TasksService } from './tasks.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { Permission } from '../types/permissions';
-import { provideEventEmitter } from '../test-utils/mock-providers';
+import {
+  mockAuditService,
+  provideAuditService,
+  provideEventEmitter,
+} from '../test-utils/mock-providers';
 
 // NOTE: In production, valid=true is set by Phase 3 evidence/approval flow.
 // Tests seed valid=true directly to verify recalculation math.
@@ -21,6 +25,7 @@ describe('TasksService', () => {
   let service: TasksService;
   let prisma: any;
   let txMock: any;
+  let audit: ReturnType<typeof mockAuditService>;
 
   const adminUser = { id: 'admin-1', roleCode: 'FOUNDER_ADMIN' };
   const regularUser = { id: 'user-1', roleCode: 'FRONTEND_LEAD' };
@@ -66,6 +71,9 @@ describe('TasksService', () => {
       mission: {
         update: jest.fn(),
       },
+      auditEvent: {
+        create: jest.fn(),
+      },
     };
 
     prisma = {
@@ -89,11 +97,14 @@ describe('TasksService', () => {
       $transaction: jest.fn((cb: any) => cb(txMock)),
     };
 
+    audit = mockAuditService();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         TasksService,
         { provide: PrismaService, useValue: prisma },
         provideEventEmitter(),
+        provideAuditService(audit),
       ],
     }).compile();
 
@@ -240,6 +251,35 @@ describe('TasksService', () => {
       );
     });
 
+    it('records a task.blocked AuditEvent inside the transaction', async () => {
+      prisma.task.findUnique.mockResolvedValue(mockTask);
+      mockGetPermissions.mockResolvedValue([Permission.UPDATE_OWN_TASK]);
+      txMock.task.update.mockResolvedValue({
+        ...mockTask,
+        status: 'blocked',
+        blocked: true,
+        blocked_reason: 'Waiting for design assets',
+      });
+      txMock.quest.findUnique.mockResolvedValue(null);
+      mockGroupBy([], []);
+      txMock.mission.update.mockResolvedValue({});
+
+      await service.block('task-1', 'Waiting for design assets', regularUser);
+
+      expect(audit.record).toHaveBeenCalledWith(txMock, {
+        entity_type: 'task',
+        entity_id: 'task-1',
+        action: 'task.blocked',
+        actor_type: 'user',
+        actor_id: 'user-1',
+        before: { status: 'todo' },
+        after: {
+          status: 'blocked',
+          blocked_reason: 'Waiting for design assets',
+        },
+      });
+    });
+
     it('throws ForbiddenException for non-owner without UPDATE_ANY_TASK', async () => {
       prisma.task.findUnique.mockResolvedValue(mockTask); // owned by user-1
       mockGetPermissions.mockResolvedValue([Permission.UPDATE_OWN_TASK]); // user-2 can only update own
@@ -247,6 +287,7 @@ describe('TasksService', () => {
       await expect(
         service.block('task-1', 'Some reason', otherUser),
       ).rejects.toThrow(ForbiddenException);
+      expect(audit.record).not.toHaveBeenCalled();
     });
   });
 
@@ -285,6 +326,73 @@ describe('TasksService', () => {
           data: expect.objectContaining({ progress_percent: expect.any(Number) }),
         }),
       );
+    });
+
+    it('records a task.status_changed AuditEvent with the tx client', async () => {
+      prisma.task.findUnique.mockResolvedValue(mockTask); // status: 'todo'
+      mockGetPermissions.mockResolvedValue([Permission.UPDATE_OWN_TASK]);
+
+      txMock.task.update.mockResolvedValue({ ...mockTask, status: 'doing' });
+      txMock.quest.findUnique.mockResolvedValue({
+        id: 'quest-1',
+        baseline_task_count: 5,
+      });
+      mockGroupBy([], []);
+      txMock.quest.update.mockResolvedValue({});
+      txMock.mission.update.mockResolvedValue({});
+
+      await service.update('task-1', { status: 'doing' }, regularUser);
+
+      expect(audit.record).toHaveBeenCalledWith(txMock, {
+        entity_type: 'task',
+        entity_id: 'task-1',
+        action: 'task.status_changed',
+        actor_type: 'user',
+        actor_id: 'user-1',
+        before: { status: 'todo' },
+        after: { status: 'doing' },
+      });
+    });
+
+    it('does not audit when the status is unchanged', async () => {
+      prisma.task.findUnique.mockResolvedValue(mockTask);
+      mockGetPermissions.mockResolvedValue([Permission.UPDATE_OWN_TASK]);
+      txMock.task.update.mockResolvedValue(mockTask);
+
+      await service.update('task-1', { title: 'Renamed' }, regularUser);
+
+      expect(audit.record).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('unblock', () => {
+    it('records a task.unblocked AuditEvent inside the transaction', async () => {
+      prisma.task.findUnique.mockResolvedValue({
+        ...mockTask,
+        status: 'blocked',
+        blocked: true,
+        blocked_reason: 'Waiting for design assets',
+      });
+      mockGetPermissions.mockResolvedValue([Permission.UPDATE_OWN_TASK]);
+      txMock.task.update.mockResolvedValue({ ...mockTask, status: 'todo' });
+      txMock.quest.findUnique.mockResolvedValue(null);
+      mockGroupBy([], []);
+      txMock.mission.update.mockResolvedValue({});
+
+      await service.unblock('task-1', regularUser);
+
+      expect(audit.record).toHaveBeenCalledWith(txMock, {
+        entity_type: 'task',
+        entity_id: 'task-1',
+        action: 'task.unblocked',
+        actor_type: 'user',
+        actor_id: 'user-1',
+        before: {
+          status: 'blocked',
+          blocked_reason: 'Waiting for design assets',
+        },
+        after: { status: 'todo', blocked_reason: null },
+      });
     });
   });
 

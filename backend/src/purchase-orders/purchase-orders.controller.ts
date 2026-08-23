@@ -66,8 +66,10 @@ export class PurchaseOrdersController {
   async update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdatePurchaseOrderDto,
+    @Req() req: express.Request,
   ) {
-    return this.purchaseOrdersService.update(id, dto);
+    const user = (req as any).user;
+    return this.purchaseOrdersService.update(id, dto, user?.id ?? null);
   }
 
   @Post(':id/receive')
@@ -83,7 +85,11 @@ export class PurchaseOrdersController {
 
   @Post(':id/cancel')
   @RequiresPermission(Permission.MANAGE_PROCUREMENT)
-  async cancel(@Param('id', ParseUUIDPipe) id: string) {
-    return this.purchaseOrdersService.cancel(id);
+  async cancel(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Req() req: express.Request,
+  ) {
+    const user = (req as any).user;
+    return this.purchaseOrdersService.cancel(id, user?.id ?? null);
   }
 }

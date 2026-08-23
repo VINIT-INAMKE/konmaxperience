@@ -11,8 +11,10 @@ import { RazorpayService } from '../razorpay/razorpay.service';
 import { EmailService } from '../email/email.service';
 import { StorageService } from '../storage/storage.service';
 import { TasksService } from '../tasks/tasks.service';
+import { AuditService } from '../audit/audit.service';
 
 export const PRISMA_MODELS = [
+  'auditEvent',
   'order',
   'orderItem',
   'payment',
@@ -167,6 +169,14 @@ export function mockStorage() {
   };
 }
 
+/**
+ * An AuditService stand-in. `record` is the only instance method the wired services
+ * call; the `AuditService.user`/`.customer` helpers are static and need no mock.
+ */
+export function mockAuditService() {
+  return { record: jest.fn().mockResolvedValue(undefined) };
+}
+
 export function mockTasksService() {
   return {
     recalculateQuestProgress: jest.fn().mockResolvedValue(undefined),
@@ -205,5 +215,9 @@ export const provideStorage = (value = mockStorage()) => ({
 });
 export const provideTasksService = (value = mockTasksService()) => ({
   provide: TasksService,
+  useValue: value,
+});
+export const provideAuditService = (value = mockAuditService()) => ({
+  provide: AuditService,
   useValue: value,
 });

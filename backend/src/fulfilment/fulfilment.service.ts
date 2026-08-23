@@ -17,6 +17,7 @@ import {
 } from '@prisma/client';
 import type { Tx } from '../common/types/transaction';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditService } from '../audit/audit.service';
 import { convertUnit } from '../common/utils/unit-conversion';
 import {
   SERIALIZABLE_TX_OPTIONS,
@@ -94,7 +95,10 @@ export function actorForOrder(order: {
 
 @Injectable()
 export class FulfilmentService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly auditService: AuditService,
+  ) {}
 
   /**
    * Resolves the zone that fulfils marketplace (customer app) orders: the zone
@@ -415,6 +419,19 @@ export class FulfilmentService {
             created.items,
             { actor_type: ActorType.customer, actor_id: customerId },
           );
+
+          await this.auditService.record(tx, {
+            entity_type: 'order',
+            entity_id: created.id,
+            action: 'order.confirmed',
+            ...AuditService.customer(customerId),
+            after: {
+              status: OrderStatus.placed,
+              placed_via: input.placedVia,
+              razorpay_payment_id: input.razorpayPaymentId,
+              total: String(pending.total),
+            },
+          });
 
           return tx.order.findUniqueOrThrow({
             where: { id: created.id },

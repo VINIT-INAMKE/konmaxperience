@@ -25,6 +25,7 @@ import { UpdateDeliveryDto } from './dto/update-delivery.dto';
 import { OrderFiltersDto } from './dto/order-filters.dto';
 import { ConfirmRazorpayPaymentDto } from './dto/create-razorpay-order.dto';
 import { FulfilmentService } from '../fulfilment/fulfilment.service';
+import { AuditService } from '../audit/audit.service';
 import {
   SERIALIZABLE_TX_OPTIONS,
   withSerializableRetry,
@@ -69,6 +70,7 @@ export class OrdersService {
     private readonly razorpayService: RazorpayService,
     private readonly pusherService: PusherService,
     private readonly fulfilmentService: FulfilmentService,
+    private readonly auditService: AuditService,
   ) {}
 
   // ---------------------------------------------------------------
@@ -156,6 +158,20 @@ export class OrdersService {
           created.items,
           { actor_type: ActorType.user, actor_id: userId },
         );
+
+        await this.auditService.record(tx, {
+          entity_type: 'order',
+          entity_id: created.id,
+          action: 'order.created',
+          ...AuditService.user(userId),
+          after: {
+            status: created.status,
+            channel: created.channel,
+            placed_via: created.placed_via,
+            total: String(created.total),
+            item_count: created.items?.length ?? 0,
+          },
+        });
 
         return created;
       }, SERIALIZABLE_TX_OPTIONS),
@@ -311,60 +327,45 @@ export class OrdersService {
       throw new NotFoundException(`Order with ID ${orderId} not found`);
     }
 
-    // Handle cancellation
     if (newStatus === OrderStatus.cancelled) {
       if (TERMINAL_STATUSES.includes(order.status)) {
         throw new BadRequestException(
           `Cannot cancel order in "${order.status}" status`,
         );
       }
-      const cancelResult = await this.prisma.order.updateMany({
+    } else {
+      // Validate non-cancellation transition
+      const allowed = STATUS_TRANSITIONS[order.status] || [];
+      if (!allowed.includes(newStatus)) {
+        throw new BadRequestException(
+          `Cannot transition from "${order.status}" to "${newStatus}". ` +
+            `Valid transitions: ${allowed.join(', ') || 'none'}`,
+        );
+      }
+    }
+
+    // The optimistic guard and the AuditEvent share one transaction so the audit
+    // row rolls back with the status change it describes (SPEC §3).
+    await this.prisma.$transaction(async (tx) => {
+      const updateResult = await tx.order.updateMany({
         where: { id: orderId, status: order.status },
-        data: { status: OrderStatus.cancelled, updated_by: userId },
+        data: { status: newStatus, updated_by: userId },
       });
-      if (cancelResult.count === 0) {
+      if (updateResult.count === 0) {
         throw new ConflictException(
           'Order status was changed by another request. Please retry.',
         );
       }
 
-      // Pusher trigger for customer orders (D-13 + Pitfall 4: null-guard for POS orders)
-      if (order.customer_id) {
-        this.pusherService
-          .trigger(
-            `private-customer-${order.customer_id}`,
-            'order.status-changed',
-            {
-              orderId: order.id,
-              orderNumber: order.order_number,
-              status: OrderStatus.cancelled,
-              updatedAt: new Date().toISOString(),
-            },
-          )
-          .catch((err) => console.error('[Pusher] Status trigger error:', err));
-      }
-
-      return this.prisma.order.findUnique({ where: { id: orderId } });
-    }
-
-    // Validate non-cancellation transition
-    const allowed = STATUS_TRANSITIONS[order.status] || [];
-    if (!allowed.includes(newStatus)) {
-      throw new BadRequestException(
-        `Cannot transition from "${order.status}" to "${newStatus}". ` +
-          `Valid transitions: ${allowed.join(', ') || 'none'}`,
-      );
-    }
-
-    const updateResult = await this.prisma.order.updateMany({
-      where: { id: orderId, status: order.status },
-      data: { status: newStatus, updated_by: userId },
+      await this.auditService.record(tx, {
+        entity_type: 'order',
+        entity_id: orderId,
+        action: 'order.status_changed',
+        ...AuditService.user(userId),
+        before: { status: order.status },
+        after: { status: newStatus },
+      });
     });
-    if (updateResult.count === 0) {
-      throw new ConflictException(
-        'Order status was changed by another request. Please retry.',
-      );
-    }
 
     // Pusher trigger for customer orders (D-13 + Pitfall 4: null-guard for POS orders)
     if (order.customer_id) {

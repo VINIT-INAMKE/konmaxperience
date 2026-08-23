@@ -6,6 +6,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { RazorpayService } from '../razorpay/razorpay.service';
 import { PusherService } from '../chat/pusher.service';
 import { FulfilmentService } from '../fulfilment/fulfilment.service';
+import { provideAuditService } from '../test-utils/mock-providers';
 import { Prisma } from '@prisma/client';
 
 describe('OrdersService — Razorpay', () => {
@@ -57,6 +58,7 @@ describe('OrdersService — Razorpay', () => {
             applyPrepTypeOnCreate: jest.fn().mockResolvedValue(undefined),
           },
         },
+        provideAuditService(),
       ],
     }).compile();
 

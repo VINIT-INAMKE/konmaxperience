@@ -425,6 +425,27 @@ model Node {
   readiness_snapshots ReadinessSnapshot[]
   products            Product[]
   product_categories  ProductCategory[]
+  audit_events        AuditEvent[]
+}
+
+/// SPEC §3: every mutating write that changes state also writes an AuditEvent inside
+/// the same transaction. `entity_type`/`action` are free-form strings (dot-namespaced
+/// verbs, e.g. "order.status_changed") so new domains need no migration.
+model AuditEvent {
+  id          String    @id @default(uuid())
+  node_id     String    @default("11111111-1111-4111-8111-111111111111")
+  node        Node      @relation(fields: [node_id], references: [id], onDelete: Restrict)
+  entity_type String
+  entity_id   String
+  action      String
+  actor_type  ActorType @default(system)
+  actor_id    String?
+  before      Json?
+  after       Json?
+  created_at  DateTime  @default(now()) @db.Timestamptz(3)
+
+  @@index([entity_type, entity_id, created_at])
+  @@index([node_id, created_at(sort: Desc)])
 }
 
 model Role {

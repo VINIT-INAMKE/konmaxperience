@@ -6,6 +6,10 @@ import { PrismaService } from '../prisma/prisma.service';
 import { RazorpayService } from '../razorpay/razorpay.service';
 import { PusherService } from '../chat/pusher.service';
 import { FulfilmentService } from '../fulfilment/fulfilment.service';
+import {
+  mockAuditService,
+  provideAuditService,
+} from '../test-utils/mock-providers';
 
 /** Mock Prisma Decimal -- supports Number() via valueOf() */
 const dec = (n: number) => ({ valueOf: () => n, toNumber: () => n });
@@ -13,6 +17,8 @@ const dec = (n: number) => ({ valueOf: () => n, toNumber: () => n });
 const mockFulfilment = {
   applyPrepTypeOnCreate: jest.fn().mockResolvedValue(undefined),
 };
+
+const audit = mockAuditService();
 
 const createMockTx = () => ({
   channelModifier: {
@@ -25,6 +31,9 @@ const createMockTx = () => ({
     ]),
   },
   order: {
+    create: jest.fn(),
+  },
+  auditEvent: {
     create: jest.fn(),
   },
 });
@@ -40,6 +49,9 @@ const mockPrisma = {
   },
   payment: {
     findFirst: jest.fn(),
+    create: jest.fn(),
+  },
+  auditEvent: {
     create: jest.fn(),
   },
   $transaction: jest.fn(),
@@ -67,12 +79,15 @@ describe('OrdersService', () => {
           useValue: { trigger: jest.fn().mockResolvedValue(undefined) },
         },
         { provide: FulfilmentService, useValue: mockFulfilment },
+        provideAuditService(audit),
       ],
     }).compile();
 
     service = module.get<OrdersService>(OrdersService);
     jest.clearAllMocks();
     mockFulfilment.applyPrepTypeOnCreate.mockResolvedValue(undefined);
+    // updateOrderStatus now runs its optimistic guard + audit row in one transaction.
+    mockPrisma.$transaction.mockImplementation(async (cb: any) => cb(mockPrisma));
   });
 
   // ---------------------------------------------------------------
@@ -145,6 +160,21 @@ describe('OrdersService', () => {
       expect(mockPrisma.$transaction).toHaveBeenCalledWith(
         expect.any(Function),
         { isolationLevel: 'Serializable', maxWait: 5000, timeout: 15000 },
+      );
+      expect(audit.record).toHaveBeenCalledWith(
+        mockTx,
+        expect.objectContaining({
+          entity_type: 'order',
+          entity_id: 'order-1',
+          action: 'order.created',
+          actor_type: 'user',
+          actor_id: 'user-1',
+          after: expect.objectContaining({
+            status: 'placed',
+            channel: 'dine_in',
+            item_count: 0,
+          }),
+        }),
       );
     });
 
@@ -369,6 +399,63 @@ describe('OrdersService', () => {
       await expect(
         service.updateOrderStatus('o-1', 'cancelled', 'u-1'),
       ).rejects.toThrow(BadRequestException);
+      expect(audit.record).not.toHaveBeenCalled();
+    });
+
+    it('records an order.status_changed AuditEvent inside the same transaction', async () => {
+      mockPrisma.order.findUnique
+        .mockResolvedValueOnce({
+          id: 'o-1',
+          status: 'placed',
+          customer_id: null,
+        })
+        .mockResolvedValueOnce({ id: 'o-1', status: 'preparing' });
+      mockPrisma.order.updateMany.mockResolvedValue({ count: 1 });
+
+      await service.updateOrderStatus('o-1', 'preparing', 'u-1');
+
+      expect(mockPrisma.$transaction).toHaveBeenCalled();
+      expect(audit.record).toHaveBeenCalledWith(mockPrisma, {
+        entity_type: 'order',
+        entity_id: 'o-1',
+        action: 'order.status_changed',
+        actor_type: 'user',
+        actor_id: 'u-1',
+        before: { status: 'placed' },
+        after: { status: 'preparing' },
+      });
+    });
+
+    it('audits a system actor when no user is threaded through', async () => {
+      mockPrisma.order.findUnique
+        .mockResolvedValueOnce({
+          id: 'o-1',
+          status: 'placed',
+          customer_id: null,
+        })
+        .mockResolvedValueOnce({ id: 'o-1', status: 'preparing' });
+      mockPrisma.order.updateMany.mockResolvedValue({ count: 1 });
+
+      await service.updateOrderStatus('o-1', 'preparing', null);
+
+      expect(audit.record).toHaveBeenCalledWith(
+        mockPrisma,
+        expect.objectContaining({ actor_type: 'system', actor_id: null }),
+      );
+    });
+
+    it('does not audit when the optimistic guard loses the race', async () => {
+      mockPrisma.order.findUnique.mockResolvedValue({
+        id: 'o-1',
+        status: 'placed',
+        customer_id: null,
+      });
+      mockPrisma.order.updateMany.mockResolvedValue({ count: 0 });
+
+      await expect(
+        service.updateOrderStatus('o-1', 'preparing', 'u-1'),
+      ).rejects.toThrow(ConflictException);
+      expect(audit.record).not.toHaveBeenCalled();
     });
   });
 

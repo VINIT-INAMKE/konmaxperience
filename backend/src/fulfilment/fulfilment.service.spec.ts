@@ -9,6 +9,10 @@ import {
 import { OrderSource, Prisma } from '@prisma/client';
 import { FulfilmentService, actorForOrder } from './fulfilment.service';
 import { PrismaService } from '../prisma/prisma.service';
+import {
+  mockAuditService,
+  provideAuditService,
+} from '../test-utils/mock-providers';
 
 jest.mock('../common/utils/unit-conversion', () => ({
   convertUnit: jest.fn().mockResolvedValue(null),
@@ -28,6 +32,7 @@ const makeTx = () => ({
   prepBatch: { findMany: jest.fn(), update: jest.fn() },
   systemSetting: { findUnique: jest.fn() },
   zone: { findUnique: jest.fn(), findFirst: jest.fn() },
+  auditEvent: { create: jest.fn() },
 });
 type MockTx = ReturnType<typeof makeTx>;
 const asTx = (tx: MockTx) => tx as unknown as Prisma.TransactionClient;
@@ -37,6 +42,8 @@ const mockPrisma = {
   order: { findFirst: jest.fn() },
   customerAddress: { findFirst: jest.fn() },
 };
+
+const audit = mockAuditService();
 
 const userActor = { actor_type: 'user' as const, actor_id: 'user-1' };
 const orderItem = {
@@ -54,6 +61,7 @@ describe('FulfilmentService', () => {
       providers: [
         FulfilmentService,
         { provide: PrismaService, useValue: mockPrisma },
+        provideAuditService(audit),
       ],
     }).compile();
     service = module.get(FulfilmentService);
@@ -661,6 +669,19 @@ describe('FulfilmentService', () => {
           }),
         }),
       );
+      expect(audit.record).toHaveBeenCalledWith(tx, {
+        entity_type: 'order',
+        entity_id: 'ord-1',
+        action: 'order.confirmed',
+        actor_type: 'customer',
+        actor_id: 'cust-1',
+        after: {
+          status: 'placed',
+          placed_via: OrderSource.storefront,
+          razorpay_payment_id: 'pay_1',
+          total: '300',
+        },
+      });
     });
 
     it('returns the existing order when the payment id is already stored (P2002)', async () => {

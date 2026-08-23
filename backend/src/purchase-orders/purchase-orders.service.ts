@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { MovementType, Prisma, PurchaseOrderStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditService } from '../audit/audit.service';
 import { CreatePurchaseOrderDto } from './dto/create-purchase-order.dto';
 import { ReceivePurchaseOrderDto } from './dto/receive-purchase-order.dto';
 import { convertUnit } from '../common/utils/unit-conversion';
@@ -24,7 +25,10 @@ const PO_INCLUDE = {
 
 @Injectable()
 export class PurchaseOrdersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly auditService: AuditService,
+  ) {}
 
   async findAll(status?: string) {
     const where: Prisma.PurchaseOrderWhereInput = {};
@@ -96,6 +100,7 @@ export class PurchaseOrdersService {
       status?: PurchaseOrderStatus;
       linked_task_id?: string;
     },
+    userId: string | null,
   ) {
     const po = await this.findOne(id);
 
@@ -114,17 +119,34 @@ export class PurchaseOrdersService {
       );
     }
 
-    return this.prisma.purchaseOrder.update({
-      where: { id },
-      data: {
-        ...(data.notes !== undefined && { notes: data.notes }),
-        ...(data.linked_task_id !== undefined && { linked_task_id: data.linked_task_id || null }),
-        ...(data.status === PurchaseOrderStatus.ordered && {
-          status: PurchaseOrderStatus.ordered,
-          ordered_at: new Date(),
-        }),
-      },
-      include: PO_INCLUDE,
+    return this.prisma.$transaction(async (tx) => {
+      const updated = await tx.purchaseOrder.update({
+        where: { id },
+        data: {
+          ...(data.notes !== undefined && { notes: data.notes }),
+          ...(data.linked_task_id !== undefined && {
+            linked_task_id: data.linked_task_id || null,
+          }),
+          ...(data.status === PurchaseOrderStatus.ordered && {
+            status: PurchaseOrderStatus.ordered,
+            ordered_at: new Date(),
+          }),
+        },
+        include: PO_INCLUDE,
+      });
+
+      if (data.status === PurchaseOrderStatus.ordered) {
+        await this.auditService.record(tx, {
+          entity_type: 'purchase_order',
+          entity_id: id,
+          action: 'purchase_order.status_changed',
+          ...AuditService.user(userId),
+          before: { status: po.status },
+          after: { status: PurchaseOrderStatus.ordered },
+        });
+      }
+
+      return updated;
     });
   }
 
@@ -234,7 +256,7 @@ export class PurchaseOrdersService {
         ? PurchaseOrderStatus.received
         : PurchaseOrderStatus.ordered;
 
-      return tx.purchaseOrder.update({
+      const updated = await tx.purchaseOrder.update({
         where: { id: poId },
         data: {
           status: newStatus,
@@ -243,6 +265,17 @@ export class PurchaseOrdersService {
         },
         include: PO_INCLUDE,
       });
+
+      await this.auditService.record(tx, {
+        entity_type: 'purchase_order',
+        entity_id: poId,
+        action: 'purchase_order.received',
+        ...AuditService.user(userId),
+        before: { status: po.status },
+        after: { status: newStatus, lines: dto.lines.length },
+      });
+
+      return updated;
     });
   }
 
@@ -268,7 +301,7 @@ export class PurchaseOrdersService {
     });
   }
 
-  async cancel(id: string) {
+  async cancel(id: string, userId: string | null) {
     const po = await this.findOne(id);
     if (
       po.status !== PurchaseOrderStatus.draft &&
@@ -278,10 +311,23 @@ export class PurchaseOrdersService {
         'Can only cancel POs in draft or ordered status',
       );
     }
-    return this.prisma.purchaseOrder.update({
-      where: { id },
-      data: { status: PurchaseOrderStatus.cancelled },
-      include: PO_INCLUDE,
+    return this.prisma.$transaction(async (tx) => {
+      const cancelled = await tx.purchaseOrder.update({
+        where: { id },
+        data: { status: PurchaseOrderStatus.cancelled },
+        include: PO_INCLUDE,
+      });
+
+      await this.auditService.record(tx, {
+        entity_type: 'purchase_order',
+        entity_id: id,
+        action: 'purchase_order.cancelled',
+        ...AuditService.user(userId),
+        before: { status: po.status },
+        after: { status: PurchaseOrderStatus.cancelled },
+      });
+
+      return cancelled;
     });
   }
 }

@@ -3,12 +3,14 @@ import {
   NotFoundException,
   ForbiddenException,
 } from '@nestjs/common';
-import { ApprovalEntityType } from '@prisma/client';
+import { ApprovalEntityType, ApprovalStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { EvidenceService } from '../evidence/evidence.service';
 import { DelegationsService } from '../delegations/delegations.service';
+import { AuditService } from '../audit/audit.service';
 import { getPermissionsForRole } from '../permissions/permissions.cache';
 import { Permission } from '../types/permissions';
+import type { Tx } from '../common/types/transaction';
 
 @Injectable()
 export class ApprovalsService {
@@ -16,6 +18,7 @@ export class ApprovalsService {
     private readonly prisma: PrismaService,
     private readonly evidenceService: EvidenceService,
     private readonly delegationsService: DelegationsService,
+    private readonly auditService: AuditService,
   ) {}
 
   async findPending() {
@@ -67,7 +70,7 @@ export class ApprovalsService {
     adminId: string,
     reason: string,
   ) {
-    return this.prisma.$transaction(async (tx: any) => {
+    return this.prisma.$transaction(async (tx: Tx) => {
       const approval = await tx.approval.findFirst({
         where: { id: approvalId, status: 'pending' },
       });
@@ -87,6 +90,15 @@ export class ApprovalsService {
           override_reason: reason,
           override_at: new Date(),
         },
+      });
+
+      await this.auditService.record(tx, {
+        entity_type: 'approval',
+        entity_id: approval.id,
+        action: 'approval.overridden',
+        ...AuditService.user(adminId),
+        before: { status: ApprovalStatus.pending },
+        after: { status: ApprovalStatus.approved, override_reason: reason },
       });
 
       // Per D-10: if evidence approval, update Evidence record AND fire validation cascade
@@ -133,7 +145,7 @@ export class ApprovalsService {
       delegatedFromUserId = delegation.from_user_id;
     }
 
-    return this.prisma.$transaction(async (tx: any) => {
+    return this.prisma.$transaction(async (tx: Tx) => {
       const approval = await tx.approval.findUnique({
         where: { id: approvalId },
       });
@@ -147,6 +159,18 @@ export class ApprovalsService {
           status: 'approved',
           approved_by: actingUserId,
           delegated_from_user_id: delegatedFromUserId,
+        },
+      });
+
+      await this.auditService.record(tx, {
+        entity_type: 'approval',
+        entity_id: approvalId,
+        action: 'approval.decided',
+        ...AuditService.user(actingUserId),
+        before: { status: ApprovalStatus.pending },
+        after: {
+          status: ApprovalStatus.approved,
+          delegated_from: delegatedFromUserId ?? null,
         },
       });
 
