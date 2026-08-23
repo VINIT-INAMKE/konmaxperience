@@ -9,8 +9,12 @@ import { PusherService } from '../chat/pusher.service';
 import { FulfilmentService } from '../fulfilment/fulfilment.service';
 import {
   mockAuditService,
+  mockEventEmitter,
   provideAuditService,
 } from '../test-utils/mock-providers';
+import { DomainEvent } from '../common/events/domain-events';
+
+const emitter = mockEventEmitter();
 
 /** Mock Prisma Decimal -- supports Number() via valueOf() */
 const dec = (n: number) => ({ valueOf: () => n, toNumber: () => n });
@@ -76,7 +80,7 @@ describe('OrdersService', () => {
         OrdersService,
         { provide: PrismaService, useValue: mockPrisma },
         { provide: NodeService, useValue: mockNode },
-        { provide: EventEmitter2, useValue: { emit: jest.fn() } },
+        { provide: EventEmitter2, useValue: emitter },
         {
           provide: RazorpayService,
           useValue: {
@@ -96,6 +100,7 @@ describe('OrdersService', () => {
 
     service = module.get<OrdersService>(OrdersService);
     jest.clearAllMocks();
+    emitter.emit.mockReturnValue(true);
     mockFulfilment.applyPrepTypeOnCreate.mockResolvedValue(undefined);
     // updateOrderStatus now runs its optimistic guard + audit row in one transaction.
     mockPrisma.$transaction.mockImplementation(async (cb: any) => cb(mockPrisma));
@@ -650,6 +655,207 @@ describe('OrdersService', () => {
       const { created_at } = mockPrisma.order.count.mock.calls[0][0].where;
       expect(created_at.gte.toISOString()).toBe('2026-08-22T23:00:00.000Z');
       expect(created_at.lt.toISOString()).toBe('2026-08-23T23:00:00.000Z');
+    });
+  });
+
+  // ---------------------------------------------------------------
+  // Domain events (SPEC §4.1) — every one fires after the write commits
+  // ---------------------------------------------------------------
+  describe('domain events', () => {
+    describe('order.placed', () => {
+      const dto = {
+        channel: 'dine_in' as const,
+        zone_id: 'zone-1',
+        items: [{ product_id: 'mi-1', quantity: 2, unit_price: 150 }],
+      };
+      const created = {
+        id: 'order-1',
+        node_id: 'node-1',
+        zone_id: 'zone-1',
+        channel: 'dine_in',
+        status: 'placed',
+        total: '300',
+        items: [{ id: 'oi-1' }],
+        payment: null,
+      };
+
+      it('emits once, after the transaction resolves, with the typed payload', async () => {
+        const mockTx = createMockTx();
+        let txResolved = false;
+        mockPrisma.$transaction.mockImplementation(async (cb: any) => {
+          const out = await cb(mockTx);
+          txResolved = true;
+          return out;
+        });
+        mockTx.channelModifier.findFirst.mockResolvedValue(null);
+        mockTx.order.create.mockResolvedValue(created);
+        emitter.emit.mockImplementation(() => {
+          expect(txResolved).toBe(true);
+          return true;
+        });
+
+        await service.createOrder(dto, 'user-1');
+
+        expect(emitter.emit).toHaveBeenCalledTimes(1);
+        expect(emitter.emit).toHaveBeenCalledWith(
+          DomainEvent.ORDER_PLACED,
+          expect.objectContaining({
+            node_id: 'node-1',
+            actor: { actor_type: 'user', actor_id: 'user-1' },
+            occurred_at: expect.any(String),
+            orderId: 'order-1',
+            channel: 'dine_in',
+            itemCount: 1,
+            total: '300',
+            createdBy: 'user-1',
+          }),
+        );
+      });
+
+      it('still resolves when the emitter throws', async () => {
+        const mockTx = createMockTx();
+        mockPrisma.$transaction.mockImplementation(async (cb: any) => cb(mockTx));
+        mockTx.channelModifier.findFirst.mockResolvedValue(null);
+        mockTx.order.create.mockResolvedValue(created);
+        emitter.emit.mockImplementation(() => {
+          throw new Error('listener exploded');
+        });
+
+        await expect(service.createOrder(dto, 'user-1')).resolves.toBe(created);
+      });
+    });
+
+    describe('order.served / order.delivered', () => {
+      const arrangeStatus = (from: string, to: string) => {
+        mockPrisma.order.findUnique
+          .mockResolvedValueOnce({
+            id: 'o-1',
+            status: from,
+            customer_id: null,
+            order_number: 42,
+          })
+          .mockResolvedValueOnce({
+            id: 'o-1',
+            node_id: 'node-1',
+            order_number: 42,
+            channel: 'dine_in',
+            total: '550',
+            status: to,
+          });
+        mockPrisma.order.updateMany.mockResolvedValue({ count: 1 });
+      };
+
+      it('emits order.served on ready -> served', async () => {
+        arrangeStatus('ready', 'served');
+
+        await service.updateOrderStatus('o-1', 'served', 'u-1');
+
+        expect(emitter.emit).toHaveBeenCalledTimes(1);
+        expect(emitter.emit).toHaveBeenCalledWith(
+          DomainEvent.ORDER_SERVED,
+          expect.objectContaining({
+            node_id: 'node-1',
+            actor: { actor_type: 'user', actor_id: 'u-1' },
+            occurred_at: expect.any(String),
+            orderId: 'o-1',
+            orderNumber: 42,
+            channel: 'dine_in',
+            total: '550',
+          }),
+        );
+      });
+
+      /**
+       * `STATUS_TRANSITIONS` has no path into `delivered` yet (the marketplace
+       * flow stops at `dispatched`), so the `order.delivered` gate is wired but
+       * dormant. This pins the current behaviour: the guard rejects before any
+       * write, and nothing is emitted.
+       */
+      it('rejects the still-unreachable transition into delivered and emits nothing', async () => {
+        mockPrisma.order.findUnique.mockResolvedValue({
+          id: 'o-1',
+          status: 'dispatched',
+          customer_id: null,
+          order_number: 42,
+        });
+
+        await expect(
+          service.updateOrderStatus('o-1', 'delivered', 'u-1'),
+        ).rejects.toThrow(BadRequestException);
+        expect(emitter.emit).not.toHaveBeenCalled();
+      });
+
+      it('emits nothing for a non-terminal transition', async () => {
+        arrangeStatus('placed', 'preparing');
+
+        await service.updateOrderStatus('o-1', 'preparing', 'u-1');
+
+        expect(emitter.emit).not.toHaveBeenCalled();
+      });
+
+      it('does not emit when the optimistic guard loses the race', async () => {
+        mockPrisma.order.findUnique.mockResolvedValue({
+          id: 'o-1',
+          status: 'ready',
+          customer_id: null,
+          order_number: 42,
+        });
+        mockPrisma.order.updateMany.mockResolvedValue({ count: 0 });
+
+        await expect(
+          service.updateOrderStatus('o-1', 'served', 'u-1'),
+        ).rejects.toThrow(ConflictException);
+        expect(emitter.emit).not.toHaveBeenCalled();
+      });
+
+      it('still resolves when the emitter throws', async () => {
+        arrangeStatus('ready', 'served');
+        emitter.emit.mockImplementation(() => {
+          throw new Error('listener exploded');
+        });
+
+        await expect(
+          service.updateOrderStatus('o-1', 'served', 'u-1'),
+        ).resolves.toMatchObject({ id: 'o-1', status: 'served' });
+      });
+    });
+
+    describe('delivery.updated', () => {
+      it('emits once, after the update resolves, with the typed payload', async () => {
+        mockPrisma.order.findUnique.mockResolvedValue({
+          id: 'o-1',
+          channel: 'delivery',
+          delivery_status: null,
+          delivery_address: '12 Palm Rd',
+          created_by: 'user-9',
+          customer_id: null,
+        });
+        let updateResolved = false;
+        mockPrisma.order.update.mockImplementation(async () => {
+          updateResolved = true;
+          return { id: 'o-1', node_id: 'node-1', delivery_status: 'picked_up' };
+        });
+        emitter.emit.mockImplementation(() => {
+          expect(updateResolved).toBe(true);
+          return true;
+        });
+
+        await service.updateDelivery('o-1', { delivery_status: 'picked_up' });
+
+        expect(emitter.emit).toHaveBeenCalledTimes(1);
+        expect(emitter.emit).toHaveBeenCalledWith(
+          DomainEvent.DELIVERY_UPDATED,
+          expect.objectContaining({
+            node_id: 'node-1',
+            actor: { actor_type: 'user', actor_id: 'user-9' },
+            occurred_at: expect.any(String),
+            orderId: 'o-1',
+            deliveryStatus: 'picked_up',
+            deliveryAddress: '12 Palm Rd',
+            createdBy: 'user-9',
+          }),
+        );
+      });
     });
   });
 });

@@ -1,12 +1,48 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { MovementType, PrepBatchStatus } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateWasteLogDto } from './dto/create-waste-log.dto';
 import { convertUnit } from '../../common/utils/unit-conversion';
+import {
+  DomainEvent,
+  domainEventBase,
+  emitDomainEvent,
+  userActor,
+} from '../../common/events/domain-events';
+
+/** The single `waste.logged` shape, fired after either transaction branch commits. */
+type WasteLogRow = {
+  id: string;
+  node_id: string;
+  waste_type: string;
+  reason: string;
+  cost_impact: unknown;
+  zone_id: string;
+  ingredient_id: string | null;
+  prep_batch_id: string | null;
+};
 
 @Injectable()
 export class WasteService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly eventEmitter: EventEmitter2,
+  ) {}
+
+  /** Emitted AFTER the write commits (SPEC §4.1); never called from inside `tx`. */
+  private emitWasteLogged(wasteLog: WasteLogRow, userId: string) {
+    emitDomainEvent(this.eventEmitter, DomainEvent.WASTE_LOGGED, {
+      ...domainEventBase(wasteLog.node_id, userActor(userId)),
+      wasteLogId: wasteLog.id,
+      wasteType: wasteLog.waste_type,
+      reason: wasteLog.reason,
+      costImpact: String(wasteLog.cost_impact),
+      zoneId: wasteLog.zone_id,
+      ingredientId: wasteLog.ingredient_id ?? null,
+      prepBatchId: wasteLog.prep_batch_id ?? null,
+    });
+  }
 
   async findAll(zoneId?: string, page?: number, limit?: number) {
     const where: Record<string, unknown> = {};
@@ -123,7 +159,7 @@ export class WasteService {
       convertedQtyInBaseUnit = toBase;
 
       // Transaction: create WasteLog + StockMovement + decrement IngredientStock
-      return this.prisma.$transaction(async (tx) => {
+      const wasteLog = await this.prisma.$transaction(async (tx) => {
         // Check stock sufficiency before decrementing
         const existingStock = await tx.ingredientStock.findFirst({
           where: {
@@ -131,7 +167,9 @@ export class WasteService {
             zone_id: dto.zone_id,
           },
         });
-        const currentQty = existingStock ? Number(existingStock.current_quantity) : 0;
+        const currentQty = existingStock
+          ? Number(existingStock.current_quantity)
+          : 0;
         if (currentQty < convertedQtyInBaseUnit) {
           throw new BadRequestException(
             `Insufficient stock: have ${currentQty} ${ingredient.base_unit}, need ${convertedQtyInBaseUnit} for waste deduction`,
@@ -181,6 +219,9 @@ export class WasteService {
 
         return wasteLog;
       });
+
+      this.emitWasteLogged(wasteLog, userId);
+      return wasteLog;
     }
 
     if (dto.waste_type === 'prep_batch') {
@@ -231,7 +272,7 @@ export class WasteService {
       }
 
       // Transaction: create WasteLog + decrement PrepBatch quantity_remaining
-      return this.prisma.$transaction(async (tx) => {
+      const wasteLog = await this.prisma.$transaction(async (tx) => {
         const wasteLog = await tx.wasteLog.create({
           data: {
             waste_type: dto.waste_type,
@@ -247,7 +288,8 @@ export class WasteService {
         });
 
         // Decrement PrepBatch quantity_remaining and mark depleted if needed
-        const newRemaining = Number(prepBatch.quantity_remaining) - wasteQtyInBatchUnit;
+        const newRemaining =
+          Number(prepBatch.quantity_remaining) - wasteQtyInBatchUnit;
         await tx.prepBatch.update({
           where: { id: dto.prep_batch_id },
           data: {
@@ -258,6 +300,9 @@ export class WasteService {
 
         return wasteLog;
       });
+
+      this.emitWasteLogged(wasteLog, userId);
+      return wasteLog;
     }
 
     throw new BadRequestException(

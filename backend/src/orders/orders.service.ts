@@ -29,6 +29,12 @@ import { ConfirmRazorpayPaymentDto } from './dto/create-razorpay-order.dto';
 import { FulfilmentService } from '../fulfilment/fulfilment.service';
 import { AuditService } from '../audit/audit.service';
 import {
+  DomainEvent,
+  domainEventBase,
+  emitDomainEvent,
+  userActor,
+} from '../common/events/domain-events';
+import {
   SERIALIZABLE_TX_OPTIONS,
   withSerializableRetry,
 } from '../common/utils/transaction-retry';
@@ -180,18 +186,15 @@ export class OrdersService {
       }, SERIALIZABLE_TX_OPTIONS),
     );
 
-    // Fire-and-forget AFTER transaction commits (Pitfall 1 compliance)
-    try {
-      this.eventEmitter.emit('order.placed', {
-        orderId: order.id,
-        channel: order.channel,
-        itemCount: order.items?.length ?? 0,
-        total: String(order.total),
-        createdBy: userId,
-      });
-    } catch (e) {
-      /* event emission failed - non-critical */
-    }
+    // Fire-and-forget AFTER the transaction commits (SPEC §4.1)
+    emitDomainEvent(this.eventEmitter, DomainEvent.ORDER_PLACED, {
+      ...domainEventBase(order.node_id, userActor(userId)),
+      orderId: order.id,
+      channel: order.channel,
+      itemCount: order.items?.length ?? 0,
+      total: String(order.total),
+      createdBy: userId,
+    });
 
     return order;
   }
@@ -388,7 +391,32 @@ export class OrdersService {
         .catch((err) => console.error('[Pusher] Status trigger error:', err));
     }
 
-    return this.prisma.order.findUnique({ where: { id: orderId } });
+    const updated = await this.prisma.order.findUnique({
+      where: { id: orderId },
+    });
+
+    // The two terminal fulfilment states the bridge listens for, emitted AFTER
+    // the status transaction has committed (SPEC §4.1).
+    if (
+      updated &&
+      (newStatus === OrderStatus.served || newStatus === OrderStatus.delivered)
+    ) {
+      emitDomainEvent(
+        this.eventEmitter,
+        newStatus === OrderStatus.served
+          ? DomainEvent.ORDER_SERVED
+          : DomainEvent.ORDER_DELIVERED,
+        {
+          ...domainEventBase(updated.node_id, userActor(userId)),
+          orderId: updated.id,
+          orderNumber: updated.order_number,
+          channel: updated.channel,
+          total: String(updated.total),
+        },
+      );
+    }
+
+    return updated;
   }
 
   // ---------------------------------------------------------------
@@ -514,17 +542,14 @@ export class OrdersService {
       data: updateData,
     });
 
-    // Fire-and-forget AFTER update persists (Pitfall 1 compliance)
-    try {
-      this.eventEmitter.emit('delivery.updated', {
-        orderId: order.id,
-        deliveryStatus: dto.delivery_status ?? order.delivery_status,
-        deliveryAddress: order.delivery_address,
-        createdBy: order.created_by,
-      });
-    } catch (e) {
-      /* event emission failed - non-critical */
-    }
+    // Fire-and-forget AFTER the update persists (SPEC §4.1)
+    emitDomainEvent(this.eventEmitter, DomainEvent.DELIVERY_UPDATED, {
+      ...domainEventBase(updated.node_id, userActor(order.created_by)),
+      orderId: order.id,
+      deliveryStatus: dto.delivery_status ?? order.delivery_status,
+      deliveryAddress: order.delivery_address,
+      createdBy: order.created_by,
+    });
 
     // Pusher trigger for customer orders (D-13 + Pitfall 4: null-guard for POS orders)
     if (order.customer_id) {

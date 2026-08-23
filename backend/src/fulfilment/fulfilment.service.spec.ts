@@ -11,8 +11,11 @@ import { FulfilmentService, actorForOrder } from './fulfilment.service';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   mockAuditService,
+  mockEventEmitter,
   provideAuditService,
+  provideEventEmitter,
 } from '../test-utils/mock-providers';
+import { DomainEvent } from '../common/events/domain-events';
 
 jest.mock('../common/utils/unit-conversion', () => ({
   convertUnit: jest.fn().mockResolvedValue(null),
@@ -44,6 +47,7 @@ const mockPrisma = {
 };
 
 const audit = mockAuditService();
+const emitter = mockEventEmitter();
 
 const userActor = { actor_type: 'user' as const, actor_id: 'user-1' };
 const orderItem = {
@@ -62,10 +66,12 @@ describe('FulfilmentService', () => {
         FulfilmentService,
         { provide: PrismaService, useValue: mockPrisma },
         provideAuditService(audit),
+        provideEventEmitter(emitter),
       ],
     }).compile();
     service = module.get(FulfilmentService);
     jest.clearAllMocks();
+    emitter.emit.mockReturnValue(true);
     mockConvertUnit.mockResolvedValue(null);
   });
 
@@ -724,6 +730,98 @@ describe('FulfilmentService', () => {
         expect.objectContaining({ id: 'ord-2' }),
       );
       expect(mockPrisma.$transaction).toHaveBeenCalledTimes(2);
+    });
+
+    // -------------------------------------------------------------
+    // order.confirmed domain event (SPEC §4.1)
+    // -------------------------------------------------------------
+    describe('order.confirmed', () => {
+      const confirmed = {
+        id: 'ord-1',
+        node_id: 'node-1',
+        order_number: 7,
+        channel: 'takeaway',
+        total: '300',
+        customer_id: 'cust-1',
+        status: 'placed',
+        items: [orderItem],
+        payment: { id: 'p-1' },
+      };
+
+      const arrangeConfirm = () => {
+        const tx = makeTx();
+        tx.systemSetting.findUnique.mockResolvedValue({ value: 'zone-1' });
+        tx.zone.findUnique.mockResolvedValue({ id: 'zone-1' });
+        tx.order.create.mockResolvedValue({
+          id: 'ord-1',
+          zone_id: 'zone-1',
+          items: [orderItem],
+        });
+        tx.product.findMany.mockResolvedValue([
+          { id: 'mi-1', recipe: { id: 'r-1', preparation_type: 'scratch' } },
+        ]);
+        tx.order.findUniqueOrThrow.mockResolvedValue(confirmed);
+        return tx;
+      };
+
+      it('emits once, after the transaction resolves, with the typed payload', async () => {
+        const tx = arrangeConfirm();
+        let txResolved = false;
+        mockPrisma.$transaction.mockImplementation(
+          async (cb: (t: unknown) => unknown) => {
+            const out = await cb(tx);
+            txResolved = true;
+            return out;
+          },
+        );
+        emitter.emit.mockImplementation(() => {
+          expect(txResolved).toBe(true);
+          return true;
+        });
+
+        await service.confirmPaidOrder(input);
+
+        expect(emitter.emit).toHaveBeenCalledTimes(1);
+        expect(emitter.emit).toHaveBeenCalledWith(
+          DomainEvent.ORDER_CONFIRMED,
+          expect.objectContaining({
+            node_id: 'node-1',
+            actor: { actor_type: 'customer', actor_id: 'cust-1' },
+            occurred_at: expect.any(String),
+            orderId: 'ord-1',
+            orderNumber: 7,
+            channel: 'takeaway',
+            total: '300',
+            itemCount: 1,
+            customerId: 'cust-1',
+          }),
+        );
+      });
+
+      it('does not re-emit on the P2002 replay path', async () => {
+        mockPrisma.$transaction.mockRejectedValue(
+          Object.assign(new Error('dup'), { code: 'P2002' }),
+        );
+        mockPrisma.order.findFirst.mockResolvedValue({ id: 'ord-existing' });
+
+        await service.confirmPaidOrder(input);
+
+        expect(emitter.emit).not.toHaveBeenCalled();
+      });
+
+      it('still resolves when the emitter throws', async () => {
+        const tx = arrangeConfirm();
+        mockPrisma.$transaction.mockImplementation(
+          async (cb: (t: unknown) => unknown) => cb(tx),
+        );
+        emitter.emit.mockImplementation(() => {
+          throw new Error('listener exploded');
+        });
+
+        await expect(service.confirmPaidOrder(input)).resolves.toEqual(
+          expect.objectContaining({ id: 'ord-1' }),
+        );
+      });
     });
   });
 });

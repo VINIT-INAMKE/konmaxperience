@@ -4,6 +4,9 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { EventsService } from './events.service';
+import { DomainEvent } from '../common/events/domain-events';
+
+const mockEmitter = { emit: jest.fn() };
 
 const mockTx = {
   event: {
@@ -38,8 +41,13 @@ describe('EventsService', () => {
   let service: EventsService;
 
   beforeEach(() => {
-    service = new EventsService(mockPrisma as any, {} as any);
+    service = new EventsService(
+      mockPrisma as any,
+      {} as any,
+      mockEmitter as any,
+    );
     jest.clearAllMocks();
+    mockEmitter.emit.mockImplementation(() => true);
     // Reset $transaction to pass mockTx
     mockPrisma.$transaction.mockImplementation(
       (cb: (tx: typeof mockTx) => Promise<any>) => cb(mockTx),
@@ -284,6 +292,84 @@ describe('EventsService', () => {
       expect(mockPrisma.event.delete).toHaveBeenCalledWith({
         where: { id: 'e1' },
       });
+    });
+  });
+
+  // ---------------------------------------------------------------
+  // update — event.completed domain event (SPEC §4.1)
+  // ---------------------------------------------------------------
+  describe('update — event.completed', () => {
+    const updatedRow = {
+      id: 'e1',
+      node_id: 'node-1',
+      title: 'Sunset Supper',
+      status: 'past',
+    };
+
+    it('emits event.completed once, after the update resolves', async () => {
+      mockPrisma.event.findUnique.mockResolvedValue({
+        id: 'e1',
+        status: 'upcoming',
+      });
+      let updateResolved = false;
+      mockPrisma.event.update.mockImplementation(async () => {
+        updateResolved = true;
+        return updatedRow;
+      });
+      mockPrisma.eventBooking.count.mockResolvedValue(12);
+      mockEmitter.emit.mockImplementation(() => {
+        expect(updateResolved).toBe(true);
+        return true;
+      });
+
+      await service.update('e1', { status: 'past' } as any);
+
+      expect(mockEmitter.emit).toHaveBeenCalledTimes(1);
+      expect(mockEmitter.emit).toHaveBeenCalledWith(
+        DomainEvent.EVENT_COMPLETED,
+        expect.objectContaining({
+          node_id: 'node-1',
+          actor: { actor_type: 'system', actor_id: null },
+          occurred_at: expect.any(String),
+          eventId: 'e1',
+          title: 'Sunset Supper',
+          attendedCount: 12,
+        }),
+      );
+      expect(mockPrisma.eventBooking.count).toHaveBeenCalledWith({
+        where: {
+          event_id: 'e1',
+          payment_status: { in: ['paid', 'free'] },
+        },
+      });
+    });
+
+    it('does not re-emit when the event was already past', async () => {
+      mockPrisma.event.findUnique.mockResolvedValue({
+        id: 'e1',
+        status: 'past',
+      });
+      mockPrisma.event.update.mockResolvedValue(updatedRow);
+
+      await service.update('e1', { status: 'past' } as any);
+
+      expect(mockEmitter.emit).not.toHaveBeenCalled();
+    });
+
+    it('still resolves when the emitter throws', async () => {
+      mockPrisma.event.findUnique.mockResolvedValue({
+        id: 'e1',
+        status: 'upcoming',
+      });
+      mockPrisma.event.update.mockResolvedValue(updatedRow);
+      mockPrisma.eventBooking.count.mockResolvedValue(0);
+      mockEmitter.emit.mockImplementation(() => {
+        throw new Error('listener exploded');
+      });
+
+      await expect(
+        service.update('e1', { status: 'past' } as any),
+      ).resolves.toEqual(updatedRow);
     });
   });
 });

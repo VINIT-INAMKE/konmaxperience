@@ -5,8 +5,11 @@ import { PurchaseOrdersService } from './purchase-orders.service';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   mockAuditService,
+  mockEventEmitter,
   provideAuditService,
+  provideEventEmitter,
 } from '../test-utils/mock-providers';
+import { DomainEvent } from '../common/events/domain-events';
 
 jest.mock('../common/utils/unit-conversion', () => ({
   convertUnit: jest.fn(),
@@ -32,6 +35,7 @@ describe('PurchaseOrdersService — audit', () => {
   let prisma: MockPo;
   let tx: ReturnType<typeof makeTx>;
   let audit: ReturnType<typeof mockAuditService>;
+  let emitter: ReturnType<typeof mockEventEmitter>;
 
   const draftPo = {
     id: 'po-1',
@@ -47,17 +51,20 @@ describe('PurchaseOrdersService — audit', () => {
       $transaction: jest.fn((cb: (t: unknown) => unknown) => cb(tx)),
     };
     audit = mockAuditService();
+    emitter = mockEventEmitter();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         PurchaseOrdersService,
         { provide: PrismaService, useValue: prisma },
         provideAuditService(audit),
+        provideEventEmitter(emitter),
       ],
     }).compile();
 
     service = module.get(PurchaseOrdersService);
     jest.clearAllMocks();
+    emitter.emit.mockReturnValue(true);
     mockConvertUnit.mockResolvedValue(null);
   });
 
@@ -151,6 +158,106 @@ describe('PurchaseOrdersService — audit', () => {
         actor_id: 'user-1',
         before: { status: PurchaseOrderStatus.ordered },
         after: { status: PurchaseOrderStatus.received, lines: 1 },
+      });
+    });
+
+    // -------------------------------------------------------------
+    // purchase_order.received domain event (SPEC §4.1)
+    // -------------------------------------------------------------
+    describe('purchase_order.received', () => {
+      const arrangeReceive = () => {
+        tx.purchaseOrder.findUniqueOrThrow.mockResolvedValue({
+          id: 'po-1',
+          zone_id: 'zone-1',
+          status: PurchaseOrderStatus.ordered,
+          lines: [
+            {
+              id: 'pol-1',
+              ingredient_id: 'ing-1',
+              quantity: 10,
+              received_quantity: 0,
+              unit: 'kg',
+              ingredient: { id: 'ing-1', base_unit: 'g' },
+            },
+          ],
+        });
+        mockConvertUnit.mockResolvedValue(10000);
+        tx.purchaseOrderLine.findMany.mockResolvedValue([
+          { id: 'pol-1', quantity: 10, received_quantity: 10 },
+        ]);
+      };
+
+      it('emits once, after the transaction resolves, with the typed payload', async () => {
+        arrangeReceive();
+        let txResolved = false;
+        prisma.$transaction.mockImplementation(
+          async (cb: (t: unknown) => unknown) => {
+            const out = await cb(tx);
+            txResolved = true;
+            return out;
+          },
+        );
+        tx.purchaseOrder.update.mockResolvedValue({
+          id: 'po-1',
+          node_id: 'node-1',
+          status: PurchaseOrderStatus.received,
+          vendor_id: 'v-1',
+          vendor: { id: 'v-1', name: 'Green Farms' },
+          linked_task_id: 'task-9',
+          total_amount: '4200.00',
+        });
+        emitter.emit.mockImplementation(() => {
+          expect(txResolved).toBe(true);
+          return true;
+        });
+
+        await service.receivePurchaseOrder(
+          'po-1',
+          { lines: [{ id: 'pol-1', received_quantity: 10 }] },
+          'user-1',
+        );
+
+        expect(emitter.emit).toHaveBeenCalledTimes(1);
+        expect(emitter.emit).toHaveBeenCalledWith(
+          DomainEvent.PURCHASE_ORDER_RECEIVED,
+          expect.objectContaining({
+            node_id: 'node-1',
+            actor: { actor_type: 'user', actor_id: 'user-1' },
+            occurred_at: expect.any(String),
+            purchaseOrderId: 'po-1',
+            vendorId: 'v-1',
+            vendorName: 'Green Farms',
+            linkedTaskId: 'task-9',
+            lineCount: 1,
+            totalAmount: '4200.00',
+            fullyReceived: true,
+          }),
+        );
+      });
+
+      it('still resolves when the emitter throws', async () => {
+        arrangeReceive();
+        const updated = {
+          id: 'po-1',
+          node_id: 'node-1',
+          status: PurchaseOrderStatus.received,
+          vendor_id: 'v-1',
+          vendor: { id: 'v-1', name: 'Green Farms' },
+          linked_task_id: null,
+          total_amount: '4200.00',
+        };
+        tx.purchaseOrder.update.mockResolvedValue(updated);
+        emitter.emit.mockImplementation(() => {
+          throw new Error('listener exploded');
+        });
+
+        await expect(
+          service.receivePurchaseOrder(
+            'po-1',
+            { lines: [{ id: 'pol-1', received_quantity: 10 }] },
+            'user-1',
+          ),
+        ).resolves.toEqual(updated);
       });
     });
   });

@@ -4,9 +4,16 @@ import {
   ConflictException,
   NotFoundException,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { EventStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { RazorpayService } from '../razorpay/razorpay.service';
+import {
+  DomainEvent,
+  domainEventBase,
+  emitDomainEvent,
+  systemActor,
+} from '../common/events/domain-events';
 import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
 import { CreateBookingDto } from './dto/create-booking.dto';
@@ -17,9 +24,12 @@ export class EventsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly razorpayService: RazorpayService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
-  private async enrichWithGuestCounts<T extends { id: string; capacity: number }>(
+  private async enrichWithGuestCounts<
+    T extends { id: string; capacity: number },
+  >(
     events: T[],
   ): Promise<Array<T & { booked_guests: number; spots_remaining: number }>> {
     if (events.length === 0) return [];
@@ -128,16 +138,17 @@ export class EventsService {
   }
 
   async update(id: string, dto: UpdateEventDto) {
-    // Verify event exists (lightweight check — no aggregation)
+    // Verify event exists (lightweight check — no aggregation). `status` comes
+    // along so `event.completed` fires only on the transition into `past`.
     const exists = await this.prisma.event.findUnique({
       where: { id },
-      select: { id: true },
+      select: { id: true, status: true },
     });
     if (!exists) {
       throw new NotFoundException(`Event with ID ${id} not found`);
     }
 
-    return this.prisma.event.update({
+    const updated = await this.prisma.event.update({
       where: { id },
       data: {
         ...(dto.title !== undefined && { title: dto.title }),
@@ -156,6 +167,24 @@ export class EventsService {
         brand: { select: { id: true, name: true } },
       },
     });
+
+    // Emit AFTER the update resolves (SPEC §4.1).
+    if (dto.status === EventStatus.past && exists.status !== EventStatus.past) {
+      const attendedCount = await this.prisma.eventBooking.count({
+        where: {
+          event_id: id,
+          payment_status: { in: ['paid', 'free'] },
+        },
+      });
+      emitDomainEvent(this.eventEmitter, DomainEvent.EVENT_COMPLETED, {
+        ...domainEventBase(updated.node_id, systemActor()),
+        eventId: updated.id,
+        title: updated.title,
+        attendedCount,
+      });
+    }
+
+    return updated;
   }
 
   async remove(id: string) {
@@ -181,61 +210,65 @@ export class EventsService {
   }
 
   async createBooking(eventId: string, dto: CreateBookingDto) {
-    return this.prisma.$transaction(async (tx) => {
-      // 1. Find the event
-      const event = await tx.event.findUniqueOrThrow({
-        where: { id: eventId },
-      });
+    return this.prisma.$transaction(
+      async (tx) => {
+        // 1. Find the event
+        const event = await tx.event.findUniqueOrThrow({
+          where: { id: eventId },
+        });
 
-      // 2. Check event date is in the future
-      if (event.date < new Date()) {
-        throw new BadRequestException(
-          'Cannot book a past event.',
-        );
-      }
+        // 2. Check event date is in the future
+        if (event.date < new Date()) {
+          throw new BadRequestException('Cannot book a past event.');
+        }
 
-      // 3. Check event is not cancelled
-      if (event.status === EventStatus.cancelled) {
-        throw new BadRequestException(
-          'Cannot book a cancelled event.',
-        );
-      }
+        // 3. Check event is not cancelled
+        if (event.status === EventStatus.cancelled) {
+          throw new BadRequestException('Cannot book a cancelled event.');
+        }
 
-      // 4. Check duplicate booking by phone
-      const existingBooking = await tx.eventBooking.findUnique({
-        where: { event_id_customer_phone: { event_id: eventId, customer_phone: dto.customer_phone } },
-        select: { id: true },
-      });
-      if (existingBooking) {
-        throw new BadRequestException(
-          'This phone number has already booked this event.',
-        );
-      }
+        // 4. Check duplicate booking by phone
+        const existingBooking = await tx.eventBooking.findUnique({
+          where: {
+            event_id_customer_phone: {
+              event_id: eventId,
+              customer_phone: dto.customer_phone,
+            },
+          },
+          select: { id: true },
+        });
+        if (existingBooking) {
+          throw new BadRequestException(
+            'This phone number has already booked this event.',
+          );
+        }
 
-      // 5. Sum existing bookings
-      const aggregate = await tx.eventBooking.aggregate({
-        where: { event_id: eventId },
-        _sum: { guests: true },
-      });
-      const booked = aggregate._sum.guests ?? 0;
+        // 5. Sum existing bookings
+        const aggregate = await tx.eventBooking.aggregate({
+          where: { event_id: eventId },
+          _sum: { guests: true },
+        });
+        const booked = aggregate._sum.guests ?? 0;
 
-      // 6. Check capacity
-      if (booked + dto.guests > event.capacity) {
-        throw new BadRequestException(
-          `Sorry, this event is full. No spots remain for ${dto.guests} guests.`,
-        );
-      }
+        // 6. Check capacity
+        if (booked + dto.guests > event.capacity) {
+          throw new BadRequestException(
+            `Sorry, this event is full. No spots remain for ${dto.guests} guests.`,
+          );
+        }
 
-      // 7. Create booking
-      return tx.eventBooking.create({
-        data: {
-          event_id: eventId,
-          customer_name: dto.customer_name,
-          customer_phone: dto.customer_phone,
-          guests: dto.guests,
-        },
-      });
-    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+        // 7. Create booking
+        return tx.eventBooking.create({
+          data: {
+            event_id: eventId,
+            customer_name: dto.customer_name,
+            customer_phone: dto.customer_phone,
+            guests: dto.guests,
+          },
+        });
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
   }
 
   // ---------------------------------------------------------------
@@ -243,7 +276,9 @@ export class EventsService {
   // ---------------------------------------------------------------
   async checkoutEvent(eventId: string, guests: number, customerId: string) {
     // Fetch event
-    const event = await this.prisma.event.findUnique({ where: { id: eventId } });
+    const event = await this.prisma.event.findUnique({
+      where: { id: eventId },
+    });
     if (!event) {
       throw new NotFoundException(`Event with ID ${eventId} not found`);
     }
@@ -268,32 +303,37 @@ export class EventsService {
 
     // Free event path (D-19)
     if (amountInPaise === 0) {
-      const booking = await this.prisma.$transaction(async (tx) => {
-        // Re-check capacity inside transaction
-        const txAgg = await tx.eventBooking.aggregate({
-          where: { event_id: eventId },
-          _sum: { guests: true },
-        });
-        const txBooked = txAgg._sum.guests ?? 0;
-        if (event.capacity - txBooked < guests) {
-          throw new BadRequestException('This event is now full');
-        }
+      const booking = await this.prisma.$transaction(
+        async (tx) => {
+          // Re-check capacity inside transaction
+          const txAgg = await tx.eventBooking.aggregate({
+            where: { event_id: eventId },
+            _sum: { guests: true },
+          });
+          const txBooked = txAgg._sum.guests ?? 0;
+          if (event.capacity - txBooked < guests) {
+            throw new BadRequestException('This event is now full');
+          }
 
-        // Get customer info
-        const customer = await tx.customer.findUnique({ where: { id: customerId } });
+          // Get customer info
+          const customer = await tx.customer.findUnique({
+            where: { id: customerId },
+          });
 
-        return tx.eventBooking.create({
-          data: {
-            event_id: eventId,
-            customer_id: customerId,
-            customer_name: customer?.name || '',
-            customer_phone: customer?.phone || '',
-            guests,
-            payment_status: 'free',
-            payment_amount: 0,
-          },
-        });
-      }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+          return tx.eventBooking.create({
+            data: {
+              event_id: eventId,
+              customer_id: customerId,
+              customer_name: customer?.name || '',
+              customer_phone: customer?.phone || '',
+              guests,
+              payment_status: 'free',
+              payment_amount: 0,
+            },
+          });
+        },
+        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+      );
 
       return { type: 'free' as const, booking };
     }
@@ -308,30 +348,35 @@ export class EventsService {
     });
 
     // Step 2: Short serializable tx — re-check capacity + insert booking (no external calls)
-    await this.prisma.$transaction(async (tx) => {
-      const txAgg = await tx.eventBooking.aggregate({
-        where: { event_id: eventId },
-        _sum: { guests: true },
-      });
-      const txBooked = txAgg._sum.guests ?? 0;
-      if (event.capacity - txBooked < guests) {
-        throw new BadRequestException('This event is now full');
-      }
+    await this.prisma.$transaction(
+      async (tx) => {
+        const txAgg = await tx.eventBooking.aggregate({
+          where: { event_id: eventId },
+          _sum: { guests: true },
+        });
+        const txBooked = txAgg._sum.guests ?? 0;
+        if (event.capacity - txBooked < guests) {
+          throw new BadRequestException('This event is now full');
+        }
 
-      const customer = await tx.customer.findUnique({ where: { id: customerId } });
-      return tx.eventBooking.create({
-        data: {
-          event_id: eventId,
-          customer_id: customerId,
-          customer_name: customer?.name || '',
-          customer_phone: customer?.phone || '',
-          guests,
-          razorpay_order_id: order.id,
-          payment_status: 'pending',
-          payment_amount: amountInPaise / 100,
-        },
-      });
-    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+        const customer = await tx.customer.findUnique({
+          where: { id: customerId },
+        });
+        return tx.eventBooking.create({
+          data: {
+            event_id: eventId,
+            customer_id: customerId,
+            customer_name: customer?.name || '',
+            customer_phone: customer?.phone || '',
+            guests,
+            razorpay_order_id: order.id,
+            payment_status: 'pending',
+            payment_amount: amountInPaise / 100,
+          },
+        });
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
 
     return { type: 'paid' as const, razorpay_order_id: order.id };
   }
@@ -339,10 +384,16 @@ export class EventsService {
   // ---------------------------------------------------------------
   // Confirm Booking (signature verify + API re-fetch + booking update)
   // ---------------------------------------------------------------
-  async confirmBooking(eventId: string, dto: ConfirmBookingDto, customerId: string) {
+  async confirmBooking(
+    eventId: string,
+    dto: ConfirmBookingDto,
+    customerId: string,
+  ) {
     // Step 1: Verify HMAC signature (D-09) — BEFORE fetchPayment
     const isValid = this.razorpayService.verifyPaymentSignature(
-      dto.razorpay_order_id, dto.razorpay_payment_id, dto.razorpay_signature,
+      dto.razorpay_order_id,
+      dto.razorpay_payment_id,
+      dto.razorpay_signature,
     );
     if (!isValid) {
       throw new BadRequestException('Invalid payment signature');
@@ -350,72 +401,85 @@ export class EventsService {
 
     // Step 2: Re-fetch payment from Razorpay API (D-12 belt-and-suspenders)
     // Accept both 'captured' (auto-capture on) and 'authorized' (auto-capture off / test mode)
-    const payment = await this.razorpayService.fetchPayment(dto.razorpay_payment_id);
+    const payment = await this.razorpayService.fetchPayment(
+      dto.razorpay_payment_id,
+    );
     if (payment.status !== 'captured' && payment.status !== 'authorized') {
-      throw new BadRequestException(`Payment not captured — status: ${payment.status}`);
+      throw new BadRequestException(
+        `Payment not captured — status: ${payment.status}`,
+      );
     }
     if (payment.order_id !== dto.razorpay_order_id) {
       throw new BadRequestException('Order ID mismatch');
     }
 
     // Step 3: Find pending booking and update in serializable transaction
-    return this.prisma.$transaction(async (tx) => {
-      const booking = await tx.eventBooking.findFirst({
-        where: { razorpay_order_id: dto.razorpay_order_id, customer_id: customerId },
-      });
-      if (!booking) {
-        throw new NotFoundException('Booking not found');
-      }
-      if (booking.payment_status === 'paid') {
-        return booking; // idempotent
-      }
-
-      // Re-check capacity inside transaction (only count paid + free)
-      const guestAgg = await tx.eventBooking.aggregate({
-        where: { event_id: eventId, payment_status: { in: ['paid', 'free'] } },
-        _sum: { guests: true },
-      });
-      const confirmedGuests = guestAgg._sum.guests ?? 0;
-      const event = await tx.event.findUnique({ where: { id: eventId } });
-
-      if (!event || event.capacity - confirmedGuests < booking.guests) {
-        // Capacity exceeded after payment — auto-refund (D-14)
-        await this.razorpayService.createRefund(
-          dto.razorpay_payment_id,
-          Number(payment.amount),
-          'capacity_exceeded',
-        );
-        await tx.eventBooking.update({
-          where: { id: booking.id },
-          data: { payment_status: 'refunded' },
-        });
-        throw new BadRequestException(
-          'This event is now full. Your payment has been refunded — it may take 5-7 business days to reflect.',
-        );
-      }
-
-      // Update booking to paid
-      if (dto.customer_name && !booking.customer_name) {
-        await tx.eventBooking.update({
-          where: { id: booking.id },
-          data: {
-            payment_status: 'paid',
-            razorpay_payment_id: dto.razorpay_payment_id,
-            customer_name: dto.customer_name,
+    return this.prisma.$transaction(
+      async (tx) => {
+        const booking = await tx.eventBooking.findFirst({
+          where: {
+            razorpay_order_id: dto.razorpay_order_id,
+            customer_id: customerId,
           },
         });
-      } else {
-        await tx.eventBooking.update({
-          where: { id: booking.id },
-          data: {
-            payment_status: 'paid',
-            razorpay_payment_id: dto.razorpay_payment_id,
-          },
-        });
-      }
+        if (!booking) {
+          throw new NotFoundException('Booking not found');
+        }
+        if (booking.payment_status === 'paid') {
+          return booking; // idempotent
+        }
 
-      return tx.eventBooking.findUnique({ where: { id: booking.id } });
-    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+        // Re-check capacity inside transaction (only count paid + free)
+        const guestAgg = await tx.eventBooking.aggregate({
+          where: {
+            event_id: eventId,
+            payment_status: { in: ['paid', 'free'] },
+          },
+          _sum: { guests: true },
+        });
+        const confirmedGuests = guestAgg._sum.guests ?? 0;
+        const event = await tx.event.findUnique({ where: { id: eventId } });
+
+        if (!event || event.capacity - confirmedGuests < booking.guests) {
+          // Capacity exceeded after payment — auto-refund (D-14)
+          await this.razorpayService.createRefund(
+            dto.razorpay_payment_id,
+            Number(payment.amount),
+            'capacity_exceeded',
+          );
+          await tx.eventBooking.update({
+            where: { id: booking.id },
+            data: { payment_status: 'refunded' },
+          });
+          throw new BadRequestException(
+            'This event is now full. Your payment has been refunded — it may take 5-7 business days to reflect.',
+          );
+        }
+
+        // Update booking to paid
+        if (dto.customer_name && !booking.customer_name) {
+          await tx.eventBooking.update({
+            where: { id: booking.id },
+            data: {
+              payment_status: 'paid',
+              razorpay_payment_id: dto.razorpay_payment_id,
+              customer_name: dto.customer_name,
+            },
+          });
+        } else {
+          await tx.eventBooking.update({
+            where: { id: booking.id },
+            data: {
+              payment_status: 'paid',
+              razorpay_payment_id: dto.razorpay_payment_id,
+            },
+          });
+        }
+
+        return tx.eventBooking.findUnique({ where: { id: booking.id } });
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
   }
 
   async getBookings(eventId: string) {

@@ -3,6 +3,7 @@ import {
   Injectable,
   ServiceUnavailableException,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import {
   ActorType,
   MovementType,
@@ -24,6 +25,12 @@ import {
   hasPrismaCode,
   withSerializableRetry,
 } from '../common/utils/transaction-retry';
+import {
+  DomainEvent,
+  customerActor,
+  domainEventBase,
+  emitDomainEvent,
+} from '../common/events/domain-events';
 
 export const MARKETPLACE_ZONE_SETTING_KEY = 'marketplace_fulfilment_zone_id';
 /** Zone.zone_type used by seed.ts for production kitchens ('Main Kitchen', 'Prep Station'). */
@@ -98,6 +105,7 @@ export class FulfilmentService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditService: AuditService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   /**
@@ -376,7 +384,7 @@ export class FulfilmentService {
     );
 
     try {
-      return await withSerializableRetry(() =>
+      const order = await withSerializableRetry(() =>
         this.prisma.$transaction(async (tx) => {
           const zoneId = await this.resolveMarketplaceZoneId(tx);
 
@@ -439,6 +447,21 @@ export class FulfilmentService {
           });
         }, SERIALIZABLE_TX_OPTIONS),
       );
+
+      // Emit AFTER the transaction commits (SPEC §4.1). The P2002 replay path
+      // below returns the already-created order and deliberately does not
+      // re-emit — the order was confirmed once.
+      emitDomainEvent(this.eventEmitter, DomainEvent.ORDER_CONFIRMED, {
+        ...domainEventBase(order.node_id, customerActor(customerId)),
+        orderId: order.id,
+        orderNumber: order.order_number,
+        channel: order.channel,
+        total: String(order.total),
+        itemCount: order.items.length,
+        customerId: order.customer_id,
+      });
+
+      return order;
     } catch (err) {
       if (hasPrismaCode(err, 'P2002')) {
         const existing = await this.findOrderByRazorpayPaymentId(

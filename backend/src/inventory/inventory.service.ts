@@ -4,6 +4,13 @@ import { MovementType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateStockAdjustmentDto } from './dto/create-stock-adjustment.dto';
 import { convertUnit } from '../common/utils/unit-conversion';
+import {
+  DomainEvent,
+  domainEventBase,
+  emitDomainEvent,
+  systemActor,
+} from '../common/events/domain-events';
+import { DEFAULT_NODE_ID } from '../node/node.constants';
 
 @Injectable()
 export class InventoryService {
@@ -149,21 +156,21 @@ export class InventoryService {
       });
     });
 
-    // Emit stock.low AFTER transaction commits (Pitfall 1 compliance)
+    // Emit stock.low AFTER the transaction commits (SPEC §4.1).
+    // `IngredientStock` carries no `node_id`, so the default node is used.
     if (
       stock &&
       Number(stock.current_quantity) < Number(stock.ingredient.min_stock_level)
     ) {
-      try {
-        this.eventEmitter.emit('stock.low', {
-          ingredientId: stock.ingredient_id,
-          ingredientName: stock.ingredient.name,
-          currentQty: Number(stock.current_quantity),
-          minQty: Number(stock.ingredient.min_stock_level),
-          unit: stock.ingredient.base_unit,
-          zoneId: stock.zone_id,
-        });
-      } catch (e) { /* event emission failed - non-critical */ }
+      emitDomainEvent(this.eventEmitter, DomainEvent.STOCK_LOW, {
+        ...domainEventBase(DEFAULT_NODE_ID, systemActor()),
+        ingredientId: stock.ingredient_id,
+        ingredientName: stock.ingredient.name,
+        currentQty: Number(stock.current_quantity),
+        minQty: Number(stock.ingredient.min_stock_level),
+        unit: stock.ingredient.base_unit,
+        zoneId: stock.zone_id,
+      });
     }
 
     return stock;
