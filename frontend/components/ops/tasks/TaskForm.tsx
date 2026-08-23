@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -41,6 +42,22 @@ interface TaskFormProps {
   onSubmit: (data: TaskFormValues) => Promise<void>;
   isSubmitting: boolean;
   defaultTaskType?: TaskType;
+  /**
+   * `edit` locks the two fields `PATCH /tasks/:id` cannot accept (`task_type`
+   * and `xp`) rather than letting the sheet silently drop them on save.
+   */
+  mode?: 'create' | 'edit';
+  /** Pre-fills the fields — `TaskSheet` passes the task's current values. */
+  initialValues?: Partial<TaskFormValues>;
+  /** Kept out of the dependency picker so a task cannot depend on itself. */
+  excludeTaskId?: string;
+  /** Overrides the submit button's resting label. */
+  submitLabel?: string;
+  /**
+   * Reports `formState.isDirty` upward so the sheet can confirm before it
+   * throws away unsaved work (SPEC §6.4).
+   */
+  onDirtyChange?: (dirty: boolean) => void;
 }
 
 const taskSchema = z.object({
@@ -73,13 +90,20 @@ export function TaskForm({
   onSubmit,
   isSubmitting,
   defaultTaskType,
+  mode = 'create',
+  initialValues,
+  excludeTaskId,
+  submitLabel,
+  onDirtyChange,
 }: TaskFormProps) {
+  const isEdit = mode === 'edit';
+
   const {
     register,
     handleSubmit,
     watch,
     setValue,
-    formState: { errors },
+    formState: { errors, isDirty },
   } = useForm<TaskFormValues>({
     resolver: zodResolver(taskSchema),
     defaultValues: {
@@ -90,8 +114,15 @@ export function TaskForm({
       xp: 25,
       description: '',
       title: '',
+      depends_on_task_id: undefined,
+      due_date: '',
+      ...initialValues,
     },
   });
+
+  useEffect(() => {
+    onDirtyChange?.(isDirty);
+  }, [isDirty, onDirtyChange]);
 
   const taskType = watch('task_type');
   const dependsOnTaskId = watch('depends_on_task_id');
@@ -119,15 +150,15 @@ export function TaskForm({
     enabled: !!missionId,
   });
 
-  // Build dependency items for combobox
-  const depItems = missionTasks
-    .filter((t) => t.quest_id === questId || !t.quest_id)
-    .map((t) => `${t.title} (${t.status})`);
+  // Build dependency items for combobox — never offer the task its own id.
+  const depCandidates = missionTasks.filter(
+    (t) => (t.quest_id === questId || !t.quest_id) && t.id !== excludeTaskId,
+  );
+
+  const depItems = depCandidates.map((t) => `${t.title} (${t.status})`);
 
   const depTaskMap = new Map(
-    missionTasks
-      .filter((t) => t.quest_id === questId || !t.quest_id)
-      .map((t) => [`${t.title} (${t.status})`, t.id]),
+    depCandidates.map((t) => [`${t.title} (${t.status})`, t.id]),
   );
 
   const selectedDepLabel = dependsOnTaskId
@@ -170,9 +201,9 @@ export function TaskForm({
           <Select
             value={taskType}
             onValueChange={(val: unknown) =>
-              setValue('task_type', val as TaskType)
+              setValue('task_type', val as TaskType, { shouldDirty: true })
             }
-            disabled={!!defaultTaskType}
+            disabled={!!defaultTaskType || isEdit}
           >
             <SelectTrigger className="w-full">
               <SelectValue placeholder="Select type" />
@@ -187,6 +218,11 @@ export function TaskForm({
               ))}
             </SelectContent>
           </Select>
+          {isEdit && (
+            <p className="text-xs text-ink-muted">
+              Type is fixed once the task exists.
+            </p>
+          )}
           {taskType === 'adhoc' && (
             <p className="text-xs text-[var(--status-warning)]">
               Ad-hoc tasks receive 70% XP weight
@@ -209,7 +245,9 @@ export function TaskForm({
           <Select
             value={watch('domain')}
             onValueChange={(val: unknown) =>
-              setValue('domain', val as TaskFormValues['domain'])
+              setValue('domain', val as TaskFormValues['domain'], {
+                shouldDirty: true,
+              })
             }
           >
             <SelectTrigger className="w-full">
@@ -259,7 +297,7 @@ export function TaskForm({
             <Select
               value={watch('owner_user_id')}
               onValueChange={(val: unknown) =>
-                setValue('owner_user_id', val as string)
+                setValue('owner_user_id', val as string, { shouldDirty: true })
               }
             >
               <SelectTrigger className="w-full">
@@ -297,7 +335,9 @@ export function TaskForm({
           <Select
             value={watch('priority')}
             onValueChange={(val: unknown) =>
-              setValue('priority', val as TaskFormValues['priority'])
+              setValue('priority', val as TaskFormValues['priority'], {
+                shouldDirty: true,
+              })
             }
           >
             <SelectTrigger className="w-full">
@@ -330,7 +370,13 @@ export function TaskForm({
             type="number"
             {...register('xp', { valueAsNumber: true })}
             min={0}
+            disabled={isEdit}
           />
+          {isEdit && (
+            <p className="text-xs text-ink-muted">
+              XP is set at creation and earned through evidence.
+            </p>
+          )}
           {errors.xp && (
             <p className="text-xs text-destructive">{errors.xp.message}</p>
           )}
@@ -369,9 +415,11 @@ export function TaskForm({
             onValueChange={(val: unknown) => {
               const label = val as string | null;
               if (label && depTaskMap.has(label)) {
-                setValue('depends_on_task_id', depTaskMap.get(label));
+                setValue('depends_on_task_id', depTaskMap.get(label), {
+                  shouldDirty: true,
+                });
               } else {
-                setValue('depends_on_task_id', undefined);
+                setValue('depends_on_task_id', undefined, { shouldDirty: true });
               }
             }}
           >
@@ -399,12 +447,15 @@ export function TaskForm({
           {isSubmitting ? (
             <>
               <Loader2 className="size-4 animate-spin motion-reduce:animate-none" />
-              Creating...
+              {isEdit ? 'Saving...' : 'Creating...'}
             </>
-          ) : taskType === 'adhoc' ? (
-            'Create ad-hoc task'
           ) : (
-            'Create task'
+            (submitLabel ??
+              (isEdit
+                ? 'Save changes'
+                : taskType === 'adhoc'
+                  ? 'Create ad-hoc task'
+                  : 'Create task'))
           )}
         </Button>
       </div>

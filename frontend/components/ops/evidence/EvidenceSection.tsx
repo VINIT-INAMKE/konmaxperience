@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
-import { FileQuestion } from 'lucide-react';
+import { useState, useRef, useEffect, useMemo } from 'react';
+import { FileQuestion, ShieldCheck } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import confetti from 'canvas-confetti';
@@ -12,10 +12,18 @@ import { EvidenceUploadZone } from './EvidenceUploadZone';
 import { EvidenceItem } from './EvidenceItem';
 import { LinkEvidenceForm } from './LinkEvidenceForm';
 import { NoteEvidenceForm } from './NoteEvidenceForm';
+import { InlineDecision } from '@/components/ops/approvals/InlineDecision';
+import { ApprovalEntityChip } from '@/components/ops/approvals/ApprovalEntityChip';
 import { apiClient } from '@/lib/api-client';
+import { optionalGet } from '@/lib/api/optional';
+import { trackAction } from '@/lib/usage';
+import { USAGE_ACTIONS } from '@/lib/types/usage';
+import { P31 } from '@/lib/api/phase31';
 import { useAuthStore } from '@/lib/stores/auth-store';
 import { RoleCode } from '@/lib/types/roles';
 import type { Task } from '@/lib/types/tasks';
+import type { Approval } from '@/lib/types/approvals';
+import { APPROVAL_ENTITY_LABELS } from '@/lib/types/approvals';
 import type { Evidence } from '@/lib/types/evidence';
 
 interface EvidenceSectionProps {
@@ -44,6 +52,33 @@ export function EvidenceSection({ task, isOwn, isAdmin }: EvidenceSectionProps) 
     queryFn: () => apiClient.get<Evidence[]>(`/tasks/${task.id}/evidence`),
   });
 
+  /**
+   * SPEC §6.4 — the approvals this viewer owes on *this* task, decided in place.
+   * `/approvals` is gated behind `APPROVE_EVIDENCE`, so a 403 is an ordinary
+   * outcome for most roles: `optionalGet` turns it into `null` and the block
+   * simply does not render. The key sits under `['approvals','pending', …]`
+   * because that is the prefix `InlineDecision` patches optimistically.
+   */
+  const { data: myApprovals } = useQuery({
+    queryKey: ['approvals', 'pending', 'mine'],
+    queryFn: () => optionalGet<Approval[]>(P31.myPendingApprovals),
+  });
+
+  const evidenceIds = useMemo(
+    () => new Set((evidence ?? []).map((item) => item.id)),
+    [evidence],
+  );
+
+  const taskApprovals = useMemo(
+    () =>
+      (myApprovals ?? []).filter(
+        (row) =>
+          (row.entity_type === 'task' && row.entity_id === task.id) ||
+          (row.entity_type === 'evidence' && evidenceIds.has(row.entity_id)),
+      ),
+    [myApprovals, evidenceIds, task.id],
+  );
+
   // Detect task.valid transition: false -> true
   useEffect(() => {
     if (task.valid && !prevValidRef.current) {
@@ -58,6 +93,7 @@ export function EvidenceSection({ task, isOwn, isAdmin }: EvidenceSectionProps) 
       const readinessMsg = task.readiness_meter_id && task.readiness_value > 0
         ? ` \u00b7 +${task.readiness_value} ${task.readiness_meter?.name ?? 'Readiness'}`
         : '';
+      trackAction(USAGE_ACTIONS.TASK_VALIDATE, { task_id: task.id });
       toast.success(`Task validated! +${task.valid_xp} XP${readinessMsg}`);
     }
     prevValidRef.current = task.valid;
@@ -72,6 +108,7 @@ export function EvidenceSection({ task, isOwn, isAdmin }: EvidenceSectionProps) 
       user.roleCode.endsWith('_LEAD'));
 
   const handleEvidenceChange = () => {
+    trackAction(USAGE_ACTIONS.EVIDENCE_UPLOAD, { from: 'task_page' });
     void queryClient.invalidateQueries({ queryKey: ['evidence', task.id] });
     void queryClient.invalidateQueries({ queryKey: ['tasks', task.id] });
     if (task.quest_id) {
@@ -116,6 +153,38 @@ export function EvidenceSection({ task, isOwn, isAdmin }: EvidenceSectionProps) 
         </div>
 
         <ValidationStatus task={task} evidence={evidence ?? []} />
+
+        {taskApprovals.length > 0 && (
+          <section
+            aria-label="Approvals waiting on you"
+            className="space-y-3 rounded-lg border border-[var(--status-warning)]/25 bg-[var(--status-warning)]/10 p-3"
+          >
+            <h4 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-[var(--status-warning)]">
+              <ShieldCheck className="size-3.5" aria-hidden="true" />
+              Waiting on your sign-off
+            </h4>
+            {taskApprovals.map((approval) => (
+              <div key={approval.id} className="space-y-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <ApprovalEntityChip entityType={approval.entity_type} />
+                  <span className="text-sm font-medium text-ink">
+                    {approval.subject?.title ??
+                      APPROVAL_ENTITY_LABELS[approval.entity_type]}
+                  </span>
+                </div>
+                <InlineDecision
+                  approvalId={approval.id}
+                  size="xs"
+                  subjectLabel={APPROVAL_ENTITY_LABELS[
+                    approval.entity_type
+                  ].toLowerCase()}
+                  extraInvalidateKeys={[['tasks', task.id]]}
+                  onDecided={handleApprovalAction}
+                />
+              </div>
+            ))}
+          </section>
+        )}
 
         {(isOwn || isAdmin) && (
           <EvidenceUploadZone

@@ -12,7 +12,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { QuestProgress } from '@/components/ops/quests/QuestProgress';
 import { QuestLinkedEntities } from '@/components/ops/quests/QuestLinkedEntities';
 import { ConfirmActivateDialog } from '@/components/ops/quests/ConfirmActivateDialog';
+import { QuestSheet } from '@/components/ops/quests/QuestSheet';
 import { TaskListView } from '@/components/ops/tasks/TaskListView';
+import { TaskSheet } from '@/components/ops/tasks/TaskSheet';
 import { TaskViewToggle } from '@/components/ops/tasks/TaskViewToggle';
 
 const TaskKanban = dynamic(
@@ -20,6 +22,8 @@ const TaskKanban = dynamic(
   { loading: () => <Skeleton className="h-96 rounded-xl" /> },
 );
 import { apiClient } from '@/lib/api-client';
+import { trackAction } from '@/lib/usage';
+import { USAGE_ACTIONS } from '@/lib/types/usage';
 import { useAuthStore } from '@/lib/stores/auth-store';
 import { RoleCode } from '@/lib/types/roles';
 import { QUEST_STATUS_LABELS } from '@/lib/types/quests';
@@ -53,6 +57,9 @@ export default function QuestDetailPage(props: {
 
   const [view, setView] = useState<'kanban' | 'list'>('kanban');
   const [activateOpen, setActivateOpen] = useState(false);
+  // SPEC §6.4 — the dedicated new-task route is gone; both open a sheet.
+  const [taskSheet, setTaskSheet] = useState<'core' | 'adhoc' | null>(null);
+  const [editQuestOpen, setEditQuestOpen] = useState(false);
 
   const {
     data: quest,
@@ -83,7 +90,10 @@ export default function QuestDetailPage(props: {
       taskId: string;
       status: TaskStatus;
     }) => apiClient.patch(`/tasks/${taskId}`, { status }),
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
+      trackAction(USAGE_ACTIONS.TASK_STATUS_CHANGE, {
+        status: variables.status,
+      });
       void queryClient.invalidateQueries({
         queryKey: ['tasks', { questId: id }],
       });
@@ -167,23 +177,35 @@ export default function QuestDetailPage(props: {
               </Badge>
             </div>
 
-            {/* Activate / Deactivate quest button */}
-            {quest.status === 'planned' && isAdmin && (
-              <Button onClick={() => setActivateOpen(true)}>
-                Activate quest
-              </Button>
-            )}
-            {quest.status === 'active' && isAdmin && (
-              <Button
-                variant="outline"
-                onClick={() => {
-                  deactivateMutation.mutate();
-                }}
-                disabled={deactivateMutation.isPending}
-              >
-                {deactivateMutation.isPending ? 'Deactivating...' : 'Deactivate quest'}
-              </Button>
-            )}
+            {/* Edit / Activate / Deactivate — all sheets or in-place mutations */}
+            <div className="flex flex-wrap items-center gap-2">
+              {isAdmin && (
+                <Button
+                  variant="outline"
+                  onClick={() => setEditQuestOpen(true)}
+                >
+                  Edit quest
+                </Button>
+              )}
+              {quest.status === 'planned' && isAdmin && (
+                <Button onClick={() => setActivateOpen(true)}>
+                  Activate quest
+                </Button>
+              )}
+              {quest.status === 'active' && isAdmin && (
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    deactivateMutation.mutate();
+                  }}
+                  disabled={deactivateMutation.isPending}
+                >
+                  {deactivateMutation.isPending
+                    ? 'Deactivating...'
+                    : 'Deactivate quest'}
+                </Button>
+              )}
+            </div>
           </div>
         </div>
 
@@ -219,18 +241,14 @@ export default function QuestDetailPage(props: {
           <div className="flex flex-wrap items-center gap-2">
             <ExportButton reportType="tasks" reportName="Tasks" isTimeSeries={false} />
             <TaskViewToggle view={view} onViewChange={setView} />
-            <Button
-              nativeButton={false}
-              render={<Link href={`/quests/${id}/tasks/new`} />}
-            >
+            <Button onClick={() => setTaskSheet('core')}>
               <Plus className="size-4" />
               Add task
             </Button>
             <Button
               variant="outline"
               className="text-[var(--status-warning)] border-[var(--status-warning)]/30 hover:bg-[var(--status-warning)]/10"
-              nativeButton={false}
-              render={<Link href={`/quests/${id}/tasks/new?type=adhoc`} />}
+              onClick={() => setTaskSheet('adhoc')}
             >
               <Plus className="size-4" />
               Add ad-hoc task
@@ -273,6 +291,23 @@ export default function QuestDetailPage(props: {
 
         {/* SPEC §6.4 — the records this quest's tasks actually touched. */}
         <QuestLinkedEntities tasks={tasks} isLoading={tasksLoading} />
+        {/* SPEC §6.4 — create and edit happen over the page, not on a route */}
+        <TaskSheet
+          open={taskSheet !== null}
+          onOpenChange={(next) => {
+            if (!next) setTaskSheet(null);
+          }}
+          mode="create"
+          defaults={{ quest_id: id, mission_id: quest.mission_id }}
+          defaultTaskType={taskSheet === 'adhoc' ? 'adhoc' : undefined}
+        />
+
+        <QuestSheet
+          open={editQuestOpen}
+          onOpenChange={setEditQuestOpen}
+          mode="edit"
+          quest={quest}
+        />
 
         {/* Activate dialog */}
         <ConfirmActivateDialog

@@ -1,6 +1,6 @@
 'use client';
 
-import { use } from 'react';
+import { use, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { format } from 'date-fns';
@@ -32,6 +32,7 @@ import type { Quest } from '@/lib/types/quests';
 import type { Task } from '@/lib/types/tasks';
 import { TASK_TYPE_XP_WEIGHT } from '@/lib/types/tasks';
 import { QuestCard } from '@/components/ops/quests/QuestCard';
+import { QuestSheet } from '@/components/ops/quests/QuestSheet';
 
 const PHASE_COLORS: Record<MissionPhase, string> = {
   setup: STATUS_BADGE.neutral,
@@ -55,6 +56,9 @@ export default function MissionDetailPage({
   const { id } = use(params);
   const user = useAuthStore((s) => s.user);
   const isAdmin = user?.roleCode === RoleCode.FOUNDER_ADMIN;
+
+  // SPEC §6.4 — the dedicated new-quest route is gone; it opens in a sheet.
+  const [newQuestOpen, setNewQuestOpen] = useState(false);
 
   const {
     data: mission,
@@ -216,7 +220,7 @@ export default function MissionDetailPage({
           <div className="flex items-center justify-between">
             <h2 className="text-base font-semibold">Quests</h2>
             {isAdmin && (
-              <Button nativeButton={false} render={<Link href={`/missions/${id}/quests/new`} />} size="sm">
+              <Button size="sm" onClick={() => setNewQuestOpen(true)}>
                 <Plus className="size-4" />
                 Add quest
               </Button>
@@ -250,11 +254,7 @@ export default function MissionDetailPage({
                 No quests yet. Break this mission into weekly quests to get moving.
               </p>
               {isAdmin ? (
-                <Button
-                  nativeButton={false}
-                  render={<Link href={`/missions/${id}/quests/new`} />}
-                  size="sm"
-                >
+                <Button size="sm" onClick={() => setNewQuestOpen(true)}>
                   <Plus className="size-4" />
                   Add quest
                 </Button>
@@ -279,6 +279,15 @@ export default function MissionDetailPage({
             </div>
           )}
         </div>
+
+        {isAdmin && (
+          <QuestSheet
+            open={newQuestOpen}
+            onOpenChange={setNewQuestOpen}
+            mode="create"
+            defaults={{ mission_id: id }}
+          />
+        )}
       </div>
   );
 }
