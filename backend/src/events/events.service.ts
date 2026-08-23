@@ -1,30 +1,69 @@
 import {
   Injectable,
+  Logger,
   BadRequestException,
   ConflictException,
   NotFoundException,
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { EventStatus, Prisma } from '@prisma/client';
+import {
+  BookingStatus,
+  EventStatus,
+  OrderItemStatus,
+  Prisma,
+} from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { RazorpayService } from '../razorpay/razorpay.service';
+import { AuditService } from '../audit/audit.service';
+import { LoyaltyService } from '../loyalty/loyalty.service';
+import { toPaise } from '../common/money/money';
 import {
   DomainEvent,
   domainEventBase,
   emitDomainEvent,
   systemActor,
+  userActor,
 } from '../common/events/domain-events';
 import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
 import { CreateBookingDto } from './dto/create-booking.dto';
 import { ConfirmBookingDto } from './dto/confirm-booking.dto';
+import { MarkAttendanceDto } from './dto/mark-attendance.dto';
+
+/**
+ * Bookings that occupy a seat: `confirmed`, `attended`, or a `held` row whose
+ * hold has not run out yet.
+ *
+ * This predicate is what makes a fifteen-minute checkout hold safe. A quote
+ * writes a `held` `EventBooking` (`CheckoutService.createHolds`) so two
+ * customers cannot pay for the same last seat; without the `hold_expires_at`
+ * bound, an abandoned checkout would keep blocking that seat until the sweep
+ * ran — and between sweeps the event would read as full. `cancelled` and
+ * `no_show` never occupy: the first gave the seat back, the second is only
+ * ever marked once the event is over.
+ *
+ * `hold_expires_at: { gt: now }` does not match NULL, so a `held` row with no
+ * expiry occupies nothing — `EventHoldsCron` deletes those.
+ */
+export const OCCUPYING_BOOKINGS = (
+  now: Date = new Date(),
+): Prisma.EventBookingWhereInput => ({
+  OR: [
+    { status: { in: [BookingStatus.confirmed, BookingStatus.attended] } },
+    { status: BookingStatus.held, hold_expires_at: { gt: now } },
+  ],
+});
 
 @Injectable()
 export class EventsService {
+  private readonly logger = new Logger(EventsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly razorpayService: RazorpayService,
     private readonly eventEmitter: EventEmitter2,
+    private readonly audit: AuditService,
+    private readonly loyalty: LoyaltyService,
   ) {}
 
   private async enrichWithGuestCounts<
@@ -36,7 +75,7 @@ export class EventsService {
     const eventIds = events.map((e) => e.id);
     const guestSums = await this.prisma.eventBooking.groupBy({
       by: ['event_id'],
-      where: { event_id: { in: eventIds } },
+      where: { event_id: { in: eventIds }, ...OCCUPYING_BOOKINGS() },
       _sum: { guests: true },
     });
     const guestMap = new Map(
@@ -105,7 +144,7 @@ export class EventsService {
     }
 
     const guestAgg = await this.prisma.eventBooking.aggregate({
-      where: { event_id: id },
+      where: { event_id: id, ...OCCUPYING_BOOKINGS() },
       _sum: { guests: true },
     });
     const booked_guests = guestAgg._sum.guests ?? 0;
@@ -243,9 +282,9 @@ export class EventsService {
           );
         }
 
-        // 5. Sum existing bookings
+        // 5. Sum the bookings that actually occupy a seat (expired holds do not)
         const aggregate = await tx.eventBooking.aggregate({
-          where: { event_id: eventId },
+          where: { event_id: eventId, ...OCCUPYING_BOOKINGS() },
           _sum: { guests: true },
         });
         const booked = aggregate._sum.guests ?? 0;
@@ -290,7 +329,7 @@ export class EventsService {
 
     // Check capacity
     const guestAgg = await this.prisma.eventBooking.aggregate({
-      where: { event_id: eventId },
+      where: { event_id: eventId, ...OCCUPYING_BOOKINGS() },
       _sum: { guests: true },
     });
     const bookedGuests = guestAgg._sum.guests ?? 0;
@@ -307,7 +346,7 @@ export class EventsService {
         async (tx) => {
           // Re-check capacity inside transaction
           const txAgg = await tx.eventBooking.aggregate({
-            where: { event_id: eventId },
+            where: { event_id: eventId, ...OCCUPYING_BOOKINGS() },
             _sum: { guests: true },
           });
           const txBooked = txAgg._sum.guests ?? 0;
@@ -351,7 +390,7 @@ export class EventsService {
     await this.prisma.$transaction(
       async (tx) => {
         const txAgg = await tx.eventBooking.aggregate({
-          where: { event_id: eventId },
+          where: { event_id: eventId, ...OCCUPYING_BOOKINGS() },
           _sum: { guests: true },
         });
         const txBooked = txAgg._sum.guests ?? 0;
@@ -429,7 +468,12 @@ export class EventsService {
           return booking; // idempotent
         }
 
-        // Re-check capacity inside transaction (only count paid + free)
+        // Re-check capacity inside transaction (only count paid + free).
+        // Deliberately NOT `OCCUPYING_BOOKINGS`: this branch decides whether a
+        // payment that already landed has to be refunded, so it must count only
+        // seats that are settled. A checkout hold is `payment_status: 'pending'`
+        // and is therefore already excluded — as is the booking being confirmed
+        // right now, which is why the comparison below is `< booking.guests`.
         const guestAgg = await tx.eventBooking.aggregate({
           where: {
             event_id: eventId,
@@ -480,6 +524,132 @@ export class EventsService {
       },
       { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
     );
+  }
+
+  // ---------------------------------------------------------------
+  // Attendance (OPS-04, SPEC §5.2 step 5)
+  // ---------------------------------------------------------------
+
+  /**
+   * Marks one booking `attended` or `no_show` on the day.
+   *
+   * `attended` also flips the linked `OrderItem` to `attended`, which is what
+   * opens the review gate (`ReviewsService` only accepts a review for a
+   * `delivered` or `attended` item), and emits `booking.attended` — the event
+   * the SALES bridge rule and the review invitation consume.
+   *
+   * Only a `confirmed` booking can be marked: a `held` row is an unpaid
+   * placeholder, and `cancelled` / `attended` / `no_show` are terminal. The
+   * booking row, the order item and the audit row commit together; the domain
+   * event and the loyalty earn happen *after* the commit and are
+   * failure-isolated, so a broken listener can never roll back attendance.
+   */
+  async markAttendance(
+    eventId: string,
+    dto: MarkAttendanceDto,
+    userId: string | null,
+  ) {
+    const { updated, nodeId, orderId } = await this.prisma.$transaction(
+      async (tx) => {
+        const booking = await tx.eventBooking.findFirst({
+          where: { id: dto.booking_id, event_id: eventId },
+          include: {
+            order_item: { select: { id: true, order_id: true } },
+            event: { select: { node_id: true } },
+          },
+        });
+        if (!booking) {
+          throw new NotFoundException(
+            `Booking ${dto.booking_id} not found for this event`,
+          );
+        }
+        if (booking.status !== BookingStatus.confirmed) {
+          throw new BadRequestException(
+            `Only a confirmed booking can be marked ${dto.status} — this one is ${booking.status}`,
+          );
+        }
+
+        const row = await tx.eventBooking.update({
+          where: { id: booking.id },
+          data: { status: dto.status },
+        });
+
+        // A no-show item is `cancelled`, not `attended`: nothing was consumed,
+        // so it must not open the review gate.
+        if (booking.order_item) {
+          await tx.orderItem.update({
+            where: { id: booking.order_item.id },
+            data: {
+              status:
+                dto.status === BookingStatus.attended
+                  ? OrderItemStatus.attended
+                  : OrderItemStatus.cancelled,
+            },
+          });
+        }
+
+        await this.audit.record(tx, {
+          entity_type: 'event_booking',
+          entity_id: booking.id,
+          action: `booking.${dto.status}`,
+          ...AuditService.user(userId),
+          before: { status: booking.status },
+          after: { status: dto.status },
+        });
+
+        return {
+          updated: row,
+          nodeId: booking.event.node_id,
+          orderId: booking.order_item?.order_id ?? null,
+        };
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
+
+    if (dto.status === BookingStatus.attended) {
+      emitDomainEvent(this.eventEmitter, DomainEvent.BOOKING_ATTENDED, {
+        ...domainEventBase(nodeId, userActor(userId)),
+        bookingId: updated.id,
+        eventId,
+        guests: updated.guests,
+      });
+      await this.earnForAttendedBooking(orderId);
+    }
+
+    return updated;
+  }
+
+  /**
+   * An experience is never `delivered`, so attendance is the moment its order
+   * earns loyalty. `earnForOrder` is idempotent on `@@unique([order_id,
+   * reason])`, so an order that already earned on delivery (a mixed cart with
+   * both a shipped line and an experience) simply earns nothing more here.
+   *
+   * Shipping is excluded from the base — a courier fee is not spend on us.
+   * Failure is logged, never thrown: the booking is already `attended` and
+   * committed, and a loyalty outage must not read back as a failed check-in.
+   */
+  private async earnForAttendedBooking(orderId: string | null): Promise<void> {
+    if (!orderId) return;
+    try {
+      const order = await this.prisma.order.findUnique({
+        where: { id: orderId },
+        select: { customer_id: true, total: true, shipping_amount: true },
+      });
+      if (!order?.customer_id) return;
+
+      const netPaise = Math.max(
+        0,
+        toPaise(order.total) - toPaise(order.shipping_amount),
+      );
+      await this.loyalty.earnForOrder(orderId, order.customer_id, netPaise);
+    } catch (error) {
+      this.logger.warn(
+        `Loyalty earn for attended booking on order ${orderId} failed: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+    }
   }
 
   async getBookings(eventId: string) {
