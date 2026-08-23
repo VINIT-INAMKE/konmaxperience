@@ -21,7 +21,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { ShimmerButton } from '@/components/ui/shimmer-button';
 import { apiClient } from '@/lib/api-client';
 import type { Vendor } from '@/lib/types/vendor';
 import { PAYMENT_TERMS_OPTIONS } from '@/lib/types/vendor';
@@ -191,8 +190,7 @@ export function VendorForm({
 
           {/* Actions */}
           <div className="flex items-center gap-3 pt-2">
-            <ShimmerButton
-              shimmerColor="#4ade80"
+            <Button
               type="submit"
               disabled={isSubmitting || !name.trim()}
               className="h-9 text-sm px-4"
@@ -207,7 +205,7 @@ export function VendorForm({
               ) : (
                 'Add Vendor'
               )}
-            </ShimmerButton>
+            </Button>
             <Button
               type="button"
               variant="ghost"

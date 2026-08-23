@@ -8,9 +8,9 @@ interface InventoryDashboardChartsProps {
 }
 
 const statusConfig = [
-  { key: 'draft' as const, label: 'Draft', color: 'bg-muted-foreground/20' },
-  { key: 'ordered' as const, label: 'Ordered', color: 'bg-amber-500/40' },
-  { key: 'received' as const, label: 'Received', color: 'bg-emerald-500/40' },
+  { key: 'draft' as const, label: 'Draft', color: 'bg-ink-faint/30' },
+  { key: 'ordered' as const, label: 'Ordered', color: 'bg-warning/40' },
+  { key: 'received' as const, label: 'Received', color: 'bg-good/40' },
 ];
 
 export function InventoryDashboardCharts({ poBreakdown, topVendors }: InventoryDashboardChartsProps) {
@@ -25,7 +25,7 @@ export function InventoryDashboardCharts({ poBreakdown, topVendors }: InventoryD
         </CardHeader>
         <CardContent className="space-y-4">
           {totalPOs === 0 ? (
-            <p className="text-sm text-muted-foreground py-4 text-center">No purchase orders</p>
+            <p className="text-sm text-ink-muted py-4 text-center">No purchase orders</p>
           ) : (
             statusConfig.map((status) => {
               const count = poBreakdown[status.key];
@@ -57,12 +57,12 @@ export function InventoryDashboardCharts({ poBreakdown, topVendors }: InventoryD
         </CardHeader>
         <CardContent>
           {topVendors.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-4 text-center">No vendor spend data</p>
+            <p className="text-sm text-ink-muted py-4 text-center">No vendor spend data</p>
           ) : (
             <div className="space-y-3">
               {topVendors.slice(0, 5).map((vendor, i) => (
                 <div key={vendor.vendor_id} className="flex items-center gap-3">
-                  <span className="font-mono text-sm text-muted-foreground w-4">{i + 1}</span>
+                  <span className="font-mono text-sm text-ink-muted w-4">{i + 1}</span>
                   <span className="text-sm flex-1 truncate">{vendor.vendor_name}</span>
                   <span className="font-mono font-bold text-sm">
                     ₹{vendor.spend.toLocaleString('en-IN')}

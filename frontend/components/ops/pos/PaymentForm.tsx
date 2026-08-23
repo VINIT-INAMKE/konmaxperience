@@ -166,7 +166,7 @@ export function PaymentForm({ orderId, orderTotal, onPaymentRecorded }: PaymentF
           <Textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            placeholder="e.g. Split — cash &#8377;300 + UPI &#8377;200"
+            placeholder="e.g. Split — cash ₹300 + UPI ₹200"
           />
         </div>
       )}

@@ -108,7 +108,7 @@ export function ChannelModifierTable({ modifiers }: ChannelModifierTableProps) {
     <div className="space-y-3 border rounded-lg p-4">
       {/* Header */}
       <button
-        className="flex items-center gap-2 w-full text-left"
+        className="flex items-center gap-2 w-full text-left rounded focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[var(--focus)]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
         onClick={() => setIsExpanded((v) => !v)}
         aria-expanded={isExpanded}
       >
@@ -246,7 +246,7 @@ export function ChannelModifierTable({ modifiers }: ChannelModifierTableProps) {
                         </div>
                       ) : (
                         <button
-                          className="p-1 rounded text-muted-foreground hover:text-foreground transition-colors"
+                          className="p-1 rounded text-muted-foreground hover:text-foreground transition-colors motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[var(--focus)]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
                           onClick={() => handleEdit(channelType)}
                           aria-label={`Edit ${CHANNEL_LABELS[channelType]} pricing`}
                         >

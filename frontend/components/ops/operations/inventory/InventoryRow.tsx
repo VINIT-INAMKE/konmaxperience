@@ -8,6 +8,7 @@ import {
   TooltipTrigger,
   TooltipContent,
 } from '@/components/ui/tooltip';
+import { STATUS_BADGE } from '@/lib/status-styles';
 import type { IngredientStock } from '@/lib/types/inventory';
 import {
   ingredientCategoryBadgeClass,
@@ -39,7 +40,7 @@ export function InventoryRow({ stock }: InventoryRowProps) {
       </td>
 
       {/* Zone */}
-      <td className="px-4 py-3 text-sm text-muted-foreground">
+      <td className="px-4 py-3 text-sm text-ink-muted">
         {stock.zone?.name ?? '—'}
       </td>
 
@@ -47,7 +48,7 @@ export function InventoryRow({ stock }: InventoryRowProps) {
       <td className="px-4 py-3">
         <span
           className={`font-mono text-sm ${
-            isLowStock ? 'text-amber-500' : 'text-green-400'
+            isLowStock ? 'text-warning' : 'text-good'
           }`}
         >
           {currentQty} {stock.ingredient?.base_unit}
@@ -55,18 +56,18 @@ export function InventoryRow({ stock }: InventoryRowProps) {
       </td>
 
       {/* Min Level */}
-      <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
+      <td className="px-4 py-3 font-mono text-xs text-ink-muted">
         {minLevel} {stock.ingredient?.base_unit}
       </td>
 
       {/* Status */}
       <td className="px-4 py-3">
         {isLowStock ? (
-          <Badge className="text-xs border-0 bg-amber-500/15 text-amber-500">
+          <Badge className={`text-xs ${STATUS_BADGE.warning}`}>
             Low Stock
           </Badge>
         ) : (
-          <Badge className="text-xs border-0 bg-muted text-muted-foreground">
+          <Badge className={`text-xs ${STATUS_BADGE.neutral}`}>
             OK
           </Badge>
         )}
@@ -78,7 +79,7 @@ export function InventoryRow({ stock }: InventoryRowProps) {
           <TooltipTrigger>
             <Link
               href={`/operations/inventory/${stock.ingredient_id}`}
-              className="p-1.5 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors inline-flex"
+              className="p-1.5 rounded text-ink-muted hover:text-foreground hover:bg-muted transition-colors inline-flex"
             >
               <History className="size-3.5" />
             </Link>

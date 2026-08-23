@@ -1,6 +1,7 @@
 'use client';
 
 import { cn } from '@/lib/utils';
+import { STATUS_BADGE } from '@/lib/status-styles';
 import type { RecipeStatus } from '@/lib/types/recipe';
 import { RECIPE_STATUS_LABELS } from '@/lib/types/recipe';
 
@@ -9,19 +10,19 @@ interface RecipeStatusBadgeProps {
   className?: string;
 }
 
-export function RecipeStatusBadge({ status, className }: RecipeStatusBadgeProps) {
-  const statusClasses: Record<RecipeStatus, string> = {
-    draft: 'bg-muted text-muted-foreground',
-    pending: 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
-    approved: 'bg-green-500/15 text-green-400',
-    archived: 'bg-muted/50 text-muted-foreground line-through',
-  };
+const STATUS_CLASSES: Record<RecipeStatus, string> = {
+  draft: STATUS_BADGE.neutral,
+  pending: STATUS_BADGE.warning,
+  approved: STATUS_BADGE.good,
+  archived: STATUS_BADGE.muted,
+};
 
+export function RecipeStatusBadge({ status, className }: RecipeStatusBadgeProps) {
   return (
     <span
       className={cn(
-        'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium',
-        statusClasses[status],
+        'inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium',
+        STATUS_CLASSES[status],
         className
       )}
     >

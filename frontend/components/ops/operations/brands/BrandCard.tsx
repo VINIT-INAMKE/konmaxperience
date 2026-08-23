@@ -1,16 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import { Trash2 } from 'lucide-react';
-import { MagicCard } from '@/components/ui/magic-card';
-import { ShineBorder } from '@/components/ui/shine-border';
+import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { BrandStatusBadge } from './BrandStatusBadge';
 import type { Brand } from '@/lib/types/brand';
 import { BRAND_TYPE_LABELS } from '@/lib/types/brand';
-import { GRADIENT_OVERLAY } from '@/lib/brand-colors';
 
 function getInitials(name: string): string {
   return name
@@ -38,31 +35,15 @@ export function BrandCard({
   onEdit,
   onDelete,
 }: BrandCardProps) {
-  const [showShine, setShowShine] = useState(isNew);
-
-  useEffect(() => {
-    if (isNew) {
-      setShowShine(true);
-      const timer = setTimeout(() => setShowShine(false), 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [isNew]);
-
   const canEdit = isAdmin || currentUserId === brand.owner_user_id;
   const ownerName = brand.owner?.name ?? null;
 
   return (
     <div className="relative rounded-lg">
-      {showShine && (
-        <ShineBorder
-          shineColor={['#4ade80', '#22d3ee', '#a78bfa']}
-          duration={3}
-          borderWidth={2}
-        />
-      )}
-      <MagicCard
-        gradientColor={GRADIENT_OVERLAY}
-        className="p-4 space-y-2 cursor-pointer hover:bg-muted/20 transition-colors"
+      <Card
+        className={`p-4 gap-2 space-y-2 cursor-pointer transition-colors motion-reduce:transition-none hover:bg-muted/20 ${
+          isNew ? 'ring-2 ring-brand/40' : ''
+        }`}
       >
         {/* Row 1: brand name + type badge + status badge */}
         <div className="flex items-center gap-2 flex-wrap">
@@ -82,10 +63,10 @@ export function BrandCard({
                   {getInitials(ownerName)}
                 </AvatarFallback>
               </Avatar>
-              <span className="text-sm text-muted-foreground">{ownerName}</span>
+              <span className="text-sm text-ink-muted">{ownerName}</span>
             </>
           ) : (
-            <span className="text-sm text-muted-foreground">No owner</span>
+            <span className="text-sm text-ink-muted">No owner</span>
           )}
         </div>
 
@@ -106,7 +87,7 @@ export function BrandCard({
           )}
           {isAdmin && (
             <button
-              className="ml-auto p-1 rounded text-muted-foreground hover:text-destructive transition-colors"
+              className="ml-auto p-1 rounded text-ink-muted transition-colors motion-reduce:transition-none hover:text-destructive focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[var(--focus)]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
               onClick={(e) => {
                 e.stopPropagation();
                 onDelete(brand);
@@ -117,7 +98,7 @@ export function BrandCard({
             </button>
           )}
         </div>
-      </MagicCard>
+      </Card>
     </div>
   );
 }

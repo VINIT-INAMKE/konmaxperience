@@ -4,7 +4,6 @@ import { ExternalLink, Pencil, Trash2, BookOpen, ClipboardList, List, DollarSign
 import { TableRow, TableCell } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ShineBorder } from '@/components/ui/shine-border';
 import { AssetStatusBadge } from './AssetStatusBadge';
 import type { Asset, AssetType } from '@/lib/types/asset';
 import { ASSET_TYPE_LABELS } from '@/lib/types/asset';
@@ -33,19 +32,11 @@ export function AssetRow({ asset, isAdmin, currentUserId, isNew, onEdit, onDelet
   const canEdit = isAdmin || isCreator;
 
   return (
-    <TableRow className="relative">
-      {isNew && (
-        <ShineBorder
-          shineColor={['#4ade80', '#22d3ee', '#a78bfa']}
-          duration={3}
-          borderWidth={2}
-        />
-      )}
-
+    <TableRow className={`relative ${isNew ? 'bg-brand-soft' : ''}`}>
       {/* Name */}
       <TableCell>
         <div className="flex items-center gap-2">
-          <Icon className="size-4 text-muted-foreground shrink-0" />
+          <Icon className="size-4 text-ink-muted shrink-0" />
           <span className="text-sm font-medium">{asset.name}</span>
         </div>
       </TableCell>
@@ -59,7 +50,7 @@ export function AssetRow({ asset, isAdmin, currentUserId, isNew, onEdit, onDelet
 
       {/* Brand */}
       <TableCell>
-        <span className="text-sm text-muted-foreground">
+        <span className="text-sm text-ink-muted">
           {asset.linked_brand?.name ?? '\u2014'}
         </span>
       </TableCell>
@@ -69,21 +60,21 @@ export function AssetRow({ asset, isAdmin, currentUserId, isNew, onEdit, onDelet
         <div className="flex items-center gap-2">
           <AssetStatusBadge status={asset.status} />
           {asset.status === 'approved' && (
-            <span className="text-xs text-green-400">Ready for display</span>
+            <span className="text-xs text-good">Ready for display</span>
           )}
         </div>
       </TableCell>
 
       {/* Uploaded by */}
       <TableCell>
-        <span className="text-sm text-muted-foreground">
+        <span className="text-sm text-ink-muted">
           {asset.creator?.name ?? '\u2014'}
         </span>
       </TableCell>
 
       {/* Date */}
       <TableCell>
-        <span className="text-xs text-muted-foreground">
+        <span className="text-xs text-ink-muted">
           {new Date(asset.created_at).toLocaleDateString()}
         </span>
       </TableCell>

@@ -1,62 +1,38 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Monitor } from 'lucide-react';
+import { Monitor, RefreshCw } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { apiClient } from '@/lib/api-client';
 import type { KdsZoneData, OrderItemStatus } from '@/lib/types/kds';
 import { ORDER_ITEM_STATUS_LABELS } from '@/lib/types/kds';
 import { KdsZoneColumn } from './KdsZoneColumn';
 
+/** SPEC §6.4: BorderBeam marks an order that arrived in the last minute. */
+const NEW_ORDER_WINDOW_MS = 60_000;
+
 export function KdsBoard() {
   const queryClient = useQueryClient();
-  const seenOrderIds = useRef<Set<string>>(new Set());
-  const [newOrderIds, setNewOrderIds] = useState<Set<string>>(new Set());
 
-  const { data: zones, isError, isLoading } = useQuery({
+  const { data: zones, isError, isLoading, refetch } = useQuery({
     queryKey: ['kds-orders'],
     queryFn: () => apiClient.get<KdsZoneData[]>('/kitchen/kds'),
     refetchInterval: 5000,
     refetchIntervalInBackground: true,
   });
 
-  // New order detection: track seen IDs, compute new ones
-  useEffect(() => {
-    if (!zones) return;
-
-    const currentIds = new Set<string>();
-    for (const zone of zones) {
-      for (const order of zone.orders) {
-        currentIds.add(order.id);
-      }
-    }
-
-    // First load: seed seenOrderIds without flashing
-    if (seenOrderIds.current.size === 0) {
-      seenOrderIds.current = currentIds;
-      return;
-    }
-
-    const newIds = new Set<string>();
-    for (const id of currentIds) {
-      if (!seenOrderIds.current.has(id)) {
-        newIds.add(id);
-      }
-    }
-
-    if (newIds.size > 0) {
-      setNewOrderIds(newIds);
-      // After 3s, clear new flags and update seen
-      const timer = setTimeout(() => {
-        setNewOrderIds(new Set());
-        seenOrderIds.current = currentIds;
-      }, 3000);
-      return () => clearTimeout(timer);
-    }
-
-    seenOrderIds.current = currentIds;
-  }, [zones]);
+  // An order is "new" while it is under a minute old — recomputed on every poll.
+  const newOrderIds = new Set(
+    (zones ?? [])
+      .flatMap((zone) => zone.orders)
+      .filter(
+        (order) =>
+          Date.now() - new Date(order.created_at).getTime() < NEW_ORDER_WINDOW_MS,
+      )
+      .map((order) => order.id),
+  );
 
   // Status advance mutation
   const statusMutation = useMutation({
@@ -95,7 +71,7 @@ export function KdsBoard() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full">
-        <div className="text-white/50 text-lg">Loading kitchen orders...</div>
+        <div className="text-ink-muted text-lg">Loading kitchen orders...</div>
       </div>
     );
   }
@@ -104,11 +80,15 @@ export function KdsBoard() {
   if (isError) {
     return (
       <>
-        <div className="fixed top-16 left-0 right-0 z-[60] bg-destructive/90 text-white text-center py-2 text-sm">
+        <div className="fixed top-16 left-0 right-0 z-[60] bg-critical text-critical-ink text-center py-2 text-sm">
           Connection issue &mdash; retrying...
         </div>
-        <div className="flex items-center justify-center h-full">
-          <div className="text-white/50 text-lg">Reconnecting...</div>
+        <div className="flex flex-col items-center justify-center h-full gap-3">
+          <div className="text-ink-muted text-lg">Reconnecting...</div>
+          <Button variant="outline" onClick={() => void refetch()}>
+            <RefreshCw className="size-4 mr-2" />
+            Retry now
+          </Button>
         </div>
       </>
     );
@@ -119,9 +99,9 @@ export function KdsBoard() {
   if (!hasOrders) {
     return (
       <div className="flex flex-col items-center justify-center h-full gap-3">
-        <Monitor className="size-12 text-white/20" />
-        <h2 className="text-xl font-semibold text-white/70">No orders in queue</h2>
-        <p className="text-sm text-white/40">
+        <Monitor className="size-12 text-ink-faint" />
+        <h2 className="text-xl font-semibold text-ink-subtle">No orders in queue</h2>
+        <p className="text-sm text-ink-muted">
           Orders placed on POS will appear here automatically.
         </p>
       </div>

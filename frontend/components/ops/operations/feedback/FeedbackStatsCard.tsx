@@ -29,7 +29,7 @@ export function FeedbackStatsCard({ stats, isLoading }: FeedbackStatsCardProps) 
             ) : (
               <>
                 <div className="flex items-center gap-2">
-                  <span className="text-2xl font-semibold text-amber-500">
+                  <span className="text-2xl font-semibold text-gold">
                     {stats ? stats.average_rating.toFixed(1) : '—'}
                   </span>
                   <div className="flex items-center gap-0.5">
@@ -38,8 +38,8 @@ export function FeedbackStatsCard({ stats, isLoading }: FeedbackStatsCardProps) 
                         key={i}
                         className={`size-4 ${
                           i < filledStars
-                            ? 'fill-amber-500 text-amber-500'
-                            : 'text-muted-foreground/30'
+                            ? 'fill-gold text-gold'
+                            : 'text-ink-faint'
                         }`}
                       />
                     ))}

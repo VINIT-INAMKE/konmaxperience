@@ -11,6 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { STATUS_BADGE } from '@/lib/status-styles';
 import type { RecipeStatus } from '@/lib/types/recipe';
 import { RECIPE_STATUS_LABELS } from '@/lib/types/recipe';
 
@@ -34,10 +35,10 @@ export function RecipeStatusBanner({
   const [versionDialogOpen, setVersionDialogOpen] = useState(false);
 
   const bannerClasses: Record<RecipeStatus, string> = {
-    draft: 'bg-[var(--muted)] text-[var(--muted-foreground)]',
-    pending: 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
-    approved: 'bg-green-500/10 text-green-600 dark:text-green-400',
-    archived: 'bg-[var(--muted)]/50 text-[var(--muted-foreground)]',
+    draft: STATUS_BADGE.neutral,
+    pending: STATUS_BADGE.warning,
+    approved: STATUS_BADGE.good,
+    archived: STATUS_BADGE.muted,
   };
 
   return (

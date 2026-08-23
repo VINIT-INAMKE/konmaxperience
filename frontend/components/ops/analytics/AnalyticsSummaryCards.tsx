@@ -1,7 +1,6 @@
 'use client';
 
 import { Card, CardContent } from '@/components/ui/card';
-import { NumberTicker } from '@/components/ui/number-ticker';
 import { Skeleton } from '@/components/ui/skeleton';
 import { IndianRupee, Percent, ShoppingCart, TrendingUp } from 'lucide-react';
 import type { AnalyticsSummary } from '@/lib/types/analytics';
@@ -21,7 +20,7 @@ export function AnalyticsSummaryCards({ summary, isLoading }: AnalyticsSummaryCa
   if (isLoading) {
     return (
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="col-span-2 lg:col-span-2 border-l-4 border-l-amber-500/30">
+        <Card className="col-span-2 lg:col-span-2 border-l-4 border-l-gold/30">
           <CardContent className="p-5 space-y-3">
             <Skeleton className="h-3 w-24" />
             <Skeleton className="h-10 w-28" />
@@ -46,14 +45,14 @@ export function AnalyticsSummaryCards({ summary, isLoading }: AnalyticsSummaryCa
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
       {/* Hero: Total Revenue */}
-      <Card className="col-span-2 lg:col-span-2 border-l-4 border-l-amber-500/30">
+      <Card className="col-span-2 lg:col-span-2 border-l-4 border-l-gold/30">
         <CardContent className="p-5">
           <div className="flex items-start justify-between">
-            <span className="text-xs font-bold text-muted-foreground uppercase tracking-wide">Total Revenue</span>
-            <IndianRupee className="size-5 text-amber-500/70" />
+            <span className="text-xs font-bold text-ink-muted uppercase tracking-wide">Total Revenue</span>
+            <IndianRupee className="size-5 text-gold" />
           </div>
-          <p className="mt-3 text-4xl font-bold leading-tight">
-            ₹<NumberTicker value={revenueValue} />
+          <p className="mt-3 text-4xl font-bold leading-tight tabular-nums">
+            ₹{revenueValue.toLocaleString('en-IN')}
           </p>
         </CardContent>
       </Card>
@@ -67,12 +66,12 @@ export function AnalyticsSummaryCards({ summary, isLoading }: AnalyticsSummaryCa
           <Card key={card.key} className={card.key === 'aov' ? 'col-span-2 lg:col-span-1' : ''}>
             <CardContent className="p-4">
               <div className="flex items-start justify-between">
-                <span className="text-xs font-bold text-muted-foreground">{card.label}</span>
-                <Icon className="size-4 text-muted-foreground" />
+                <span className="text-xs font-bold text-ink-muted">{card.label}</span>
+                <Icon className="size-4 text-ink-muted" />
               </div>
-              <p className="mt-2 text-[28px] font-bold font-mono leading-tight">
+              <p className="mt-2 text-[28px] font-bold font-mono leading-tight tabular-nums">
                 {'prefix' in card && card.prefix}
-                <NumberTicker value={value} />
+                {value.toLocaleString('en-IN')}
                 {'suffix' in card && <span className="text-sm font-normal ml-1">{card.suffix}</span>}
               </p>
             </CardContent>

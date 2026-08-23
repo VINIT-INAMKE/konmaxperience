@@ -21,7 +21,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { ShimmerButton } from '@/components/ui/shimmer-button';
 import { FoodCostBadge } from './FoodCostBadge';
 import { apiClient } from '@/lib/api-client';
 import {
@@ -362,8 +361,7 @@ export function ProductForm({
 
           {/* Actions */}
           <div className="flex items-center gap-3 pt-2">
-            <ShimmerButton
-              shimmerColor="#4ade80"
+            <Button
               type="submit"
               disabled={isSubmitting || !canSubmit}
               className="h-9 text-sm px-4"
@@ -378,7 +376,7 @@ export function ProductForm({
               ) : (
                 'Add Product'
               )}
-            </ShimmerButton>
+            </Button>
             <Button
               type="button"
               variant="ghost"

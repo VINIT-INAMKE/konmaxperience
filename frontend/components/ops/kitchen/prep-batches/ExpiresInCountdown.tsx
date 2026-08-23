@@ -26,10 +26,10 @@ function getColorClass(hours: number, minutes: number): string {
   const totalMinutes = hours * 60 + minutes;
 
   if (totalMinutes < 60) {
-    return 'text-destructive';
+    return 'text-critical';
   }
   if (totalMinutes < 240) {
-    return 'text-amber-600 dark:text-amber-400';
+    return 'text-warning';
   }
   return '';
 }
@@ -52,7 +52,7 @@ export function ExpiresInCountdown({ expiresAt }: ExpiresInCountdownProps) {
   }, [expiresAt]);
 
   if (!expiresAt) {
-    return <span className="text-muted-foreground text-sm">No expiry</span>;
+    return <span className="text-ink-muted text-sm">No expiry</span>;
   }
 
   if (!time || time.expired) {

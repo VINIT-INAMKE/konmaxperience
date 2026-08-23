@@ -1,7 +1,6 @@
 'use client';
 
 import { Minus, Plus } from 'lucide-react';
-import { AnimatedListItem } from '@/components/ui/animated-list';
 import { Button } from '@/components/ui/button';
 
 interface CartItem {
@@ -20,7 +19,7 @@ export function PosCartItemRow({ item, onUpdateQuantity }: PosCartItemRowProps) 
   const lineTotal = item.unit_price * item.quantity;
 
   return (
-    <AnimatedListItem>
+    <li>
       <div className="flex flex-col gap-1 py-2">
         <span className="text-sm font-normal leading-snug line-clamp-1">
           {item.name}
@@ -32,6 +31,7 @@ export function PosCartItemRow({ item, onUpdateQuantity }: PosCartItemRowProps) 
               size="icon"
               className="size-8 shrink-0"
               onClick={() => onUpdateQuantity(-1)}
+              aria-label={`Remove one ${item.name}`}
             >
               <Minus className="size-3" />
             </Button>
@@ -43,6 +43,7 @@ export function PosCartItemRow({ item, onUpdateQuantity }: PosCartItemRowProps) 
               size="icon"
               className="size-8 shrink-0"
               onClick={() => onUpdateQuantity(1)}
+              aria-label={`Add one ${item.name}`}
             >
               <Plus className="size-3" />
             </Button>
@@ -52,6 +53,6 @@ export function PosCartItemRow({ item, onUpdateQuantity }: PosCartItemRowProps) 
           </span>
         </div>
       </div>
-    </AnimatedListItem>
+    </li>
   );
 }

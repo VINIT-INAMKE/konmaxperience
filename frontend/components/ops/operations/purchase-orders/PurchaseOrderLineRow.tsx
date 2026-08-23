@@ -116,7 +116,7 @@ export function PurchaseOrderLineRow({
       {/* Remove */}
       <button
         type="button"
-        className="p-1.5 rounded text-muted-foreground hover:text-destructive transition-colors mt-0.5"
+        className="p-1.5 rounded text-muted-foreground hover:text-destructive transition-colors motion-reduce:transition-none mt-0.5 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[var(--focus)]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
         onClick={() => onRemove(index)}
         aria-label="Remove line item"
       >

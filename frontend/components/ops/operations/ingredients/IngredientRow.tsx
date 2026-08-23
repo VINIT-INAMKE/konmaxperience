@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Pencil, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
+import { STATUS_BADGE } from '@/lib/status-styles';
 import type { Ingredient } from '@/lib/types/ingredient';
 import {
   ingredientCategoryBadgeClass,
@@ -56,23 +57,23 @@ export function IngredientRow({ ingredient, stock, onEdit, onDelete, isAdmin }: 
           {ingredientCategoryName(ingredient.category_obj)}
         </Badge>
       </td>
-      <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
+      <td className="px-4 py-3 font-mono text-xs text-ink-muted">
         {ingredient.base_unit}
       </td>
-      <td className="px-4 py-3 text-sm text-muted-foreground">
+      <td className="px-4 py-3 text-sm text-ink-muted">
         {ingredient.min_stock_level} {ingredient.base_unit}
       </td>
       <td className="px-4 py-3">
         {stock ? (
           <div className="flex items-center gap-2">
-            <span className={`font-mono text-xs ${isLowStock ? 'text-amber-500' : 'text-muted-foreground'}`}>
+            <span className={`font-mono text-xs ${isLowStock ? 'text-warning' : 'text-ink-muted'}`}>
               {stock.current_quantity} {ingredient.base_unit}
             </span>
             {isLowStock && (
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger>
-                    <Badge className="text-xs border-0 bg-amber-500/15 text-amber-500">Low Stock</Badge>
+                    <Badge className={`text-xs ${STATUS_BADGE.warning}`}>Low Stock</Badge>
                   </TooltipTrigger>
                   <TooltipContent>
                     Below minimum of {ingredient.min_stock_level} {ingredient.base_unit}
@@ -82,7 +83,7 @@ export function IngredientRow({ ingredient, stock, onEdit, onDelete, isAdmin }: 
             )}
           </div>
         ) : (
-          <span className="font-mono text-xs text-muted-foreground">&mdash;</span>
+          <span className="font-mono text-xs text-ink-muted">&mdash;</span>
         )}
       </td>
       <td className="px-4 py-3">
@@ -96,7 +97,7 @@ export function IngredientRow({ ingredient, stock, onEdit, onDelete, isAdmin }: 
               >
                 <Badge
                   variant="outline"
-                  className="text-[10px] font-normal cursor-pointer hover:bg-[var(--accent)] transition-colors"
+                  className="text-[10px] font-normal cursor-pointer hover:bg-accent transition-colors motion-reduce:transition-none"
                 >
                   {recipe.name}
                 </Badge>
@@ -106,7 +107,7 @@ export function IngredientRow({ ingredient, stock, onEdit, onDelete, isAdmin }: 
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger>
-                    <Badge variant="outline" className="text-[10px] font-normal text-muted-foreground">
+                    <Badge variant="outline" className="text-[10px] font-normal text-ink-muted">
                       +{uniqueRecipes.length - 3}
                     </Badge>
                   </TooltipTrigger>
@@ -122,14 +123,14 @@ export function IngredientRow({ ingredient, stock, onEdit, onDelete, isAdmin }: 
             )}
           </div>
         ) : (
-          <span className="text-xs text-muted-foreground">No recipes</span>
+          <span className="text-xs text-ink-muted">No recipes</span>
         )}
       </td>
       <td className="px-4 py-3">
         <div className="flex items-center gap-1">
           <button
             onClick={() => onEdit(ingredient)}
-            className="p-1.5 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            className="p-1.5 rounded text-ink-muted hover:text-foreground hover:bg-muted transition-colors motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[var(--focus)]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
             aria-label="Edit ingredient"
           >
             <Pencil className="size-3.5" />
@@ -137,7 +138,7 @@ export function IngredientRow({ ingredient, stock, onEdit, onDelete, isAdmin }: 
           {isAdmin && (
             <button
               onClick={() => onDelete(ingredient)}
-              className="p-1.5 rounded text-muted-foreground hover:text-destructive transition-colors"
+              className="p-1.5 rounded text-ink-muted hover:text-destructive transition-colors motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[var(--focus)]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
               aria-label="Delete ingredient"
             >
               <Trash2 className="size-3.5" />

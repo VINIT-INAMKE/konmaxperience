@@ -1,15 +1,18 @@
 'use client';
 
 import { Badge } from '@/components/ui/badge';
+import { STATUS_BADGE } from '@/lib/status-styles';
 import type { BrandStatus } from '@/lib/types/brand';
 import { BRAND_STATUS_LABELS } from '@/lib/types/brand';
 
+// `idea` has no status meaning (it was decorative purple) — Rule S4 maps it to neutral.
+// `planning` and `development` are both "in flight, not live" and share the info tint.
 const STATUS_CLASSES: Record<BrandStatus, string> = {
-  idea: 'text-purple-400 border-purple-500/30',
-  planning: 'text-blue-400 border-blue-500/30',
-  development: 'text-cyan-400 border-cyan-500/30',
-  active: 'text-green-400 border-green-500/30',
-  paused: 'text-amber-400 border-amber-500/30',
+  idea: STATUS_BADGE.neutral,
+  planning: STATUS_BADGE.info,
+  development: STATUS_BADGE.info,
+  active: STATUS_BADGE.good,
+  paused: STATUS_BADGE.warning,
 };
 
 interface BrandStatusBadgeProps {

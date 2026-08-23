@@ -12,7 +12,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { ShimmerButton } from '@/components/ui/shimmer-button';
 import { apiClient } from '@/lib/api-client';
 import { YIELD_UNITS, RECIPE_STATUSES, RECIPE_STATUS_LABELS } from '@/lib/types/recipe';
 import type { RecipeStatus } from '@/lib/types/recipe';
@@ -267,15 +266,14 @@ export function RecipeWizardStep1({
 
       {/* CTA */}
       <div className="pt-2">
-        <ShimmerButton
-          shimmerColor="#4ade80"
+        <Button
           className="h-9 text-sm px-4"
           disabled={!canProceed}
           onClick={onNext}
           type="button"
         >
           Next: Add Ingredients
-        </ShimmerButton>
+        </Button>
       </div>
     </div>
   );

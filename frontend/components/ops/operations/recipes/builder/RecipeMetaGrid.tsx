@@ -74,7 +74,7 @@ export function RecipeMetaGrid({
                 key={type}
                 className={`flex flex-col items-center gap-1 rounded-lg border px-3 py-3 min-h-[48px] cursor-pointer transition-colors ${
                   isSelected
-                    ? 'border-[var(--primary)] bg-[var(--primary)]/5 text-foreground font-medium'
+                    ? 'border-brand bg-brand/5 text-ink font-medium'
                     : 'border-border bg-transparent text-muted-foreground'
                 } ${isLocked ? 'opacity-50 pointer-events-none' : ''}`}
               >
@@ -87,7 +87,7 @@ export function RecipeMetaGrid({
           })}
         </RadioGroup>
         {preparationType === 'ready_to_sell' && (
-          <p className="text-xs text-amber-500 mt-1">
+          <p className="text-xs text-warning mt-1">
             Prep steps and cooking method are optional for shelf items.
           </p>
         )}
@@ -104,7 +104,7 @@ export function RecipeMetaGrid({
             onValueChange={(v) => onChange('brandId', v ?? '')}
             disabled={isLocked}
           >
-            <SelectTrigger className="h-8 text-sm bg-transparent border-transparent hover:border-border focus:border-[var(--primary)] transition-colors truncate">
+            <SelectTrigger className="h-8 text-sm bg-transparent border-transparent hover:border-border focus:border-brand transition-colors truncate">
               <SelectValue placeholder="Select brand">
                 {(value: string) => {
                   if (!value) return 'Select brand';
@@ -132,7 +132,7 @@ export function RecipeMetaGrid({
             onValueChange={(v) => onChange('zoneId', v ?? '')}
             disabled={isLocked}
           >
-            <SelectTrigger className="h-8 text-sm bg-transparent border-transparent hover:border-border focus:border-[var(--primary)] transition-colors truncate">
+            <SelectTrigger className="h-8 text-sm bg-transparent border-transparent hover:border-border focus:border-brand transition-colors truncate">
               <SelectValue placeholder="Select zone">
                 {(value: string) => {
                   if (!value) return 'Select zone';
@@ -156,7 +156,7 @@ export function RecipeMetaGrid({
             Yield Qty
           </label>
           <Input
-            className="h-8 text-sm bg-transparent border-transparent hover:border-border focus:border-[var(--primary)] transition-colors"
+            className="h-8 text-sm bg-transparent border-transparent hover:border-border focus:border-brand transition-colors"
             value={yieldQty}
             onChange={(e) => onChange('yieldQty', e.target.value)}
             disabled={isLocked}
@@ -176,7 +176,7 @@ export function RecipeMetaGrid({
             onValueChange={(v) => onChange('yieldUnit', v ?? '')}
             disabled={isLocked}
           >
-            <SelectTrigger className="h-8 text-sm bg-transparent border-transparent hover:border-border focus:border-[var(--primary)] transition-colors">
+            <SelectTrigger className="h-8 text-sm bg-transparent border-transparent hover:border-border focus:border-brand transition-colors">
               <SelectValue placeholder="Select unit" />
             </SelectTrigger>
             <SelectContent>
@@ -195,7 +195,7 @@ export function RecipeMetaGrid({
             Portion Size
           </label>
           <Input
-            className="h-8 text-sm bg-transparent border-transparent hover:border-border focus:border-[var(--primary)] transition-colors"
+            className="h-8 text-sm bg-transparent border-transparent hover:border-border focus:border-brand transition-colors"
             value={portionSize}
             onChange={(e) => onChange('portionSize', e.target.value)}
             disabled={isLocked}
@@ -209,7 +209,7 @@ export function RecipeMetaGrid({
             Shelf Life (hrs)
           </label>
           <Input
-            className="h-8 text-sm bg-transparent border-transparent hover:border-border focus:border-[var(--primary)] transition-colors"
+            className="h-8 text-sm bg-transparent border-transparent hover:border-border focus:border-brand transition-colors"
             value={shelfLifeHours}
             onChange={(e) => onChange('shelfLifeHours', e.target.value)}
             disabled={isLocked}
@@ -226,7 +226,7 @@ export function RecipeMetaGrid({
           Description
         </label>
         <textarea
-          className="w-full text-sm bg-transparent border border-transparent hover:border-border focus:border-[var(--primary)] outline-none transition-colors rounded-md p-2 min-h-[56px] resize-y disabled:pointer-events-none disabled:opacity-50"
+          className="w-full text-sm bg-transparent border border-transparent hover:border-border focus:border-brand outline-none transition-colors rounded-md p-2 min-h-[56px] resize-y disabled:pointer-events-none disabled:opacity-50"
           value={description}
           onChange={(e) => onChange('description', e.target.value)}
           disabled={isLocked}

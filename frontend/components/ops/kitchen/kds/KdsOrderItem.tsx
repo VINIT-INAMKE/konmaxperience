@@ -42,19 +42,19 @@ export function KdsOrderItem({ item, onStatusAdvance }: KdsOrderItemProps) {
           handleClick();
         }
       }}
-      className={`flex items-center justify-between gap-2 rounded-md px-3 min-h-[48px] transition-colors ${
+      className={`flex items-center justify-between gap-2 rounded-md px-3 min-h-[48px] transition-colors motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[var(--focus)]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)] ${
         isReady
           ? 'opacity-50 cursor-default'
-          : 'cursor-pointer hover:bg-white/5 active:bg-white/10'
+          : 'cursor-pointer hover:bg-[var(--ink)]/5 active:bg-[var(--ink)]/10'
       }`}
     >
       <div className="flex items-center gap-3 flex-1 min-w-0">
-        <span className="text-[18px] text-white/90">{item.product_name}</span>
-        <span className="text-sm text-white/50 shrink-0">x{item.quantity}</span>
+        <span className="text-[18px] text-ink">{item.product_name}</span>
+        <span className="text-sm text-ink-muted shrink-0">x{item.quantity}</span>
       </div>
       <div className="flex items-center gap-2 shrink-0">
         {item.item_notes && (
-          <span className="text-xs text-amber-400 max-w-[120px] truncate">
+          <span className="text-xs text-warning max-w-[120px] truncate">
             {item.item_notes}
           </span>
         )}

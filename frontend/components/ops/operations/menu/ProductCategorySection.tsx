@@ -37,7 +37,7 @@ export function ProductCategorySection({
       {/* Section header */}
       <div className="flex items-center gap-2 flex-wrap">
         <button
-          className="flex items-center gap-2 min-w-0 flex-1"
+          className="flex items-center gap-2 min-w-0 flex-1 rounded focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[var(--focus)]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
           onClick={() => setIsExpanded((v) => !v)}
           aria-expanded={isExpanded}
           aria-label={`${isExpanded ? 'Collapse' : 'Expand'} ${category.name}`}
@@ -67,14 +67,14 @@ export function ProductCategorySection({
           {isAdmin && (
             <>
               <button
-                className="p-1 rounded text-muted-foreground hover:text-foreground transition-colors"
+                className="p-1 rounded text-muted-foreground hover:text-foreground transition-colors motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[var(--focus)]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
                 onClick={() => onEditCategory(category)}
                 aria-label={`Edit category ${category.name}`}
               >
                 <Pencil className="size-3.5" />
               </button>
               <button
-                className="p-1 rounded text-muted-foreground hover:text-destructive transition-colors"
+                className="p-1 rounded text-muted-foreground hover:text-destructive transition-colors motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[var(--focus)]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
                 onClick={() => onDeleteCategory(category)}
                 aria-label={`Delete category ${category.name}`}
               >

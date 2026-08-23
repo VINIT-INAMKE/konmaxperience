@@ -1,30 +1,31 @@
 'use client';
 
 import { Badge } from '@/components/ui/badge';
+import { STATUS_BADGE } from '@/lib/status-styles';
 import { ORDER_STATUS_LABELS } from '@/lib/types/kds';
 import { PAYMENT_STATUS_LABELS } from '@/lib/types/orders';
 import type { OrderStatus, PaymentStatus } from '@/lib/types/kds';
 
 const ORDER_STATUS_STYLES: Record<OrderStatus, string> = {
-  placed: 'bg-blue-500/15 text-blue-600 border-0',
-  confirmed: 'bg-blue-500/15 text-blue-600 border-0',
-  preparing: 'bg-amber-500/15 text-amber-600 border-0',
-  ready: 'bg-emerald-500/15 text-emerald-700 border-0',
-  served: 'bg-muted text-muted-foreground border-0',
-  dispatched: 'bg-muted text-muted-foreground border-0',
-  shipped: 'bg-muted text-muted-foreground border-0',
-  delivered: 'bg-muted text-muted-foreground border-0',
-  completed: 'bg-muted text-muted-foreground border-0',
-  cancelled: 'bg-destructive/10 text-destructive border-0',
-  refunded: 'bg-destructive/10 text-destructive border-0',
+  placed: STATUS_BADGE.info,
+  confirmed: STATUS_BADGE.info,
+  preparing: STATUS_BADGE.warning,
+  ready: STATUS_BADGE.good,
+  served: STATUS_BADGE.neutral,
+  dispatched: STATUS_BADGE.neutral,
+  shipped: STATUS_BADGE.neutral,
+  delivered: STATUS_BADGE.neutral,
+  completed: STATUS_BADGE.neutral,
+  cancelled: STATUS_BADGE.serious,
+  refunded: STATUS_BADGE.serious,
 };
 
 const PAYMENT_STATUS_STYLES: Record<PaymentStatus, string> = {
-  paid: 'bg-emerald-500/15 text-emerald-700 border-0',
-  pending: 'bg-amber-500/15 text-amber-600 border-0',
-  failed: 'bg-destructive/10 text-destructive border-0',
-  refunded: 'bg-blue-500/15 text-blue-600 border-0',
-  partially_refunded: 'bg-blue-500/15 text-blue-600 border-0',
+  paid: STATUS_BADGE.good,
+  pending: STATUS_BADGE.warning,
+  failed: STATUS_BADGE.critical,
+  refunded: STATUS_BADGE.info,
+  partially_refunded: STATUS_BADGE.info,
 };
 
 interface OrderStatusBadgeProps {

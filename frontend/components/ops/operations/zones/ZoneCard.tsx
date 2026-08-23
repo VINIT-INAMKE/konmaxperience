@@ -1,6 +1,5 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import {
   ChefHat,
   UtensilsCrossed,
@@ -10,8 +9,7 @@ import {
   Coffee,
   Trash2,
 } from 'lucide-react';
-import { MagicCard } from '@/components/ui/magic-card';
-import { ShineBorder } from '@/components/ui/shine-border';
+import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
@@ -22,15 +20,14 @@ import {
 import { ZoneStatusBadge } from './ZoneStatusBadge';
 import type { Zone, ZoneType } from '@/lib/types/zone';
 import { ZONE_TYPE_LABELS } from '@/lib/types/zone';
-import { GRADIENT_OVERLAY } from '@/lib/brand-colors';
 
 const ZONE_TYPE_ICONS: Record<ZoneType, React.ReactNode> = {
-  kitchen: <ChefHat className="size-4 text-muted-foreground" />,
-  dining: <UtensilsCrossed className="size-4 text-muted-foreground" />,
-  outdoor: <Leaf className="size-4 text-muted-foreground" />,
-  workspace: <Monitor className="size-4 text-muted-foreground" />,
-  storage: <Archive className="size-4 text-muted-foreground" />,
-  leisure: <Coffee className="size-4 text-muted-foreground" />,
+  kitchen: <ChefHat className="size-4 text-ink-muted" />,
+  dining: <UtensilsCrossed className="size-4 text-ink-muted" />,
+  outdoor: <Leaf className="size-4 text-ink-muted" />,
+  workspace: <Monitor className="size-4 text-ink-muted" />,
+  storage: <Archive className="size-4 text-ink-muted" />,
+  leisure: <Coffee className="size-4 text-ink-muted" />,
 };
 
 function getInitials(name: string): string {
@@ -59,31 +56,15 @@ export function ZoneCard({
   onEdit,
   onDelete,
 }: ZoneCardProps) {
-  const [showShine, setShowShine] = useState(isNew);
-
-  useEffect(() => {
-    if (isNew) {
-      setShowShine(true);
-      const timer = setTimeout(() => setShowShine(false), 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [isNew]);
-
   const canEdit = isAdmin || currentUserId === zone.owner_user_id;
   const ownerName = zone.owner?.name ?? null;
 
   return (
     <div className="relative rounded-lg">
-      {showShine && (
-        <ShineBorder
-          shineColor={['#4ade80', '#22d3ee', '#a78bfa']}
-          duration={3}
-          borderWidth={2}
-        />
-      )}
-      <MagicCard
-        gradientColor={GRADIENT_OVERLAY}
-        className="p-4 space-y-2 cursor-pointer hover:bg-muted/20 transition-colors"
+      <Card
+        className={`p-4 gap-2 space-y-2 cursor-pointer transition-colors motion-reduce:transition-none hover:bg-muted/20 ${
+          isNew ? 'ring-2 ring-brand/40' : ''
+        }`}
       >
         {/* Row 1: type icon + name + status badge */}
         <div className="flex items-center gap-2 flex-wrap">
@@ -108,12 +89,12 @@ export function ZoneCard({
                   {getInitials(ownerName)}
                 </AvatarFallback>
               </Avatar>
-              <span className="text-sm text-muted-foreground">{ownerName}</span>
+              <span className="text-sm text-ink-muted">{ownerName}</span>
             </>
           ) : (
-            <span className="text-sm text-muted-foreground">No owner</span>
+            <span className="text-sm text-ink-muted">No owner</span>
           )}
-          <span className="text-xs text-muted-foreground ml-auto">
+          <span className="text-xs text-ink-muted ml-auto">
             {ZONE_TYPE_LABELS[zone.zone_type]}
           </span>
         </div>
@@ -134,13 +115,13 @@ export function ZoneCard({
             </Button>
           )}
           {zone.notes && (
-            <p className="text-xs text-muted-foreground line-clamp-1 flex-1">
+            <p className="text-xs text-ink-muted line-clamp-1 flex-1">
               {zone.notes}
             </p>
           )}
           {isAdmin && (
             <button
-              className="ml-auto p-1 rounded text-muted-foreground hover:text-destructive transition-colors"
+              className="ml-auto p-1 rounded text-ink-muted transition-colors motion-reduce:transition-none hover:text-destructive focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[var(--focus)]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
               onClick={(e) => {
                 e.stopPropagation();
                 onDelete(zone);
@@ -151,7 +132,7 @@ export function ZoneCard({
             </button>
           )}
         </div>
-      </MagicCard>
+      </Card>
     </div>
   );
 }

@@ -2,8 +2,6 @@
 
 import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { ShimmerButton } from '@/components/ui/shimmer-button';
-import { NumberTicker } from '@/components/ui/number-ticker';
 import type { RecipeDetailsState } from './RecipeWizardStep1';
 import type { BomLineState } from './BomLineRow';
 
@@ -102,13 +100,14 @@ export function RecipeWizardStep3({
         <h3 className="text-sm font-semibold">Computed Cost</h3>
         {computedCost != null ? (
           <div className="flex items-baseline gap-1">
-            <span className="text-muted-foreground text-sm">INR</span>
-            <NumberTicker
-              value={computedCost}
-              decimalPlaces={2}
-              className="text-2xl font-bold"
-            />
-            <span className="text-xs text-muted-foreground ml-1">per batch</span>
+            <span className="text-ink-muted text-sm">INR</span>
+            <span className="text-2xl font-bold tabular-nums">
+              {computedCost.toLocaleString('en-IN', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}
+            </span>
+            <span className="text-xs text-ink-muted ml-1">per batch</span>
           </div>
         ) : (
           <p className="text-sm text-muted-foreground">
@@ -120,8 +119,7 @@ export function RecipeWizardStep3({
 
       {/* Navigation */}
       <div className="flex items-center gap-3 pt-2">
-        <ShimmerButton
-          shimmerColor="#4ade80"
+        <Button
           className="h-9 text-sm px-4"
           onClick={onSubmit}
           disabled={isSubmitting}
@@ -135,7 +133,7 @@ export function RecipeWizardStep3({
           ) : (
             'Publish Recipe'
           )}
-        </ShimmerButton>
+        </Button>
         <Button
           type="button"
           variant="ghost"

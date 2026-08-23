@@ -4,6 +4,7 @@ import { AlertTriangle, Check, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { STATUS_BADGE } from '@/lib/status-styles';
 import {
   Tooltip,
   TooltipContent,
@@ -50,7 +51,7 @@ export function PrepBatchWizardStep2({
       )}
 
       {/* Deduction preview table */}
-      <div className="rounded-lg border overflow-hidden">
+      <div className="rounded-lg border overflow-x-auto">
         <table className="w-full">
           <thead>
             <tr className="border-b bg-muted/40">
@@ -87,12 +88,12 @@ export function PrepBatchWizardStep2({
                 <td className="px-4 py-2 text-sm">{line.unit}</td>
                 <td className="px-4 py-2">
                   {line.sufficient ? (
-                    <Badge variant="secondary" className="text-green-600 bg-green-50 dark:text-green-400 dark:bg-green-950">
+                    <Badge variant="secondary" className={STATUS_BADGE.good}>
                       <Check className="size-3 mr-1" />
                       OK
                     </Badge>
                   ) : (
-                    <Badge variant="secondary" className="text-destructive bg-destructive/10">
+                    <Badge variant="secondary" className={STATUS_BADGE.serious}>
                       Insufficient
                     </Badge>
                   )}
@@ -113,7 +114,7 @@ export function PrepBatchWizardStep2({
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger
-                className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium h-9 px-4 py-2 bg-primary text-primary-foreground opacity-50 cursor-not-allowed"
+                className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium h-9 px-4 py-2 bg-primary text-primary-foreground opacity-50 cursor-not-allowed focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[var(--focus)]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
               >
                 Next
               </TooltipTrigger>

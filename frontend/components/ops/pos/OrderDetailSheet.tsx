@@ -85,7 +85,7 @@ function StatusProgression({ order }: { order: Order }) {
             {idx > 0 && (
               <div
                 className={`h-0.5 w-6 ${
-                  isCompleted ? 'bg-emerald-500' : 'bg-muted'
+                  isCompleted ? 'bg-good' : 'bg-muted'
                 }`}
               />
             )}
@@ -93,19 +93,19 @@ function StatusProgression({ order }: { order: Order }) {
               <div
                 className={`size-3 rounded-full ${
                   isCompleted
-                    ? 'bg-emerald-500'
+                    ? 'bg-good'
                     : isActive
-                      ? 'bg-primary'
+                      ? 'bg-brand'
                       : 'bg-muted'
                 }`}
               />
               <span
                 className={`text-[10px] font-medium ${
                   isActive
-                    ? 'text-foreground'
+                    ? 'text-ink'
                     : isFuture
-                      ? 'text-muted-foreground'
-                      : 'text-emerald-700'
+                      ? 'text-ink-muted'
+                      : 'text-good'
                 }`}
               >
                 {step.charAt(0).toUpperCase() + step.slice(1)}
@@ -231,7 +231,7 @@ export function OrderDetailSheet({
             {/* Items table */}
             <div>
               <h3 className="text-xs font-bold text-muted-foreground mb-2">Items</h3>
-              <div className="rounded-lg border overflow-hidden">
+              <div className="rounded-lg border overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b bg-muted/40">
