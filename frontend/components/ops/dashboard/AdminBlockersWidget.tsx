@@ -18,7 +18,9 @@ interface BlockedTask {
 export function AdminBlockersWidget() {
   const { data: blockedTasks, isLoading } = useQuery({
     queryKey: ['tasks', 'blocked'],
-    queryFn: () => apiClient.get<BlockedTask[]>('/tasks?blocked=true'),
+    // GET /tasks has no `blocked` param — it was silently dropped and the
+    // widget listed every task. The blocked set has its own route.
+    queryFn: () => apiClient.get<BlockedTask[]>('/tasks/blocked'),
   });
 
   const count = blockedTasks?.length ?? 0;

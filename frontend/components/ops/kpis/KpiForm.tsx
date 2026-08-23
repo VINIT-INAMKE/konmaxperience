@@ -90,7 +90,9 @@ export function KpiForm({ kpi, open, onOpenChange }: KpiFormProps) {
   // Fetch tasks for the picker
   const { data: allTasks } = useQuery({
     queryKey: ['tasks-for-kpi'],
-    queryFn: () => apiClient.get<TaskOption[]>('/tasks?limit=100'),
+    // GET /tasks takes no `limit` param — it was ignored, so drop the pretence.
+    // The picker narrows the full list client-side below.
+    queryFn: () => apiClient.get<TaskOption[]>('/tasks'),
     enabled: open,
   });
 

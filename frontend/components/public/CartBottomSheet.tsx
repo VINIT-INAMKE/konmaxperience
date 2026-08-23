@@ -17,6 +17,7 @@ import { useRazorpay } from '@/hooks/use-razorpay';
 import { useCustomerAuth } from '@/hooks/use-customer-auth';
 import { apiClient } from '@/lib/api-client';
 import type { CustomerAddress } from '@/lib/types/marketplace';
+import type { ChannelModifier } from '@/lib/types/catalog';
 import type { Customer } from '@/lib/types/customer-auth';
 
 interface CartBottomSheetProps {
@@ -32,11 +33,18 @@ export function CartBottomSheet({ open, onOpenChange }: CartBottomSheetProps) {
   const [showLogin, setShowLogin] = useState(false);
   const [addresses, setAddresses] = useState<CustomerAddress[]>([]);
   const [serviceabilityError, setServiceabilityError] = useState('');
-  const [deliveryCharge, setDeliveryCharge] = useState(0);
+  const [deliveryModifier, setDeliveryModifier] = useState<ChannelModifier | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
 
   const subtotal = items.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0);
+  // ChannelModifier.modifier_type decides how modifier_value is read; a
+  // percentage row is a share of the subtotal, not a rupee amount.
+  const deliveryCharge = !deliveryModifier
+    ? 0
+    : deliveryModifier.modifier_type === 'percentage'
+      ? (subtotal * deliveryModifier.modifier_value) / 100
+      : deliveryModifier.modifier_value;
   const total = subtotal + (channel === 'delivery' ? deliveryCharge : 0);
   const totalItems = items.reduce((sum, i) => sum + i.quantity, 0);
 
@@ -68,18 +76,16 @@ export function CartBottomSheet({ open, onOpenChange }: CartBottomSheetProps) {
   // Fetch delivery charge
   useEffect(() => {
     if (channel !== 'delivery') {
-      setDeliveryCharge(0);
+      setDeliveryModifier(null);
       return;
     }
     apiClient
-      .get<{ modifier_value: number; modifier_type: string }[]>('/catalog/channel-modifiers')
+      .get<ChannelModifier[]>('/catalog/channel-modifiers')
       .then((modifiers) => {
-        const delivery = modifiers.find((m) => m.modifier_type === 'fixed' || m);
-        if (delivery) {
-          setDeliveryCharge(delivery.modifier_value);
-        }
+        // One row per OrderChannel — match on `channel`, not on modifier_type.
+        setDeliveryModifier(modifiers.find((m) => m.channel === 'delivery') ?? null);
       })
-      .catch(() => setDeliveryCharge(0));
+      .catch(() => setDeliveryModifier(null));
   }, [channel]);
 
   const razorpay = useRazorpay({

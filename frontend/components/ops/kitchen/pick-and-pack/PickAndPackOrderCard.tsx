@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { CheckCircle2 } from 'lucide-react';
 import type { PickAndPackOrder, PickAndPackItem } from '@/lib/types/kitchen';
+import type { PreparationType } from '@/lib/types/recipe';
+import { PREPARATION_TYPE_LABELS } from '@/lib/types/recipe';
 import { BorderBeam } from '@/components/ui/border-beam';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
@@ -15,17 +17,19 @@ interface PickAndPackOrderCardProps {
   onItemPicked: (itemId: string) => void;
 }
 
-const PREP_TYPE_BADGE_CLASSES: Record<string, string> = {
+/**
+ * Exhaustive over Prisma `PreparationType`. `scratch` is the API's fallback when
+ * an item has no recipe, so it must have a badge of its own; labels come from
+ * the shared map so this screen speaks the same vocabulary as the recipe UI.
+ */
+const PREP_TYPE_BADGE_CLASSES: Record<PreparationType, string> = {
+  scratch: 'bg-[var(--success)]/10 text-[var(--success)]',
   batch_prepared: 'bg-[var(--info)]/10 text-[var(--info)]',
   ready_to_sell: 'bg-muted text-muted-foreground',
   assemble: 'bg-[var(--warning)]/10 text-[var(--warning)]',
 };
 
-const PREP_TYPE_LABELS: Record<string, string> = {
-  batch_prepared: 'Batch Prepared',
-  ready_to_sell: 'Ready to Sell',
-  assemble: 'Assemble',
-};
+const PREP_TYPE_LABELS = PREPARATION_TYPE_LABELS;
 
 export function PickAndPackOrderCard({ order, isNew, onItemPicked }: PickAndPackOrderCardProps) {
   const [showBeam, setShowBeam] = useState(isNew);

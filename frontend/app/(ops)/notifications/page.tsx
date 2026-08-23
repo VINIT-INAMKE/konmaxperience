@@ -10,12 +10,15 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { NotificationItem } from '@/components/ops/notifications/NotificationItem';
 import { BellOff } from 'lucide-react';
 
+// Covers every Prisma `NotificationType` member: task_due, task_blocked,
+// approval_pending, low_stock, new_order, order_ready, delivery_update and
+// admin_notice (broadcasts from POST /notifications/broadcast).
 const TAB_FILTERS: Record<string, string> = {
   all: '',
   unread: 'is_read=false',
   tasks: 'type=task_due,task_blocked',
   approvals: 'type=approval_pending',
-  ops: 'type=low_stock,new_order,order_ready,delivery_update',
+  ops: 'type=low_stock,new_order,order_ready,delivery_update,admin_notice',
 };
 
 const PAGE_SIZE = 20;
@@ -33,7 +36,7 @@ function EmptyState({ tab }: { tab: string }) {
     unread: 'You have no unread notifications.',
     tasks: 'Task deadline and blocker alerts will appear here.',
     approvals: 'Approval pending alerts will appear here.',
-    ops: 'Stock, order, and delivery alerts will appear here.',
+    ops: 'Stock, order, delivery, and admin announcements will appear here.',
   };
 
   return (

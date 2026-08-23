@@ -40,7 +40,15 @@ interface OrderDetailSheetProps {
 
 const STATUS_STEPS: OrderStatus[] = ['placed', 'preparing', 'ready', 'served'];
 const DELIVERY_STATUS_STEPS: DeliveryStatus[] = DELIVERY_STATUSES;
-const TERMINAL_STATUSES: OrderStatus[] = ['served', 'dispatched', 'cancelled'];
+/** Mirrors the backend's cancel guard (orders.service.ts TERMINAL_STATUSES). */
+const TERMINAL_STATUSES: OrderStatus[] = [
+  'served',
+  'dispatched',
+  'delivered',
+  'completed',
+  'cancelled',
+  'refunded',
+];
 
 function formatINR(value: number): string {
   return new Intl.NumberFormat('en-IN', {
@@ -171,14 +179,17 @@ export function OrderDetailSheet({
   const orderShortId = String(order.order_number);
   const canCancel = !TERMINAL_STATUSES.includes(order.status);
 
-  // Compute next order status
-  const STATUS_FLOW: Record<string, string> = {
+  // Compute next order status. Mirrors the backend's STATUS_TRANSITIONS; orders
+  // that arrive already `confirmed` (storefront / payment webhook) advance to
+  // `preparing` the same way a `placed` POS order does.
+  const STATUS_FLOW: Partial<Record<OrderStatus, OrderStatus>> = {
     placed: 'preparing',
+    confirmed: 'preparing',
     preparing: 'ready',
     ready: order.channel === 'delivery' ? 'dispatched' : 'served',
   };
   const nextOrderStatus = STATUS_FLOW[order.status] ?? null;
-  const NEXT_STATUS_LABELS: Record<string, string> = {
+  const NEXT_STATUS_LABELS: Partial<Record<OrderStatus, string>> = {
     preparing: 'Start Preparing',
     ready: 'Mark Ready',
     served: 'Mark Served',

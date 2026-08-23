@@ -17,7 +17,18 @@ import { OrderDetailSheet } from '@/components/ops/pos/OrderDetailSheet';
 import { apiClient } from '@/lib/api-client';
 import type { Order, DailySummary } from '@/lib/types/orders';
 import type { OrderStatus, OrderChannel, PaymentMethod } from '@/lib/types/kds';
+import { ORDER_CHANNEL_LABELS, ORDER_STATUS_LABELS } from '@/lib/types/kds';
+import { PAYMENT_METHOD_LABELS } from '@/lib/types/orders';
 import { ExportButton } from '@/components/ops/exports/ExportButton';
+
+// Filter options are derived from the enum label maps so a new Prisma member
+// cannot silently go missing from a dropdown.
+const CHANNEL_OPTIONS = Object.entries(ORDER_CHANNEL_LABELS) as [OrderChannel, string][];
+const STATUS_OPTIONS = Object.entries(ORDER_STATUS_LABELS) as [OrderStatus, string][];
+const PAYMENT_METHOD_OPTIONS = Object.entries(PAYMENT_METHOD_LABELS) as [
+  PaymentMethod,
+  string,
+][];
 
 function todayStr(): string {
   return new Date().toISOString().slice(0, 10);
@@ -116,9 +127,11 @@ export default function OrderHistoryPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="">All</SelectItem>
-                <SelectItem value="dine_in">Dine-In</SelectItem>
-                <SelectItem value="takeaway">Takeaway</SelectItem>
-                <SelectItem value="delivery">Delivery</SelectItem>
+                {CHANNEL_OPTIONS.map(([value, label]) => (
+                  <SelectItem key={value} value={value}>
+                    {label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -133,12 +146,11 @@ export default function OrderHistoryPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="">All</SelectItem>
-                <SelectItem value="placed">Placed</SelectItem>
-                <SelectItem value="preparing">Preparing</SelectItem>
-                <SelectItem value="ready">Ready</SelectItem>
-                <SelectItem value="served">Served</SelectItem>
-                <SelectItem value="dispatched">Dispatched</SelectItem>
-                <SelectItem value="cancelled">Cancelled</SelectItem>
+                {STATUS_OPTIONS.map(([value, label]) => (
+                  <SelectItem key={value} value={value}>
+                    {label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -153,9 +165,11 @@ export default function OrderHistoryPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="">All</SelectItem>
-                <SelectItem value="cash">Cash</SelectItem>
-                <SelectItem value="card">Card</SelectItem>
-                <SelectItem value="upi">UPI</SelectItem>
+                {PAYMENT_METHOD_OPTIONS.map(([value, label]) => (
+                  <SelectItem key={value} value={value}>
+                    {label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>

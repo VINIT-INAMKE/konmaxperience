@@ -4,11 +4,18 @@ import { Badge } from '@/components/ui/badge';
 import type { StockMovement } from '@/lib/types/inventory';
 import { MOVEMENT_TYPE_LABELS, MOVEMENT_TYPE_BADGE_CLASSES } from '@/lib/types/inventory';
 
+/**
+ * The `reference_type` values the backend actually writes on a StockMovement.
+ * `recipe_prep`, `customer_order` and `manual` were never emitted — the real
+ * tokens are the ones below; anything else falls through to the raw string.
+ */
 const REFERENCE_TYPE_LABELS: Record<string, string> = {
   purchase_order: 'Purchase Order',
-  recipe_prep: 'Recipe Prep',
-  customer_order: 'Customer Order',
-  manual: 'Manual',
+  prep_batch: 'Prep Batch',
+  order: 'Order',
+  waste_log: 'Waste Log',
+  supply_usage: 'Supply Usage',
+  import: 'Import',
 };
 
 interface StockMovementRowProps {

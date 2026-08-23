@@ -2,6 +2,7 @@
 
 import { Receipt, ExternalLink } from 'lucide-react';
 import type { CustomerOrder } from '@/lib/types/marketplace';
+import type { OrderStatus } from '@/lib/types/kds';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
@@ -10,14 +11,19 @@ interface CustomerOrderCardProps {
   onReorder: (order: CustomerOrder) => void;
 }
 
-const STATUS_BADGE_CLASSES: Record<string, string> = {
+/** Exhaustive over Prisma `OrderStatus` so a new member cannot render unstyled. */
+const STATUS_BADGE_CLASSES: Record<OrderStatus, string> = {
   placed: 'bg-blue-50 text-blue-700',
+  confirmed: 'bg-blue-50 text-blue-700',
   preparing: 'bg-amber-50 text-amber-700',
   ready: 'bg-orange-50 text-orange-700',
   dispatched: 'bg-orange-50 text-orange-700',
+  shipped: 'bg-orange-50 text-orange-700',
   delivered: 'bg-green-50 text-green-700',
   served: 'bg-green-50 text-green-700',
+  completed: 'bg-green-50 text-green-700',
   cancelled: 'bg-stone-100 text-stone-500',
+  refunded: 'bg-stone-100 text-stone-500',
 };
 
 function formatDate(iso: string): string {
