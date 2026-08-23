@@ -41,6 +41,12 @@ export class RecipesController {
     return this.recipesService.findOne(id);
   }
 
+  /** SPEC §4.4 — the policy-generated gate for this recipe, one row per required role. */
+  @Get(':id/approvals')
+  async findApprovalState(@Param('id', ParseUUIDPipe) id: string) {
+    return this.recipesService.findApprovalState(id);
+  }
+
   @Post()
   @RequiresPermission(Permission.MANAGE_OPS)
   async create(
@@ -61,6 +67,22 @@ export class RecipesController {
     const user = (req as any).user;
     const isAdmin = user.roleCode === 'FOUNDER_ADMIN';
     return this.recipesService.update(id, dto, user.id, isAdmin);
+  }
+
+  /**
+   * SPEC §4.4 — submit for approval (`draft → pending`), which materialises the
+   * `(recipe, food)` gate. `PATCH { status: 'pending' }` still does the same
+   * thing; this is the named action the status banner calls.
+   */
+  @Post(':id/submit')
+  @RequiresPermission(Permission.MANAGE_OPS)
+  async submit(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Req() req: express.Request,
+  ) {
+    const user = (req as any).user;
+    const isAdmin = user.roleCode === 'FOUNDER_ADMIN';
+    return this.recipesService.submit(id, user.id, isAdmin);
   }
 
   @Post(':id/version')
