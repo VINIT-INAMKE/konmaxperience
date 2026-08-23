@@ -2,16 +2,14 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { AlertCircle, Loader2, ShieldCheck } from 'lucide-react';
-import { toast } from 'sonner';
+import { AlertCircle, ExternalLink, ShieldCheck } from 'lucide-react';
 import { formatDistanceToNow, parseISO } from 'date-fns';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { RejectionDialog } from '@/components/ops/evidence/RejectionDialog';
 import { ApprovalEntityChip } from './ApprovalEntityChip';
+import { InlineDecision } from './InlineDecision';
 import { OverrideDialog } from './OverrideDialog';
-import { ApiError, apiClient } from '@/lib/api-client';
 import { useAuthStore } from '@/lib/stores/auth-store';
 import { RoleCode, ROLE_DISPLAY_NAMES } from '@/lib/types/roles';
 import type { Approval } from '@/lib/types/approvals';
@@ -28,59 +26,26 @@ function roleLabel(code: string): string {
   return ROLE_DISPLAY_NAMES[code as RoleCode] ?? code;
 }
 
-/** Surfaces the backend's own message ("This approval is reserved for …"). */
-function failureMessage(error: unknown, fallback: string): string {
-  return error instanceof ApiError && error.message ? error.message : fallback;
-}
-
 interface ApprovalItemProps {
   approval: Approval;
   onAction: () => void;
 }
 
 export function ApprovalItem({ approval, onAction }: ApprovalItemProps) {
-  const [isApproving, setIsApproving] = useState(false);
-  const [isRejecting, setIsRejecting] = useState(false);
-  const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [overrideDialogOpen, setOverrideDialogOpen] = useState(false);
 
   const user = useAuthStore((s) => s.user);
   const isAdmin = user?.roleCode === RoleCode.FOUNDER_ADMIN;
 
-  const waitingMs = Date.now() - new Date(approval.created_at).getTime();
+  // Read once per mount, not per render: an approvals list re-renders on every
+  // keystroke in its filter box and the age badge must not flicker with it.
+  const [readAt] = useState(() => Date.now());
+  const waitingMs = readAt - new Date(approval.created_at).getTime();
   const isPendingLong = waitingMs > ONE_DAY_MS;
   const pendingDays = Math.floor(waitingMs / ONE_DAY_MS);
 
   const subjectTitle =
     approval.subject?.title ?? `${approval.entity_type} ${approval.entity_id.slice(0, 8)}`;
-
-  const handleApprove = async () => {
-    setIsApproving(true);
-    try {
-      await apiClient.post(`/approvals/${approval.id}/approve`);
-      toast.success('Approved.');
-      onAction();
-    } catch (error) {
-      toast.error(failureMessage(error, "Couldn't approve that — try again."));
-    } finally {
-      setIsApproving(false);
-    }
-  };
-
-  /** SPEC §6.4 — `notes` is required on reject; `RejectionDialog` enforces it. */
-  const handleReject = async (notes: string) => {
-    setIsRejecting(true);
-    try {
-      await apiClient.post(`/approvals/${approval.id}/reject`, { notes });
-      toast.success('Feedback sent.');
-      setRejectDialogOpen(false);
-      onAction();
-    } catch (error) {
-      toast.error(failureMessage(error, "Couldn't send feedback — try again."));
-    } finally {
-      setIsRejecting(false);
-    }
-  };
 
   return (
     <Card className="border-line bg-surface">
@@ -142,42 +107,38 @@ export function ApprovalItem({ approval, onAction }: ApprovalItemProps) {
           )}
         </div>
 
-        {/* Row 3 — actions */}
-        <div className="flex flex-wrap items-center gap-2 pt-1">
-          <Button
-            size="sm"
-            onClick={() => void handleApprove()}
-            disabled={isApproving || isRejecting}
-          >
-            {isApproving ? (
-              <>
-                <Loader2 className="size-3 animate-spin motion-reduce:animate-none" />
-                Approving...
-              </>
-            ) : (
-              'Approve'
-            )}
-          </Button>
-          <Button
-            size="sm"
-            variant="destructive"
-            onClick={() => setRejectDialogOpen(true)}
-            disabled={isApproving || isRejecting}
-          >
-            Reject
-          </Button>
+        {/* Row 3 — decide here; the detail page stays one click away */}
+        <div className="pt-1">
+          <InlineDecision
+            approvalId={approval.id}
+            subjectLabel={APPROVAL_ENTITY_LABELS[
+              approval.entity_type
+            ].toLowerCase()}
+            onDecided={onAction}
+          />
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          {approval.subject?.url && (
+            <Button
+              size="sm"
+              variant="ghost"
+              nativeButton={false}
+              render={<Link href={approval.subject.url} />}
+            >
+              <ExternalLink className="size-3.5" aria-hidden="true" />
+              Open
+            </Button>
+          )}
           {isAdmin && (
-            <>
-              <div className="h-4 w-px bg-line" />
-              <Button
-                size="sm"
-                variant="outline"
-                className="border-warning/40 text-warning"
-                onClick={() => setOverrideDialogOpen(true)}
-              >
-                Override
-              </Button>
-            </>
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-warning/40 text-warning"
+              onClick={() => setOverrideDialogOpen(true)}
+            >
+              Override
+            </Button>
           )}
         </div>
 
@@ -207,14 +168,6 @@ export function ApprovalItem({ approval, onAction }: ApprovalItemProps) {
           </p>
         )}
       </CardContent>
-
-      <RejectionDialog
-        open={rejectDialogOpen}
-        onOpenChange={setRejectDialogOpen}
-        onReject={handleReject}
-        isSubmitting={isRejecting}
-        subjectLabel={APPROVAL_ENTITY_LABELS[approval.entity_type].toLowerCase()}
-      />
 
       {isAdmin && (
         <OverrideDialog

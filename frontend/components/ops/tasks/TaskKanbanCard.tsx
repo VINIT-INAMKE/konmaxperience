@@ -1,10 +1,16 @@
 'use client';
 
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { GripVertical, Link as LinkIcon, CheckCircle2, FileCheck, FileQuestion, TrendingUp } from 'lucide-react';
+import { GripVertical, Link as LinkIcon, CheckCircle2, FileCheck, FileQuestion, Pencil, TrendingUp } from 'lucide-react';
 import { format, isPast, parseISO } from 'date-fns';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { TaskRowEvidenceButton } from './TaskRowEvidenceButton';
+import { TaskSheet } from './TaskSheet';
+import { useAuthStore } from '@/lib/stores/auth-store';
+import { RoleCode } from '@/lib/types/roles';
 import type { Task } from '@/lib/types/tasks';
 import { TASK_TYPE_LABELS, TASK_PRIORITY_LABELS, TASK_TYPE_XP_WEIGHT } from '@/lib/types/tasks';
 import { getPriorityBadge, getTaskTypeBadge, STATUS_BADGE } from '@/lib/status-styles';
@@ -28,11 +34,20 @@ function getLeftBorderClass(task: Task) {
 
 export function TaskKanbanCard({ task, isDraggable }: TaskKanbanCardProps) {
   const router = useRouter();
+  const user = useAuthStore((s) => s.user);
+  const [editOpen, setEditOpen] = useState(false);
+
+  // SPEC §6.4 — editing happens in a sheet over the board, never on a page.
+  const canEdit =
+    task.is_own === true ||
+    user?.roleCode === RoleCode.FOUNDER_ADMIN ||
+    (!!user?.id && user.id === task.owner_user_id);
 
   const isOverdue =
     task.due_date && !task.completed_at && isPast(parseISO(task.due_date));
 
   return (
+    <>
     <Card
       className={`cursor-pointer transition-all duration-200 hover:bg-muted/50 ${getLeftBorderClass(task)} ${
         task.status === 'done' ? 'opacity-60' : ''
@@ -40,11 +55,33 @@ export function TaskKanbanCard({ task, isDraggable }: TaskKanbanCardProps) {
       onClick={() => router.push(`/tasks/${task.id}`)}
     >
       <CardContent className="py-3 px-4 space-y-2">
-        {/* Header: title + drag handle */}
+        {/* Header: title + row actions + drag handle */}
         <div className="flex items-start justify-between gap-2">
           <h4 className="text-sm font-semibold leading-tight line-clamp-2">
             {task.title}
           </h4>
+          <div
+            className="flex shrink-0 items-center gap-0.5"
+            onClick={(event) => event.stopPropagation()}
+            onPointerDown={(event) => event.stopPropagation()}
+          >
+            <TaskRowEvidenceButton
+              taskId={task.id}
+              taskTitle={task.title}
+              questId={task.quest_id}
+            />
+            {canEdit && (
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label={`Edit ${task.title}`}
+                title="Edit task"
+                onClick={() => setEditOpen(true)}
+              >
+                <Pencil className="size-3.5" />
+              </Button>
+            )}
+          </div>
           {isDraggable && (
             <GripVertical className="size-5 text-muted-foreground shrink-0 cursor-grab opacity-0 group-hover:opacity-100 transition-opacity" />
           )}
@@ -136,5 +173,15 @@ export function TaskKanbanCard({ task, isDraggable }: TaskKanbanCardProps) {
         </div>
       </CardContent>
     </Card>
+
+    {canEdit && (
+      <TaskSheet
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        mode="edit"
+        task={task}
+      />
+    )}
+    </>
   );
 }

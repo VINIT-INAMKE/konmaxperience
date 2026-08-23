@@ -30,9 +30,10 @@ import {
   TaskViewToggle,
   useTaskViewPreference,
 } from '@/components/ops/tasks/TaskViewToggle';
-// `TaskSheet` (Task 16, Wave 3) replaces this — a wave boundary, not a TODO.
-import { AdHocTaskSheet } from '@/components/ops/tasks/AdHocTaskSheet';
+import { TaskSheet } from '@/components/ops/tasks/TaskSheet';
 import { apiClient } from '@/lib/api-client';
+import { trackAction } from '@/lib/usage';
+import { USAGE_ACTIONS } from '@/lib/types/usage';
 import { useAuthStore } from '@/lib/stores/auth-store';
 import { Permission } from '@/lib/types/permissions';
 import { RoleCode } from '@/lib/types/roles';
@@ -106,7 +107,10 @@ function TasksContent() {
   const statusMutation = useMutation({
     mutationFn: ({ taskId, status }: { taskId: string; status: TaskStatus }) =>
       apiClient.patch(`/tasks/${taskId}`, { status }),
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
+      trackAction(USAGE_ACTIONS.TASK_STATUS_CHANGE, {
+        status: variables.status,
+      });
       void queryClient.invalidateQueries({ queryKey: ['tasks'] });
     },
   });
@@ -202,7 +206,11 @@ function TasksContent() {
         </div>
       )}
 
-      <AdHocTaskSheet open={createOpen} onOpenChange={setCreateOpen} />
+      <TaskSheet
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        mode="create"
+      />
     </div>
   );
 }

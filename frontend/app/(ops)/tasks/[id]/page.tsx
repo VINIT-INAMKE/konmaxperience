@@ -10,6 +10,7 @@ import {
   AlertCircle,
   Link as LinkIcon,
   AlertTriangle,
+  Pencil,
 } from 'lucide-react';
 import { format, parseISO, isPast, formatDistanceToNow } from 'date-fns';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -25,8 +26,11 @@ import {
 } from '@/components/ui/select';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { BlockerDialog } from '@/components/ops/tasks/BlockerDialog';
+import { TaskSheet } from '@/components/ops/tasks/TaskSheet';
 import { EvidenceSection } from '@/components/ops/evidence/EvidenceSection';
 import { apiClient } from '@/lib/api-client';
+import { trackAction } from '@/lib/usage';
+import { USAGE_ACTIONS } from '@/lib/types/usage';
 import {
   STATUS_BADGE,
   getPriorityBadge,
@@ -66,6 +70,7 @@ export default function TaskDetailPage(props: {
   const isAdmin = user?.roleCode === RoleCode.FOUNDER_ADMIN;
 
   const [blockerOpen, setBlockerOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
 
   const {
     data: task,
@@ -80,7 +85,8 @@ export default function TaskDetailPage(props: {
   const statusMutation = useMutation({
     mutationFn: (status: TaskStatus) =>
       apiClient.patch(`/tasks/${id}`, { status }),
-    onSuccess: () => {
+    onSuccess: (_data, status) => {
+      trackAction(USAGE_ACTIONS.TASK_STATUS_CHANGE, { status });
       void queryClient.invalidateQueries({ queryKey: ['tasks', id] });
       if (task?.quest_id) {
         void queryClient.invalidateQueries({
@@ -198,6 +204,16 @@ export default function TaskDetailPage(props: {
         <div className="space-y-2">
           <div className="flex items-center gap-3 flex-wrap">
             <h1 className="text-2xl font-bold">{task.title}</h1>
+            {canEdit && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setEditOpen(true)}
+              >
+                <Pencil className="size-3.5" aria-hidden="true" />
+                Edit
+              </Button>
+            )}
             <ExportButton
               reportType="tasks"
               reportName="Tasks"
@@ -546,6 +562,16 @@ export default function TaskDetailPage(props: {
           onOpenChange={setBlockerOpen}
           onBlocked={handleBlocked}
         />
+
+        {/* SPEC §6.4 — editing is a sheet over the page, never a second route */}
+        {canEdit && (
+          <TaskSheet
+            open={editOpen}
+            onOpenChange={setEditOpen}
+            mode="edit"
+            task={task}
+          />
+        )}
       </div>
   );
 }

@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -31,18 +32,27 @@ const questSchema = z.object({
   end_date: z.string().optional(),
 });
 
-type QuestFormData = z.infer<typeof questSchema>;
+export type QuestFormData = z.infer<typeof questSchema>;
 
 interface QuestFormProps {
   missionId: string;
   onSubmit: (data: CreateQuestDto) => Promise<void>;
   isSubmitting: boolean;
+  /** Pre-fills the fields — `QuestSheet` passes the quest's current values. */
+  initialValues?: Partial<QuestFormData>;
+  /** Overrides the submit button's resting label. */
+  submitLabel?: string;
+  /** Reports `formState.isDirty` so the sheet can confirm before discarding. */
+  onDirtyChange?: (dirty: boolean) => void;
 }
 
 export function QuestForm({
   missionId,
   onSubmit,
   isSubmitting,
+  initialValues,
+  submitLabel,
+  onDirtyChange,
 }: QuestFormProps) {
   const {
     data: users,
@@ -58,7 +68,7 @@ export function QuestForm({
     register,
     handleSubmit,
     setValue,
-    formState: { errors },
+    formState: { errors, isDirty },
   } = useForm<QuestFormData>({
     resolver: zodResolver(questSchema),
     defaultValues: {
@@ -68,8 +78,13 @@ export function QuestForm({
       owner_user_id: '',
       start_date: '',
       end_date: '',
+      ...initialValues,
     },
   });
+
+  useEffect(() => {
+    onDirtyChange?.(isDirty);
+  }, [isDirty, onDirtyChange]);
 
   async function handleFormSubmit(data: QuestFormData) {
     const dto: CreateQuestDto = {
@@ -165,7 +180,10 @@ export function QuestForm({
             </Alert>
           ) : (
             <Select
-              onValueChange={(v) => setValue('owner_user_id', v as string)}
+              defaultValue={initialValues?.owner_user_id ?? ''}
+              onValueChange={(v) =>
+                setValue('owner_user_id', v as string, { shouldDirty: true })
+              }
               disabled={isSubmitting}
             >
               <SelectTrigger
@@ -229,10 +247,10 @@ export function QuestForm({
         {isSubmitting ? (
           <>
             <Loader2 className="size-4 animate-spin motion-reduce:animate-none" />
-            Creating...
+            Saving...
           </>
         ) : (
-          'Create quest'
+          (submitLabel ?? 'Create quest')
         )}
       </Button>
     </form>
