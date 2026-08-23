@@ -2,7 +2,6 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
-import { ShimmerButton } from '@/components/ui/shimmer-button';
 import { BomLineRow } from './BomLineRow';
 import type { BomLineState } from './BomLineRow';
 import { apiClient } from '@/lib/api-client';
@@ -100,21 +99,20 @@ export function RecipeWizardStep2({
       <button
         type="button"
         onClick={handleAddLine}
-        className="w-full min-h-[48px] rounded-lg border border-dashed border-border text-sm text-muted-foreground hover:bg-muted/20 hover:text-foreground transition-colors"
+        className="w-full min-h-[48px] rounded-lg border border-dashed border-line text-sm text-ink-muted hover:bg-muted/20 hover:text-foreground transition-colors motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[var(--focus)]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
       >
         + Add Line
       </button>
 
       {/* Navigation */}
       <div className="flex items-center gap-3 pt-2">
-        <ShimmerButton
-          shimmerColor="#4ade80"
+        <Button
           className="h-9 text-sm px-4"
           onClick={onNext}
           type="button"
         >
           Next: Review &amp; Cost
-        </ShimmerButton>
+        </Button>
         <Button
           type="button"
           variant="ghost"

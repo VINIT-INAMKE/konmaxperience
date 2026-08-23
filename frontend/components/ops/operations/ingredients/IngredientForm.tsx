@@ -21,7 +21,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { ShimmerButton } from '@/components/ui/shimmer-button';
 import { apiClient } from '@/lib/api-client';
 import type { Ingredient, IngredientCategoryItem, UsageType } from '@/lib/types/ingredient';
 import { BASE_UNITS } from '@/lib/types/ingredient';
@@ -144,7 +143,7 @@ export function IngredientForm({
                     key={opt.value}
                     className={`flex flex-col items-center gap-1 rounded-lg border px-2 py-2.5 min-h-[48px] cursor-pointer transition-colors text-center ${
                       isSelected
-                        ? 'border-[var(--primary)] bg-[var(--primary)]/5 text-foreground font-medium'
+                        ? 'border-brand bg-brand/5 text-ink font-medium'
                         : 'border-border bg-transparent text-muted-foreground'
                     } ${isSubmitting ? 'opacity-50 pointer-events-none' : ''}`}
                   >
@@ -156,7 +155,7 @@ export function IngredientForm({
               })}
             </RadioGroup>
             {(usageType === 'supply' || usageType === 'equipment') && (
-              <p className="text-xs text-amber-500 mt-1">
+              <p className="text-xs text-warning mt-1">
                 This item will not appear in recipe BOM lines or availability calculations.
               </p>
             )}
@@ -239,8 +238,7 @@ export function IngredientForm({
 
           {/* Actions */}
           <div className="flex items-center gap-3 pt-2">
-            <ShimmerButton
-              shimmerColor="#4ade80"
+            <Button
               type="submit"
               disabled={isSubmitting || !name.trim() || !baseUnit}
               className="h-9 text-sm px-4"
@@ -255,7 +253,7 @@ export function IngredientForm({
               ) : (
                 'Add Ingredient'
               )}
-            </ShimmerButton>
+            </Button>
             <Button
               type="button"
               variant="ghost"

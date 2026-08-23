@@ -1,8 +1,26 @@
 'use client';
 
 import { Badge } from '@/components/ui/badge';
-import type { StockMovement } from '@/lib/types/inventory';
-import { MOVEMENT_TYPE_LABELS, MOVEMENT_TYPE_BADGE_CLASSES } from '@/lib/types/inventory';
+import { STATUS_BADGE } from '@/lib/status-styles';
+import type { StockMovement, StockMovementType } from '@/lib/types/inventory';
+import { MOVEMENT_TYPE_LABELS } from '@/lib/types/inventory';
+
+/**
+ * Movement kinds carry direction, not severity: stock coming in reads `good`,
+ * stock leaving for a known reason reads `info`, waste reads `serious`. The two
+ * kinds with no status meaning (`import`, `shipment_packed`) take the brand tints.
+ */
+const MOVEMENT_TYPE_CLASSES: Record<StockMovementType, string> = {
+  purchase_received: STATUS_BADGE.good,
+  prep_deducted: STATUS_BADGE.info,
+  order_deducted: STATUS_BADGE.info,
+  waste: STATUS_BADGE.serious,
+  adjustment: STATUS_BADGE.neutral,
+  supply_usage: STATUS_BADGE.info,
+  import: 'text-brand bg-brand-soft border-transparent',
+  shipment_packed: 'text-leaf bg-[var(--leaf)]/12 border-transparent',
+  return: STATUS_BADGE.warning,
+};
 
 /**
  * The `reference_type` values the backend actually writes on a StockMovement.
@@ -38,14 +56,14 @@ export function StockMovementRow({ movement, baseUnit }: StockMovementRowProps) 
   return (
     <div className="flex items-center gap-4 px-4 py-3 border-b last:border-b-0">
       {/* Type Badge */}
-      <Badge className={`text-xs border-0 shrink-0 ${MOVEMENT_TYPE_BADGE_CLASSES[movementType]}`}>
+      <Badge className={`text-xs shrink-0 ${MOVEMENT_TYPE_CLASSES[movementType]}`}>
         {MOVEMENT_TYPE_LABELS[movementType]}
       </Badge>
 
       {/* Quantity */}
       <span
         className={`font-mono text-sm shrink-0 ${
-          isPositive ? 'text-green-400' : 'text-red-400'
+          isPositive ? 'text-good' : 'text-serious'
         }`}
       >
         {isPositive ? '+' : ''}{qty} {baseUnit ?? movement.unit}
@@ -53,30 +71,30 @@ export function StockMovementRow({ movement, baseUnit }: StockMovementRowProps) 
 
       {/* Original quantity */}
       {movement.original_quantity != null && (
-        <span className="font-mono text-xs text-muted-foreground shrink-0">
+        <span className="font-mono text-xs text-ink-muted shrink-0">
           {Number(movement.original_quantity)} {movement.unit}
         </span>
       )}
 
       {/* Reason */}
-      <span className="text-sm text-muted-foreground truncate flex-1">
+      <span className="text-sm text-ink-muted truncate flex-1">
         {movement.reason ?? '\u2014'}
       </span>
 
       {/* Reference */}
       {movement.reference_type && (
-        <span className="text-xs text-muted-foreground shrink-0">
+        <span className="text-xs text-ink-muted shrink-0">
           {REFERENCE_TYPE_LABELS[movement.reference_type] ?? movement.reference_type}
         </span>
       )}
 
       {/* User */}
-      <span className="text-xs text-muted-foreground shrink-0">
+      <span className="text-xs text-ink-muted shrink-0">
         {movement.creator?.name ?? '\u2014'}
       </span>
 
       {/* Date */}
-      <span className="text-xs text-muted-foreground shrink-0">
+      <span className="text-xs text-ink-muted shrink-0">
         {dateStr}
       </span>
     </div>

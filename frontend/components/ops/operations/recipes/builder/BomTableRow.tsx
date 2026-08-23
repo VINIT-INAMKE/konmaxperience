@@ -265,7 +265,7 @@ export function BomTableRow({
           {lineCost !== null ? (
             <span>{'\u20B9'} {lineCost.toFixed(2)}</span>
           ) : (
-            <span className="text-amber-500">&mdash;</span>
+            <span className="text-warning">&mdash;</span>
           )}
         </div>
 
@@ -273,7 +273,8 @@ export function BomTableRow({
         <button
           type="button"
           className={cn(
-            'p-1 rounded text-muted-foreground hover:text-destructive transition-colors',
+            'p-1 rounded text-muted-foreground hover:text-destructive transition-colors motion-reduce:transition-none',
+            'focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[var(--focus)]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]',
             (isGhost || isLocked) && 'invisible'
           )}
           onClick={() => onRemove(line.id)}
@@ -327,12 +328,12 @@ export function BomTableRow({
             </span>
           )}
           {lineCost === null && line.item_id && (
-            <span className="ml-auto text-sm text-amber-500">&mdash;</span>
+            <span className="ml-auto text-sm text-warning">&mdash;</span>
           )}
           {!isGhost && !isLocked && (
             <button
               type="button"
-              className="p-1 rounded text-muted-foreground hover:text-destructive transition-colors"
+              className="p-1 rounded text-muted-foreground hover:text-destructive transition-colors motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[var(--focus)]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
               onClick={() => onRemove(line.id)}
               aria-label="Remove line"
             >

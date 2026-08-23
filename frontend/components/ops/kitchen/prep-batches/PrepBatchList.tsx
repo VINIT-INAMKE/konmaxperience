@@ -37,7 +37,7 @@ export function PrepBatchList() {
   }
 
   return (
-    <div className="rounded-lg border overflow-hidden">
+    <div className="rounded-lg border overflow-x-auto">
       <table className="w-full">
         <thead>
           <tr className="border-b bg-muted/40">

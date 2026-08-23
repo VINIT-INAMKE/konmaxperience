@@ -44,14 +44,14 @@ export function KdsElapsedTimer({ createdAt }: KdsElapsedTimerProps) {
     display = `${minutes}m ${seconds}s`;
   }
 
-  // Color thresholds per UI-SPEC
+  // Color thresholds per UI-SPEC — the status ramp, not a hue of its own.
   let colorClass: string;
   if (minutes < 10) {
-    colorClass = 'text-[oklch(0.627_0.194_142.495)]'; // green
+    colorClass = 'text-good';
   } else if (minutes < 20) {
-    colorClass = 'text-[oklch(0.769_0.188_70.08)]'; // amber
+    colorClass = 'text-warning';
   } else {
-    colorClass = 'text-destructive'; // red
+    colorClass = 'text-critical';
   }
 
   return (

@@ -476,7 +476,7 @@ export function RecipeBuilderPage({ recipeId }: RecipeBuilderPageProps) {
         <div className="flex items-center gap-2 sm:gap-3">
           {isDirty && (
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <span className="size-2 rounded-full bg-amber-500" />
+              <span className="size-2 rounded-full bg-warning" />
               <span className="hidden sm:inline">Unsaved changes</span>
             </div>
           )}
@@ -495,7 +495,7 @@ export function RecipeBuilderPage({ recipeId }: RecipeBuilderPageProps) {
       <input
         className={cn(
           'text-xl sm:text-2xl lg:text-[28px] font-semibold leading-[1.15] bg-transparent border-0 outline-none w-full mb-2',
-          'border-b border-transparent hover:border-border focus:border-[var(--primary)]',
+          'border-b border-transparent hover:border-border focus:border-brand',
           'transition-colors placeholder:text-muted-foreground/40',
           isLocked && 'pointer-events-none opacity-70'
         )}
@@ -590,7 +590,7 @@ export function RecipeBuilderPage({ recipeId }: RecipeBuilderPageProps) {
                 Prep Steps
               </label>
               <textarea
-                className="text-sm bg-transparent border border-transparent hover:border-border focus:border-[var(--primary)] outline-none transition-colors rounded-md p-2 min-h-[80px] resize-y disabled:pointer-events-none disabled:opacity-50"
+                className="text-sm bg-transparent border border-transparent hover:border-border focus:border-brand outline-none transition-colors rounded-md p-2 min-h-[80px] resize-y disabled:pointer-events-none disabled:opacity-50"
                 value={prepSteps}
                 onChange={(e) => {
                   setPrepSteps(e.target.value);
@@ -605,7 +605,7 @@ export function RecipeBuilderPage({ recipeId }: RecipeBuilderPageProps) {
                 Cooking Method
               </label>
               <textarea
-                className="text-sm bg-transparent border border-transparent hover:border-border focus:border-[var(--primary)] outline-none transition-colors rounded-md p-2 min-h-[80px] resize-y disabled:pointer-events-none disabled:opacity-50"
+                className="text-sm bg-transparent border border-transparent hover:border-border focus:border-brand outline-none transition-colors rounded-md p-2 min-h-[80px] resize-y disabled:pointer-events-none disabled:opacity-50"
                 value={cookingMethod}
                 onChange={(e) => {
                   setCookingMethod(e.target.value);

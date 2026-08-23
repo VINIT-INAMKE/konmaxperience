@@ -40,7 +40,7 @@ export function RecipeCostPanel({
             <div className="flex items-baseline gap-1">
               <AnimatedCost value={batchCost} className="text-2xl font-semibold" />
               {!isComplete && (
-                <span className="text-xs text-amber-500">(partial)</span>
+                <span className="text-xs text-warning">(partial)</span>
               )}
             </div>
           </div>
@@ -81,7 +81,7 @@ export function RecipeCostPanel({
           {/* Missing prices warning */}
           {missingPrices.length > 0 && (
             <div className="border-t border-border pt-3 space-y-2">
-              <div className="flex items-center gap-1.5 text-amber-500 text-xs font-medium">
+              <div className="flex items-center gap-1.5 text-warning text-xs font-medium">
                 <AlertTriangle className="size-3.5" />
                 {missingPrices.length} ingredient
                 {missingPrices.length !== 1 ? 's' : ''} missing prices

@@ -12,7 +12,7 @@ export function KdsExitButton() {
       variant="ghost"
       size="icon"
       onClick={() => router.push('/operations/kitchen/prep-batches')}
-      className="text-white/70 hover:text-white hover:bg-white/10 shrink-0"
+      className="text-ink-subtle hover:text-ink hover:bg-[var(--ink)]/10 shrink-0"
       aria-label="Exit KDS"
     >
       <X className="size-5" />

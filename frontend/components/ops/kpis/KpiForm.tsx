@@ -24,7 +24,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { ShimmerButton } from '@/components/ui/shimmer-button';
 import { apiClient } from '@/lib/api-client';
 import {
   KPI_DOMAINS,
@@ -338,7 +337,7 @@ export function KpiForm({ kpi, open, onOpenChange }: KpiFormProps) {
                     <button
                       type="button"
                       onClick={() => removeTask(t.id)}
-                      className="ml-0.5 rounded-sm hover:bg-primary/20 p-0.5"
+                      className="ml-0.5 rounded-sm hover:bg-primary/20 p-0.5 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[var(--focus)]/50"
                     >
                       <X className="size-3" />
                     </button>
@@ -372,8 +371,8 @@ export function KpiForm({ kpi, open, onOpenChange }: KpiFormProps) {
                       key={t.id}
                       type="button"
                       onClick={() => toggleTask(t.id)}
-                      className={`w-full flex items-center gap-2 px-3 py-2 text-left text-sm hover:bg-accent transition-colors border-b last:border-b-0 ${
-                        isSelected ? 'bg-primary/5' : ''
+                      className={`w-full flex items-center gap-2 px-3 py-2 text-left text-sm hover:bg-accent transition-colors motion-reduce:transition-none border-b last:border-b-0 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[var(--focus)]/50 focus-visible:ring-inset ${
+                        isSelected ? 'bg-brand-soft' : ''
                       }`}
                     >
                       <div
@@ -415,13 +414,13 @@ export function KpiForm({ kpi, open, onOpenChange }: KpiFormProps) {
             >
               Discard Changes
             </Button>
-            <ShimmerButton
+            <Button
               type="submit"
               disabled={mutation.isPending}
               className="text-sm px-5 py-2"
             >
               {mutation.isPending ? 'Saving...' : 'Save KPI'}
-            </ShimmerButton>
+            </Button>
           </SheetFooter>
         </form>
       </SheetContent>

@@ -2,31 +2,24 @@ interface FoodCostBadgeProps {
   percent: number | null;
 }
 
+/** Food-cost ramp: under 30% is healthy, 30–40% needs watching, above 40% is a problem. */
+function foodCostClass(percent: number): string {
+  if (percent < 30) return 'text-good';
+  if (percent <= 40) return 'text-warning';
+  return 'text-serious';
+}
+
 export function FoodCostBadge({ percent }: FoodCostBadgeProps) {
   if (percent === null) {
     return (
-      <span className="text-xs text-muted-foreground">Cost not available</span>
-    );
-  }
-
-  if (percent < 30) {
-    return (
-      <span className="inline-flex h-8 items-center text-xs font-semibold text-green-500">
-        {percent.toFixed(1)}% food cost
-      </span>
-    );
-  }
-
-  if (percent <= 40) {
-    return (
-      <span className="inline-flex h-8 items-center text-xs font-semibold text-amber-500">
-        {percent.toFixed(1)}% food cost
-      </span>
+      <span className="text-xs text-ink-muted">Cost not available</span>
     );
   }
 
   return (
-    <span className="inline-flex h-8 items-center text-xs font-semibold text-red-500">
+    <span
+      className={`inline-flex h-8 items-center text-xs font-semibold ${foodCostClass(percent)}`}
+    >
       {percent.toFixed(1)}% food cost
     </span>
   );

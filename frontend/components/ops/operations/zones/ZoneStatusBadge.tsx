@@ -1,14 +1,15 @@
 'use client';
 
 import { Badge } from '@/components/ui/badge';
+import { STATUS_BADGE } from '@/lib/status-styles';
 import type { ZoneStatus } from '@/lib/types/zone';
 import { ZONE_STATUS_LABELS } from '@/lib/types/zone';
 
 const STATUS_CLASSES: Record<ZoneStatus, string> = {
-  planned: 'text-amber-400 border-amber-500/30',
-  setup: 'text-blue-400 border-blue-500/30',
-  active: 'text-green-400 border-green-500/30',
-  inactive: 'text-zinc-400 border-zinc-500/30',
+  planned: STATUS_BADGE.warning,
+  setup: STATUS_BADGE.info,
+  active: STATUS_BADGE.good,
+  inactive: STATUS_BADGE.neutral,
 };
 
 interface ZoneStatusBadgeProps {

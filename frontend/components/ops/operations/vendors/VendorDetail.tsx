@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { VendorPriceHistory } from './VendorPriceHistory';
 import { VendorPriceForm } from './VendorPriceForm';
 import { apiClient } from '@/lib/api-client';
+import { STATUS_BADGE } from '@/lib/status-styles';
 import type { Vendor, VendorPrice } from '@/lib/types/vendor';
 
 interface VendorDetailProps {
@@ -94,9 +95,7 @@ export function VendorDetail({ open, onOpenChange, vendor }: VendorDetailProps) 
               <div className="flex items-center gap-2">
                 <Badge
                   className={
-                    vendor.status === 'active'
-                      ? 'bg-green-500/15 text-green-400 border-0'
-                      : 'bg-muted text-muted-foreground border-0'
+                    vendor.status === 'active' ? STATUS_BADGE.good : STATUS_BADGE.neutral
                   }
                 >
                   {vendor.status === 'active' ? 'Active' : 'Inactive'}
@@ -164,7 +163,7 @@ export function VendorDetail({ open, onOpenChange, vendor }: VendorDetailProps) 
                       >
                         {/* Header row */}
                         <button
-                          className="w-full flex items-center justify-between px-3 py-2.5 text-sm hover:bg-muted/30 transition-colors"
+                          className="w-full flex items-center justify-between px-3 py-2.5 text-sm hover:bg-muted/30 transition-colors motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[var(--focus)]/50 focus-visible:ring-inset"
                           onClick={() => toggleIngredient(group.ingredientId)}
                         >
                           <div className="flex items-center gap-2">

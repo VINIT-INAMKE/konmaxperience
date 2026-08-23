@@ -1,7 +1,6 @@
 'use client';
 
 import { Card, CardContent } from '@/components/ui/card';
-import { NumberTicker } from '@/components/ui/number-ticker';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ShoppingCart, CheckCircle, Clock, Trash2 } from 'lucide-react';
 import type { KitchenMetrics } from '@/lib/types/analytics';
@@ -47,16 +46,16 @@ export function KitchenMetricsCards({ metrics, isLoading }: KitchenMetricsCardsP
           <Card key={card.key}>
             <CardContent className="p-4">
               <div className="flex items-start justify-between">
-                <span className="text-xs font-bold text-muted-foreground">{card.label}</span>
-                <Icon className="size-4 text-muted-foreground" />
+                <span className="text-xs font-bold text-ink-muted">{card.label}</span>
+                <Icon className="size-4 text-ink-muted" />
               </div>
-              <p className="mt-2 text-[28px] font-bold font-mono leading-tight">
+              <p className="mt-2 text-[28px] font-bold font-mono leading-tight tabular-nums">
                 {'prefix' in card && card.prefix}
-                <NumberTicker value={Math.round(value)} />
+                {Math.round(value).toLocaleString('en-US')}
                 {'suffix' in card && <span className="text-sm font-normal ml-1">{card.suffix}</span>}
               </p>
               {card.field === 'waste_today_cost' && (
-                <p className="text-xs text-muted-foreground mt-1">
+                <p className="text-xs text-ink-muted mt-1">
                   {metrics.waste_percentage.toFixed(1)}% of production
                 </p>
               )}

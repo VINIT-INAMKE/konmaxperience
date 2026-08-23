@@ -19,7 +19,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { ShimmerButton } from '@/components/ui/shimmer-button';
 import { apiClient } from '@/lib/api-client';
 import type { Channel, ChannelType, ChannelStatus } from '@/lib/types/channel';
 import {
@@ -160,8 +159,7 @@ export function ChannelForm({ open, onOpenChange, channel, onSuccess }: ChannelF
 
           {/* Actions */}
           <div className="flex items-center gap-3 pt-2">
-            <ShimmerButton
-              shimmerColor="#4ade80"
+            <Button
               type="submit"
               disabled={isSubmitting || !name.trim() || !channelType}
               className="h-9 text-sm px-4"
@@ -176,7 +174,7 @@ export function ChannelForm({ open, onOpenChange, channel, onSuccess }: ChannelF
               ) : (
                 'Add Channel'
               )}
-            </ShimmerButton>
+            </Button>
             <Button
               type="button"
               variant="ghost"

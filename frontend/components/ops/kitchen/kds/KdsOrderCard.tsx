@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import type { KdsOrder, OrderItemStatus } from '@/lib/types/kds';
 import { BorderBeam } from '@/components/ui/border-beam';
+import { BEAM_FROM, BEAM_TO } from '@/lib/brand-colors';
 import { KdsElapsedTimer } from './KdsElapsedTimer';
 import { KdsOrderItem } from './KdsOrderItem';
 
@@ -14,18 +15,7 @@ interface KdsOrderCardProps {
 }
 
 export function KdsOrderCard({ order, isNew, isComplete, onStatusAdvance }: KdsOrderCardProps) {
-  const [showBeam, setShowBeam] = useState(isNew);
   const [fadedOut, setFadedOut] = useState(false);
-
-  // BorderBeam for new orders: show for 3 seconds
-  useEffect(() => {
-    if (isNew) {
-      setShowBeam(true);
-      const timer = setTimeout(() => setShowBeam(false), 3000);
-      return () => clearTimeout(timer);
-    }
-    setShowBeam(false);
-  }, [isNew]);
 
   // Fade-out complete orders after 30 seconds
   useEffect(() => {
@@ -38,20 +28,28 @@ export function KdsOrderCard({ order, isNew, isComplete, onStatusAdvance }: KdsO
 
   return (
     <div
-      className={`relative rounded-lg bg-[oklch(0.205_0_0)] p-4 space-y-3 transition-opacity duration-1000 ${
+      className={`relative rounded-lg bg-surface-raised p-4 space-y-3 transition-opacity duration-1000 motion-reduce:transition-none ${
         fadedOut ? 'opacity-0' : 'opacity-100'
       }`}
     >
-      {showBeam && <BorderBeam size={80} duration={3} />}
+      {isNew && (
+        <BorderBeam
+          size={60}
+          duration={5}
+          colorFrom={BEAM_FROM}
+          colorTo={BEAM_TO}
+          className="motion-reduce:hidden"
+        />
+      )}
 
       {/* Header: order number + customer + timer */}
       <div className="flex items-start justify-between gap-2">
         <div>
-          <h3 className="text-[28px] font-bold leading-[1.1] text-white">
+          <h3 className="text-[28px] font-bold leading-[1.1] text-ink-strong">
             #{order.order_number}
           </h3>
           {order.customer_name && (
-            <p className="text-sm text-white/60">{order.customer_name}</p>
+            <p className="text-sm text-ink-subtle">{order.customer_name}</p>
           )}
         </div>
         <KdsElapsedTimer createdAt={order.created_at} />

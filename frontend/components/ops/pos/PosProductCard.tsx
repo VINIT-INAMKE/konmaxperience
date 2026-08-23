@@ -1,8 +1,8 @@
 'use client';
 
-import { MagicCard } from '@/components/ui/magic-card';
-import { GRADIENT_OVERLAY } from '@/lib/brand-colors';
+import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { STATUS_BADGE } from '@/lib/status-styles';
 import type { Product } from '@/lib/types/catalog';
 import type { ProductAvailability } from '@/lib/types/orders';
 
@@ -19,17 +19,17 @@ function getServingsBadge(availability: ProductAvailability | undefined) {
 
   if (!available || servings_remaining <= 0) {
     return (
-      <span className="text-xs font-bold text-muted-foreground">
+      <span className="text-xs font-bold text-ink-muted">
         Sold Out
       </span>
     );
   }
 
-  let colorClass = 'bg-emerald-500/15 text-emerald-700';
+  let colorClass: string = STATUS_BADGE.good;
   if (servings_remaining === 1) {
-    colorClass = 'bg-red-500/15 text-red-700';
+    colorClass = STATUS_BADGE.serious;
   } else if (servings_remaining <= 5) {
-    colorClass = 'bg-amber-500/15 text-amber-700';
+    colorClass = STATUS_BADGE.warning;
   }
 
   return (
@@ -56,7 +56,7 @@ export function PosProductCard({
         isSoldOut ? 'opacity-60 pointer-events-none' : ''
       }`}
     >
-      <MagicCard gradientColor={GRADIENT_OVERLAY} className="h-full rounded-lg">
+      <Card className="h-full rounded-lg py-0">
         <div className="flex flex-col justify-between h-full p-3 gap-2">
           {/* Top: Name + badge */}
           <div className="flex items-start justify-between gap-1">
@@ -72,7 +72,7 @@ export function PosProductCard({
           </span>
 
           {/* Separator */}
-          <div className="border-t border-border" />
+          <div className="border-t border-line" />
 
           {/* Add button */}
           {!isSoldOut && (
@@ -93,7 +93,7 @@ export function PosProductCard({
             <div className="h-9" />
           )}
         </div>
-      </MagicCard>
+      </Card>
     </div>
   );
 }

@@ -27,8 +27,8 @@ export function FeedbackRow({ feedback }: FeedbackRowProps) {
                 key={i}
                 className={`size-3 ${
                   i < feedback.rating
-                    ? 'fill-amber-500 text-amber-500'
-                    : 'text-muted-foreground/30'
+                    ? 'fill-gold text-gold'
+                    : 'text-ink-faint'
                 }`}
               />
             ))}

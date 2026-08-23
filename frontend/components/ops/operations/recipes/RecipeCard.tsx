@@ -2,12 +2,10 @@
 
 import { Archive } from 'lucide-react';
 import Link from 'next/link';
-import { MagicCard } from '@/components/ui/magic-card';
-import { NumberTicker } from '@/components/ui/number-ticker';
+import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { RecipeStatusBadge } from './RecipeStatusBadge';
 import type { Recipe } from '@/lib/types/recipe';
-import { GRADIENT_OVERLAY } from '@/lib/brand-colors';
 
 interface RecipeCardProps {
   recipe: Recipe;
@@ -23,10 +21,7 @@ export function RecipeCard({
   return (
     <div className="relative rounded-lg">
       <Link href={`/operations/recipes/${recipe.id}`} className="block">
-        <MagicCard
-          gradientColor={GRADIENT_OVERLAY}
-          className="p-4 space-y-2 cursor-pointer hover:bg-muted/20 transition-colors"
-        >
+        <Card className="p-4 gap-2 space-y-2 cursor-pointer transition-colors motion-reduce:transition-none hover:bg-muted/20">
           {/* Row 1: name + status badge */}
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-base font-semibold">{recipe.name}</span>
@@ -45,7 +40,7 @@ export function RecipeCard({
                 {recipe.zone.name}
               </Badge>
             )}
-            <span className="text-xs text-muted-foreground ml-auto">
+            <span className="text-xs text-ink-muted ml-auto">
               {recipe.yield_qty} {recipe.yield_unit}
             </span>
           </div>
@@ -53,12 +48,13 @@ export function RecipeCard({
           {/* Row 3: computed cost */}
           {recipe.computed_cost != null && (
             <div className="flex items-center gap-1 text-sm">
-              <span className="text-muted-foreground text-xs">INR</span>
-              <NumberTicker
-                value={recipe.computed_cost}
-                decimalPlaces={2}
-                className="text-sm font-medium"
-              />
+              <span className="text-ink-muted text-xs">INR</span>
+              <span className="text-sm font-medium tabular-nums">
+                {recipe.computed_cost.toLocaleString('en-IN', {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
+              </span>
             </div>
           )}
 
@@ -66,7 +62,7 @@ export function RecipeCard({
           {isAdmin && (
             <div className="flex items-center justify-end pt-1">
               <button
-                className="p-1 rounded text-muted-foreground hover:text-destructive transition-colors"
+                className="p-1 rounded text-ink-muted transition-colors motion-reduce:transition-none hover:text-destructive focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[var(--focus)]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
@@ -78,7 +74,7 @@ export function RecipeCard({
               </button>
             </div>
           )}
-        </MagicCard>
+        </Card>
       </Link>
     </div>
   );

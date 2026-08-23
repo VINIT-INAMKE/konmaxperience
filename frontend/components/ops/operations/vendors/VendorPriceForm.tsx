@@ -20,7 +20,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { ShimmerButton } from '@/components/ui/shimmer-button';
 import { apiClient } from '@/lib/api-client';
 import type { Ingredient } from '@/lib/types/ingredient';
 import type { VendorPrice } from '@/lib/types/vendor';
@@ -169,8 +168,7 @@ export function VendorPriceForm({
 
           {/* Actions */}
           <div className="flex items-center gap-3 pt-2">
-            <ShimmerButton
-              shimmerColor="#4ade80"
+            <Button
               type="submit"
               disabled={isSubmitting || !ingredientId || !price || !effectiveDate}
               className="h-9 text-sm px-4"
@@ -183,7 +181,7 @@ export function VendorPriceForm({
               ) : (
                 'Add Price'
               )}
-            </ShimmerButton>
+            </Button>
             <Button
               type="button"
               variant="ghost"

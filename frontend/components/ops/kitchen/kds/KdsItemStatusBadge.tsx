@@ -1,18 +1,19 @@
 'use client';
 
 import { Badge } from '@/components/ui/badge';
+import { STATUS_BADGE } from '@/lib/status-styles';
 import type { OrderItemStatus } from '@/lib/types/kds';
 import { ORDER_ITEM_STATUS_LABELS } from '@/lib/types/kds';
 
 const STATUS_CLASSES: Record<OrderItemStatus, string> = {
-  pending: 'text-muted-foreground bg-muted',
-  preparing: 'text-amber-600 bg-amber-50 dark:text-amber-400 dark:bg-amber-950',
-  ready: 'text-green-600 bg-green-50 dark:text-green-400 dark:bg-green-950',
-  packed: 'text-green-600 bg-green-50 dark:text-green-400 dark:bg-green-950',
-  shipped: 'text-muted-foreground bg-muted',
-  delivered: 'text-muted-foreground bg-muted',
-  attended: 'text-muted-foreground bg-muted',
-  cancelled: 'text-destructive bg-destructive/10',
+  pending: STATUS_BADGE.neutral,
+  preparing: STATUS_BADGE.warning,
+  ready: STATUS_BADGE.good,
+  packed: STATUS_BADGE.good,
+  shipped: STATUS_BADGE.neutral,
+  delivered: STATUS_BADGE.neutral,
+  attended: STATUS_BADGE.neutral,
+  cancelled: STATUS_BADGE.serious,
 };
 
 interface KdsItemStatusBadgeProps {

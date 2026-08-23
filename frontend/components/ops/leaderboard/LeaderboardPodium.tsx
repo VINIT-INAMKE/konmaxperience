@@ -1,9 +1,5 @@
 'use client';
 
-import { BlurFade } from '@/components/ui/blur-fade';
-import { ShineBorder } from '@/components/ui/shine-border';
-import { HyperText } from '@/components/ui/hyper-text';
-import { NumberTicker } from '@/components/ui/number-ticker';
 import { LevelBadge } from '@/components/ops/gamification/LevelBadge';
 import type { LeaderboardUser } from '@/lib/types/leaderboard';
 
@@ -20,50 +16,31 @@ interface PodiumColumnProps {
 }
 
 function PodiumColumn({ user, rank, isCurrentUser, elevated }: PodiumColumnProps) {
-  const content = (
+  return (
     <div
-      className="flex flex-col items-center gap-2 p-4 rounded-xl"
+      className={`flex flex-col items-center gap-2 p-4 rounded-xl ${
+        isCurrentUser ? 'ring-2 ring-inset ring-brand bg-brand-soft' : ''
+      }`}
       style={elevated ? { transform: 'translateY(-20px)' } : undefined}
     >
       <img
         src={`https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(user.name)}`}
         alt={user.name}
-        className="size-12 rounded-full border-2 border-border"
+        className="size-12 rounded-full border-2 border-line"
         width={48}
         height={48}
       />
-      <HyperText
-        as="span"
-        className="text-base font-semibold py-0 overflow-visible"
-        animateOnHover
-        startOnView
-      >
-        {user.name}
-      </HyperText>
+      <span className="text-base font-semibold">{user.name}</span>
       <LevelBadge level={user.level} />
       <div className="flex items-baseline gap-1">
-        <NumberTicker
-          value={user.xp_total}
-          className="text-lg font-bold tabular-nums"
-        />
-        <span className="text-xs text-muted-foreground">XP</span>
+        <span className="text-lg font-bold tabular-nums">
+          {user.xp_total.toLocaleString('en-IN')}
+        </span>
+        <span className="text-xs text-ink-muted">XP</span>
       </div>
-      <span className="text-2xl font-semibold" style={{ color: 'var(--primary)' }}>
-        #{rank}
-      </span>
+      <span className="text-2xl font-semibold text-brand">#{rank}</span>
     </div>
   );
-
-  if (isCurrentUser) {
-    return (
-      <div className="relative rounded-xl">
-        <ShineBorder borderWidth={2} shineColor={['#a78bfa', '#22c55e']} />
-        {content}
-      </div>
-    );
-  }
-
-  return content;
 }
 
 export function LeaderboardPodium({ users, currentUserId }: LeaderboardPodiumProps) {
@@ -77,18 +54,16 @@ export function LeaderboardPodium({ users, currentUserId }: LeaderboardPodiumPro
   ].filter(Boolean) as { user: LeaderboardUser; rank: number; elevated: boolean }[];
 
   return (
-    <BlurFade>
-      <div className="flex items-end justify-center gap-4 py-6">
-        {podiumOrder.map(({ user, rank, elevated }) => (
-          <PodiumColumn
-            key={user.id}
-            user={user}
-            rank={rank}
-            isCurrentUser={user.id === currentUserId}
-            elevated={elevated}
-          />
-        ))}
-      </div>
-    </BlurFade>
+    <div className="flex items-end justify-center gap-4 py-6">
+      {podiumOrder.map(({ user, rank, elevated }) => (
+        <PodiumColumn
+          key={user.id}
+          user={user}
+          rank={rank}
+          isCurrentUser={user.id === currentUserId}
+          elevated={elevated}
+        />
+      ))}
+    </div>
   );
 }

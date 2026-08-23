@@ -8,12 +8,13 @@ interface ChannelBreakdownChartProps {
   data: ChannelRevenue[];
 }
 
+/** The brand ramp from tokens.css — never a raw hue. */
 const CHART_COLORS = [
-  'var(--chart-1))',
-  'var(--chart-2))',
-  'var(--chart-3))',
-  'var(--chart-4))',
-  'var(--chart-5))',
+  'var(--chart-1)',
+  'var(--chart-2)',
+  'var(--chart-3)',
+  'var(--chart-4)',
+  'var(--chart-5)',
 ];
 
 function formatChannel(channel: string): string {
@@ -33,7 +34,7 @@ export function ChannelBreakdownChart({ data }: ChannelBreakdownChartProps) {
       <CardContent>
         {formatted.length === 0 ? (
           <div className="flex items-center justify-center h-60">
-            <p className="text-sm text-muted-foreground">No channel data for this period.</p>
+            <p className="text-sm text-ink-muted">No channel data for this period.</p>
           </div>
         ) : (
           <ResponsiveContainer width="100%" height={240}>
@@ -52,7 +53,7 @@ export function ChannelBreakdownChart({ data }: ChannelBreakdownChartProps) {
                   <Cell key={index} fill={CHART_COLORS[index % CHART_COLORS.length]} />
                 ))}
               </Pie>
-              <Tooltip formatter={(v: any) => `₹${Number(v).toLocaleString('en-IN')}`} />
+              <Tooltip formatter={(v) => `₹${Number(v).toLocaleString('en-IN')}`} />
               <Legend />
             </PieChart>
           </ResponsiveContainer>

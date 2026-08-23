@@ -21,7 +21,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { ShimmerButton } from '@/components/ui/shimmer-button';
 import { apiClient } from '@/lib/api-client';
 import type { Zone, ZoneType, ZoneStatus } from '@/lib/types/zone';
 import {
@@ -243,8 +242,7 @@ export function ZoneForm({
 
           {/* Actions */}
           <div className="flex items-center gap-3 pt-2">
-            <ShimmerButton
-              shimmerColor="#4ade80"
+            <Button
               type="submit"
               disabled={isSubmitting || !name.trim() || !zoneType}
               className="h-9 text-sm px-4"
@@ -259,7 +257,7 @@ export function ZoneForm({
               ) : (
                 'Add Zone'
               )}
-            </ShimmerButton>
+            </Button>
             <Button
               type="button"
               variant="ghost"

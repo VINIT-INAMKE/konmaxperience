@@ -20,7 +20,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { ShimmerButton } from '@/components/ui/shimmer-button';
 import { AssetUploadZone } from './AssetUploadZone';
 import { apiClient } from '@/lib/api-client';
 import { useAuthStore } from '@/lib/stores/auth-store';
@@ -254,7 +253,7 @@ export function AssetForm({ open, onOpenChange, asset, onSuccess }: AssetFormPro
                 disabled={isSubmitting}
               />
               {uploadedFile && (
-                <p className="text-xs text-green-400">
+                <p className="text-xs text-good">
                   Ready: {uploadedFile.name}
                 </p>
               )}
@@ -263,8 +262,7 @@ export function AssetForm({ open, onOpenChange, asset, onSuccess }: AssetFormPro
 
           {/* Actions */}
           <div className="flex items-center gap-3 pt-2">
-            <ShimmerButton
-              shimmerColor="#4ade80"
+            <Button
               type="submit"
               disabled={!canSubmit}
               className="h-9 text-sm px-4"
@@ -279,7 +277,7 @@ export function AssetForm({ open, onOpenChange, asset, onSuccess }: AssetFormPro
               ) : (
                 'Upload Asset'
               )}
-            </ShimmerButton>
+            </Button>
             <Button
               type="button"
               variant="ghost"

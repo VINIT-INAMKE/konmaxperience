@@ -3,7 +3,6 @@
 import { useCallback, useRef, useState } from 'react';
 import { UploadCloud } from 'lucide-react';
 import { toast } from 'sonner';
-import { BorderBeam } from '@/components/ui/border-beam';
 import { apiClient } from '@/lib/api-client';
 import { ASSET_ALLOWED_MIME_TYPES, ASSET_MAX_FILE_SIZE } from '@/lib/types/asset';
 
@@ -161,10 +160,10 @@ export function AssetUploadZone({ onFileReady, disabled }: AssetUploadZoneProps)
         role="button"
         tabIndex={disabled ? -1 : 0}
         aria-label="Asset upload zone — drop files here or click to browse"
-        className={`relative min-h-[120px] rounded-xl flex flex-col items-center justify-center gap-2 transition-all duration-100 cursor-pointer ${
+        className={`relative min-h-[120px] rounded-xl flex flex-col items-center justify-center gap-2 transition-all duration-100 motion-reduce:transition-none cursor-pointer focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[var(--focus)]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)] ${
           isDragging
-            ? 'border-2 border-solid border-primary bg-muted/50'
-            : 'border border-dashed border-border'
+            ? 'border-2 border-solid border-brand bg-muted/50'
+            : 'border border-dashed border-line'
         } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
         onDragEnter={handleDragEnter}
         onDragLeave={handleDragLeave}
@@ -173,8 +172,6 @@ export function AssetUploadZone({ onFileReady, disabled }: AssetUploadZoneProps)
         onClick={() => !disabled && !isUploading && fileInputRef.current?.click()}
         onKeyDown={handleKeyDown}
       >
-        {isDragging && <BorderBeam size={60} duration={4} />}
-
         <UploadCloud
           className={`size-6 ${isDragging ? 'text-primary' : 'text-muted-foreground'}`}
         />
@@ -183,7 +180,7 @@ export function AssetUploadZone({ onFileReady, disabled }: AssetUploadZoneProps)
           <div className="flex flex-col items-center gap-1">
             <div className="w-[160px] h-1 bg-muted rounded-full overflow-hidden">
               <div
-                className="h-full bg-blue-400 transition-all duration-200 rounded-full"
+                className="h-full bg-info-status transition-all duration-200 motion-reduce:transition-none rounded-full"
                 style={{ width: `${uploadProgress}%` }}
                 role="progressbar"
                 aria-valuenow={uploadProgress}
@@ -192,7 +189,7 @@ export function AssetUploadZone({ onFileReady, disabled }: AssetUploadZoneProps)
                 aria-label="Upload progress"
               />
             </div>
-            <span className="text-xs text-blue-400">{uploadProgress}%</span>
+            <span className="text-xs text-info-status">{uploadProgress}%</span>
           </div>
         ) : (
           <>

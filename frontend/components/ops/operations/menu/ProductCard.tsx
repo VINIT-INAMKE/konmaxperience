@@ -4,11 +4,10 @@ import { useState } from 'react';
 import { Loader2, Pencil, Trash2 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
-import { MagicCard } from '@/components/ui/magic-card';
+import { Card } from '@/components/ui/card';
 import { FoodCostBadge } from './FoodCostBadge';
 import { calcFoodCostPercent } from '@/lib/types/catalog';
 import type { Product } from '@/lib/types/catalog';
-import { GRADIENT_OVERLAY } from '@/lib/brand-colors';
 
 interface ProductCardProps {
   item: Product;
@@ -43,10 +42,7 @@ export function ProductCard({
   };
 
   return (
-    <MagicCard
-      gradientColor={GRADIENT_OVERLAY}
-      className="p-4 space-y-2 cursor-default"
-    >
+    <Card className="p-4 gap-2 space-y-2 cursor-default">
       {/* Row 1: item name */}
       <div>
         <span className="text-base font-semibold">{item.name}</span>
@@ -54,7 +50,7 @@ export function ProductCard({
 
       {/* Row 2: base price + food cost badge */}
       <div className="flex items-center gap-3 flex-wrap">
-        <span className="text-sm text-muted-foreground">
+        <span className="text-sm text-ink-muted">
           ₹{item.base_price.toLocaleString()}
         </span>
         <FoodCostBadge percent={foodCostPercent} />
@@ -63,7 +59,7 @@ export function ProductCard({
       {/* Row 3: availability toggle */}
       <div className="flex items-center gap-2">
         {isToggling ? (
-          <Loader2 className="size-4 animate-spin motion-reduce:animate-none text-muted-foreground" />
+          <Loader2 className="size-4 animate-spin motion-reduce:animate-none text-ink-muted" />
         ) : (
           <Switch
             id={`available-${item.id}`}
@@ -74,7 +70,7 @@ export function ProductCard({
         )}
         <label
           htmlFor={`available-${item.id}`}
-          className="text-sm text-muted-foreground cursor-pointer select-none"
+          className="text-sm text-ink-muted cursor-pointer select-none"
         >
           Published
         </label>
@@ -93,7 +89,7 @@ export function ProductCard({
         </Button>
         {isAdmin && (
           <button
-            className="ml-auto p-1 rounded text-muted-foreground hover:text-destructive transition-colors"
+            className="ml-auto p-1 rounded text-ink-muted transition-colors motion-reduce:transition-none hover:text-destructive focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[var(--focus)]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
             onClick={() => onRemove(item)}
             aria-label={`Remove ${item.name} from menu`}
           >
@@ -101,6 +97,6 @@ export function ProductCard({
           </button>
         )}
       </div>
-    </MagicCard>
+    </Card>
   );
 }

@@ -55,7 +55,7 @@ export function PurchaseOrderRow({ po, onCancel }: PurchaseOrderRowProps) {
           {canCancel && (
             <button
               onClick={() => onCancel(po)}
-              className="p-1.5 rounded text-muted-foreground hover:text-destructive transition-colors"
+              className="p-1.5 rounded text-muted-foreground hover:text-destructive transition-colors motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[var(--focus)]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
               aria-label="Cancel purchase order"
             >
               <X className="size-3.5" />

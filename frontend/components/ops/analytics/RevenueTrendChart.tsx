@@ -22,12 +22,12 @@ export function RevenueTrendChart({ data, isLoading }: RevenueTrendChartProps) {
           <Skeleton className="h-64 w-full rounded-lg" />
         ) : data.length === 0 ? (
           <div className="flex items-center justify-center h-64">
-            <p className="text-sm text-muted-foreground">No revenue data for this period.</p>
+            <p className="text-sm text-ink-muted">No revenue data for this period.</p>
           </div>
         ) : (
           <ResponsiveContainer width="100%" height={256}>
             <LineChart data={data}>
-              <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+              <CartesianGrid strokeDasharray="3 3" className="stroke-line" />
               <XAxis
                 dataKey="date"
                 tickFormatter={(d: string) => format(new Date(d + 'T00:00:00'), 'MMM d')}
@@ -40,8 +40,11 @@ export function RevenueTrendChart({ data, isLoading }: RevenueTrendChartProps) {
                 tick={{ fontSize: 12 }}
               />
               <Tooltip
-                formatter={(value: any) => [`₹${Number(value).toLocaleString('en-IN')}`, 'Revenue']}
-                labelFormatter={(label: any) =>
+                formatter={(value) => [
+                  `₹${Number(value).toLocaleString('en-IN')}`,
+                  'Revenue',
+                ]}
+                labelFormatter={(label) =>
                   format(new Date(String(label) + 'T00:00:00'), 'MMM d, yyyy')
                 }
               />
