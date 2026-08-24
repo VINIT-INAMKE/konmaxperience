@@ -2,19 +2,17 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { BookingStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { withAdvisoryLock } from '../common/utils/advisory-lock';
+import { ADVISORY_LOCK, withAdvisoryLock } from '../common/utils/advisory-lock';
 
 /**
  * Advisory-lock id for the five-minute booking-hold sweep.
  *
- * The Postgres advisory namespace is one 64-bit key space shared by the whole
- * database, so this number may never be reused by another job. `5_7xx_xxx` is
- * P5a's block; `5_700_101` is the nightly loyalty expiry, so the sweep takes
- * `5_700_102`. It is declared here rather than in `ADVISORY_LOCK` because P5a
- * Task 16 does not own `common/utils/advisory-lock.ts` — folding both P5a ids
- * into that registry is a one-line post-merge follow-up.
+ * P6 (RUN-06) folded it into the one registry in `common/utils/advisory-lock.ts`
+ * — the Postgres advisory namespace is a single 64-bit key space shared by the
+ * whole database, and a number spread across three files is a number waiting to
+ * be reused. The named re-export stays so no import breaks.
  */
-export const BOOKING_HOLD_SWEEP_LOCK_ID = 5_700_102;
+export const BOOKING_HOLD_SWEEP_LOCK_ID = ADVISORY_LOCK.BOOKING_HOLD_SWEEP;
 
 /**
  * Bookings whose hold has run out and which therefore have to go.
@@ -66,6 +64,7 @@ export class EventHoldsCron {
         this.prisma,
         BOOKING_HOLD_SWEEP_LOCK_ID,
         () => this.releaseExpiredHolds(),
+        this.logger,
       );
 
       if (released === null) {

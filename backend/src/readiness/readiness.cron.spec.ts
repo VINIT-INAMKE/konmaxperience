@@ -16,6 +16,21 @@ const NODE_ID = '11111111-1111-4111-8111-111111111111';
 const LATE_UTC_EVENING = new Date('2026-08-23T19:30:00.000Z');
 const KOLKATA_DAY = new Date('2026-08-24T00:00:00.000Z');
 
+/**
+ * P6 (RUN-06) checks the unlock, so `withAdvisoryLock` issues *both* statements
+ * through `$queryRaw`: the acquire reads `locked`, the release reads `released`.
+ * Route by SQL text so a spec can still flip the acquire on its own.
+ */
+function advisoryLockRaw(prisma: MockPrisma, locked = true): void {
+  prisma.$queryRaw.mockImplementation((sql: { text: string }) =>
+    Promise.resolve(
+      sql.text.includes('pg_advisory_unlock')
+        ? [{ released: true }]
+        : [{ locked }],
+    ),
+  );
+}
+
 describe('ReadinessCron', () => {
   let cron: ReadinessCron;
   let prisma: MockPrisma;
@@ -26,8 +41,7 @@ describe('ReadinessCron', () => {
 
   beforeEach(() => {
     prisma = mockPrisma();
-    prisma.$queryRaw.mockResolvedValue([{ locked: true }]);
-    prisma.$executeRaw.mockResolvedValue(1);
+    advisoryLockRaw(prisma);
     prisma.readinessMeter.findMany.mockResolvedValue([]);
     prisma.readinessSnapshot.upsert.mockResolvedValue({});
 
@@ -150,14 +164,18 @@ describe('ReadinessCron', () => {
 
       await cron.nightlyRecomputeAndSnapshot();
 
-      expect(prisma.$queryRaw).toHaveBeenCalledTimes(1);
+      // Acquire and release, both through `$queryRaw` since P6 reads the
+      // `pg_advisory_unlock` result instead of discarding it.
+      expect(prisma.$queryRaw).toHaveBeenCalledTimes(2);
       expect(derivation.recomputeAll).toHaveBeenCalledTimes(1);
       expect(prisma.readinessSnapshot.upsert).toHaveBeenCalledTimes(2);
       // Snapshots must read the values this pass just published.
       expect(derivation.recomputeAll.mock.invocationCallOrder[0]).toBeLessThan(
         prisma.readinessMeter.findMany.mock.invocationCallOrder[0],
       );
-      expect(prisma.$executeRaw).toHaveBeenCalledTimes(1);
+      expect(
+        (prisma.$queryRaw.mock.calls[1][0] as { text: string }).text,
+      ).toContain('pg_advisory_unlock');
       expect(logSpy).toHaveBeenCalledWith(
         'Nightly readiness: recomputed 2 meters, wrote 2 snapshots',
       );
@@ -178,7 +196,9 @@ describe('ReadinessCron', () => {
       expect(derivation.recomputeAll).not.toHaveBeenCalled();
       expect(prisma.readinessMeter.findMany).not.toHaveBeenCalled();
       expect(prisma.readinessSnapshot.upsert).not.toHaveBeenCalled();
-      expect(prisma.$executeRaw).not.toHaveBeenCalled();
+      // Only the acquire ran: releasing a lock this instance never took would
+      // free it for whoever is actually holding it.
+      expect(prisma.$queryRaw).toHaveBeenCalledTimes(1);
       expect(logSpy).toHaveBeenCalledWith(
         'Nightly readiness job skipped — lock held by another instance',
       );
@@ -190,7 +210,7 @@ describe('ReadinessCron', () => {
       await expect(cron.nightlyRecomputeAndSnapshot()).resolves.toBeUndefined();
 
       expect(prisma.readinessSnapshot.upsert).not.toHaveBeenCalled();
-      expect(prisma.$executeRaw).toHaveBeenCalledTimes(1);
+      expect(prisma.$queryRaw).toHaveBeenCalledTimes(2);
       expect(errorSpy).toHaveBeenCalledWith(
         expect.stringContaining('meter blew up'),
         expect.any(String),
