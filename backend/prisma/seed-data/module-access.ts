@@ -112,6 +112,9 @@ export const MODULE_ACCESS: ModuleAccessSeed[] = [
     'guide_editor',
     'zones',
     'channels',
+    // RUN-04's `/admin/usage` dashboard. Its own key rather than a corner of
+    // `settings`, so it can be revoked without revoking system settings.
+    'usage',
   ].map((k, i) => ({
     module_key: k,
     role_codes: [R.FOUNDER_ADMIN, R.TECH_LEAD] as string[],
