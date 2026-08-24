@@ -282,8 +282,10 @@ describe('StaffNudgeCron', () => {
       await cron.runSweep();
 
       const where = callArg<{
-        status: { in: ShipmentStatus[] };
-        updated_at: { gte: Date };
+        where: {
+          status: { in: ShipmentStatus[] };
+          updated_at: { gte: Date };
+        };
       }>(prisma.shipment.findMany).where;
 
       expect(where.status.in).toEqual([
