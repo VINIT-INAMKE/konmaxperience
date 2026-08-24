@@ -50,10 +50,14 @@ export function EventRow({ event, onEdit, onViewBookings, onDelete }: EventRowPr
         </Badge>
       </td>
 
-      {/* Capacity fill */}
+      {/* Capacity fill — `booked_guests` is the backend's hold-aware sum:
+          confirmed + attended + holds whose timer has not run out. */}
       <td className="px-4 py-3">
-        <div className="space-y-1">
-          <div className="text-sm">
+        <div
+          className="space-y-1"
+          title="Seats taken: confirmed + attended + checkout holds that have not expired."
+        >
+          <div className="text-sm tabular-nums">
             {bookedGuests} / {event.capacity}
           </div>
           <div className="h-1 bg-muted rounded-full overflow-hidden">
@@ -62,15 +66,23 @@ export function EventRow({ event, onEdit, onViewBookings, onDelete }: EventRowPr
               style={{ width: `${fillPercent}%` }}
             />
           </div>
+          {event.spots_remaining !== undefined && (
+            <div className="text-xs text-muted-foreground tabular-nums">
+              {event.spots_remaining > 0
+                ? `${event.spots_remaining} left`
+                : 'Full'}
+            </div>
+          )}
         </div>
       </td>
 
-      {/* Bookings button */}
+      {/* Bookings, holds and day-of attendance */}
       <td className="px-4 py-3">
         <Button
           variant="ghost"
           size="sm"
           className="gap-1.5"
+          title="Bookings, held seats and attendance"
           onClick={onViewBookings}
         >
           <Users className="size-3.5" />

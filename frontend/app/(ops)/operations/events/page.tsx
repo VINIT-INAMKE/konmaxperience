@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/dialog';
 import { EventForm } from '@/components/ops/operations/events/EventForm';
 import { EventRow } from '@/components/ops/operations/events/EventRow';
-import { BookingListSheet } from '@/components/ops/operations/events/BookingListSheet';
+import { AttendanceSheet } from '@/components/ops/operations/events/AttendanceSheet';
 import { apiClient } from '@/lib/api-client';
 import type { Event } from '@/lib/types/events';
 import { ExportButton } from '@/components/ops/exports/ExportButton';
@@ -24,8 +24,7 @@ export default function EventsPage() {
   const queryClient = useQueryClient();
   const [formOpen, setFormOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<Event | undefined>(undefined);
-  const [bookingsEventId, setBookingsEventId] = useState<string | null>(null);
-  const [bookingsEventName, setBookingsEventName] = useState('');
+  const [attendanceEvent, setAttendanceEvent] = useState<Event | null>(null);
   const [deletingEvent, setDeletingEvent] = useState<Event | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -54,8 +53,7 @@ export default function EventsPage() {
   };
 
   const handleViewBookings = (event: Event) => {
-    setBookingsEventId(event.id);
-    setBookingsEventName(event.title);
+    setAttendanceEvent(event);
   };
 
   const handleDeleteConfirm = async () => {
@@ -167,13 +165,12 @@ export default function EventsPage() {
           onSaved={handleSaved}
         />
 
-        {/* Booking list Sheet */}
-        <BookingListSheet
-          eventId={bookingsEventId}
-          eventName={bookingsEventName}
-          open={!!bookingsEventId}
+        {/* Bookings, holds and day-of attendance (OPS-04) */}
+        <AttendanceSheet
+          event={attendanceEvent}
+          open={!!attendanceEvent}
           onOpenChange={(o) => {
-            if (!o) setBookingsEventId(null);
+            if (!o) setAttendanceEvent(null);
           }}
         />
 
