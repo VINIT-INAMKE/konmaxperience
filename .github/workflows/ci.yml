@@ -53,10 +53,12 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
       # DESIGN-02 / DESIGN-04 / QA-04 are errors (see frontend/eslint-rules/no-raw-colors.mjs).
-      # The ceiling is a ratchet, not a formality: the tree sits at 60 warnings
-      # today, so 80 leaves headroom for a work-in-progress branch while still
-      # failing on a slide. Phase 34 rewrites the storefront and lowers it again.
-      - run: npx eslint . --max-warnings 80
+      # The ceiling is a ratchet, not a formality. P4 set it at 80 over a tree of
+      # 60 warnings and left the storefront on a warn-level exemption; Phase 34
+      # deleted that exemption (the whole customer surface is now an error) and
+      # the tree sits in the low fifties, so 60 is the new ceiling. Every
+      # remaining warning is a React Compiler diagnostic, tracked in P4 Task 19.
+      - run: npx eslint . --max-warnings 60
       - run: npx tsc --noEmit
       - run: npm run build
       - name: Motion allowlist (SPEC 6.4)
@@ -68,3 +70,131 @@ jobs:
       - name: One token file (SPEC 7 - no second :root palette)
         run: |
           ! grep -rl --include=*.css "^  --public-" app | grep -v "app/tokens.css"
+
+  frontend-e2e:
+    name: Frontend (Playwright smoke 2 — purchase)
+    runs-on: ubuntu-latest
+    # QA-06. The purchase smoke walks the real money path against a real backend,
+    # a real Postgres and a real Redis. Two things are deliberately *not* real:
+    #
+    #  * `checkout.razorpay.com` is stubbed in the browser (`e2e/fixtures/razorpay-stub.ts`),
+    #    so no network call leaves the runner for the modal, and
+    #  * the capture is delivered as a signed webhook rather than by paying,
+    #    because a stub cannot mint a `razorpay_signature` the backend accepts.
+    #
+    # `POST /customer/orders` still opens a **real Razorpay test-mode order**
+    # through `api.razorpay.com`, so the three `RAZORPAY_*` repository secrets
+    # below have to be set to a test key pair and its webhook secret. Without
+    # them the pay step fails at "Razorpay not configured".
+    #
+    # `SHIPROCKET_WEBHOOK_TOKEN` must be set (any value of 16+ characters) or
+    # `POST /webhooks/shiprocket` answers `403` **by design** — P5a deviation 8:
+    # the courier callback is authenticated by a shared secret, not a body HMAC,
+    # and `ShiprocketWebhookService` fails closed when the token is absent. The
+    # purchase smoke does not exercise that route, but the value is set here so
+    # a future shipment smoke does not have to rediscover this.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: konma
+          POSTGRES_PASSWORD: konma
+          POSTGRES_DB: konma
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U konma"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      NODE_ENV: test
+      TZ: Asia/Kolkata
+      DATABASE_URL: postgresql://konma:konma@localhost:5432/konma?schema=public
+      DIRECT_DATABASE_URL: postgresql://konma:konma@localhost:5432/konma?schema=public
+      UPSTASH_REDIS_URL: redis://localhost:6379
+      JWT_SECRET: ci-only-dummy-secret-0123456789abcdef0123456789abcdef
+      # The demo customer's seeded address is 600096; `ServiceabilityService`
+      # falls back to this list when `SystemSetting['delivery_pincodes']` is empty.
+      DELIVERY_PINCODES: '600131,600100,600119,600126,600097,600096,600073'
+      SHIPROCKET_WEBHOOK_TOKEN: ci-shiprocket-webhook-token
+      RAZORPAY_KEY_ID: ${{ secrets.RAZORPAY_KEY_ID }}
+      RAZORPAY_KEY_SECRET: ${{ secrets.RAZORPAY_KEY_SECRET }}
+      RAZORPAY_WEBHOOK_SECRET: ${{ secrets.RAZORPAY_WEBHOOK_SECRET }}
+      # Baked into the frontend bundle at build time by `webServer`.
+      NEXT_PUBLIC_API_URL: http://localhost:4000
+      NEXT_TELEMETRY_DISABLED: '1'
+      # The fixtures read the `[DEV] OTP …` line out of this file.
+      E2E_BACKEND_LOG: /tmp/konma-backend-e2e.log
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install backend
+        working-directory: backend
+        run: npm ci
+      - name: Prisma client
+        working-directory: backend
+        run: npx prisma generate
+      - name: Migrate
+        working-directory: backend
+        run: npx prisma migrate deploy
+      - name: Seed reference data
+        working-directory: backend
+        run: npm run seed:reference
+      - name: Seed demo data (catalog, coupons, the demo customer)
+        working-directory: backend
+        run: npm run seed:demo
+        env:
+          SEED_DEMO_FORCE: 'true'
+      - name: Build backend
+        working-directory: backend
+        run: npm run build
+
+      - name: Boot the backend
+        working-directory: backend
+        run: |
+          node dist/src/main.js > "$E2E_BACKEND_LOG" 2>&1 &
+          echo "$!" > /tmp/konma-backend.pid
+          for i in $(seq 1 60); do
+            if curl -fsS -o /dev/null "http://localhost:4000/catalog/products?limit=1"; then
+              echo "backend up after ${i}s"; exit 0
+            fi
+            sleep 1
+          done
+          echo "backend did not start"; tail -50 "$E2E_BACKEND_LOG"; exit 1
+
+      - name: Install frontend
+        working-directory: frontend
+        run: npm ci
+      - name: Install Chromium
+        working-directory: frontend
+        run: npx playwright install --with-deps chromium
+      - name: Playwright — smoke 2
+        working-directory: frontend
+        run: npm run test:e2e
+
+      - name: Stop the backend
+        if: always()
+        run: kill "$(cat /tmp/konma-backend.pid)" || true
+
+      - name: Upload the trace and report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-trace
+          path: |
+            frontend/test-results/
+            frontend/playwright-report/
+            /tmp/konma-backend-e2e.log
+          retention-days: 7
+          if-no-files-found: ignore
