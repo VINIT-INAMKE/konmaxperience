@@ -21,7 +21,7 @@
 
 **Honest status notes (from the 2026-08-22 audit):**
 - **Phase 25 (Third-Party Delivery Integration): NOT BUILT.** No code exists for Porter or Shiprocket and no plans were ever written, despite this file previously reporting "4/4 plans complete". Superseded by v2.0 Phase 33 (P5 Shiprocket shipments).
-- **Phase 26 (Order Detail Page): NOT BUILT.** Phase directory is empty; no `/orders/[id]` staff page exists. Folded into v2.0 Phase 34 (staff Orders screen with refunds).
+- **Phase 26 (Order Detail Page): NOT BUILT.** Phase directory is empty; no `/orders/[id]` staff page exists. Folded into v2.0 Phase 34 (staff Orders screen with refunds) — **discharged 2026-08-25**: `/pos/orders/[id]` is a real route and `OrderDetailSheet` is deleted.
 - All other phases (14-24, 27, 28) shipped with code and summaries. Phase 28-05 code landed in commit `49086da`.
 
 - [x] **Phase 14: Foundation** - Schema, backend API, role filtering, and security hardening (completed 2026-03-22)
@@ -55,8 +55,8 @@
 - [x] **Phase 31: Mission Bridge (P3)** - Domain events, MissionBridgeService, derived meters + snapshots + history, policy-generated approvals, recipe approval via policy, decision votes *(complete 2026-08-23 at `080a664`, range `ced2385..080a664`)*
 - [x] **Phase 32: Role-Aware IA + Identity (P4)** - Persistent header, spine nav, ModuleAccess, /tasks, My Quests, sheets, chips, motion allowlist, brand tokens light + dark, Pusher on kitchen screens, usage events *(complete 2026-08-24 at `e871cf4`, range `be2879f..e871cf4`)*
 - [x] **Phase 33: Marketplace Backend (P5a)** - Catalog, mixed-fulfilment quote/checkout/confirm, FulfilmentService, Shiprocket + shipments, coupons, loyalty, reviews, search, refunds *(complete 2026-08-24 at `5a15e39`, range `8b46610..5a15e39`)*
-- [ ] **Phase 34: Marketplace Storefront + Staff Commerce (P5b)** - Storefront routes (desktop + SEO), cart/checkout UI, account, staff Catalog/Promotions/Reviews/Shipments/Orders/Experiences/Customers screens
-- [ ] **Phase 35: Run-It Layer (P6)** - WhatsApp nudges, daily close, theoretical vs actual food cost, usage dashboard, AI evidence-review assist + morning brief (human-in-the-loop)
+- [x] **Phase 34: Marketplace Storefront + Staff Commerce (P5b)** - Storefront routes (desktop + SEO), cart/checkout UI, account, staff Catalog/Promotions/Reviews/Shipments/Orders/Experiences/Customers screens *(complete 2026-08-25 at `6b82f7f`, range `089a947..6b82f7f`)*
+- [ ] **Phase 35: Run-It Layer (P6)** - WhatsApp nudges, daily close, theoretical vs actual food cost, usage dashboard, AI evidence-review assist + morning brief (human-in-the-loop) — **IN PROGRESS**: Wave 1 merged (`b7da851`, `6885699`, `8e29ac8`), Wave 2 in flight
 
 ## Phase Details
 
@@ -128,7 +128,8 @@ Plans:
 v1.1 (done): 14 -> 15 -> 16 -> 17 -> 18 -> 19 -> 20 -> 21 -> 22 -> 23 -> 24 -> 27 -> 28 (25, 26 never executed).
 v2.0: 29 -> 30 -> 31 -> 32 -> 33 -> 34 -> 35. Phase 33 may run in parallel with Phase 32 once Phase 31 is complete; Phase 34 needs both.
 **Phase 31 completed 2026-08-23 — Phases 32 and 33 ran in parallel.**
-**Phases 32 and 33 both completed 2026-08-24. Phase 34 is unblocked.**
+**Phases 32 and 33 both completed 2026-08-24.**
+**Phase 34 completed 2026-08-25 at `6b82f7f`. Phase 35 (the last phase of v2.0) is in progress.**
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -152,8 +153,8 @@ v2.0: 29 -> 30 -> 31 -> 32 -> 33 -> 34 -> 35. Phase 33 may run in parallel with 
 | 31. Mission Bridge (P3) | v2.0 | 1/1 | Complete    | 2026-08-23 |
 | 32. Role-Aware IA + Identity (P4) | v2.0 | 1/1 | Complete    | 2026-08-24 |
 | 33. Marketplace Backend (P5a) | v2.0 | 1/1 | Complete    | 2026-08-24 |
-| 34. Marketplace Storefront + Staff Commerce (P5b) | v2.0 | 0/? | Not started | — |
-| 35. Run-It Layer (P6) | v2.0 | 0/? | Not started | — |
+| 34. Marketplace Storefront + Staff Commerce (P5b) | v2.0 | 1/1 | Complete    | 2026-08-25 |
+| 35. Run-It Layer (P6) | v2.0 | 0/1 | In progress (Wave 1 merged) | — |
 
 ### Phase 18: Data Export
 **Goal**: CSV/XLSX export for all 22 report types with server-side file generation, R2 storage, export history, and export buttons on 13 data pages
@@ -310,7 +311,7 @@ Plans:
 **Goal:** Dedicated /orders/[id] detail page for staff — order timeline, payment processing (Razorpay UPI QR display + WhatsApp payment link), delivery status tracking, KDS status, receipt generation and download. Replaces the current OrderDetailSheet slide-out with a full page.
 **Requirements**: TBD
 **Depends on:** Phase 23 — Razorpay payment infrastructure
-**Status:** **NOT BUILT.** Phase directory is empty and no staff `/orders/[id]` page exists (orders still use `OrderDetailSheet`). Folded into v2.0 Phase 34 staff Orders screen (all channels, refunds, shipment status — SPEC.md §5.5).
+**Status:** **NOT BUILT under this number — delivered by Phase 34 (2026-08-25).** Folded into the v2.0 Phase 34 staff Orders screen (all channels, refunds, shipment status — SPEC.md §5.5). `/pos/orders/[id]` is now a real route (P5b decision 8 put it under `/pos/` so `/orders/*` stays free for the customer), `OrderDetailSheet` is deleted, and the refund ledger, shipment link and lifecycle actions are linkable and reloadable.
 **Plans:** 0 plans (none)
 
 ### Phase 27: Mission Flow & Assessment Gap Closure
@@ -498,7 +499,7 @@ Plans:
 **Gates at `5a15e39`**: backend 102/102 suites · 1575 tests · `tsc` exit 0 · 0 lint errors · build clean. Frontend on the same tree: `tsc --noEmit` exit 0 · `next build` compiled.
 **Hands off to Phase 34**: the storefront purchase flow is broken until it is rebuilt around the quote — `frontend/hooks/use-cart.ts:35` posts an empty body to `POST /customer/orders`, which now requires `{ quote_id }` — and `variantId` appears nowhere in the frontend. Full gap list at the end of the phase summary.
 
-### Phase 34: Marketplace Storefront + Staff Commerce (P5b)
+### Phase 34: Marketplace Storefront + Staff Commerce (P5b) — ✅ COMPLETE (2026-08-25, `6b82f7f`)
 **Goal**: Customers shop all four product types on a desktop-designed, SEO-ready storefront with account, tracking and reviews, and staff run catalog, promotions, reviews, shipments, orders, experiences and customers from the ops app.
 **Depends on**: Phase 32 and Phase 33
 **Requirements**: STORE-01 … STORE-04, ACCT-01, ACCT-02, OPS-01 … OPS-05, QA-06
@@ -509,10 +510,16 @@ Plans:
   4. Staff screens exist for Catalog (products, variants, media, categories, publish), Promotions, Reviews moderation, Shipments queue (pack → AWB → pickup → label → track, Pusher-driven), Orders (all channels, refunds, full order detail — closes the Phase 26 intent), Experiences (events + attendance) and Customers (profile, orders, loyalty adjust)
   5. POS sells `prepared_food` products only and is otherwise unchanged; Pick & Pack shows the shipped `packed` queue alongside local non-scratch items
   6. Playwright smoke test 2 (`browse → add three fulfilment types → coupon → pay (Razorpay test) → confirm → track`) passes in CI; desktop and mobile layouts pass a recorded walk-through
+     — **Corrected 2026-08-25:** criteria 1–5 all shipped. Eighteen storefront routes live under `app/(public)/**` and the six staff commerce screens under `app/(ops)/**`; all six public routes export `generateMetadata` with no top-level `'use client'`, `/p/[slug]` and `/experiences/[slug]` emit `Product`/`Event` + `BreadcrumbList` JSON-LD, `sitemap.xml` carries 21 live-data URLs and `robots.txt` 5 allows / 34 disallows, and `app/page.tsx` was never touched. Two deviations inside criterion 1: **the redirects are `next.config.ts` rules answering `308`, not the planned route-level `redirect()` pages answering `307`** (a config rule is answered before the proxy and before the filesystem, so it carries a `Location` header with no rendered body — what a crawler needs to move link equity), and there are **four** of them, not one: `/menu`→`/shop?type=prepared_food`, `/events`→`/experiences`, `/events/:id`→`/experiences`, `/profile`→`/account`. Criterion 6 is **met on the automated half and honest about the manual half**: `npm run test:e2e` passes **3/3 on the merged tree** — the strict purchase path, an unavailable-line negative and a mobile-viewport read-only check — and the `frontend-e2e` CI job exists but **has not yet run green in CI**, because it needs three Razorpay test-mode repository secrets that are not set. The smoke stops at the **same payment boundary P5a's smoke did**: `checkout.razorpay.com` is stubbed in the browser and the capture arrives as a signed `payment.captured` webhook, because a stub cannot mint a `razorpay_signature` the backend will accept — the Razorpay *order* is real, and the webhook runs the same `FulfilmentService.confirmPaidOrder`. A **fresh operator walk-through of the seven staff screens on the merged tree was not done**: the staff path was runtime-proved at the API layer by P5a's 51-request smoke and re-checked per screen by each Wave-3 task agent at merge time. That gap moves to **Phase 35**.
+     — Two more deviations worth carrying: **experience capacity is read from `GET /events/:id`, not `GET /catalog/availability/:productId`** — the catalog route's `capacity` branch does not subtract live holds, so a sitting could offer seats it had already promised; and the Shipments **"To pack" queue is assembled from three reads** (`GET /shipments` paged to exhaustion, cross-referenced with `GET /orders`) because no endpoint answers "shipped lines whose order has no `Shipment` row", the predicate Phase 33's summary established.
+     — One fix that was not in any task's file list and was load-bearing: **`proxy.ts`'s matcher had to exclude `sitemap.xml`, `robots.txt` and `opengraph-image`**, which were being 307-bounced to the staff login. Without it the whole SEO surface shipped inert.
 **Spec sections**: §5.1, §5.2, §5.5, §6.4, §7, §8 (auth), §10, §11 P5
-**Plans**: TBD
+**Plans**: `docs/superpowers/plans/2026-08-24-p5b-storefront-staff-commerce.md` (20 tasks) — record: `.planning/phases/34-p5b-storefront-staff-commerce/34-01-SUMMARY.md`
+**Migration**: none. P5b adds no migration — `backend/prisma/migrations/**` had no owner in the execution partition, and the drift gate stands where P5a left it (`No difference detected.`). Backend change was confined to Task 2's seven surgical gaps (`20 files, +1,488 / −63`), of which six were a decorator, a DTO field, a merge rule, a new presign route, a new serviceability route, or a missing `AuditEvent`.
+**Gates at `6b82f7f`**: frontend `tsc --noEmit` exit 0 · `eslint .` **0 errors / 53 warnings** against the new ceiling of 60 (ratcheted from 80) · `next build` compiled, 83/83 static pages · **`npm run test:e2e` 3 passed**. Backend on the same tree — note the counts include Phase 35 Wave 1, which merged into this branch first — 111 suites · 1749 tests (1722 passed, 27 todo) · `tsc` exit 0 · 0 lint errors · build clean.
+**Hands off to Phase 35**: the fresh staff walk-through; `QA-05`'s Postgres-backed integration harness (now three phases deep); `refund.failed` reconciliation; the `Notification.is_email_sent` drop (P6 Task 4); three soft-404s that return `200` bodies (all `noindex`ed — the status-code fix needs slug resolution in `proxy.ts`); and the `metadataBase` / `NEXT_PUBLIC_SITE_URL` split between `app/layout.tsx` and `lib/seo/metadata.ts`. Four operator actions are outstanding and cannot be done from the repo: the three Razorpay CI secrets, `NEXT_PUBLIC_R2_PUBLIC_URL` in production, the R2 `expire-exports-30d` lifecycle rule, and the five Meta WhatsApp template submissions.
 
-### Phase 35: Run-It Layer (P6)
+### Phase 35: Run-It Layer (P6) — 🚧 IN PROGRESS (Wave 1 merged 2026-08-25)
 **Goal**: The node runs day-to-day on the system — staff get WhatsApp nudges, a daily close screen, theoretical vs actual food cost, a usage dashboard, and human-in-the-loop AI assists.
 **Depends on**: Phase 34
 **Requirements**: RUN-01 … RUN-06
@@ -524,4 +531,5 @@ Plans:
   5. AI evidence-review assist and a morning brief run on the Claude API as suggestions only — no evidence is approved, readiness value set or price changed by AI
   6. Nightly jobs (stock reconciliation with drift `AuditEvent`, loyalty expiry, readiness snapshots) run under `pg_try_advisory_lock`; R2 has a 30-day lifecycle rule on `exports/` and a weekly orphan sweep
 **Spec sections**: §1.2 (AI limits), §3.4, §6.5, §8, §11 P6
-**Plans**: TBD
+**Plans**: `docs/superpowers/plans/2026-08-24-p6-run-it-layer.md`
+**Progress (2026-08-25)**: **Wave 1 (Tasks 1–3) merged** with a green combined backend gate — `b7da851` (P6 schema: `DailyClose`, `EvidenceReviewSuggestion`, `User.phone`/`whatsapp_opt_in`, new `NotificationType` members, plus the `notifications`/`ai`/`daily_close` setting blocks and the jest mock registry), `8e29ac8` (`AiProviderPort` — a heuristic-first resolver with an optional-key `AnthropicProvider` and its env contract, so criterion 5's "suggestions only" holds even with no API key configured) and `6885699` (one unified `ADVISORY_LOCK` registry with an unlock check, the stock-reconciliation cron, the R2 orphan sweep and `docs/R2-LIFECYCLE.md`). **Wave 2 (Tasks 4–7) is in flight.** Criterion 6's R2 lifecycle rule is documented but is a console action the operator must still perform; criterion 1's five Meta WhatsApp templates are still awaiting submission and approval.

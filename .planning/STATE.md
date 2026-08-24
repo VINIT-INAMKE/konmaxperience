@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Mission OS + Marketplace
-status: "Phase 34 (P5b) 18/20 tasks merged — only T13 (SEO) and T20 (Playwright/CI/record) remain; Phase 35 (P6) planned, unexecuted. Paused on weekly usage limit 2026-08-24."
-stopped_at: P4 complete at e871cf4 — all 19 tasks merged, lint/CI enforcement landed, eight-role walk-through recorded; see .planning/phases/32-p4-role-aware-ia/32-01-SUMMARY.md. P5a complete at 5a15e39; see .planning/phases/33-p5a-marketplace-backend/33-01-SUMMARY.md
-last_updated: "2026-08-24"
+status: "Phase 34 (P5b Storefront + Staff Commerce) COMPLETE at 6b82f7f — all 20 tasks merged, Playwright smoke 2 green on the merged tree. Phase 35 (P6 Run-It Layer) IN PROGRESS — Wave 1 (Tasks 1–3) merged, Wave 2 (Tasks 4–7) in flight."
+stopped_at: P5b complete at 6b82f7f — all 20 tasks merged, sitemap/robots/308 redirects landed, `npm run test:e2e` 3/3 on the merged tree; see .planning/phases/34-p5b-storefront-staff-commerce/34-01-SUMMARY.md
+last_updated: "2026-08-25"
 progress:
   total_phases: 7
   completed_phases: 0
@@ -22,39 +22,63 @@ See: .planning/PROJECT.md (updated 2026-08-22) and /SPEC.md (canonical v2.0 spec
 
 ## Current Position
 
-**PAUSED 2026-08-24 (weekly usage limit).** Phase 34 (P5b Storefront + Staff Commerce) is **18/20 merged** at
-`b1d7fcd`: Tasks 1–12 and 14–19 all landed (types/money/apiClient, seven backend gaps fixed incl. the six
-`@Public()` customer routes and cart-shrink, real light pin + colour sweep + proxy hardening + staff spine
-entries, storefront shell, cart store v3 + `/cart`, `/shop` + `/shop/[category]` + `/search`, `/p/[slug]`,
-`/experiences`, `/checkout` (quote → countdown → Razorpay → confirm), `/orders/[id]/track`, `/account/*` +
-`/login` + `/profile` retirement + session store, and the six staff screens: Shipments, Promotions, Reviews,
-Customers, Orders detail `/pos/orders/[id]` + refunds, Experiences attendance, Catalog variants + media).
-Frontend gates at `b1d7fcd`: tsc clean · eslint 0 errors / 55 warnings · build green. Backend: 104 suites /
-1645 tests, 0 lint errors.
-
-**Remaining for Phase 34 (next session):** Task 13 (SEO — sitemap/robots/redirects incl. `/menu`→`/shop` and
-lifting the route-level `/profile` + `/events` redirects into `next.config.ts` for real 30x, OG image,
-indexability audit incl. the two known soft-404s from the group-level `loading.tsx`; also delete
-`CategoryTabBar`/`MenuBrandTabs`/`ProductOrderCard` with the `/menu` redirect) and Task 20 (Playwright smoke 2
-split at the payment boundary, CI, the merged-tree manual walk-throughs every Wave-1/2 agent deferred, and
-`.planning/phases/34-*/34-01-SUMMARY.md`). Then all of Phase 35 (P6) per
-`docs/superpowers/plans/2026-08-24-p6-run-it-layer.md`.
-
-**Small recorded debts from Wave 1/2 reports:** catalog availability `capacity` branch ignores live holds
-(experiences pages read `/events/:id` instead — backend fix wanted); no `sort` param on `GET /catalog/products`
-(CatalogSort caps at 200); `PUBLIC_INCLUDE` variants lack `stock_on_hand`; `getOrderById` items lack the `event`
-relation (booking date on track page); `AccountLink` still does its own profile GET (should use
-`loadCustomerProfile`); `use-cart.ts` header comment stale + redundant profile effect; no staff receipt endpoint;
-no `PATCH /catalog/media/:id` (reorder = create-then-delete); no `order_id` filter on `GET /shipments`.
-
-### Pre-pause position (Phase 32/33 record)
-
 Milestone: v2.0 Mission OS + Marketplace (Phases 29–35 on branch `v2-os-marketplace`)
-Phase: 32 (Role-Aware IA + Identity, P4) — **COMPLETE** at `e871cf4` (record: `.planning/phases/32-p4-role-aware-ia/32-01-SUMMARY.md`)
-Also complete: 33 (Marketplace Backend, P5a) at `5a15e39` (record: `.planning/phases/33-p5a-marketplace-backend/33-01-SUMMARY.md`)
-Next phase: 34 (Marketplace Storefront + Staff Commerce, P5b) — needed both 32 and 33; **now unblocked**
-Previous phases: 31 (Mission Bridge, P3) complete at `080a664`; 30 (Platform Foundation, P2) complete at `fc49c19`
+Phase: 34 (Marketplace Storefront + Staff Commerce, P5b) — **COMPLETE** at `6b82f7f`
+(record: `.planning/phases/34-p5b-storefront-staff-commerce/34-01-SUMMARY.md`)
+Current phase: 35 (Run-It Layer, P6) — **IN PROGRESS**: Wave 1 merged, Wave 2 dispatched
+Previous phases: 33 (Marketplace Backend, P5a) at `5a15e39`; 32 (Role-Aware IA + Identity, P4) at `e871cf4`;
+31 (Mission Bridge, P3) at `080a664`; 30 (Platform Foundation, P2) at `fc49c19`
 Previous milestone: v1.1 complete 2026-03-27 (Phases 14–24, 27, 28 shipped; Phases 25 and 26 were never built — see ROADMAP.md notes)
+
+**Phase 34 (P5b) is complete.** All 20 tasks of
+`docs/superpowers/plans/2026-08-24-p5b-storefront-staff-commerce.md` are merged. Tasks 1–12 and 14–19 landed
+first at `b1d7fcd` (types/money/`ApiError` status, seven backend gaps fixed incl. the six `@Public()` customer
+routes and cart-shrink, the real light pin + colour sweep + proxy hardening + staff spine entries, the
+storefront shell, cart store v3 + `/cart`, `/shop` + `/shop/[category]` + `/search`, `/p/[slug]`,
+`/experiences`, `/checkout` (quote → countdown → Razorpay → confirm), `/orders/[id]/track`, `/account/*` +
+`/login` + `/profile` retirement + session context, and the six staff screens: Shipments, Promotions, Reviews,
+Customers, Orders detail `/pos/orders/[id]` + refunds, Experiences attendance, Catalog variants + media).
+The final two landed 2026-08-25: **T13 SEO** (`864da4b`, merge `dcdabd7`) and **T20 Playwright/CI**
+(`d623af1`, merge `6b82f7f`).
+
+T13 shipped `app/sitemap.ts` (21 URLs matching the live catalogue — 4 static + 5 categories + 10
+non-experience products + 2 experiences, an experience listed only under `/experiences/[slug]`),
+`app/robots.ts` (5 allows, 34 disallows, absolute sitemap pointer), `app/opengraph-image.tsx`, and the four
+retired routes moved into `next.config.ts` as real **308**s (`/menu`→`/shop?type=prepared_food`,
+`/events`→`/experiences`, `/events/:id`→`/experiences`, `/profile`→`/account`, all curl-verified). It also
+fixed a load-bearing `proxy.ts` matcher hole — robots/sitemap/og-image were being 307-bounced to the staff
+login, which made the whole feature inert — and deleted the four superseded route pages plus
+`CategoryTabBar`/`MenuBrandTabs`/`ProductOrderCard`. T20 shipped `playwright.config.ts` (desktop 1440×900 +
+Pixel 5, `workers: 1`, trace on-first-retry), `e2e/smoke-2-purchase.spec.ts` with real-OTP / Razorpay-stub /
+signed-webhook fixtures, `e2e/README.md`, the `frontend-e2e` CI job, and the lint ratchet (P4's legacy warn
+block dropped, error block widened to the whole customer surface, CI ceiling 80→60).
+
+**Gates at `6b82f7f`:** frontend `tsc` clean · `eslint` 0 errors / 53 warnings (ceiling 60) · `next build`
+83/83 static pages · **`npm run test:e2e` 3/3 passed on the merged tree**. Backend (counts include Phase 35
+Wave 1): 111 suites / 1749 tests (1722 passed, 27 todo) · `tsc` clean · 0 lint errors · build green. P5b adds
+no migration, so the drift gate stands where P5a left it.
+
+**Phase 35 (P6 Run-It Layer) is in progress.** Wave 1 (Tasks 1–3) merged at `b7da851` (P6 schema —
+`DailyClose`, `EvidenceReviewSuggestion`, `User.phone`/`whatsapp_opt_in`, `NotificationType` members, plus the
+`notifications`/`ai`/`daily_close` setting blocks), `6885699` (unified `ADVISORY_LOCK` registry + unlock check,
+stock reconciliation cron, R2 orphan sweep + `docs/R2-LIFECYCLE.md`) and `8e29ac8` (`AiProviderPort` —
+heuristic-first resolver, optional-key `AnthropicProvider`, env contract), with a green combined backend gate.
+Wave 2 (Tasks 4–7) is in flight.
+
+**Recorded debts carried out of Phase 34** (none blocking): catalog availability `capacity` branch ignores live
+holds (experiences pages read `/events/:id` instead — backend fix wanted); no `sort` param on
+`GET /catalog/products` (CatalogSort caps at 200); `PUBLIC_INCLUDE` variants lack `stock_on_hand`;
+`getOrderById` items lack the `event` relation (booking date on track page); `AccountLink` still does its own
+profile GET (should use `loadCustomerProfile`); `use-cart.ts` header comment stale + redundant profile effect;
+no staff receipt endpoint; no `PATCH /catalog/media/:id` (reorder = create-then-delete); no `order_id` filter on
+`GET /shipments`; **`app/layout.tsx` hardcodes `metadataBase: https://konma.store` while `lib/seo/metadata.ts`
+reads `NEXT_PUBLIC_SITE_URL`** (two sources of truth for one origin); **unknown routes 307-bounce to `/team`**
+via the `proxy.ts` fallthrough (no real 404); **three soft-404s** (`/p|/shop|/experiences` with an unknown slug
+return 200 bodies — all `noindex`ed, but the status-code fix needs proxy slug resolution); **sitemap cursor
+pagination unexercised** by one-page seed data; **`Notification.is_email_sent` drop deferred to P6 Task 4**
+(a schema comment and an `it.todo` mark it).
+
+### Prior position (Phase 32/33 record)
 
 P4 shipped all 19 tasks of `docs/superpowers/plans/2026-08-23-p4-role-aware-ia-identity.md`: one `app/tokens.css`
 promoting the homepage's `--public-*` palette to a semantic layer plus a designed dark set and a 26-name shadcn
@@ -97,9 +121,10 @@ plus hand-written triggers and six CHECK constraints. Gates at `5a15e39`: backen
 tsc clean · 0 lint errors · build clean · drift gate `No difference detected.` · frontend tsc clean and `next build`
 compiled.
 
-**The storefront purchase flow is broken until Phase 34 fixes it:** `frontend/hooks/use-cart.ts:35` still posts an
-empty body to `POST /customer/orders`, which now requires `{ quote_id }`, and `variantId` does not appear anywhere
-in the frontend. Full gap list at the end of the Phase 33 summary.
+~~The storefront purchase flow is broken until Phase 34 fixes it~~ — **resolved 2026-08-25 by Phase 34.**
+`hooks/use-cart.ts` was rewritten around sync → quote → order → Razorpay → confirm, `variantId` became half a
+cart line's identity in cart store v3 (`cartLineKey(productId, variantId)`, byte-identical to the key
+`assertQuoteStillValid` builds), and the whole path is proven by the passing Playwright smoke.
 
 P3 shipped all 17 tasks of `docs/superpowers/plans/2026-08-23-p3-mission-bridge.md`: the typed after-commit
 domain-event catalogue (`common/events/domain-events.ts`), `MissionBridgeService` + `mission-bridge.rules.ts`
@@ -346,6 +371,7 @@ Recent decisions affecting current work:
 - Phase 28 added: Recipe preparation_type — multi-fulfillment food product support (scratch, batch_prepared, ready_to_sell, assemble). Forked availability, deduction timing, KDS routing, pick & pack queue. 10 requirements scoped.
 - 2026-08-22 audit: Phases 25 and 26 confirmed never built (no code, no plans). v1.1 closed as-is; their intent moves to v2.0 Phases 33/34.
 - v2.0 opened 2026-08-22 from SPEC.md: Phase 29 Stop the Bleeding (P1), 30 Platform Foundation (P2), 31 Mission Bridge (P3), 32 Role-Aware IA + Identity (P4), 33 Marketplace Backend (P5a), 34 Marketplace Storefront + Staff Commerce (P5b), 35 Run-It Layer (P6). 89 requirements scoped.
+- 2026-08-25: Phase 34 (P5b) complete at `6b82f7f` — 20/20 tasks. Phase 26's intent (a real staff order detail page) is now discharged by `/pos/orders/[id]`; Phase 25's remains superseded by Phase 33's `ShippingProvider`. The frontend gained its first automated test infrastructure (Playwright + the `frontend-e2e` CI job); there was none before.
 
 ### Pending Todos
 
@@ -362,38 +388,47 @@ None yet.
 - The configured Upstash Redis host was unresolvable from the dev machine on 2026-08-24
   (`getaddrinfo ENOTFOUND present-pelican-68710.upstash.io`). Without Redis there is no OTP, cart, quote or
   pending-order key. The P5a smoke ran against a throwaway local `redis:8.6-alpine` container on port 6390.
+- **Operator actions outstanding (none doable from the repo, two of them gate CI):** set the three Razorpay
+  test-mode repository secrets `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` / `RAZORPAY_WEBHOOK_SECRET` — the
+  `frontend-e2e` job fails at "Razorpay not configured" without them; set `NEXT_PUBLIC_R2_PUBLIC_URL` in
+  production (`next.config.ts` otherwise degrades to the `cdn.konma.store` / `**.r2.dev` fallbacks); create
+  the R2 lifecycle rule `expire-exports-30d` per `docs/R2-LIFECYCLE.md`; submit the five Meta WhatsApp
+  templates for approval before P6's `RUN-01` can fire.
 
 ## Session Continuity
 
-Last session: 2026-08-24
-Stopped at: Phase 33 (P5a marketplace backend) complete at `5a15e39` — migration
-`20260826120000_p5a_marketplace_backend` committed, applied to Postgres, seeded, drift-checked and
-smoke-tested end to end against `dist/src/main.js`. Record:
-`.planning/phases/33-p5a-marketplace-backend/33-01-SUMMARY.md`
+Last session: 2026-08-25
+Stopped at: Phase 34 (P5b storefront + staff commerce) complete at `6b82f7f` — all 20 tasks merged, SEO
+surface landed (sitemap 21 URLs, robots, four 308 redirects, `proxy.ts` matcher fix), Playwright smoke 2
+passing 3/3 on the merged tree. Record:
+`.planning/phases/34-p5b-storefront-staff-commerce/34-01-SUMMARY.md`
 Resume file: None
-Next action: write the Phase 32 (P4) record, then `/gsd:plan-phase 34`.
+Next action: finish Phase 35 (P6) Wave 2 (Tasks 4–7), then Wave 3, per
+`docs/superpowers/plans/2026-08-24-p6-run-it-layer.md`.
 
-Carry into Phase 34:
-- **The storefront purchase flow is broken.** `POST /customer/orders` now requires `{ quote_id }` and
-  `frontend/hooks/use-cart.ts:35` sends no body. The flow must become quote → render → order → Razorpay →
-  confirm, with `410` (re-quote silently) distinguished from `404` (back to the cart).
-- **`variantId` is absent from the entire frontend** (zero matches). The backend carries it end to end; a
-  two-variant product cannot be sold at the right price without it. P2 follow-up #1, now load-bearing.
-- **`tax_amount` is contained inside `subtotal`** and must never be added to a displayed total (P5a
-  decision 1, signed off and verified live). Money is a JSON **number**, not a string.
-- **`Order.discount_amount` bundles coupon discount and loyalty redemption**; the split is in
-  `Order.coupon_id`, `Order.loyalty_points_redeemed` and the `CouponRedemption` row.
-- Every staff commerce screen (Catalog, Promotions, Reviews, Shipments, Orders + refunds, Experiences,
-  Customers) is still missing; the APIs are complete and specified in the P5a plan appendix §C.
-- `/menu` → `/shop` plus the rest of the SPEC storefront routes, JSON-LD, sitemap and robots.
+Carry into Phase 35:
+- **A fresh operator walk-through of the seven staff commerce screens** on the merged tree was NOT done.
+  The storefront money path is proven by the passing Playwright smoke; the staff path (pack → AWB → pickup →
+  label → courier webhook → delivered → review moderation → partial/full refund with loyalty clawback) was
+  runtime-proved at the API layer by P5a's 51-request smoke and re-checked per screen by each Wave-3 task
+  agent at merge time. Recorded as outstanding, not claimed.
 - **`QA-05` second half — the Postgres-backed integration harness** (`test/jest-integration.json`) is still
-  unbuilt, now with two phases' worth of multi-write transactions waiting for it. Carried from `QA-02`.
-- Playwright smoke test 2 (`browse → three fulfilment types → coupon → pay → confirm → track`) → Phase 34.
+  unbuilt, now three phases deep (carried from `QA-02` → Phase 33 → Phase 34). The Playwright smoke covers
+  the storefront path through HTTP, which is not transaction-level coverage.
+- **`refund.failed` webhook reconciliation** — deliberately out of P5b scope (plan decision 11), still
+  unhandled.
+- **The 15-minute hold vs the 30-minute pending order** — a payment captured after its booking hold was
+  swept still throws inside `applyCommercialEffects` and leaves a captured payment with no order.
+- **`Notification.is_email_sent` drop** — deferred to P6 Task 4; a schema comment and an `it.todo` mark it.
+- **Soft-404 status codes** (`/p|/shop|/experiences` unknown slugs return `200` bodies, all `noindex`ed) and
+  the **`metadataBase` vs `NEXT_PUBLIC_SITE_URL` split** in `app/layout.tsx` / `lib/seo/metadata.ts`.
 - Shiprocket sandbox was never needed (`SystemSetting['shipping'].provider` seeds `manual`); the eight
   adapter request/response shapes remain the only surface untested against reality.
+- `Order.zone_id` → `fulfilment_zone_id` rename and multi-shipment orders — unchanged deferrals.
 
-Carry into the Phase 32 record (all code merged, summary outstanding):
-- `QA-03` (Playwright smoke test 1) — still not automated.
+Long-lived carry-forwards (recorded in the Phase 32 record, `e7ab01e`, and still open):
+- `QA-03` (Playwright smoke test 1 — the ops shell) — still not automated. Phase 34 built the Playwright
+  harness and smoke **2**; smoke 1 was never in P5b's scope and has no owner yet.
 - `/admin/approval-policies`, the `Notification.is_email_sent` removal.
 - **Decision 4 is a live behaviour change**: `requires_approval: true` with zero `Approval` rows now blocks
   validation. On a populated database, affected tasks stop being `valid` on their next cascade. No backfill was
