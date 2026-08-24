@@ -2,6 +2,8 @@ import 'reflect-metadata';
 import {
   ApprovalMode,
   ApprovalScope,
+  CouponStatus,
+  CouponType,
   FulfilmentType,
   MediaKind,
   MeterMode,
@@ -32,6 +34,11 @@ import {
   DEMO_PRODUCT_CATEGORIES,
   DEMO_RECIPES,
 } from '../../prisma/seed-data/demo-catalog';
+import {
+  DEMO_COUPONS,
+  DEMO_CUSTOMER_ADDRESS,
+  DEMO_LOYALTY_CUSTOMER,
+} from '../../prisma/seed-data/demo-commerce';
 import { SYSTEM_ACTOR } from '../../prisma/seed-data/system-actor';
 import { RoleCode } from '../types/roles';
 import { Permission } from '../types/permissions';
@@ -473,5 +480,71 @@ describe('seed-data: demo catalog', () => {
       expect(event.capacity).toBeGreaterThan(0);
       expect(event.price).toBeGreaterThan(0);
     }
+  });
+});
+
+describe('seed-data: demo commerce (P5a Task 18)', () => {
+  it('gives every coupon a unique, uppercase code', () => {
+    const codes = DEMO_COUPONS.map((c) => c.code);
+    expect(new Set(codes).size).toBe(codes.length);
+    for (const code of codes) {
+      expect(code).toBe(code.toUpperCase());
+      expect(code).toMatch(/^[A-Z0-9]+$/);
+    }
+  });
+
+  it('opens every coupon window before it closes', () => {
+    for (const coupon of DEMO_COUPONS) {
+      expect(coupon.ends_in_days).toBeGreaterThan(coupon.starts_in_days);
+    }
+  });
+
+  it('carries a zero value on every free_shipping coupon', () => {
+    for (const coupon of DEMO_COUPONS) {
+      if (coupon.type === CouponType.free_shipping) {
+        expect(coupon.value).toBe(0);
+      } else {
+        expect(coupon.value).toBeGreaterThan(0);
+      }
+      expect(coupon.value).toBeGreaterThanOrEqual(0);
+    }
+  });
+
+  it('restricts applies_to to real ProductTypes', () => {
+    const types = Object.values(ProductType) as string[];
+    for (const coupon of DEMO_COUPONS) {
+      for (const type of coupon.applies_to) {
+        expect(types).toContain(type);
+      }
+    }
+  });
+
+  it('ships at least one expired coupon so the window is provable', () => {
+    const expired = DEMO_COUPONS.filter((c) => c.ends_in_days < 0);
+    expect(expired.length).toBeGreaterThan(0);
+    for (const coupon of expired) {
+      expect(coupon.status).toBe(CouponStatus.active);
+    }
+  });
+
+  it('matches the demo loyalty tier to the seeded tier thresholds', () => {
+    const tiers = SEED_SETTING_DEFAULTS.loyalty.tiers as Record<string, number>;
+    const { tier, lifetime_points, points_balance } = DEMO_LOYALTY_CUSTOMER;
+    expect(Object.keys(tiers)).toContain(tier);
+    expect(lifetime_points).toBeGreaterThanOrEqual(tiers[tier]);
+    const higher = Object.entries(tiers)
+      .filter(([, threshold]) => threshold > tiers[tier])
+      .map(([, threshold]) => threshold);
+    for (const threshold of higher) {
+      expect(lifetime_points).toBeLessThan(threshold);
+    }
+    expect(points_balance).toBeGreaterThan(0);
+    expect(points_balance).toBeLessThanOrEqual(lifetime_points);
+  });
+
+  it('gives the demo customer a serviceable default address', () => {
+    expect(DEMO_CUSTOMER_ADDRESS.is_default).toBe(true);
+    expect(DEMO_CUSTOMER_ADDRESS.pincode).toMatch(/^\d{6}$/);
+    expect(DEMO_LOYALTY_CUSTOMER.phone).toMatch(/^[6-9]\d{9}$/);
   });
 });

@@ -13,6 +13,11 @@ import {
   demoMediaUrl,
   demoSearchText,
 } from './seed-data/demo-catalog';
+import {
+  DEMO_COUPONS,
+  DEMO_CUSTOMER_ADDRESS,
+  DEMO_LOYALTY_CUSTOMER,
+} from './seed-data/demo-commerce';
 
 type Tx = Prisma.TransactionClient;
 
@@ -139,6 +144,7 @@ export async function seedDemoCatalog(prisma: PrismaClient): Promise<void> {
         { brandId: brand.id, userId: creator.id },
         { recipeIds, eventIds, categoryIds },
       );
+      await seedCommerce(tx, creator.id);
     },
     { timeout: 60000 },
   );
@@ -149,8 +155,114 @@ export async function seedDemoCatalog(prisma: PrismaClient): Promise<void> {
       `${DEMO_RECIPES.length} recipes, ${DEMO_EVENTS.length} events, ` +
       `${DEMO_PRODUCT_CATEGORIES.length} product categories, ` +
       `${DEMO_PRODUCTS.length} products, ${variantCount} variants, ` +
-      `${DEMO_PRODUCTS.length} media`,
+      `${DEMO_PRODUCTS.length} media, ${DEMO_COUPONS.length} coupons, ` +
+      `1 loyalty account`,
   );
+}
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Demo promotions and loyalty (P5a Task 18).
+ *
+ * Idempotent by construction: coupons upsert on `code`, the customer upserts on
+ * `phone`, the address is matched on `(customer_id, label)`, and the opening
+ * loyalty balance is written **once** — guarded by a `findFirst` on the seed's
+ * own `LoyaltyTransaction(reason: adjust, order_id: null)`, because
+ * `@@unique([order_id, reason])` does not constrain rows whose `order_id` is
+ * NULL. Re-running therefore never double-credits.
+ */
+async function seedCommerce(tx: Tx, userId: string): Promise<void> {
+  const now = Date.now();
+
+  for (const coupon of DEMO_COUPONS) {
+    const data = {
+      description: coupon.description,
+      type: coupon.type,
+      value: coupon.value,
+      min_order: coupon.min_order,
+      max_discount: coupon.max_discount,
+      applies_to: coupon.applies_to,
+      starts_at: new Date(now + coupon.starts_in_days * DAY_MS),
+      ends_at: new Date(now + coupon.ends_in_days * DAY_MS),
+      usage_limit: coupon.usage_limit,
+      per_customer_limit: coupon.per_customer_limit,
+      status: coupon.status,
+    };
+    await tx.coupon.upsert({
+      where: { code: coupon.code },
+      update: data,
+      create: {
+        node_id: DEFAULT_NODE_ID,
+        code: coupon.code,
+        created_by: userId,
+        ...data,
+      },
+    });
+  }
+
+  const customer = await tx.customer.upsert({
+    where: { phone: DEMO_LOYALTY_CUSTOMER.phone },
+    update: {
+      name: DEMO_LOYALTY_CUSTOMER.name,
+      email: DEMO_LOYALTY_CUSTOMER.email,
+    },
+    create: {
+      phone: DEMO_LOYALTY_CUSTOMER.phone,
+      name: DEMO_LOYALTY_CUSTOMER.name,
+      email: DEMO_LOYALTY_CUSTOMER.email,
+    },
+    select: { id: true },
+  });
+
+  const existingAddress = await tx.customerAddress.findFirst({
+    where: { customer_id: customer.id, label: DEMO_CUSTOMER_ADDRESS.label },
+    select: { id: true },
+  });
+  if (existingAddress) {
+    await tx.customerAddress.update({
+      where: { id: existingAddress.id },
+      data: DEMO_CUSTOMER_ADDRESS,
+    });
+  } else {
+    await tx.customerAddress.create({
+      data: { customer_id: customer.id, ...DEMO_CUSTOMER_ADDRESS },
+    });
+  }
+
+  await tx.loyaltyAccount.upsert({
+    where: { customer_id: customer.id },
+    update: {},
+    create: {
+      customer_id: customer.id,
+      points_balance: DEMO_LOYALTY_CUSTOMER.points_balance,
+      lifetime_points: DEMO_LOYALTY_CUSTOMER.lifetime_points,
+      tier: DEMO_LOYALTY_CUSTOMER.tier,
+    },
+  });
+
+  const openingCredit = await tx.loyaltyTransaction.findFirst({
+    where: {
+      customer_id: customer.id,
+      order_id: null,
+      reason: 'adjust',
+      notes: 'demo seed',
+    },
+    select: { id: true },
+  });
+  if (!openingCredit) {
+    await tx.loyaltyTransaction.create({
+      data: {
+        customer_id: customer.id,
+        order_id: null,
+        delta: DEMO_LOYALTY_CUSTOMER.points_balance,
+        balance_after: DEMO_LOYALTY_CUSTOMER.points_balance,
+        reason: 'adjust',
+        notes: 'demo seed',
+        created_by: userId,
+      },
+    });
+  }
 }
 
 /** `Ingredient` has no unique on `name`, so match-then-write rather than upsert. */

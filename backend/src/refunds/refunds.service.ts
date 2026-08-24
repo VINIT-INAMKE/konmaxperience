@@ -25,6 +25,27 @@ import {
 import { CreateRefundDto } from './dto/create-refund.dto';
 
 /**
+ * A human sentence out of whatever the Razorpay SDK threw.
+ *
+ * `rzp.payments.refund()` rejects with a plain object shaped
+ * `{ statusCode, error: { code, description, … } }` — **not** an `Error` — so
+ * reading `.message` off it yields `undefined` and staff saw
+ * "Refund failed at the gateway: undefined". Prefer the gateway's own
+ * `description`, then its `code`, then a real `Error.message`.
+ */
+function gatewayErrorMessage(err: unknown): string {
+  if (typeof err === 'object' && err !== null) {
+    const inner = (err as { error?: { description?: string; code?: string } })
+      .error;
+    if (inner?.description) return inner.description;
+    if (inner?.code) return inner.code;
+    const message = (err as { message?: unknown }).message;
+    if (typeof message === 'string' && message.length > 0) return message;
+  }
+  return 'unknown gateway error';
+}
+
+/**
  * The `payload.refund.entity` Razorpay sends on `refund.processed`. `amount` is
  * in **paise**, as everything on the wire from Razorpay is.
  */
@@ -161,7 +182,7 @@ export class RefundsService {
         data: { status: RefundStatus.failed },
       });
       throw new BadRequestException(
-        `Refund failed at the gateway: ${(err as Error).message}`,
+        `Refund failed at the gateway: ${gatewayErrorMessage(err)}`,
       );
     }
 
