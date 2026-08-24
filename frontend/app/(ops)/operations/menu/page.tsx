@@ -43,9 +43,11 @@ export default function MenuPage() {
   // Brand tab state
   const [selectedBrandId, setSelectedBrandId] = useState<string>('');
 
-  // Menu item form state
+  // Menu item form state. The sheet tracks the product by **id**, not by a
+  // snapshot: the variant and media editors inside it write through the same
+  // `menu-items` query, and a snapshot would keep showing the pre-write list.
   const [itemFormOpen, setItemFormOpen] = useState(false);
-  const [editingItem, setEditingItem] = useState<Product | null>(null);
+  const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [itemFormCategoryId, setItemFormCategoryId] = useState<string>('');
 
   // Delete item dialog state
@@ -108,6 +110,11 @@ export default function MenuPage() {
     queryFn: () => apiClient.get<ChannelModifier[]>('/catalog/channel-modifiers'),
   });
 
+  const editingItem = useMemo(
+    () => products.find((p) => p.id === editingItemId) ?? null,
+    [products, editingItemId],
+  );
+
   // Group items by category_id
   const itemsByCategory = useMemo(() => {
     const map = new Map<string, Product[]>();
@@ -138,20 +145,20 @@ export default function MenuPage() {
   };
 
   const handleAddItem = (categoryId: string) => {
-    setEditingItem(null);
+    setEditingItemId(null);
     setItemFormCategoryId(categoryId);
     setItemFormOpen(true);
   };
 
   const handleEditItem = (item: Product) => {
-    setEditingItem(item);
+    setEditingItemId(item.id);
     setItemFormCategoryId(item.category_id);
     setItemFormOpen(true);
   };
 
   const handleItemFormOpenChange = (open: boolean) => {
     setItemFormOpen(open);
-    if (!open) setEditingItem(null);
+    if (!open) setEditingItemId(null);
   };
 
   const handleDeleteItemConfirm = async () => {
@@ -368,6 +375,7 @@ export default function MenuPage() {
           onSuccess={() => {
             void queryClient.invalidateQueries({ queryKey: ['menu-items', effectiveBrandId] });
           }}
+          onCreated={(product) => setEditingItemId(product.id)}
         />
 
         {/* Category Form Sheet */}
