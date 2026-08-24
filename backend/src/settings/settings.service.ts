@@ -64,6 +64,50 @@ export const SETTING_DEFAULTS = {
     history_default_days: 90,
     history_max_days: 365,
   },
+  notifications: {
+    /** Master switch for outbound WhatsApp staff nudges (RUN-01). Off until templates are approved by Meta. */
+    whatsapp_enabled: false,
+    /** Node-local window in which no WhatsApp nudge is sent. In-app is unaffected. */
+    quiet_hours: { start: '21:00', end: '07:00' },
+    /** Hours before the same (user, type, reference) may be nudged again. */
+    cooldown_hours: {
+      approval_pending: 24,
+      task_blocked: 12,
+      low_stock: 4,
+      shipment_failed: 6,
+      morning_brief: 20,
+      daily_close_due: 20,
+    },
+    /** Types that also send an email through `EmailService` (v1 behaviour, preserved). */
+    email_types: [
+      'task_due',
+      'task_blocked',
+      'approval_pending',
+      'low_stock',
+    ] as string[],
+  },
+  ai: {
+    /** `heuristic` needs no key and is the seeded default (decision 1). */
+    provider: 'heuristic' as 'anthropic' | 'heuristic',
+    model: 'claude-opus-5' as string,
+    /** RUN-05 guard rail. Flipping this to true is a SPEC §1.2 violation; nothing reads it as permission. */
+    evidence_assist_enabled: true,
+    morning_brief_enabled: true,
+    /** Roles that receive the morning brief. */
+    morning_brief_role_codes: [
+      'FOUNDER_ADMIN',
+      'BACKEND_LEAD',
+      'FRONTEND_LEAD',
+      'BI_LEAD',
+      'PROCUREMENT_LEAD',
+    ] as string[],
+  },
+  daily_close: {
+    /** Minute-of-day the close job runs, node-local. */
+    compute_at: '00:45' as string,
+    /** Roles allowed to sign (RUN-02). Checked in addition to `MANAGE_OPS`. */
+    signer_role_codes: ['FRONTEND_LEAD', 'FOUNDER_ADMIN'] as string[],
+  },
 };
 
 export type SettingKey = keyof typeof SETTING_DEFAULTS;

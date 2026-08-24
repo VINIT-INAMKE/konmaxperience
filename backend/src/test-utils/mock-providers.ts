@@ -3,6 +3,7 @@
  * Every factory returns plain objects of jest.fn() so suites can assert on calls.
  * `jest.clearAllMocks()` keeps these implementations (it only clears call history).
  */
+import type { InjectionToken } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PusherService } from '../chat/pusher.service';
 import { QStashService } from '../notifications/qstash.service';
@@ -19,6 +20,8 @@ import {
 import { WhatsAppService } from '../customer-auth/whatsapp.service';
 
 export const PRISMA_MODELS = [
+  'dailyClose',
+  'evidenceReviewSuggestion',
   'auditEvent',
   'usageEvent',
   'bridgeDispatch',
@@ -290,7 +293,13 @@ export const provideAuditService = (value = mockAuditService()) => ({
   useValue: value,
 });
 
-/** A SettingsService stand-in that returns the declared defaults unless overridden. */
+/**
+ * A SettingsService stand-in that returns the declared defaults unless overridden.
+ * Because it reads `SETTING_DEFAULTS` directly, `get('notifications')`,
+ * `get('ai')` and `get('daily_close')` answer with the P6 blocks with no extra
+ * wiring; override a single block the usual way:
+ * `mockSettings({ ai: { ...SETTING_DEFAULTS.ai, provider: 'anthropic' } })`.
+ */
 export function mockSettings(overrides: Partial<typeof SETTING_DEFAULTS> = {}) {
   const values = { ...SETTING_DEFAULTS, ...overrides } as Record<
     string,
@@ -333,6 +342,64 @@ export function mockWhatsApp() {
     sendTemplate: jest.fn().mockResolvedValue(undefined),
   };
 }
+
+/**
+ * An `AiProviderPort` stand-in — the deterministic pair every AI-facing spec
+ * injects. Shaped against `src/ai/ai.types.ts` but deliberately **not** typed
+ * against it: this file imports nothing from `src/ai/**` so it stays green in
+ * the wave that creates that module (same reason `mockApprovalPolicyService`
+ * does not import its class). No call reaches the network.
+ */
+export function mockAiProvider(
+  overrides: Partial<{
+    reviewEvidence: jest.Mock;
+    writeMorningBrief: jest.Mock;
+  }> = {},
+) {
+  return {
+    name: 'heuristic' as const,
+    reviewEvidence: jest.fn().mockResolvedValue({
+      verdict: 'approve',
+      confidence: 0.75,
+      reasons: ['Written by the mission bridge from a real ops event.'],
+      provider: 'heuristic',
+      model: null,
+      latency_ms: 1,
+    }),
+    writeMorningBrief: jest.fn().mockResolvedValue({
+      headline: 'Yesterday closed clean.',
+      bullets: [
+        '12 orders, ₹18,400 revenue.',
+        'No blockers open longer than a day.',
+        'Two approvals waiting on BACKEND_LEAD.',
+      ],
+      actions: ['Sign yesterday’s close.'],
+      provider: 'heuristic',
+      model: null,
+      latency_ms: 1,
+    }),
+    ...overrides,
+  };
+}
+
+/**
+ * An `AiProviderResolver` stand-in: `get()` resolves to the supplied port
+ * double, so a spec can assert on `provider.reviewEvidence` directly.
+ */
+export function mockAiResolver(provider = mockAiProvider()) {
+  return { provider, get: jest.fn().mockResolvedValue(provider) };
+}
+
+/**
+ * Ready-made `providers` entry for the AI resolver. `AiProviderResolver` lives
+ * in `src/ai/ai-provider.resolver.ts`, which this file must not import (see
+ * `mockAiProvider`), so the class is passed in as the token:
+ * `provideAi(AiProviderResolver)` or `provideAi(AiProviderResolver, resolver)`.
+ */
+export const provideAi = (
+  token: InjectionToken,
+  value: unknown = mockAiResolver(),
+) => ({ provide: token, useValue: value });
 
 export const provideSettings = (value = mockSettings()) => ({
   provide: SettingsService,

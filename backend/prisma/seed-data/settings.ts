@@ -52,6 +52,36 @@ export const SEED_SETTING_DEFAULTS: typeof SETTING_DEFAULTS = {
     history_default_days: 90,
     history_max_days: 365,
   },
+  notifications: {
+    whatsapp_enabled: false,
+    quiet_hours: { start: '21:00', end: '07:00' },
+    cooldown_hours: {
+      approval_pending: 24,
+      task_blocked: 12,
+      low_stock: 4,
+      shipment_failed: 6,
+      morning_brief: 20,
+      daily_close_due: 20,
+    },
+    email_types: ['task_due', 'task_blocked', 'approval_pending', 'low_stock'],
+  },
+  ai: {
+    provider: 'heuristic',
+    model: 'claude-opus-5',
+    evidence_assist_enabled: true,
+    morning_brief_enabled: true,
+    morning_brief_role_codes: [
+      'FOUNDER_ADMIN',
+      'BACKEND_LEAD',
+      'FRONTEND_LEAD',
+      'BI_LEAD',
+      'PROCUREMENT_LEAD',
+    ],
+  },
+  daily_close: {
+    compute_at: '00:45',
+    signer_role_codes: ['FRONTEND_LEAD', 'FOUNDER_ADMIN'],
+  },
 };
 
 export type SeedSettingKey = keyof typeof SEED_SETTING_DEFAULTS;
