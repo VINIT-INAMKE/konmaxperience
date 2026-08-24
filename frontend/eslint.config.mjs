@@ -3,7 +3,6 @@ import nextVitals from "eslint-config-next/core-web-vitals";
 import nextTs from "eslint-config-next/typescript";
 import {
   noRawColorRules,
-  noRawColorWarnRules,
   noBannedPrimitiveRules,
 } from "./eslint-rules/no-raw-colors.mjs";
 
@@ -52,29 +51,29 @@ const eslintConfig = defineConfig([
     },
   },
   {
-    // Phase 34 rewrites the storefront wholesale; the rule warns there so the
-    // debt is visible, not silent. The CI --max-warnings ceiling ratchets down
-    // when Phase 34 lands.
-    files: [
-      "app/(public)/**/*.tsx",
-      "components/public/**/*.tsx",
-      "app/(auth)/**/*.tsx",
-    ],
-    rules: noRawColorWarnRules,
-  },
-  {
-    // Phase 34's *new* storefront. The warn block above is a debt ledger for
-    // code that predates the token file; nothing below this line predates it,
-    // so the same rule is an error here from the first commit. Ordering is
-    // load-bearing: this block must follow the warn block, because the globs
-    // overlap under `app/(public)/` and the last matching config wins.
+    // The customer-facing surface, all of it (P5b Task 20).
     //
-    // `noBannedPrimitiveRules` rides along because `components/storefront/**`
-    // is new ground the P4 block (ops · ui · lib) does not cover, and the
-    // SPEC §6.4 motion allowlist applies to the storefront just as much.
+    // P4 left a **warn-level** block over `app/(public)/**`, `components/public/**`
+    // and `app/(auth)/**` as a debt ledger: Phase 34 was going to rewrite the
+    // storefront wholesale, so raw colours there were visible but not fatal, and
+    // only the not-yet-written `components/storefront/**` was held to an error.
+    // Phase 34 has now landed — `components/storefront/**` *is* the storefront,
+    // the superseded `components/public/*` shelves and the `app/(public)/profile`
+    // page are gone, and what is left under `app/(public)/` is the new routes plus
+    // thin redirects. There is nothing left for the ledger to excuse, so the two
+    // blocks collapse into this one and the rule is an error everywhere a
+    // customer can see. The CI `--max-warnings` ceiling ratchets down with it.
+    //
+    // `noBannedPrimitiveRules` rides along because the storefront is new ground
+    // the P4 block (ops · ui · lib) does not cover, and the SPEC §6.4 motion
+    // allowlist applies to it just as much.
     files: [
-      "app/(public)/{shop,p,experiences,search,cart,checkout,account,orders}/**/*.ts",
-      "app/(public)/{shop,p,experiences,search,cart,checkout,account,orders}/**/*.tsx",
+      "app/(public)/**/*.ts",
+      "app/(public)/**/*.tsx",
+      "app/(auth)/**/*.ts",
+      "app/(auth)/**/*.tsx",
+      "components/public/**/*.ts",
+      "components/public/**/*.tsx",
       "components/storefront/**/*.ts",
       "components/storefront/**/*.tsx",
     ],
@@ -84,7 +83,10 @@ const eslintConfig = defineConfig([
     },
   },
   {
-    // Frozen by the P4 brief and SPEC §7: the homepage owns its scoped styles.
+    // Frozen by the P4 brief and SPEC §1.3/§7: the homepage owns its scoped
+    // styles. Ordering is load-bearing — this must stay last, because
+    // `components/public/ScrollVideoStory.tsx` is inside the block above and the
+    // final matching config wins.
     files: ["app/page.tsx", "components/public/ScrollVideoStory.tsx"],
     rules: { "no-restricted-syntax": "off" },
   },
