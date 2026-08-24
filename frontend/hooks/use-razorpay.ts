@@ -63,6 +63,19 @@ export function useRazorpay(options: UseRazorpayOptions) {
       description?: string;
       prefill?: { name?: string; contact?: string; email?: string };
       skipContactInfo?: boolean; // POS mode: skip phone/email prompt, go straight to QR/payment
+      /**
+       * The publishable key to open with. **Optional and additive** — every
+       * pre-existing caller (`/menu`, the POS payment form) omits it and keeps
+       * reading `NEXT_PUBLIC_RAZORPAY_KEY_ID` exactly as before.
+       *
+       * The storefront checkout passes `CreateOrderResponse.key_id`, because
+       * the server that opened the Razorpay order is the authority on which
+       * account it belongs to: a build whose env var drifted from the backend's
+       * would otherwise open a modal against the wrong merchant and fail at
+       * signature verification. `null`/`undefined` falls back to the env var,
+       * and the caller is responsible for refusing to open when neither exists.
+       */
+      key?: string | null;
     }) => {
       try {
         setState('loading-script');
@@ -70,7 +83,7 @@ export function useRazorpay(options: UseRazorpayOptions) {
 
         setState('razorpay-open');
         const rzp = new window.Razorpay({
-          key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID!,
+          key: params.key || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID!,
           order_id: params.razorpayOrderId,
           name: 'Konma Xperience',
           description: params.description || 'Payment',
