@@ -313,6 +313,8 @@ export interface ServiceabilityResponse {
     etd?: string;
     /** Rupees. */
     amount?: number;
+    /** Provider's stated reason when unserviceable. */
+    reason?: string;
   } | null;
 }
 
