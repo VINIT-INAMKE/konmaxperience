@@ -14,6 +14,21 @@ import { mockPrisma, type MockPrisma } from '../test-utils/mock-providers';
 
 const NOW = new Date('2026-08-24T06:15:00.000Z');
 
+/**
+ * P6 (RUN-06) checks the unlock, so `withAdvisoryLock` issues *both* statements
+ * through `$queryRaw`: the acquire reads `locked`, the release reads `released`.
+ * Route by SQL text so a spec can still flip the acquire on its own.
+ */
+function advisoryLockRaw(prisma: MockPrisma, locked = true): void {
+  prisma.$queryRaw.mockImplementation((sql: { text: string }) =>
+    Promise.resolve(
+      sql.text.includes('pg_advisory_unlock')
+        ? [{ released: true }]
+        : [{ locked }],
+    ),
+  );
+}
+
 describe('EventHoldsCron', () => {
   let cron: EventHoldsCron;
   let prisma: MockPrisma;
@@ -23,8 +38,7 @@ describe('EventHoldsCron', () => {
 
   beforeEach(() => {
     prisma = mockPrisma();
-    prisma.$queryRaw.mockResolvedValue([{ locked: true }]);
-    prisma.$executeRaw.mockResolvedValue(1);
+    advisoryLockRaw(prisma);
     prisma.eventBooking.deleteMany.mockResolvedValue({ count: 0 });
 
     logSpy = jest.spyOn(Logger.prototype, 'log').mockImplementation(() => {});
@@ -52,11 +66,19 @@ describe('EventHoldsCron', () => {
       expect(options.cronTime).toBe(CronExpression.EVERY_5_MINUTES);
     });
 
-    it('uses a lock id no other job claims', () => {
-      expect(Object.values(ADVISORY_LOCK)).not.toContain(
+    it('uses the registry id, and one no other job claims', () => {
+      // P6 folded the inline constant into the single registry; the export
+      // stays as an alias so no import breaks.
+      expect(BOOKING_HOLD_SWEEP_LOCK_ID).toBe(ADVISORY_LOCK.BOOKING_HOLD_SWEEP);
+      expect(Object.values(ADVISORY_LOCK)).toContain(
         BOOKING_HOLD_SWEEP_LOCK_ID,
       );
       expect(BOOKING_HOLD_SWEEP_LOCK_ID).not.toBe(LOYALTY_EXPIRY_LOCK_ID);
+      expect(
+        Object.values(ADVISORY_LOCK).filter(
+          (id) => id === BOOKING_HOLD_SWEEP_LOCK_ID,
+        ),
+      ).toHaveLength(1);
     });
   });
 
@@ -64,12 +86,20 @@ describe('EventHoldsCron', () => {
     it('takes the lock and releases it', async () => {
       await cron.sweepExpiredHolds();
 
-      expect(prisma.$queryRaw).toHaveBeenCalledTimes(1);
-      expect(prisma.$executeRaw).toHaveBeenCalledTimes(1);
+      // Acquire and release, both through `$queryRaw` since P6 reads the
+      // `pg_advisory_unlock` result instead of discarding it.
+      expect(prisma.$queryRaw).toHaveBeenCalledTimes(2);
       const lockSql = prisma.$queryRaw.mock.calls[0][0] as {
+        text: string;
         values: unknown[];
       };
       expect(lockSql.values).toContain(BOOKING_HOLD_SWEEP_LOCK_ID);
+      const unlockSql = prisma.$queryRaw.mock.calls[1][0] as {
+        text: string;
+        values: unknown[];
+      };
+      expect(unlockSql.text).toContain('pg_advisory_unlock');
+      expect(unlockSql.values).toContain(BOOKING_HOLD_SWEEP_LOCK_ID);
     });
 
     it('short-circuits with no writes when another instance holds the lock', async () => {
@@ -78,7 +108,9 @@ describe('EventHoldsCron', () => {
       await cron.sweepExpiredHolds();
 
       expect(prisma.eventBooking.deleteMany).not.toHaveBeenCalled();
-      expect(prisma.$executeRaw).not.toHaveBeenCalled();
+      // Only the acquire ran: releasing a lock this instance never took would
+      // free it for whoever is actually holding it.
+      expect(prisma.$queryRaw).toHaveBeenCalledTimes(1);
       expect(debugSpy).toHaveBeenCalledWith(
         expect.stringContaining('lock held by another instance'),
       );
@@ -91,7 +123,10 @@ describe('EventHoldsCron', () => {
 
       await expect(cron.sweepExpiredHolds()).resolves.toBeUndefined();
 
-      expect(prisma.$executeRaw).toHaveBeenCalledTimes(1);
+      expect(prisma.$queryRaw).toHaveBeenCalledTimes(2);
+      expect(
+        (prisma.$queryRaw.mock.calls[1][0] as { text: string }).text,
+      ).toContain('pg_advisory_unlock');
       expect(errorSpy).toHaveBeenCalledWith(
         expect.stringContaining('connection reset'),
         expect.anything(),

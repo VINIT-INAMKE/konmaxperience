@@ -1,8 +1,22 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import {
+  S3Client,
+  PutObjectCommand,
+  ListObjectsV2Command,
+  DeleteObjectsCommand,
+} from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { createR2Client } from './r2.config';
+
+/** The S3 `DeleteObjects` API rejects a batch larger than this. */
+export const DELETE_BATCH_LIMIT = 1000;
+
+/** One object as the orphan sweep needs it: its key and when it was last written. */
+export interface StoredObject {
+  key: string;
+  lastModified: Date | null;
+}
 
 const ALLOWED_MIME_TYPES = new Set([
   'image/jpeg',
@@ -94,5 +108,71 @@ export class StorageService {
         ContentLength: body.length,
       }),
     );
+  }
+
+  /**
+   * Lists every key under a prefix, following the S3 continuation token.
+   *
+   * `ListObjectsV2` caps a page at 1000 keys and signals more with
+   * `IsTruncated`; stopping at the first page would make the orphan sweep think
+   * a bucket's tail did not exist. Used only by that sweep (RUN-06).
+   */
+  async listKeys(prefix: string): Promise<StoredObject[]> {
+    const objects: StoredObject[] = [];
+    let continuationToken: string | undefined;
+
+    do {
+      const page = await this.s3.send(
+        new ListObjectsV2Command({
+          Bucket: this.bucketName,
+          Prefix: prefix,
+          ContinuationToken: continuationToken,
+        }),
+      );
+
+      for (const item of page.Contents ?? []) {
+        if (!item.Key) continue;
+        objects.push({
+          key: item.Key,
+          lastModified: item.LastModified ?? null,
+        });
+      }
+
+      // `NextContinuationToken` is only meaningful while truncated; treating a
+      // stale token as live would loop the same page forever.
+      continuationToken = page.IsTruncated
+        ? page.NextContinuationToken
+        : undefined;
+    } while (continuationToken);
+
+    return objects;
+  }
+
+  /**
+   * Deletes keys in chunks of {@link DELETE_BATCH_LIMIT} (the S3 batch limit),
+   * returning how many the API reported as deleted. Used only by the orphan
+   * sweep (RUN-06) — every other deletion in this system is a database write.
+   */
+  async deleteKeys(keys: string[]): Promise<number> {
+    let deleted = 0;
+
+    for (let i = 0; i < keys.length; i += DELETE_BATCH_LIMIT) {
+      const chunk = keys.slice(i, i + DELETE_BATCH_LIMIT);
+      if (chunk.length === 0) continue;
+
+      const result = await this.s3.send(
+        new DeleteObjectsCommand({
+          Bucket: this.bucketName,
+          Delete: { Objects: chunk.map((Key) => ({ Key })), Quiet: true },
+        }),
+      );
+
+      // `Quiet: true` suppresses the per-key success list, so a quiet response
+      // means "all of them minus whatever came back as an error".
+      const errors = result.Errors?.length ?? 0;
+      deleted += chunk.length - errors;
+    }
+
+    return deleted;
   }
 }

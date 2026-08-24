@@ -3,19 +3,17 @@ import { Cron } from '@nestjs/schedule';
 import { LoyaltyReason } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { DEFAULT_NODE_TIMEZONE } from '../node/node.constants';
-import { withAdvisoryLock } from '../common/utils/advisory-lock';
+import { ADVISORY_LOCK, withAdvisoryLock } from '../common/utils/advisory-lock';
 
 /**
  * Advisory-lock id for the nightly loyalty expiry sweep.
  *
- * The Postgres advisory namespace is one 64-bit key space shared by the whole
- * database, so this number may never be reused by another job. It is declared
- * here rather than in `ADVISORY_LOCK` because P5a Task 7 does not own
- * `common/utils/advisory-lock.ts`; folding it into that registry is a one-line
- * post-merge follow-up. `3_1xx_xxx` is P3's block (readiness holds `3_100_001`),
- * `5_7xx_xxx` is P5a's.
+ * P6 (RUN-06) folded it into the one registry in `common/utils/advisory-lock.ts`
+ * — the Postgres advisory namespace is a single 64-bit key space shared by the
+ * whole database, and a number spread across three files is a number waiting to
+ * be reused. The named re-export stays so no import breaks.
  */
-export const LOYALTY_EXPIRY_LOCK_ID = 5_700_101;
+export const LOYALTY_EXPIRY_LOCK_ID = ADVISORY_LOCK.LOYALTY_EXPIRY;
 
 /** Rows per pass. Bounded so one very old backlog cannot hold a connection all night. */
 export const EXPIRY_BATCH_SIZE = 500;
@@ -52,6 +50,7 @@ export class LoyaltyExpiryCron {
         this.prisma,
         LOYALTY_EXPIRY_LOCK_ID,
         () => this.expirePoints(),
+        this.logger,
       );
 
       if (expired === null) {

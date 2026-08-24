@@ -2,21 +2,35 @@ import { Prisma } from '@prisma/client';
 
 /**
  * The slice of `PrismaService` the helper touches. Declaring it structurally (a) keeps
- * `common/utils` free of a Nest dependency and (b) lets a spec pass two `jest.fn()`s.
+ * `common/utils` free of a Nest dependency and (b) lets a spec pass one `jest.fn()`.
+ *
+ * Both statements go through `$queryRaw`: the acquire reads `pg_try_advisory_lock`
+ * and, since P6, the release reads `pg_advisory_unlock` instead of discarding it.
  */
 export type AdvisoryLockClient = {
   $queryRaw: (query: Prisma.Sql) => Promise<unknown>;
-  $executeRaw: (query: Prisma.Sql) => Promise<number>;
 };
+
+/** The minimum a caller must supply for the unlock check to be visible. */
+export type AdvisoryLockLogger = { error(msg: string): void };
 
 /**
  * Stable lock ids — never reuse a number for a different job.
  *
- * The namespace is a single 64-bit key space shared by the whole database, so the
- * `3_1xx_xxx` block is reserved for P3 and Phase 35's `RUN-06` takes the next one.
+ * One 64-bit key space for the whole database, blocked by the phase that
+ * introduced the job: `3_1xx_xxx` P3, `5_7xx_xxx` P5a, `6_35x_xxx` P6.
+ * (The pre-P6 comment reserved the "next" block for RUN-06; P5a took it first,
+ * so the convention is recorded as it actually shipped.)
  */
 export const ADVISORY_LOCK = {
-  READINESS_SNAPSHOT: 3_100_001,
+  READINESS_SNAPSHOT: 3_100_001, // P3 — readiness.cron.ts
+  LOYALTY_EXPIRY: 5_700_101, // P5a — loyalty.cron.ts (was inline)
+  BOOKING_HOLD_SWEEP: 5_700_102, // P5a — event-holds.cron.ts (was inline)
+  STOCK_RECONCILIATION: 6_350_001, // P6 — inventory/stock-reconciliation.cron.ts
+  DAILY_CLOSE: 6_350_002, // P6 — daily-close/daily-close.cron.ts
+  MORNING_BRIEF: 6_350_003, // P6 — ai/morning-brief/morning-brief.cron.ts
+  STAFF_NUDGE_SWEEP: 6_350_004, // P6 — notifications/staff-nudge.cron.ts
+  R2_ORPHAN_SWEEP: 6_350_005, // P6 — storage/orphan-sweep.cron.ts
 } as const;
 
 /**
@@ -32,13 +46,20 @@ export const ADVISORY_LOCK = {
  * Caveat worth knowing: `pg_advisory_lock` is *session*-scoped and Prisma pools its
  * connections, so lock and unlock are only guaranteed to share a session while the
  * two statements are issued back-to-back on an otherwise idle client — which is the
- * case for a nightly job. If this is ever reused on a hot path, move to
- * `pg_try_advisory_xact_lock` inside an interactive `$transaction` instead.
+ * case for every job that uses this helper (nightly, weekly, or a five-minute sweep
+ * that does one `deleteMany`). Converting to `pg_try_advisory_xact_lock` inside an
+ * interactive `$transaction` would force the per-row transactions those jobs
+ * deliberately use into one long-held transaction, trading a theoretical pooling
+ * hazard for a real lock-contention one — so instead the unlock is *checked*, below.
+ *
+ * `logger` is optional so the helper keeps zero Nest dependencies; a cron passes its
+ * own `Logger` and a failed release becomes visible instead of silent.
  */
 export async function withAdvisoryLock<T>(
   prisma: AdvisoryLockClient,
   key: number,
   fn: () => Promise<T>,
+  logger?: AdvisoryLockLogger,
 ): Promise<T | null> {
   const rows = (await prisma.$queryRaw(
     Prisma.sql`SELECT pg_try_advisory_lock(${key}::bigint) AS locked`,
@@ -49,8 +70,20 @@ export async function withAdvisoryLock<T>(
   try {
     return await fn();
   } finally {
-    await prisma.$executeRaw(
-      Prisma.sql`SELECT pg_advisory_unlock(${key}::bigint)`,
-    );
+    // `pg_advisory_unlock` returns false when this session does not hold the
+    // lock — which is exactly what a pooled connection swap looks like, and
+    // which wedges the id until the connection is recycled. Ignoring the
+    // result (the pre-P6 behaviour) makes that failure invisible; a job that
+    // silently stops running is the worst outcome for a nightly.
+    const unlocked = (await prisma.$queryRaw(
+      Prisma.sql`SELECT pg_advisory_unlock(${key}::bigint) AS released`,
+    )) as { released: boolean }[] | null | undefined;
+    if (!unlocked?.[0]?.released) {
+      logger?.error(
+        `Advisory lock ${key} could not be released by this session — it may be ` +
+          `held until the pooled connection is recycled. If this recurs, the job ` +
+          `must move to pg_try_advisory_xact_lock inside an interactive transaction.`,
+      );
+    }
   }
 }

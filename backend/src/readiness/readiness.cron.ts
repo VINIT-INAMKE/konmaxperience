@@ -89,6 +89,7 @@ export class ReadinessCron {
           const snapshots = await this.snapshotAll();
           return { meters: meters.length, snapshots };
         },
+        this.logger,
       );
 
       if (ran === null) {
