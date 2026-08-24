@@ -129,6 +129,36 @@ export async function proxy(request: NextRequest) {
   }
 }
 
+/**
+ * The proxy runs on **every** route that this matcher does not exclude, so the
+ * exclusions are the whole security-relevant surface of the file.
+ *
+ * Two groups, for two different reasons:
+ *
+ * - **Assets** — `_next/static`, `_next/image`, `api`, `scroll-frames`,
+ *   `logo.png` and any `.mp4`. Running a JWT verify per byte-range request of
+ *   the homepage's scroll video is pure cost.
+ * - **Metadata files** — `sitemap.xml`, `robots.txt`, `opengraph-image` and
+ *   `favicon.ico`. These are added by P5b Task 13 and they are **not** an
+ *   optimisation: without them the proxy falls through to its "no token →
+ *   `/team`" branch and answers Googlebot's `GET /robots.txt` with a `307` to
+ *   the staff login. A crawler that cannot read `robots.txt` cannot read the
+ *   `Sitemap:` pointer inside it, and a social card fetched by Slack or
+ *   WhatsApp — which never carries a cookie — would render the sign-in page.
+ *   Excluding them here rather than adding them to `PUBLIC_PATHS` is the
+ *   pattern Next's own proxy documentation prescribes for metadata routes
+ *   (`node_modules/next/dist/docs/01-app/03-api-reference/03-file-conventions/proxy.md`),
+ *   and it keeps `PUBLIC_PATHS` a list of *pages* rather than a mix of pages
+ *   and generated files.
+ *
+ * `/menu`, `/events` and `/profile` are still listed in `PUBLIC_PATHS` above and
+ * are now unreachable: `next.config.ts` answers all three with a `308` at step 2
+ * of the routing chain, before the proxy runs at step 3. The entries are dead
+ * rather than wrong, and are left in place so that removing a redirect rule
+ * cannot silently turn a retired storefront path into a bounce to `/team`.
+ */
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|api|scroll-frames|logo\\.png|.*\\.mp4).*)'],
+  matcher: [
+    '/((?!_next/static|_next/image|favicon.ico|sitemap\\.xml|robots\\.txt|opengraph-image|api|scroll-frames|logo\\.png|.*\\.mp4).*)',
+  ],
 };
