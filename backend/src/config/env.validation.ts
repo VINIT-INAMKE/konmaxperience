@@ -59,6 +59,17 @@ export class EnvironmentVariables {
   @ValidateIf(shiprocketEnabled) @IsString() @IsNotEmpty() SHIPROCKET_PASSWORD?: string;
   @ValidateIf(shiprocketEnabled) @IsString() @IsNotEmpty() SHIPROCKET_PICKUP_LOCATION?: string;
   @ValidateIf(shiprocketEnabled) @IsString() @MinLength(16) SHIPROCKET_WEBHOOK_TOKEN?: string;
+
+  /**
+   * RUN-05. Deliberately **not** in the production-required list (P6 decision 2):
+   * `HeuristicProvider` needs no key, no network and no quota, so a node with no
+   * Anthropic credentials is a supported production state, not a broken one.
+   * `AnthropicProvider` builds a client only when this is set and degrades to
+   * the heuristic otherwise. `SystemSetting['ai'].provider` is the runtime
+   * source of truth for which provider is used; this var only decides whether
+   * the Anthropic one *can* be used.
+   */
+  @IsOptional() @IsString() ANTHROPIC_API_KEY?: string;
 }
 
 export function validate(
