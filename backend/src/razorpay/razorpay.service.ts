@@ -1,10 +1,12 @@
-import { Injectable, OnModuleInit, BadRequestException } from '@nestjs/common';
+import { Injectable, OnModuleInit, BadRequestException, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Razorpay from 'razorpay';
 import { validatePaymentVerification, validateWebhookSignature } from 'razorpay/dist/utils/razorpay-utils';
 
 @Injectable()
 export class RazorpayService implements OnModuleInit {
+  private readonly logger = new Logger(RazorpayService.name);
+
   private instance: Razorpay | null = null;
   private keySecret: string | null = null;
   private webhookSecret: string | null = null;
@@ -17,7 +19,7 @@ export class RazorpayService implements OnModuleInit {
     this.webhookSecret = this.config.get<string>('RAZORPAY_WEBHOOK_SECRET') || null;
 
     if (!keyId || !this.keySecret) {
-      console.warn('[Razorpay] RAZORPAY_KEY_ID or RAZORPAY_KEY_SECRET not set — payment service disabled');
+      this.logger.warn('[Razorpay] RAZORPAY_KEY_ID or RAZORPAY_KEY_SECRET not set — payment service disabled');
       return;
     }
     this.instance = new Razorpay({ key_id: keyId, key_secret: this.keySecret });

@@ -48,4 +48,11 @@ export default tseslint.config(
       'prettier/prettier': ['warn', { endOfLine: 'auto' }],
     },
   },
+  {
+    // QA-04 (P4 Task 19): services log through the Nest `Logger`, never through
+    // `console` — a bare `console.*` bypasses the app's log level, its context
+    // prefix and its transport. The 17 that existed were converted in Task 19.
+    files: ['src/**/*.service.ts'],
+    rules: { 'no-console': 'error' },
+  },
 );

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { PurchaseOrderStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { NodeService } from '../node/node.service';
@@ -7,6 +7,8 @@ import { loadConversions } from '../common/utils/unit-conversion';
 
 @Injectable()
 export class ProcurementService {
+  private readonly logger = new Logger(ProcurementService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly nodeService: NodeService,
@@ -154,7 +156,7 @@ export class ProcurementService {
 
         if (!factor) {
           const ingredientName = allStocks.find((s) => s.ingredient_id === ingId)?.ingredient.name ?? ingId;
-          console.warn(
+          this.logger.warn(
             `[Procurement] No unit conversion from ${fromUnit} to ${toUnit} for ${ingredientName} — skipping valuation`,
           );
           continue;

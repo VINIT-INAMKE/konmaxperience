@@ -4,6 +4,7 @@ import {
   HttpStatus,
   UnauthorizedException,
   GoneException,
+  Logger,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
@@ -229,16 +230,20 @@ describe('CustomerAuthService', () => {
   });
 
   describe('WhatsAppService dev fallback', () => {
-    it('should log to console when WHATSAPP_TOKEN not set', async () => {
+    it('should log the OTP through the Nest logger when WHATSAPP_TOKEN not set', async () => {
       const wa = new WhatsAppService();
-      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+      // QA-04 (Task 19) replaced the raw `console.log` with the service's own
+      // `Logger`, so the spy moves to the prototype rather than to `console`.
+      const logSpy = jest
+        .spyOn(Logger.prototype, 'log')
+        .mockImplementation(() => undefined);
 
       await wa.sendOtp('9876543210', '123456');
 
-      expect(consoleSpy).toHaveBeenCalledWith(
+      expect(logSpy).toHaveBeenCalledWith(
         expect.stringContaining('[DEV] OTP for 9876543210: 123456'),
       );
-      consoleSpy.mockRestore();
+      logSpy.mockRestore();
     });
   });
 });

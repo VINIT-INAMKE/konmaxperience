@@ -17,7 +17,8 @@ export interface VerifyOtpResponse {
 export interface CheckoutResponse {
   type: 'free' | 'paid';
   razorpay_order_id?: string;
-  booking?: any;
+  /** Opaque to the storefront: the confirmation screen re-fetches the booking. */
+  booking?: unknown;
 }
 
 export interface ConfirmBookingPayload {

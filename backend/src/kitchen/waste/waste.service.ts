@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { MovementType, PrepBatchStatus } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -25,6 +25,8 @@ type WasteLogRow = {
 
 @Injectable()
 export class WasteService {
+  private readonly logger = new Logger(WasteService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly eventEmitter: EventEmitter2,
@@ -134,7 +136,7 @@ export class WasteService {
           this.prisma,
         );
         if (toPrice === null) {
-          console.warn(
+          this.logger.warn(
             `[Waste] No unit conversion from ${dto.unit} to ${latestPrice.unit} for ingredient ${dto.ingredient_id} — cost_impact set to 0`,
           );
           convertedQtyForCost = 0;

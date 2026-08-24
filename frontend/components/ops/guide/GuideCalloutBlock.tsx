@@ -81,7 +81,7 @@ export const CalloutExtension = Node.create({
     ];
   },
 
-  renderHTML({ HTMLAttributes }: { HTMLAttributes: Record<string, any> }) {
+  renderHTML({ HTMLAttributes }: { HTMLAttributes: Record<string, unknown> }) {
     return ['div', mergeAttributes(HTMLAttributes, { 'data-type': 'callout' }), 0];
   },
 

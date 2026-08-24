@@ -21,11 +21,19 @@ export const NODE_STATUS_LABELS: Record<NodeStatus, string> = {
   closed: 'Closed',
 };
 
+/**
+ * Token classes for the read-only status pill on `/admin/node`.
+ *
+ * Task 19 re-tokenised this map (it held raw `blue-500` / `green-500` /
+ * `amber-500` classes and had zero call sites, so no sweep ever reached it) and
+ * folded `NodeSettingsForm`'s private duplicate into it, so the mapping now
+ * exists exactly once.
+ */
 export const NODE_STATUS_BADGE_CLASSES: Record<NodeStatus, string> = {
-  setup: 'bg-blue-500/15 text-blue-400',
-  active: 'bg-green-500/15 text-green-400',
-  paused: 'bg-amber-500/15 text-amber-400',
-  closed: 'bg-muted text-muted-foreground',
+  setup: 'bg-info-status/12 text-info-status',
+  active: 'bg-good/12 text-good',
+  paused: 'bg-warning/12 text-warning',
+  closed: 'bg-surface-raised text-ink-muted',
 };
 
 export interface Node {

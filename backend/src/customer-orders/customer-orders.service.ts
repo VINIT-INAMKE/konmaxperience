@@ -6,6 +6,7 @@ import {
   ForbiddenException,
   ConflictException,
   ServiceUnavailableException,
+  Logger,
 } from '@nestjs/common';
 import {
   FulfilmentType,
@@ -207,6 +208,8 @@ function pendingForFulfilment(
 
 @Injectable()
 export class CustomerOrdersService {
+  private readonly logger = new Logger(CustomerOrdersService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly nodeService: NodeService,
@@ -665,7 +668,10 @@ export class CustomerOrdersService {
         status: OrderStatus.placed,
       })
       .catch((err) =>
-        console.error('[Pusher] Order placed trigger error:', err),
+        this.logger.error(
+          '[Pusher] Order placed trigger error',
+          err instanceof Error ? err.stack : String(err),
+        ),
       );
 
     return order;

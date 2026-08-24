@@ -13,14 +13,8 @@ export const STATUS_BADGE = {
   neutral:  'text-ink-muted bg-surface-raised border-transparent',
   /** Retired/abandoned states — present but no longer live. */
   muted:    'text-ink-muted bg-surface-raised border-transparent line-through',
-  /** @deprecated colour-named aliases — deleted at the end of Wave 1. */
-  amber: 'text-[var(--status-warning)] bg-[var(--status-warning)]/12 border-[var(--status-warning)]/25',
-  /** @deprecated colour-named aliases — deleted at the end of Wave 1. */
-  blue:  'text-[var(--status-info)] bg-[var(--status-info)]/12 border-[var(--status-info)]/25',
-  /** @deprecated colour-named aliases — deleted at the end of Wave 1. */
-  green: 'text-[var(--status-good)] bg-[var(--status-good)]/12 border-[var(--status-good)]/25',
-  /** @deprecated colour-named aliases — deleted at the end of Wave 1. */
-  red:   'text-[var(--status-serious)] bg-[var(--status-serious)]/12 border-[var(--status-serious)]/25',
+  // The colour-named aliases (`amber`, `blue`, `green`, `red`) that bridged the
+  // Wave 1 sweeps were deleted in Task 19 — every call site now names a meaning.
 } as const;
 
 /** Prisma `TaskStatus` — `todo` is the neutral default. */

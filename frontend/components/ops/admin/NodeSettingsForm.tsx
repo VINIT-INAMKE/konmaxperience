@@ -22,8 +22,8 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { apiClient, ApiError } from '@/lib/api-client';
-import type { Node, NodeStatus, UpdateNodePayload } from '@/lib/types/nodes';
-import { NODE_STATUS_LABELS } from '@/lib/types/nodes';
+import type { Node, UpdateNodePayload } from '@/lib/types/nodes';
+import { NODE_STATUS_BADGE_CLASSES, NODE_STATUS_LABELS } from '@/lib/types/nodes';
 import { cn } from '@/lib/utils';
 
 const NODE_KEY = ['nodes', 'current'] as const;
@@ -53,14 +53,6 @@ function supportedTimeZones(): string[] {
   }
   return FALLBACK_TIME_ZONES;
 }
-
-/** Status is read-only here; `PATCH /nodes/current` does not accept it. */
-const NODE_STATUS_TONE: Record<NodeStatus, string> = {
-  setup: 'bg-info-status/12 text-info-status',
-  active: 'bg-good/12 text-good',
-  paused: 'bg-warning/12 text-warning',
-  closed: 'bg-surface-raised text-ink-muted',
-};
 
 const nodeSchema = z.object({
   name: z
@@ -342,7 +334,7 @@ export function NodeSettingsForm() {
               <span
                 className={cn(
                   'rounded-full px-2 py-0.5 text-xs font-medium',
-                  NODE_STATUS_TONE[node.status] ??
+                  NODE_STATUS_BADGE_CLASSES[node.status] ??
                     'bg-surface-raised text-ink-muted',
                 )}
               >

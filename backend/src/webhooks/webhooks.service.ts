@@ -80,7 +80,9 @@ export class WebhooksService {
 
       const notes = payment.notes as { type?: string; entity_id?: string };
       if (!notes?.type || !notes?.entity_id) {
-        console.warn('[Webhook] Missing routing metadata in notes:', notes);
+        this.logger.warn(
+          `[Webhook] Missing routing metadata in notes: ${JSON.stringify(notes)}`,
+        );
         return;
       }
 
@@ -95,12 +97,14 @@ export class WebhooksService {
           await this.handleMarketplacePayment(payment, notes.entity_id);
           break;
         default:
-          console.warn('[Webhook] Unknown payment type:', notes.type);
+          this.logger.warn(
+            `[Webhook] Unknown payment type: ${String(notes.type)}`,
+          );
       }
     } else if (event === 'payment.failed') {
       // Log but do not update status — customer can retry with same order
       const payment = payload.payment?.entity;
-      console.log(
+      this.logger.log(
         `[Webhook] Payment failed: ${payment?.id} for order ${payment?.order_id}`,
       );
     } else if (event === 'refund.processed') {
@@ -121,7 +125,7 @@ export class WebhooksService {
       },
     });
     if (result.count === 0) {
-      console.log(
+      this.logger.log(
         `[Webhook] Booking already paid or not found for order: ${payment.order_id}`,
       );
     }
@@ -220,7 +224,10 @@ export class WebhooksService {
         status: OrderStatus.placed,
       })
       .catch((err) =>
-        console.error('[Pusher] Webhook order trigger error:', err),
+        this.logger.error(
+          '[Pusher] Webhook order trigger error',
+          err instanceof Error ? err.stack : String(err),
+        ),
       );
   }
 

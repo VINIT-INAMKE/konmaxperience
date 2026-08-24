@@ -3,6 +3,7 @@ import {
   BadRequestException,
   ConflictException,
   NotFoundException,
+  Logger,
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import {
@@ -90,6 +91,8 @@ const DELIVERY_STATUS_ORDER: (DeliveryStatus | null)[] = [
 
 @Injectable()
 export class OrdersService {
+  private readonly logger = new Logger(OrdersService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly nodeService: NodeService,
@@ -407,7 +410,12 @@ export class OrdersService {
             updatedAt: new Date().toISOString(),
           },
         )
-        .catch((err) => console.error('[Pusher] Status trigger error:', err));
+        .catch((err: unknown) =>
+          this.logger.error(
+            '[Pusher] Status trigger error',
+            err instanceof Error ? err.stack : String(err),
+          ),
+        );
     }
 
     // SPEC §5.2 step 6 — the goods have landed, so the order earns its loyalty
@@ -590,7 +598,12 @@ export class OrdersService {
           deliveryStatus: dto.delivery_status ?? order.delivery_status,
           updatedAt: new Date().toISOString(),
         })
-        .catch((err) => console.error('[Pusher] Delivery trigger error:', err));
+        .catch((err: unknown) =>
+          this.logger.error(
+            '[Pusher] Delivery trigger error',
+            err instanceof Error ? err.stack : String(err),
+          ),
+        );
     }
 
     // The rider's last scan is a delivery too: credit loyalty here as well, so a

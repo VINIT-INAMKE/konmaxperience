@@ -1,3 +1,5 @@
+import { STATUS_BADGE } from '@/lib/status-styles';
+
 /** Prisma `PurchaseOrderStatus`. */
 export type PurchaseOrderStatus = 'draft' | 'ordered' | 'received' | 'cancelled';
 
@@ -8,11 +10,19 @@ export const PO_STATUS_LABELS: Record<PurchaseOrderStatus, string> = {
   cancelled: 'Cancelled',
 };
 
+/**
+ * Task 19 re-tokenised this map. The Wave 1 sweeps partitioned `app/` and
+ * `components/` and never covered `lib/types/**`, so these four raw palette
+ * classes survived until the DESIGN-02 lint rule reached `lib/**`.
+ *
+ * `cancelled` is `muted` (struck through, no longer live) rather than a red —
+ * a cancelled PO is not an error state.
+ */
 export const PO_STATUS_BADGE_CLASSES: Record<PurchaseOrderStatus, string> = {
-  draft: 'bg-muted text-muted-foreground',
-  ordered: 'bg-blue-500/15 text-blue-400',
-  received: 'bg-green-500/15 text-green-400',
-  cancelled: 'bg-red-500/15 text-red-400',
+  draft: STATUS_BADGE.neutral,
+  ordered: STATUS_BADGE.info,
+  received: STATUS_BADGE.good,
+  cancelled: STATUS_BADGE.muted,
 };
 
 export interface PurchaseOrderLine {

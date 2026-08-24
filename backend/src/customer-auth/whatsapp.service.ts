@@ -1,7 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 
 @Injectable()
 export class WhatsAppService {
+  private readonly logger = new Logger(WhatsAppService.name);
+
   private token: string | null;
   private phoneId: string | null;
 
@@ -18,7 +20,7 @@ export class WhatsAppService {
           'WhatsApp not configured in production — set WHATSAPP_TOKEN and WHATSAPP_PHONE_ID',
         );
       }
-      console.log(`[DEV] OTP for ${recipientPhone}: ${otp}`);
+      this.logger.log(`[DEV] OTP for ${recipientPhone}: ${otp}`);
       return;
     }
 
@@ -39,7 +41,7 @@ export class WhatsAppService {
     bodyParams: string[] = [],
   ): Promise<void> {
     if (!this.token || !this.phoneId) {
-      console.log(
+      this.logger.log(
         `[DEV] WhatsApp template "${templateName}" for ${recipientPhone}: ${bodyParams.join(' | ')}`,
       );
       return;
@@ -92,7 +94,7 @@ export class WhatsAppService {
 
     if (!res.ok) {
       const body = await res.text();
-      console.error(
+      this.logger.error(
         `[WhatsApp] Failed to send ${label}: ${res.status} ${body}`,
       );
       throw new Error(`WhatsApp API error: ${res.status}`);

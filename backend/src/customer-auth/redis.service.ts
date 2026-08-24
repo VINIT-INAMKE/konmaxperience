@@ -1,14 +1,16 @@
-import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
+import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
 import Redis from 'ioredis';
 
 @Injectable()
 export class RedisService implements OnModuleInit, OnModuleDestroy {
+  private readonly logger = new Logger(RedisService.name);
+
   private client: Redis | null = null;
 
   onModuleInit() {
     const url = process.env.UPSTASH_REDIS_URL;
     if (!url) {
-      console.warn('[CustomerAuth] UPSTASH_REDIS_URL not set -- OTP storage disabled');
+      this.logger.warn('[CustomerAuth] UPSTASH_REDIS_URL not set -- OTP storage disabled');
       return;
     }
     let errorLogged = false;
@@ -20,7 +22,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
       retryStrategy: (times: number) => {
         if (times > 3) {
           if (!errorLogged) {
-            console.warn('[Redis] Unreachable after 3 attempts — disabling. App continues without OTP/dedup.');
+            this.logger.warn('[Redis] Unreachable after 3 attempts — disabling. App continues without OTP/dedup.');
             errorLogged = true;
           }
           this.client = null;
@@ -31,7 +33,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     });
     this.client.on('error', (err) => {
       if (!errorLogged) {
-        console.error('[Redis]', err.message);
+        this.logger.error(`[Redis] ${err.message}`);
       }
     });
   }

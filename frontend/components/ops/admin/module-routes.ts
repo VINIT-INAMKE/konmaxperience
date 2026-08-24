@@ -6,13 +6,18 @@
  * the API does not send: a readable label, the screen a key maps to, and the
  * `sort_order` band the seed groups it under.
  *
- * `frontend/lib/nav/spine.ts` is the shipping source of truth for the
- * navigation spine and is built in the same wave as this screen. Once it lands,
- * {@link MODULE_ROUTES} and {@link PRIMARY_MODULE_KEYS} should be derived from
- * it rather than duplicated here — this file is deliberately data-only so that
- * swap is a one-line change.
+ * `frontend/lib/nav/spine.ts` is the source of truth for the navigation spine.
+ * Task 19 made good on this file's own TODO: {@link MODULE_ROUTES} and
+ * {@link PRIMARY_MODULE_KEYS} are now *derived* from the spine rather than
+ * duplicated here, so a route that moves in the spine moves in the editor too
+ * and a key with no spine entry can never render a link.
  */
 
+import {
+  HEADER_MODULES,
+  SPINE_GROUPS,
+  SPINE_PRIMARY,
+} from '@/lib/nav/spine';
 import { moduleKeyLabel, type ModuleKey } from '@/lib/types/modules';
 import { RoleCode } from '@/lib/types/roles';
 
@@ -38,86 +43,43 @@ export function moduleLabel(key: ModuleKey): string {
 }
 
 /**
- * The screen each seeded key opens. Keys absent from this map have no route in
- * this release (`shipments`, `customers`, `reviews`, `promotions` ship with the
- * storefront phase; `talent` is v2.1) and render as "—" in the editor so a grant
- * can never produce a dead link.
+ * The screen each seeded key opens, derived from the navigation spine.
+ *
+ * Keys absent from the spine have no route in this release (`shipments`,
+ * `customers`, `reviews`, `promotions` ship with the storefront phase;
+ * `talent` is v2.1) and render as "—" in the editor, so a grant can never
+ * produce a dead link. When a spine group lists a key more than once the first
+ * entry wins, which is the group's own landing screen.
  */
-export const MODULE_ROUTES: Readonly<Record<string, string>> = {
-  // Spine (SPEC §6.2)
-  mission_control: '/dashboard',
-  my_tasks: '/tasks',
-  my_quests: '/quests?mine=1',
-  evidence: '/boards/evidence',
-  approvals: '/approvals',
-  decisions: '/decisions',
-  readiness: '/readiness',
-  team: '/team',
-  guide: '/guide',
-  chat: '/chat',
-
-  // Kitchen
-  recipes: '/operations/recipes',
-  ingredients: '/operations/ingredients',
-  prep_batches: '/operations/kitchen/prep-batches',
+const ROUTE_OVERRIDES: Readonly<Record<string, string>> = {
+  // The Kitchen group opens on "Kitchen Overview", so first-wins would point
+  // the `kds` key at the overview rather than at the screen it is named for.
   kds: '/operations/kitchen/kds',
-  pick_pack: '/operations/kitchen/pick-and-pack',
-  waste: '/operations/kitchen/waste',
-  supply_usage: '/operations/kitchen/supply-usage',
-
-  // Procurement
-  inventory: '/operations/inventory',
-  procurement: '/operations/procurement',
-  purchase_orders: '/operations/purchase-orders',
-  vendors: '/operations/vendors',
-
-  // Commerce
-  pos: '/pos',
-  orders: '/pos/orders',
-  delivery: '/pos/delivery',
-
-  // Catalog & Experiences
-  catalog: '/operations/menu',
-  experiences: '/operations/events',
-  brands: '/operations/brands',
-  assets: '/operations/assets',
-
-  // Intelligence
-  analytics: '/intelligence/analytics',
-  kpis: '/kpis',
-  feedback: '/operations/feedback',
-  exports: '/admin/exports',
-
-  // Admin
-  imports: '/admin/import',
-  users: '/admin/users',
-  permissions: '/admin/permissions',
-  delegations: '/admin/delegations',
-  notices: '/admin/notices',
-  settings: '/admin/settings',
-  modules: '/admin/modules',
-  guide_editor: '/admin/guide',
-  zones: '/operations/zones',
-  channels: '/operations/channels',
 };
 
+export const MODULE_ROUTES: Readonly<Record<string, string>> = Object.freeze(
+  [
+    ...SPINE_PRIMARY,
+    ...SPINE_GROUPS.flatMap((group) => group.items),
+    ...HEADER_MODULES,
+  ].reduce<Record<string, string>>(
+    (routes, item) => {
+      if (!(item.moduleKey in routes)) routes[item.moduleKey] = item.href;
+      return routes;
+    },
+    { ...ROUTE_OVERRIDES },
+  ),
+);
+
 /**
- * The fixed navigation spine (SPEC §6.2, `sort_order` 10–100). Disabling one of
- * these removes a top-level destination for every role, so the editor asks for
- * confirmation first.
+ * The fixed navigation spine (SPEC §6.2) plus the two header destinations.
+ * Disabling one of these removes a top-level destination for every role, so the
+ * editor asks for confirmation first.
  */
-export const PRIMARY_MODULE_KEYS: readonly ModuleKey[] = [
-  'mission_control',
-  'my_tasks',
-  'my_quests',
-  'evidence',
-  'approvals',
-  'decisions',
-  'readiness',
-  'team',
-  'guide',
-  'chat',
-];
+export const PRIMARY_MODULE_KEYS: readonly ModuleKey[] = Object.freeze([
+  ...SPINE_PRIMARY.map((item) => item.moduleKey),
+  ...HEADER_MODULES.map((item) => item.moduleKey),
+]);
 
 export interface ModuleBand {
   /** Stable id, used as a React key and as the sticky heading anchor. */

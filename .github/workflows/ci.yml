@@ -31,6 +31,8 @@ jobs:
       - run: npx tsc --noEmit -p tsconfig.json
       - run: npx jest --ci --silent
       - run: npm run build
+      - name: Services log through the Nest Logger (QA-04)
+        run: '! grep -rn "console\." src --include=*.service.ts'
 
   frontend:
     name: Frontend (lint, typecheck, build)
@@ -50,6 +52,19 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
-      - run: npm run lint
+      # DESIGN-02 / DESIGN-04 / QA-04 are errors (see frontend/eslint-rules/no-raw-colors.mjs).
+      # The ceiling is a ratchet, not a formality: the tree sits at 60 warnings
+      # today, so 80 leaves headroom for a work-in-progress branch while still
+      # failing on a slide. Phase 34 rewrites the storefront and lowers it again.
+      - run: npx eslint . --max-warnings 80
       - run: npx tsc --noEmit
       - run: npm run build
+      - name: Motion allowlist (SPEC 6.4)
+        run: |
+          ! grep -rn "BlurFade\|MagicCard\|ShimmerButton\|ShineBorder\|PulsatingButton\|InteractiveHoverButton\|AnimatedList\|AvatarCircles\|AnimatedCircularProgressBar\|TextAnimate\|HyperText\|CoolMode" --include=*.tsx app components
+      - name: Polling floor (SPEC 6.4 - no interval under 30s, no background polling)
+        run: |
+          ! grep -rnE "refetchInterval: *(1?[0-9]{1,4})(,|$)|refetchIntervalInBackground" --include=*.ts --include=*.tsx app components lib
+      - name: One token file (SPEC 7 - no second :root palette)
+        run: |
+          ! grep -rl --include=*.css "^  --public-" app | grep -v "app/tokens.css"
