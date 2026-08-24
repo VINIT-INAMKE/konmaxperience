@@ -21,7 +21,10 @@ describe('WebhooksService', () => {
     confirmPaidOrder: jest.Mock;
     findOrderByRazorpayPaymentId: jest.Mock;
   };
-  let mockRefunds: { reconcileGatewayRefund: jest.Mock };
+  let mockRefunds: {
+    reconcileGatewayRefund: jest.Mock;
+    markGatewayRefundFailed: jest.Mock;
+  };
 
   /** Signs and delivers one webhook body through the real `processWebhook` path. */
   const deliver = async (body: unknown, eventId: string) => {
@@ -50,6 +53,7 @@ describe('WebhooksService', () => {
 
     mockRefunds = {
       reconcileGatewayRefund: jest.fn().mockResolvedValue(undefined),
+      markGatewayRefundFailed: jest.fn().mockResolvedValue(undefined),
     };
 
     mockPrisma = {
@@ -343,6 +347,59 @@ describe('WebhooksService', () => {
       );
 
       expect(mockRefunds.reconcileGatewayRefund).not.toHaveBeenCalled();
+    });
+  });
+
+  // ---------------------------------------------------------------
+  // refund.failed — P5a plan risk 3. The ledger correction itself is owned and
+  // covered by RefundsService; this proves the event is routed at all, which is
+  // the gap: before P6 it fell off the end of the dispatch chain.
+  // ---------------------------------------------------------------
+  describe('refund.failed', () => {
+    const entity: GatewayRefundEntity = {
+      id: 'rfnd_failed_1',
+      payment_id: 'pay_refund_1',
+      amount: 50000,
+    };
+    const body = {
+      event: 'refund.failed',
+      payload: { refund: { entity } },
+    };
+
+    it('hands the failed refund to RefundsService', async () => {
+      await deliver(body, 'evt_refund_failed_1');
+
+      expect(mockRefunds.markGatewayRefundFailed).toHaveBeenCalledWith(entity);
+      expect(mockRefunds.reconcileGatewayRefund).not.toHaveBeenCalled();
+      expect(mockPrisma.payment.update).not.toHaveBeenCalled();
+    });
+
+    it('does not touch the event-booking branch', async () => {
+      await deliver(body, 'evt_refund_failed_2');
+
+      expect(mockPrisma.eventBooking.findFirst).not.toHaveBeenCalled();
+      expect(mockPrisma.eventBooking.update).not.toHaveBeenCalled();
+    });
+
+    it('ignores a payload with no refund entity', async () => {
+      await deliver(
+        { event: 'refund.failed', payload: {} },
+        'evt_refund_failed_3',
+      );
+
+      expect(mockRefunds.markGatewayRefundFailed).not.toHaveBeenCalled();
+    });
+
+    it('ignores a refund entity with no payment id', async () => {
+      await deliver(
+        {
+          event: 'refund.failed',
+          payload: { refund: { entity: { id: 'rfnd_failed_4' } } },
+        },
+        'evt_refund_failed_4',
+      );
+
+      expect(mockRefunds.markGatewayRefundFailed).not.toHaveBeenCalled();
     });
   });
 
