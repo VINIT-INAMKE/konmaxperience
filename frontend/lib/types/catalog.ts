@@ -115,8 +115,16 @@ export interface ChannelModifier {
   status: string;
 }
 
-/** First image for a product, or null — replaces the v1 `image_url` column. */
-export function productImage(product: Product): string | null {
+/**
+ * First image for a product, or null — replaces the v1 `image_url` column.
+ *
+ * Typed structurally rather than on `Product` so it also serves
+ * `StorefrontProduct` (`lib/types/storefront.ts`), whose public projection
+ * carries the same `media[]` but none of the staff-only recipe fields.
+ */
+export function productImage(product: {
+  media?: ProductMedia[] | null;
+}): string | null {
   return product.media?.find((m) => m.kind === 'image')?.url ?? null;
 }
 

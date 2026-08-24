@@ -22,3 +22,17 @@ export * from './modules';
 export * from './nodes';
 export * from './header';
 export * from './usage';
+
+// ── P5b: storefront + staff commerce ────────────────────────────────────────
+// Every name below is unique across the barrel — `export *` drops an ambiguous
+// re-export silently, so a collision here would delete a type rather than fail.
+// Shared vocabulary has exactly one home: `ProductType`/`FulfilmentType` in
+// `catalog`, `OrderStatus`/`PaymentStatus` in `kds`, `CouponType` in
+// `promotions`, `ShipmentStatus` in `shipments`, `LoyaltyTier` in `checkout`.
+export * from './storefront';
+export * from './checkout';
+export * from './shipments';
+export * from './promotions';
+export * from './reviews';
+export * from './customers';
+export * from './refunds';
