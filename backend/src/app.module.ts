@@ -84,6 +84,9 @@ import { CustomerPresenceInterceptor } from './customers/customer-presence.inter
 // surfaces can import `AiModule`. Kept on its own line at the end of both
 // blocks so concurrent phases adding imports do not collide with this one.
 import { AiModule } from './ai/ai.module';
+// P6 wave 2 — the run-it capabilities. Same one-line-each convention as the
+// blocks above, so concurrent phases adding imports do not collide with these.
+import { DailyCloseModule } from './daily-close/daily-close.module';
 
 @Module({
   imports: [
@@ -154,6 +157,7 @@ import { AiModule } from './ai/ai.module';
     ReviewsModule,
     CustomersModule,
     AiModule,
+    DailyCloseModule,
   ],
   controllers: [AppController],
   providers: [
