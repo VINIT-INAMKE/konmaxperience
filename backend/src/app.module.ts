@@ -87,6 +87,8 @@ import { AiModule } from './ai/ai.module';
 // P6 wave 2 — the run-it capabilities. Same one-line-each convention as the
 // blocks above, so concurrent phases adding imports do not collide with these.
 import { DailyCloseModule } from './daily-close/daily-close.module';
+import { FoodCostModule } from './food-cost/food-cost.module';
+import { EvidenceAssistModule } from './ai/evidence-assist/evidence-assist.module';
 
 @Module({
   imports: [
@@ -158,6 +160,8 @@ import { DailyCloseModule } from './daily-close/daily-close.module';
     CustomersModule,
     AiModule,
     DailyCloseModule,
+    FoodCostModule,
+    EvidenceAssistModule,
   ],
   controllers: [AppController],
   providers: [
