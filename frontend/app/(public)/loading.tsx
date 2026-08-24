@@ -1,14 +1,20 @@
+import { StorefrontSkeleton } from '@/components/storefront/common/StorefrontSkeleton';
 import { Skeleton } from '@/components/ui/skeleton';
 
+/**
+ * The route-group loading state, drawn against the shell rather than against the
+ * old 4xl phone column: the layout already owns the gutter and the `max-w-7xl`
+ * well, so this only supplies the page's own shapes — a title, a standfirst and
+ * a product grid, which is what most storefront routes resolve into.
+ */
 export default function PublicLoading() {
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
-      <Skeleton className="h-8 w-56 rounded-lg" />
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {[1, 2, 3, 4, 5, 6].map((i) => (
-          <Skeleton key={i} className="h-48 rounded-xl" />
-        ))}
+    <div className="space-y-8">
+      <div className="space-y-3">
+        <Skeleton className="h-8 w-64 max-w-full rounded-lg" />
+        <Skeleton className="h-4 w-96 max-w-full rounded-md" />
       </div>
+      <StorefrontSkeleton variant="grid" count={8} />
     </div>
   );
 }
