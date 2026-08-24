@@ -2,8 +2,8 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Mission OS + Marketplace
-status: "Phase 33 (P5a marketplace backend) complete — Phase 32 (P4) in flight with every wave merged and its record still to be written; Phase 34 next"
-stopped_at: P5a complete at 5a15e39 — migration 20260826120000_p5a_marketplace_backend applied, seeded, drift-gated and smoke-tested end to end; see .planning/phases/33-p5a-marketplace-backend/33-01-SUMMARY.md
+status: "Phases 32 (P4 role-aware IA) and 33 (P5a marketplace backend) both complete — Phase 34 (P5b storefront + staff commerce) is next and is unblocked"
+stopped_at: P4 complete at e871cf4 — all 19 tasks merged, lint/CI enforcement landed, eight-role walk-through recorded; see .planning/phases/32-p4-role-aware-ia/32-01-SUMMARY.md. P5a complete at 5a15e39; see .planning/phases/33-p5a-marketplace-backend/33-01-SUMMARY.md
 last_updated: "2026-08-24"
 progress:
   total_phases: 7
@@ -23,11 +23,40 @@ See: .planning/PROJECT.md (updated 2026-08-22) and /SPEC.md (canonical v2.0 spec
 ## Current Position
 
 Milestone: v2.0 Mission OS + Marketplace (Phases 29–35 on branch `v2-os-marketplace`)
-Phase: 33 (Marketplace Backend, P5a) — **COMPLETE** at `5a15e39` (record: `.planning/phases/33-p5a-marketplace-backend/33-01-SUMMARY.md`)
-In flight: 32 (Role-Aware IA + Identity, P4) — every wave (`p4-01` … `p4-18`) is merged into `v2-os-marketplace`, including migration `20260826000000_p4_role_aware_ia`; the phase record is still to be written
-Next phase: 34 (Marketplace Storefront + Staff Commerce, P5b) — needs both 32 and 33
+Phase: 32 (Role-Aware IA + Identity, P4) — **COMPLETE** at `e871cf4` (record: `.planning/phases/32-p4-role-aware-ia/32-01-SUMMARY.md`)
+Also complete: 33 (Marketplace Backend, P5a) at `5a15e39` (record: `.planning/phases/33-p5a-marketplace-backend/33-01-SUMMARY.md`)
+Next phase: 34 (Marketplace Storefront + Staff Commerce, P5b) — needed both 32 and 33; **now unblocked**
 Previous phases: 31 (Mission Bridge, P3) complete at `080a664`; 30 (Platform Foundation, P2) complete at `fc49c19`
 Previous milestone: v1.1 complete 2026-03-27 (Phases 14–24, 27, 28 shipped; Phases 25 and 26 were never built — see ROADMAP.md notes)
+
+P4 shipped all 19 tasks of `docs/superpowers/plans/2026-08-23-p4-role-aware-ia-identity.md`: one `app/tokens.css`
+promoting the homepage's `--public-*` palette to a semantic layer plus a designed dark set and a 26-name shadcn
+compat layer (so 279 components re-branded by changing values, not names), four mechanical sweeps onto those
+tokens, the persistent `AppHeader` (mission crumb, readiness pill, approvals/blockers badges, XP chip, Cmd-K command
+palette, notifications, theme, user), `lib/nav/spine.ts` rendering the SPEC 6.2 spine from `ModuleAccess` with
+Guide and Chat in the header, `/tasks` (server-filtered kanban + list), `/quests?mine=1`, the `/team` hub that
+absorbs wins/contribution/activity/leaderboard, `/admin/modules` and `/admin/node`, Mission Control (admin) and
+My Day (everyone else), Task/Quest sheets with inline approve/reject and evidence from the task row, Quest-to-Task
+lineage chips, Pusher on the kitchen screens with a 30 s polling floor, and `UsageEvent` page views plus six wired
+key actions. One additive migration `20260826000000_p4_role_aware_ia` (`UsageEvent` + `UsageEventType`).
+
+Task 19 made the rules mechanical: a local `eslint-rules/no-raw-colors.mjs` (no new dependency) errors on raw
+colour, banned motion primitives and `any` across `app/(ops)`, `components/ops`, `components/ui` and `lib`, warns
+on the storefront, and is off for the two frozen homepage files; 12 unused Magic-UI primitives, the `Sidebar` shim,
+six orphaned dashboard widgets and the deprecated colour constants were deleted after grep-proving zero importers;
+17 backend `console.*` calls moved to the Nest `Logger` with `no-console` enforced on services; and CI gained the
+motion-allowlist, polling-floor, single-token-file and no-console greps plus `eslint . --max-warnings 80`.
+The rules immediately caught a real gap the sweeps missed — `lib/types/purchase-order.ts` held raw palette classes
+with two live call sites, because the sweeps partitioned `app/` and `components/` and never covered `lib/types/**`.
+
+Gates at `e871cf4`: frontend `tsc --noEmit` clean, `eslint .` **0 errors / 60 warnings** (was 64), `next build`
+compiled, all four CI greps pass; backend 102 suites / 1549 tests + 26 todo, `tsc` clean, 0 lint errors.
+The eight-role walk-through ran against the local seeded stack (backend on 4022, `next start` on 3022): logged-out
+routes redirect to `/team?redirect=`, `/team` serves the rewritten login form, and per-role `GET /modules/mine`
+fed through `buildSpine()` gives 8/8 primary items and six groups for FOUNDER_ADMIN and TECH_LEAD down to 7/8 and
+no groups for TALENT_LEAD. **The visual half of the SPEC 10 walk-through (both themes, 360/1440 px, on-screen
+spine and crumb) is NOT done** — the ops shell is client-rendered, so `curl` cannot reach it; `QA-03` (Playwright
+on a built preview) moves to Phase 34.
 
 P5a shipped all 18 tasks of `docs/superpowers/plans/2026-08-23-p5a-marketplace-backend.md`: integer-paise money
 helpers, the `ShippingProvider` interface with `ManualProvider` + `ShiprocketAdapter`, a 60-second-cached public

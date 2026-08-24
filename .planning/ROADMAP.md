@@ -53,7 +53,7 @@
 - [ ] **Phase 29: Stop the Bleeding (P1)** - 14 Critical/High defects fixed with regression tests, config validation, safe seeds, error boundaries, test suite green, CI enforcing
 - [x] **Phase 30: Platform Foundation (P2)** - Fresh migration baseline: Node, Prisma enums, AuditEvent, Task.subject, ApprovalPolicy, timestamptz, CHECKs, Product replacing MenuItem, new seeds *(complete 2026-08-23 at `fc49c19`)*
 - [x] **Phase 31: Mission Bridge (P3)** - Domain events, MissionBridgeService, derived meters + snapshots + history, policy-generated approvals, recipe approval via policy, decision votes *(complete 2026-08-23 at `080a664`, range `ced2385..080a664`)*
-- [ ] **Phase 32: Role-Aware IA + Identity (P4)** - Persistent header, spine nav, ModuleAccess, /tasks, My Quests, sheets, chips, motion allowlist, brand tokens light + dark, Pusher on kitchen screens, usage events
+- [x] **Phase 32: Role-Aware IA + Identity (P4)** - Persistent header, spine nav, ModuleAccess, /tasks, My Quests, sheets, chips, motion allowlist, brand tokens light + dark, Pusher on kitchen screens, usage events *(complete 2026-08-24 at `e871cf4`, range `be2879f..e871cf4`)*
 - [x] **Phase 33: Marketplace Backend (P5a)** - Catalog, mixed-fulfilment quote/checkout/confirm, FulfilmentService, Shiprocket + shipments, coupons, loyalty, reviews, search, refunds *(complete 2026-08-24 at `5a15e39`, range `8b46610..5a15e39`)*
 - [ ] **Phase 34: Marketplace Storefront + Staff Commerce (P5b)** - Storefront routes (desktop + SEO), cart/checkout UI, account, staff Catalog/Promotions/Reviews/Shipments/Orders/Experiences/Customers screens
 - [ ] **Phase 35: Run-It Layer (P6)** - WhatsApp nudges, daily close, theoretical vs actual food cost, usage dashboard, AI evidence-review assist + morning brief (human-in-the-loop)
@@ -128,8 +128,7 @@ Plans:
 v1.1 (done): 14 -> 15 -> 16 -> 17 -> 18 -> 19 -> 20 -> 21 -> 22 -> 23 -> 24 -> 27 -> 28 (25, 26 never executed).
 v2.0: 29 -> 30 -> 31 -> 32 -> 33 -> 34 -> 35. Phase 33 may run in parallel with Phase 32 once Phase 31 is complete; Phase 34 needs both.
 **Phase 31 completed 2026-08-23 — Phases 32 and 33 ran in parallel.**
-**Phase 33 completed 2026-08-24. Phase 32's code is all merged (`p4-01`…`p4-18`) with its record outstanding;
-Phase 34 is unblocked once that record is written.**
+**Phases 32 and 33 both completed 2026-08-24. Phase 34 is unblocked.**
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -151,7 +150,7 @@ Phase 34 is unblocked once that record is written.**
 | 29. Stop the Bleeding (P1) | v2.0 | 1/1 | Complete    | 2026-08-23 |
 | 30. Platform Foundation (P2) | v2.0 | 1/1 | Complete    | 2026-08-23 |
 | 31. Mission Bridge (P3) | v2.0 | 1/1 | Complete    | 2026-08-23 |
-| 32. Role-Aware IA + Identity (P4) | v2.0 | 1/1 | Code merged (`p4-01`…`p4-18`); record outstanding | — |
+| 32. Role-Aware IA + Identity (P4) | v2.0 | 1/1 | Complete    | 2026-08-24 |
 | 33. Marketplace Backend (P5a) | v2.0 | 1/1 | Complete    | 2026-08-24 |
 | 34. Marketplace Storefront + Staff Commerce (P5b) | v2.0 | 0/? | Not started | — |
 | 35. Run-It Layer (P6) | v2.0 | 0/? | Not started | — |
@@ -463,7 +462,7 @@ Plans:
 **Migration**: `20260823180000_p3_mission_bridge` — `BridgeOutcome` enum, `BridgeDispatch` table, 3 `ReadinessMeter` columns, 3 indexes; additive only, zero DROPs. Drift gate: `No difference detected.`
 **Gates at `080a664`**: backend 75/75 suites · 974 tests · `tsc` exit 0 · 0 lint errors · build clean. Frontend gates still to be re-run on the merged tree.
 
-### Phase 32: Role-Aware IA + Identity (P4)
+### Phase 32: Role-Aware IA + Identity (P4) — ✅ COMPLETE (2026-08-24, `e871cf4`)
 **Goal**: Every role lands on "what I must move today" through a persistent mission header, a fixed navigation spine scoped by `ModuleAccess`, a real `/tasks`, and one brand token system validated in light and dark.
 **Depends on**: Phase 31 (header needs approvals count and readiness history); UI groundwork may start after Phase 30
 **Requirements**: IA-01 … IA-07, DESIGN-01 … DESIGN-04, QA-04
@@ -474,8 +473,11 @@ Plans:
   4. Task and Quest create/edit are Sheets; evidence upload works from the task row and task page; approve/reject is inline with a required note on reject; ops cards with a task link show the "Quest › Task" chip and meter
   5. One token file promotes the `--public-*` palette to `:root` with a designed dark set, light and dark pass contrast checks, a lint rule rejects arbitrary colour values, the motion allowlist is enforced (framer-motion and spectrumui removed), and the homepage is visually untouched
   6. Pusher private channels drive KDS, Pick & Pack, Shipments, Approvals count and Notifications (polling ≥ 30 s only as fallback); `UsageEvent` records page views per role and key actions
+     — **Recorded 2026-08-24:** criteria 1–4 and 6 shipped and were exercised against the local seeded stack (evidence in the phase summary). Criterion 5 shipped in full — `app/tokens.css` is the only palette, both themes are defined, and the lint rule is live — but the **contrast validation and the light/dark visual pass were done by design review, not by an automated check**; the automated half is `QA-03`. The per-role visual walk-through SPEC §10 asks for (both themes, 360 px and 1440 px, on-screen spine and crumb) was **not** done: the ops shell is client-rendered, so the `next start` + `curl` smoke cannot reach it. Role scoping was instead verified deterministically per role through `GET /modules/mine` fed into `buildSpine()`. `QA-03` (Playwright on a built preview) — deferred here from Phase 31 — moves again to **Phase 34**, together with the observation that `proxy.ts` gates only on the staff cookie, so `/admin/*` returns 200 at the HTTP layer for every authenticated role and the screens do the `MANAGE_SYSTEM` gating themselves.
 **Spec sections**: §2, §3.5, §6.1–§6.5, §7, §8 (observability), §11 P4
-**Plans**: TBD
+**Plans**: `docs/superpowers/plans/2026-08-23-p4-role-aware-ia-identity.md` (19 tasks) — record: `.planning/phases/32-p4-role-aware-ia/32-01-SUMMARY.md`
+**Migration**: `20260826000000_p4_role_aware_ia` — `UsageEvent` table + `UsageEventType` enum; additive only, zero DROPs.
+**Gates at `e871cf4`**: frontend `tsc --noEmit` exit 0 · `eslint .` 0 errors / 60 warnings (was 64) · `next build` compiled · motion-allowlist, polling-floor, single-token-file and no-console CI greps all pass. Backend 102/102 suites · 1549 tests + 26 todo · `tsc` exit 0 · 0 lint errors.
 
 ### Phase 33: Marketplace Backend (P5a) — ✅ COMPLETE (2026-08-24, `5a15e39`)
 **Goal**: The backend sells all four product types through one catalog and one mixed-fulfilment quote → pay → confirm pipeline, with Shiprocket shipments, coupons, loyalty, reviews, search and refunds.
