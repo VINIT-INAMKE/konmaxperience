@@ -70,13 +70,31 @@ export async function generateMetadata({
   const category = rows ? findCategoryBySlug(rows, slug) : null;
 
   if (!category) {
-    // The page itself decides between 404 and an error state; metadata only has
-    // to avoid claiming a name it does not have.
-    return storefrontMetadata({
-      title: `Shop — ${SITE_NAME}`,
-      description: 'Browse everything the villa kitchen makes.',
-      path: `/shop/${slug}`,
-    });
+    /**
+     * The page body decides between `notFound()` and the error state; metadata
+     * only has to avoid claiming a name it does not have — **and avoid
+     * nominating a canonical for a URL that is about to 404.**
+     *
+     * `robots: { index: false, follow: false }` is the load-bearing half (P5b
+     * Task 13). The storefront streams: `app/(public)/loading.tsx` opens a
+     * Suspense boundary, so the response headers are on the wire before
+     * `notFound()` throws and this route answers a **soft 404** — HTTP `200`
+     * carrying the not-found body. Next injects its own `<meta name="robots"
+     * content="noindex">` into that streamed markup, and this makes the refusal
+     * explicit and adds `nofollow`, matching what `/p/[slug]` and
+     * `/experiences/[slug]` already do for the identical case. Emitting the
+     * previous indexable `Shop — Konma` card with a canonical of
+     * `/shop/{unknown-slug}` invited a crawler to index every typo as a
+     * duplicate of the shop.
+     *
+     * A backend outage lands here too, and the same answer is the right one: a
+     * transient error page should not be indexed either. The route is dynamic,
+     * so the noindex lasts exactly as long as the outage does.
+     */
+    return {
+      title: `Shelf not found — ${SITE_NAME}`,
+      robots: { index: false, follow: false },
+    };
   }
 
   return storefrontMetadata({
