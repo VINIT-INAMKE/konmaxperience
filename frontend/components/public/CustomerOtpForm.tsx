@@ -168,7 +168,7 @@ export function CustomerOtpForm({ onAuthenticated, onCancel }: CustomerOtpFormPr
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 disabled={isSending}
-                className="h-10 rounded-lg border border-[var(--public-border)] bg-white text-[var(--public-fg)] placeholder:text-[var(--public-muted)]"
+                className="h-10 rounded-lg border border-[var(--public-border)] bg-[var(--surface)] text-[var(--public-fg)] placeholder:text-[var(--public-muted)]"
               />
             </div>
           </div>
@@ -177,7 +177,7 @@ export function CustomerOtpForm({ onAuthenticated, onCancel }: CustomerOtpFormPr
             type="button"
             onClick={() => void handleSendOtp()}
             disabled={!isValidPhone || isSending}
-            className="w-full h-11 rounded-lg bg-[var(--public-terracotta)] text-white hover:bg-[var(--public-terracotta)]/90 disabled:opacity-50"
+            className="w-full h-11 rounded-lg bg-[var(--public-terracotta)] text-[var(--accent-ink)] hover:bg-[var(--public-terracotta)]/90 disabled:opacity-50"
           >
             {isSending ? (
               <span className="flex items-center gap-2">
@@ -222,7 +222,7 @@ export function CustomerOtpForm({ onAuthenticated, onCancel }: CustomerOtpFormPr
             type="button"
             onClick={() => void handleVerifyOtp()}
             disabled={otp.replace(/\s/g, '').length !== 6 || isVerifying}
-            className="w-full h-11 rounded-lg bg-[var(--public-terracotta)] text-white hover:bg-[var(--public-terracotta)]/90 disabled:opacity-50"
+            className="w-full h-11 rounded-lg bg-[var(--public-terracotta)] text-[var(--accent-ink)] hover:bg-[var(--public-terracotta)]/90 disabled:opacity-50"
           >
             {isVerifying ? (
               <span className="flex items-center gap-2">
@@ -269,14 +269,14 @@ export function CustomerOtpForm({ onAuthenticated, onCancel }: CustomerOtpFormPr
             value={name}
             onChange={(e) => setName(e.target.value)}
             disabled={isSavingName}
-            className="h-10 rounded-lg border border-[var(--public-border)] bg-white text-[var(--public-fg)] placeholder:text-[var(--public-muted)]"
+            className="h-10 rounded-lg border border-[var(--public-border)] bg-[var(--surface)] text-[var(--public-fg)] placeholder:text-[var(--public-muted)]"
           />
 
           <Button
             type="button"
             onClick={() => void handleSaveName()}
             disabled={isSavingName}
-            className="w-full h-11 rounded-lg bg-[var(--public-terracotta)] text-white hover:bg-[var(--public-terracotta)]/90 disabled:opacity-50"
+            className="w-full h-11 rounded-lg bg-[var(--public-terracotta)] text-[var(--accent-ink)] hover:bg-[var(--public-terracotta)]/90 disabled:opacity-50"
           >
             {isSavingName ? (
               <span className="flex items-center gap-2">

@@ -66,7 +66,7 @@ export function GooglePlacesInput({
         type="text"
         disabled
         placeholder="Loading address search..."
-        className="w-full h-11 rounded-lg border border-[var(--public-border)] bg-white text-sm text-[var(--public-fg)] px-3 opacity-60"
+        className="w-full h-11 rounded-lg border border-[var(--public-border)] bg-[var(--surface)] text-sm text-[var(--public-fg)] px-3 opacity-60"
       />
     );
   }
@@ -84,7 +84,7 @@ export function GooglePlacesInput({
       <input
         type="text"
         placeholder={placeholder}
-        className="w-full h-11 rounded-lg border border-[var(--public-border)] bg-white text-sm text-[var(--public-fg)] px-3 placeholder:text-[var(--public-muted)] focus:ring-2 focus:ring-[var(--public-terracotta)]/30 focus:outline-none"
+        className="w-full h-11 rounded-lg border border-[var(--public-border)] bg-[var(--surface)] text-sm text-[var(--public-fg)] px-3 placeholder:text-[var(--public-muted)] focus:ring-2 focus:ring-[var(--public-terracotta)]/30 focus:outline-none"
       />
     </Autocomplete>
   );

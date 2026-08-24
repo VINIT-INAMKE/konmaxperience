@@ -45,11 +45,12 @@ export function moduleLabel(key: ModuleKey): string {
 /**
  * The screen each seeded key opens, derived from the navigation spine.
  *
- * Keys absent from the spine have no route in this release (`shipments`,
- * `customers`, `reviews`, `promotions` ship with the storefront phase;
- * `talent` is v2.1) and render as "—" in the editor, so a grant can never
- * produce a dead link. When a spine group lists a key more than once the first
- * entry wins, which is the group's own landing screen.
+ * Keys absent from the spine have no route in this release (`talent` is v2.1)
+ * and render as "—" in the editor, so a grant can never produce a dead link.
+ * `shipments`, `customers`, `reviews` and `promotions` joined the spine with
+ * the storefront phase and now resolve here for free — which is the whole point
+ * of deriving this map instead of duplicating it. When a spine group lists a key
+ * more than once the first entry wins, which is the group's own landing screen.
  */
 const ROUTE_OVERRIDES: Readonly<Record<string, string>> = {
   // The Kitchen group opens on "Kitchen Overview", so first-wins would point

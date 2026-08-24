@@ -22,7 +22,7 @@ export function PhoneLoginPrompt({ onLoginClick }: PhoneLoginPromptProps) {
       <Button
         type="button"
         onClick={onLoginClick}
-        className="w-full h-11 rounded-lg bg-[var(--public-terracotta)] text-white hover:bg-[var(--public-terracotta)]/90"
+        className="w-full h-11 rounded-lg bg-[var(--public-terracotta)] text-[var(--accent-ink)] hover:bg-[var(--public-terracotta)]/90"
       >
         Log in with WhatsApp
       </Button>

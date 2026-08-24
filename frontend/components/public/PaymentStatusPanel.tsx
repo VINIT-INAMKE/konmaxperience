@@ -70,7 +70,7 @@ export function PaymentStatusPanel({
         <Button
           type="button"
           onClick={onRetry}
-          className="bg-[var(--public-terracotta)] text-white hover:bg-[var(--public-terracotta)]/90"
+          className="bg-[var(--public-terracotta)] text-[var(--accent-ink)] hover:bg-[var(--public-terracotta)]/90"
         >
           Try again
         </Button>

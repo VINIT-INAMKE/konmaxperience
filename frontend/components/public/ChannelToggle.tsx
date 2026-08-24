@@ -13,7 +13,7 @@ export function ChannelToggle({ value, onChange }: ChannelToggleProps) {
         onClick={() => onChange('takeaway')}
         className={`flex-1 py-2 text-sm font-medium text-center rounded-lg cursor-pointer transition-colors ${
           value === 'takeaway'
-            ? 'bg-[var(--public-terracotta)] text-white'
+            ? 'bg-[var(--public-terracotta)] text-[var(--accent-ink)]'
             : 'bg-[var(--public-surface)] text-[var(--public-fg-subtle)] border border-[var(--public-border)]'
         }`}
       >
@@ -24,7 +24,7 @@ export function ChannelToggle({ value, onChange }: ChannelToggleProps) {
         onClick={() => onChange('delivery')}
         className={`flex-1 py-2 text-sm font-medium text-center rounded-lg cursor-pointer transition-colors ${
           value === 'delivery'
-            ? 'bg-[var(--public-terracotta)] text-white'
+            ? 'bg-[var(--public-terracotta)] text-[var(--accent-ink)]'
             : 'bg-[var(--public-surface)] text-[var(--public-fg-subtle)] border border-[var(--public-border)]'
         }`}
       >

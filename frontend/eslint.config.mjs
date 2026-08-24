@@ -63,6 +63,27 @@ const eslintConfig = defineConfig([
     rules: noRawColorWarnRules,
   },
   {
+    // Phase 34's *new* storefront. The warn block above is a debt ledger for
+    // code that predates the token file; nothing below this line predates it,
+    // so the same rule is an error here from the first commit. Ordering is
+    // load-bearing: this block must follow the warn block, because the globs
+    // overlap under `app/(public)/` and the last matching config wins.
+    //
+    // `noBannedPrimitiveRules` rides along because `components/storefront/**`
+    // is new ground the P4 block (ops · ui · lib) does not cover, and the
+    // SPEC §6.4 motion allowlist applies to the storefront just as much.
+    files: [
+      "app/(public)/{shop,p,experiences,search,cart,checkout,account,orders}/**/*.ts",
+      "app/(public)/{shop,p,experiences,search,cart,checkout,account,orders}/**/*.tsx",
+      "components/storefront/**/*.ts",
+      "components/storefront/**/*.tsx",
+    ],
+    rules: {
+      ...noRawColorRules,
+      ...noBannedPrimitiveRules,
+    },
+  },
+  {
     // Frozen by the P4 brief and SPEC §7: the homepage owns its scoped styles.
     files: ["app/page.tsx", "components/public/ScrollVideoStory.tsx"],
     rules: { "no-restricted-syntax": "off" },
