@@ -262,7 +262,11 @@ describe('CustomerOrdersService', () => {
   // ---------------------------------------------------------------
 
   describe('syncCart', () => {
-    it('should keep Redis cart when it has more items', async () => {
+    // The merge rule: the incoming cart is authoritative on every explicit
+    // sync; the stored cart is read only for the login merge (an empty `items`
+    // with no `channel` and no `deliveryAddressId`).
+
+    it('shrinks the stored cart when the client sends fewer lines', async () => {
       const existing = {
         items: [
           {
@@ -285,6 +289,9 @@ describe('CustomerOrdersService', () => {
         updatedAt: '2026-01-01T00:00:00Z',
       };
       redisClient.get.mockResolvedValue(JSON.stringify(existing));
+      pricingService.price.mockResolvedValue(
+        pricedCart([line({ product_id: 'm1', quantity: 1 })]),
+      );
 
       const local = {
         items: [{ productId: 'm1', name: 'A', quantity: 1, unitPrice: 100 }],
@@ -293,10 +300,159 @@ describe('CustomerOrdersService', () => {
       };
 
       const result = await service.syncCart(customerId, local as any);
-      expect(result.items).toHaveLength(2);
+
+      expect(result.items).toHaveLength(1);
+      expect(result.items[0].productId).toBe('m1');
+      // …and the shrink is what was written back, not just what was returned.
+      const written = JSON.parse(redisClient.set.mock.calls.at(-1)![1]);
+      expect(written.items).toHaveLength(1);
+      expect(written.items[0].productId).toBe('m1');
     });
 
-    it('should keep local cart when it has more items', async () => {
+    it('removes the last line — an empty cart is a storable state', async () => {
+      redisClient.get.mockResolvedValue(
+        JSON.stringify({
+          items: [
+            {
+              productId: 'm1',
+              name: 'A',
+              quantity: 1,
+              unitPrice: 100,
+              imageUrl: null,
+            },
+          ],
+          channel: 'delivery' as const,
+          deliveryAddressId: null,
+          updatedAt: '2026-01-01T00:00:00Z',
+        }),
+      );
+      pricingService.price.mockResolvedValue(pricedCart([]));
+
+      const result = await service.syncCart(customerId, {
+        items: [],
+        channel: 'delivery' as const,
+      } as any);
+
+      expect(result.items).toHaveLength(0);
+      const written = JSON.parse(redisClient.set.mock.calls.at(-1)![1]);
+      expect(written.items).toHaveLength(0);
+    });
+
+    it('persists a channel-only change against an unchanged item list', async () => {
+      const items = [
+        {
+          productId: 'm1',
+          name: 'A',
+          quantity: 1,
+          unitPrice: 100,
+          imageUrl: null,
+        },
+      ];
+      redisClient.get.mockResolvedValue(
+        JSON.stringify({
+          items,
+          channel: 'delivery' as const,
+          deliveryAddressId: null,
+          updatedAt: '2026-01-01T00:00:00Z',
+        }),
+      );
+      pricingService.price.mockResolvedValue(
+        pricedCart([line({ product_id: 'm1', quantity: 1 })]),
+      );
+
+      const result = await service.syncCart(customerId, {
+        items: [{ productId: 'm1', name: 'A', quantity: 1, unitPrice: 100 }],
+        channel: 'takeaway' as const,
+      } as any);
+
+      expect(result.channel).toBe('takeaway');
+      const written = JSON.parse(redisClient.set.mock.calls.at(-1)![1]);
+      expect(written.channel).toBe('takeaway');
+    });
+
+    it('persists an address-only change against an unchanged item list', async () => {
+      redisClient.get.mockResolvedValue(
+        JSON.stringify({
+          items: [
+            {
+              productId: 'm1',
+              name: 'A',
+              quantity: 1,
+              unitPrice: 100,
+              imageUrl: null,
+            },
+          ],
+          channel: 'delivery' as const,
+          deliveryAddressId: null,
+          updatedAt: '2026-01-01T00:00:00Z',
+        }),
+      );
+      pricingService.price.mockResolvedValue(
+        pricedCart([line({ product_id: 'm1', quantity: 1 })]),
+      );
+
+      const result = await service.syncCart(customerId, {
+        items: [{ productId: 'm1', name: 'A', quantity: 1, unitPrice: 100 }],
+        channel: 'delivery' as const,
+        deliveryAddressId: 'addr-9',
+      } as any);
+
+      expect(result.deliveryAddressId).toBe('addr-9');
+      const written = JSON.parse(redisClient.set.mock.calls.at(-1)![1]);
+      expect(written.deliveryAddressId).toBe('addr-9');
+    });
+
+    it('restores the stored cart on a login merge — empty items, nothing else said', async () => {
+      const existing = {
+        items: [
+          {
+            productId: 'm1',
+            name: 'A',
+            quantity: 1,
+            unitPrice: 100,
+            imageUrl: null,
+          },
+          {
+            productId: 'm2',
+            name: 'B',
+            quantity: 1,
+            unitPrice: 200,
+            imageUrl: null,
+          },
+        ],
+        channel: 'takeaway' as const,
+        deliveryAddressId: 'addr-1',
+        updatedAt: '2026-01-01T00:00:00Z',
+      };
+      redisClient.get.mockResolvedValue(JSON.stringify(existing));
+      pricingService.price.mockResolvedValue(
+        pricedCart([
+          line({ product_id: 'm1', quantity: 1 }),
+          line({ product_id: 'm2', quantity: 1 }),
+        ]),
+      );
+
+      const result = await service.syncCart(customerId, { items: [] } as any);
+
+      expect(result.items).toHaveLength(2);
+      expect(result.channel).toBe('takeaway');
+      expect(result.deliveryAddressId).toBe('addr-1');
+      // Rewritten so the 7-day TTL rolls forward on login.
+      const written = JSON.parse(redisClient.set.mock.calls.at(-1)![1]);
+      expect(written.items).toHaveLength(2);
+    });
+
+    it('an empty login merge with nothing stored yields an empty cart', async () => {
+      redisClient.get.mockResolvedValue(null);
+      pricingService.price.mockResolvedValue(pricedCart([]));
+
+      const result = await service.syncCart(customerId, { items: [] } as any);
+
+      expect(result.items).toHaveLength(0);
+      expect(result.channel).toBeNull();
+    });
+
+    it('grows the stored cart when the client sends more lines', async () => {
       const existing = {
         items: [
           {

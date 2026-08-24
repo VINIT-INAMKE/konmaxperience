@@ -16,6 +16,7 @@ import { PresignDto } from './dto/presign.dto';
 import { PresignAssetDto } from './dto/presign-asset.dto';
 import { PresignGuideDto } from './dto/presign-guide.dto';
 import { PresignChatDto } from './dto/presign-chat.dto';
+import { PresignProductMediaDto } from './dto/presign-product-media.dto';
 
 @Controller('storage')
 export class StorageController {
@@ -78,6 +79,22 @@ export class StorageController {
   async presignGuide(@Body() dto: PresignGuideDto) {
     this.storageService.validatePresignRequest(dto.contentType, dto.fileSize);
     const key = `guide/${Date.now()}-${dto.filename.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+    const presignedUrl = await this.storageService.generatePresignedPutUrl(key, dto.contentType);
+    const publicUrl = this.storageService.getPublicUrl(key);
+    return { presignedUrl, key, publicUrl };
+  }
+
+  /**
+   * `OPS-01` — catalog media upload. Gated by `MANAGE_OPS` to match
+   * `POST /catalog/products/:id/media`, the route that consumes the returned
+   * `publicUrl`; anything weaker would let a role that cannot attach media
+   * still write into the bucket.
+   */
+  @Post('presign-product-media')
+  @RequiresPermission(Permission.MANAGE_OPS)
+  async presignProductMedia(@Body() dto: PresignProductMediaDto) {
+    this.storageService.validatePresignRequest(dto.contentType, dto.fileSize);
+    const key = `product-media/${dto.productId}/${Date.now()}-${dto.filename.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
     const presignedUrl = await this.storageService.generatePresignedPutUrl(key, dto.contentType);
     const publicUrl = this.storageService.getPublicUrl(key);
     return { presignedUrl, key, publicUrl };

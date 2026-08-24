@@ -350,60 +350,56 @@ export class CustomerOrdersService {
     };
   }
 
+  /**
+   * `POST /customer/cart/sync` — **the incoming cart is authoritative.**
+   *
+   * The original rule kept whichever cart had *more* lines
+   * (`existing.items.length >= localCart.items.length`). That made the endpoint
+   * a one-way ratchet: removing a line, dropping a quantity to zero, or
+   * changing only `channel`/`deliveryAddressId` was silently discarded and the
+   * client got the old cart back. `/cart` cannot be built on that.
+   *
+   * The stored cart is now read for exactly the one case the merge was written
+   * for — **the login merge**: an anonymous visitor signs in, the client posts
+   * `{ items: [] }` with nothing else to say, and the cart they left behind
+   * before logging out is restored. Anything else — a non-empty `items`, or an
+   * empty one that also names a `channel` or a `deliveryAddressId` — is an
+   * explicit statement of intent by a client that knows what the cart holds,
+   * and is written through verbatim. An empty cart is therefore a real, storable
+   * state.
+   */
   async syncCart(
     customerId: string,
     localCart: SyncCartDto,
   ): Promise<PricedCartData> {
-    const existing = await this.getCart(customerId);
+    const isLoginMerge =
+      localCart.items.length === 0 &&
+      localCart.channel === undefined &&
+      localCart.deliveryAddressId === undefined;
 
-    let merged: CartData;
-
-    if (existing && existing.items.length > 0 && localCart.items.length > 0) {
-      // Both have items — keep the one with more items
-      if (existing.items.length >= localCart.items.length) {
-        merged = existing;
-      } else {
-        merged = {
-          items: localCart.items.map((i) => ({
-            productId: i.productId,
-            variantId: i.variantId ?? null,
-            name: i.name,
-            quantity: i.quantity,
-            unitPrice: i.unitPrice,
-            imageUrl: i.imageUrl ?? null,
-          })),
-          channel: localCart.channel ?? null,
-          deliveryAddressId: localCart.deliveryAddressId ?? null,
-          updatedAt: new Date().toISOString(),
-        };
+    if (isLoginMerge) {
+      const existing = await this.getCart(customerId);
+      if (existing) {
+        // Rewritten rather than just read, so the 7-day TTL rolls forward on a
+        // login the way every other sync does.
+        await this.setCart(customerId, existing);
+        return this.priceCart(existing);
       }
-    } else if (localCart.items.length > 0) {
-      // Only local cart has items
-      merged = {
-        items: localCart.items.map((i) => ({
-          productId: i.productId,
-          variantId: i.variantId ?? null,
-          name: i.name,
-          quantity: i.quantity,
-          unitPrice: i.unitPrice,
-          imageUrl: i.imageUrl ?? null,
-        })),
-        channel: localCart.channel ?? null,
-        deliveryAddressId: localCart.deliveryAddressId ?? null,
-        updatedAt: new Date().toISOString(),
-      };
-    } else if (existing) {
-      // Only Redis cart has items (or both empty)
-      merged = existing;
-    } else {
-      // Both empty
-      merged = {
-        items: [],
-        channel: localCart.channel ?? null,
-        deliveryAddressId: localCart.deliveryAddressId ?? null,
-        updatedAt: new Date().toISOString(),
-      };
     }
+
+    const merged: CartData = {
+      items: localCart.items.map((i) => ({
+        productId: i.productId,
+        variantId: i.variantId ?? null,
+        name: i.name,
+        quantity: i.quantity,
+        unitPrice: i.unitPrice,
+        imageUrl: i.imageUrl ?? null,
+      })),
+      channel: localCart.channel ?? null,
+      deliveryAddressId: localCart.deliveryAddressId ?? null,
+      updatedAt: new Date().toISOString(),
+    };
 
     await this.setCart(customerId, merged);
     // The merge decides *what* is in the cart; the database decides what it costs.

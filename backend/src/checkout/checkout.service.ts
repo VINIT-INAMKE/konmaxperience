@@ -5,7 +5,12 @@ import {
   NotFoundException,
   ServiceUnavailableException,
 } from '@nestjs/common';
-import { BookingStatus, FulfilmentType } from '@prisma/client';
+import {
+  BookingStatus,
+  FulfilmentType,
+  OrderChannel,
+  Prisma,
+} from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../customer-auth/redis.service';
 import { SettingsService } from '../settings/settings.service';
@@ -25,6 +30,7 @@ import type {
   StoredQuote,
 } from './quote.types';
 import { QuoteCheckoutDto } from './dto/quote-checkout.dto';
+import { ServiceabilityDto } from './dto/serviceability.dto';
 
 /** The address columns a quote needs: the id it freezes and the pincode it checks. */
 export interface QuoteAddress {
@@ -46,6 +52,32 @@ export interface QuoteResult {
   quote: StoredQuote;
   rejected: RejectedLine[];
   loyalty: RedeemPreview;
+}
+
+/** One half of a serviceability answer: local delivery, or courier. */
+export interface ServiceabilityHalf {
+  serviceable: boolean;
+  /** Present only when `serviceable` is false; rendered to the customer verbatim. */
+  reason?: string;
+  courier_name?: string;
+  /** ISO-8601 estimated delivery date, when the provider offers one. */
+  etd?: string;
+  /**
+   * Indicative forward shipping charge. `Prisma.Decimal` in paise-derived
+   * rupees, serialised to a JSON number by `DecimalSerializationInterceptor` —
+   * the same treatment `QuoteResponse.shipping_amount` gets.
+   */
+  amount?: Prisma.Decimal;
+}
+
+/**
+ * `POST /customer/checkout/serviceability`. `shipped` is `null` when the cart
+ * holds no shipped line — not `{ serviceable: false }`, which would read as
+ * "we cannot ship there".
+ */
+export interface ServiceabilityResponse {
+  local: ServiceabilityHalf;
+  shipped: ServiceabilityHalf | null;
 }
 
 /**
@@ -234,6 +266,88 @@ export class CheckoutService {
     );
 
     return { quote: stored, rejected: priced.rejected, loyalty: redeem };
+  }
+
+  /**
+   * "Can you reach this pincode?", answered **before** a quote exists.
+   *
+   * The address step otherwise has no way to ask: `POST /customer/checkout/quote`
+   * needs a saved `delivery_address_id`, and a customer typing a new address has
+   * not saved one yet — so the only way to discover an unserviceable pincode was
+   * to save the address, quote, and read the `400`. Trial and error.
+   *
+   * There is **no new rule here.** The local half re-reads the same
+   * `ServiceabilityService.allowedPincodes()` allow-list that
+   * `assertLocalServiceable` enforces inside the quote; the shipped half asks
+   * the same `ShippingProviderPort.checkServiceability` with the same arguments
+   * the quote builds. A pre-check that said "yes" and a quote that then said
+   * "no" would be worse than no pre-check at all, so the two must not drift.
+   *
+   * The `shipped` half is `null` when the cart holds no shipped line: there is
+   * nothing to courier, and asking a provider (or billing a Shiprocket lookup)
+   * for an answer nobody will read is waste. Provider failures propagate as the
+   * `503` the adapter raises, exactly as they would from the quote.
+   */
+  async checkServiceability(
+    cart: CartLineInput[],
+    dto: ServiceabilityDto,
+  ): Promise<ServiceabilityResponse> {
+    const pincode = dto.pincode.trim();
+
+    const allowed = await this.serviceability.allowedPincodes();
+    // An empty allow-list means "no restriction configured" (the seeded
+    // default), which `ServiceabilityService` reads as serviceable.
+    const local: ServiceabilityHalf =
+      allowed.length === 0 || allowed.includes(pincode)
+        ? { serviceable: true }
+        : {
+            serviceable: false,
+            // Verbatim the message `assertLocalServiceable` throws.
+            reason: "Sorry, we don't deliver to this pincode yet",
+          };
+
+    if (cart.length === 0) return { local, shipped: null };
+
+    const priced = await this.pricing.price(
+      cart,
+      dto.channel ?? OrderChannel.delivery,
+    );
+    if (!priced.has_shipped) return { local, shipped: null };
+
+    const cfg = await this.settings.get('shipping');
+    const provider = await this.shipping.get();
+    const result = await provider.checkServiceability({
+      pickup_pincode: cfg.pickup_location_code || pincode,
+      delivery_pincode: pincode,
+      weight_grams: Math.max(
+        priced.shipped_weight_grams,
+        cfg.default_weight_grams,
+      ),
+      declared_value_paise: priced.subtotal,
+      cod: false,
+    });
+
+    if (!result.serviceable) {
+      return {
+        local,
+        shipped: {
+          serviceable: false,
+          reason: result.reason ?? 'We cannot ship to this pincode yet',
+        },
+      };
+    }
+
+    return {
+      local,
+      shipped: {
+        serviceable: true,
+        courier_name: result.courier_name ?? undefined,
+        etd: result.etd ? result.etd.toISOString() : undefined,
+        // Indicative only — the quote is what freezes the charge. Same
+        // clamp the quote applies, so the two agree to the paise.
+        amount: toDecimal(Math.max(0, Math.round(result.rate))),
+      },
+    };
   }
 
   /**

@@ -127,6 +127,46 @@ describe('CatalogService.computeServings (assemble)', () => {
     });
   });
 
+  /**
+   * P5b gap 2: `GET /catalog/availability/:productId` was missing `@Public()`
+   * and answered `401` to an anonymous shopper — verified against a running
+   * server. Making it public only holds if the per-product answer is as
+   * CAT-03-clean as the batch answer that was already public: the `include`
+   * behind it pulls the *whole* recipe with its BOM lines, so the projection is
+   * the only thing standing between a costed recipe and a public route.
+   */
+  it('answers the same CAT-03-clean shape from both availability routes', async () => {
+    const product = assembleProduct('kg');
+    prisma.product.findMany.mockResolvedValue([product]);
+    prisma.product.findUniqueOrThrow.mockResolvedValue(product);
+
+    const batch = await service.getAllServingsAvailable();
+    const single = await service.getServingsAvailable('p-1');
+
+    expect(single).toEqual(batch['p-1']);
+    expect(Object.keys(single).sort()).toEqual([
+      'available',
+      'preparation_type',
+      'servings_remaining',
+    ]);
+
+    // Nothing costed, yielded or BOM-shaped survives the projection, even
+    // though the query that produced it loaded all three.
+    const serialised = JSON.stringify(single);
+    for (const forbidden of [
+      'computed_cost',
+      'yield_qty',
+      'yield_unit',
+      'RecipeLines',
+      'margin',
+      'cost_per_unit',
+      'ingredient',
+      'source_recipe',
+    ]) {
+      expect(serialised).not.toContain(forbidden);
+    }
+  });
+
   it('a draft product is never available', async () => {
     prisma.product.findUniqueOrThrow.mockResolvedValue({
       ...assembleProduct('kg'),

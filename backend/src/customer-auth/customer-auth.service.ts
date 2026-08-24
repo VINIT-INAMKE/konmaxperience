@@ -13,9 +13,19 @@ import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 import express from 'express';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditService } from '../audit/audit.service';
 import { RedisService } from './redis.service';
 import { WhatsAppService } from './whatsapp.service';
 import { UpdateCustomerDto } from './dto/update-customer.dto';
+
+/** The projection every profile route returns — `phone` included, secrets never. */
+const PROFILE_SELECT = {
+  id: true,
+  phone: true,
+  name: true,
+  email: true,
+  marketing_opt_in: true,
+} as const;
 
 @Injectable()
 export class CustomerAuthService {
@@ -25,6 +35,7 @@ export class CustomerAuthService {
     private readonly configService: ConfigService,
     private readonly redisService: RedisService,
     private readonly whatsAppService: WhatsAppService,
+    private readonly audit: AuditService,
   ) {}
 
   async sendOtp(phone: string) {
@@ -155,7 +166,7 @@ export class CustomerAuthService {
   async getProfile(customerId: string) {
     const customer = await this.prisma.customer.findUnique({
       where: { id: customerId },
-      select: { id: true, phone: true, name: true, email: true },
+      select: PROFILE_SELECT,
     });
 
     if (!customer) {
@@ -165,14 +176,53 @@ export class CustomerAuthService {
     return customer;
   }
 
+  /**
+   * `ACCT-01`. `name` and `email` are the customer's own presentation and are
+   * written straight through; `marketing_opt_in` is **consent**, so it moves
+   * inside a transaction that also writes the `AuditEvent` — the same row, with
+   * the same action name, that the staff-side `PATCH /customers/:id` writes.
+   * The audit row is only written when the value actually changes, so a client
+   * that echoes the whole profile back on every save does not fill the trail
+   * with no-ops.
+   */
   async updateProfile(customerId: string, dto: UpdateCustomerDto) {
-    return this.prisma.customer.update({
+    const before = await this.prisma.customer.findUnique({
       where: { id: customerId },
-      data: {
-        ...(dto.name !== undefined && { name: dto.name }),
-        ...(dto.email !== undefined && { email: dto.email }),
-      },
-      select: { id: true, phone: true, name: true, email: true },
+      select: { id: true, marketing_opt_in: true },
+    });
+    if (!before) {
+      throw new NotFoundException('Customer not found');
+    }
+
+    const consentChanged =
+      dto.marketing_opt_in !== undefined &&
+      dto.marketing_opt_in !== before.marketing_opt_in;
+
+    return this.prisma.$transaction(async (tx) => {
+      const updated = await tx.customer.update({
+        where: { id: customerId },
+        data: {
+          ...(dto.name !== undefined && { name: dto.name }),
+          ...(dto.email !== undefined && { email: dto.email }),
+          ...(dto.marketing_opt_in !== undefined && {
+            marketing_opt_in: dto.marketing_opt_in,
+          }),
+        },
+        select: PROFILE_SELECT,
+      });
+
+      if (consentChanged) {
+        await this.audit.record(tx, {
+          entity_type: 'customer',
+          entity_id: customerId,
+          action: 'customer.marketing_opt_in_changed',
+          ...AuditService.customer(customerId),
+          before: { marketing_opt_in: before.marketing_opt_in },
+          after: { marketing_opt_in: updated.marketing_opt_in },
+        });
+      }
+
+      return updated;
     });
   }
 

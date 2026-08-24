@@ -922,6 +922,149 @@ describe('ShipmentsService', () => {
       });
     });
 
+    /**
+     * P5b gap 7. This write deliberately bypasses `STATUS_TRANSITIONS` — a
+     * courier scan is not a staff lifecycle move — but it is still a change to
+     * `Order.status`, and it used to write no `AuditEvent` at all. Verified
+     * live: the one shipped order in the seeded database has a trail that
+     * jumps from `order.confirmed` (status `placed`) straight to a
+     * `status_changed` whose `before` is already `shipped`, and the whole
+     * database held **zero** `order.status_changed → shipped` rows.
+     */
+    it('audits the order’s promotion to shipped, in the same transaction', async () => {
+      const { service, prisma, audit } = await build();
+      stubTransition(
+        prisma,
+        shipmentRow({ status: ShipmentStatus.pickup_scheduled, awb: 'AWB-1' }),
+        { status: ShipmentStatus.picked_up },
+      );
+
+      await service.applyStatus(
+        'ship-1',
+        ShipmentStatus.picked_up,
+        new Date(),
+        null,
+        { actor_type: ActorType.user, actor_id: USER_ID },
+      );
+
+      // Two rows: the parcel's own event first, then the order event it caused.
+      expect(audit.record).toHaveBeenCalledTimes(2);
+      expect(callArg<AuditInput>(audit.record, 1, 0).entity_type).toBe(
+        'shipment',
+      );
+
+      const entry = callArg<AuditInput>(audit.record, 1, 1);
+      expect(entry).toMatchObject({
+        entity_type: 'order',
+        entity_id: 'order-1',
+        // The same action `OrdersService.updateStatus` writes, so the order
+        // timeline reads as one sequence regardless of who moved the status.
+        action: 'order.status_changed',
+        node_id: NODE_ID,
+        actor_type: ActorType.user,
+        actor_id: USER_ID,
+      });
+      expect(entry.before).toEqual({ status: OrderStatus.confirmed });
+      expect(entry.after).toEqual({ status: OrderStatus.shipped });
+
+      // Same transaction client as the `order.update` it describes, or the row
+      // would survive a rollback of the change it records.
+      expect(callArg(audit.record, 0, 1)).toBe(prisma);
+    });
+
+    it('carries a system actor through when the courier webhook drives it', async () => {
+      const { service, prisma, audit } = await build();
+      stubTransition(
+        prisma,
+        shipmentRow({ status: ShipmentStatus.pickup_scheduled, awb: 'AWB-1' }),
+        { status: ShipmentStatus.picked_up },
+      );
+
+      await service.applyStatus(
+        'ship-1',
+        ShipmentStatus.picked_up,
+        new Date(),
+        null,
+        systemActor,
+      );
+
+      expect(callArg<AuditInput>(audit.record, 1, 1)).toMatchObject({
+        actor_type: ActorType.system,
+        actor_id: null,
+      });
+    });
+
+    it('does not re-audit an order that is already shipped', async () => {
+      const { service, prisma, audit } = await build();
+      stubTransition(
+        prisma,
+        shipmentRow({ status: ShipmentStatus.picked_up, awb: 'AWB-1' }),
+        { status: ShipmentStatus.in_transit },
+      );
+      // `picked_up`, `in_transit` and `out_for_delivery` are all in-flight, so
+      // without the guard every courier scan after the first would write a
+      // redundant `shipped → shipped` row.
+      prisma.order.findUnique.mockResolvedValue({
+        status: OrderStatus.shipped,
+      });
+
+      await service.applyStatus(
+        'ship-1',
+        ShipmentStatus.in_transit,
+        new Date(),
+        null,
+        systemActor,
+      );
+
+      expect(prisma.order.update).not.toHaveBeenCalled();
+      expect(audit.record).toHaveBeenCalledTimes(1);
+      expect(callArg<AuditInput>(audit.record, 1, 0).entity_type).toBe(
+        'shipment',
+      );
+    });
+
+    it('writes no order audit row when the order is already terminal', async () => {
+      const { service, prisma, audit } = await build();
+      stubTransition(
+        prisma,
+        shipmentRow({ status: ShipmentStatus.pickup_scheduled, awb: 'AWB-1' }),
+        { status: ShipmentStatus.picked_up },
+      );
+      prisma.order.findUnique.mockResolvedValue({
+        status: OrderStatus.delivered,
+      });
+
+      await service.applyStatus(
+        'ship-1',
+        ShipmentStatus.picked_up,
+        new Date(),
+        null,
+        systemActor,
+      );
+
+      expect(audit.record).toHaveBeenCalledTimes(1);
+    });
+
+    it('writes no order audit row on a non-transit transition', async () => {
+      const { service, prisma, audit } = await build();
+      stubTransition(prisma, shipmentRow(), {
+        status: ShipmentStatus.awb_assigned,
+      });
+
+      await service.applyStatus(
+        'ship-1',
+        ShipmentStatus.awb_assigned,
+        new Date(),
+        null,
+        systemActor,
+      );
+
+      expect(audit.record).toHaveBeenCalledTimes(1);
+      expect(callArg<AuditInput>(audit.record, 1, 0).entity_type).toBe(
+        'shipment',
+      );
+    });
+
     it('never drags a delivered order backwards', async () => {
       const { service, prisma } = await build();
       stubTransition(

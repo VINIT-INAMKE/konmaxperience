@@ -607,10 +607,9 @@ export class ShipmentsService {
     });
 
     const changed = current.status !== next;
-    if (changed) {
-      await this.propagateToOrder(tx, shipment.order_id, next);
-    }
 
+    // The parcel's own event first, then the order event it causes — so the
+    // trail reads in the order the two facts actually happened.
     await this.audit.record(tx, {
       entity_type: 'shipment',
       entity_id: id,
@@ -626,6 +625,16 @@ export class ShipmentsService {
       },
     });
 
+    if (changed) {
+      await this.propagateToOrder(
+        tx,
+        shipment.order_id,
+        next,
+        actor,
+        shipment.node_id,
+      );
+    }
+
     return { shipment, changed };
   }
 
@@ -634,11 +643,26 @@ export class ShipmentsService {
    * **not** handled here: an order is only delivered when every line is, local
    * ones included, which is the Shiprocket webhook's job (Task 12) because it is
    * the only caller that knows the whole order has landed.
+   *
+   * This write deliberately bypasses `STATUS_TRANSITIONS` — a courier scan is
+   * not a staff lifecycle move and must not be refused by the POS state machine
+   * — but it is still a change to `Order.status`, so it writes the same
+   * `order.status_changed` AuditEvent `OrdersService.updateStatus` writes, in
+   * the same transaction. Without it the order's trail jumped from
+   * `order.confirmed` straight to a `status_changed` whose `before` was already
+   * `shipped`, i.e. the transition that put it there was invisible.
+   *
+   * The `already shipped` early return matters: `pickup_scheduled`,
+   * `in_transit` and `out_for_delivery` are all `IN_FLIGHT`, and without it
+   * every courier scan after the first would write a redundant
+   * `shipped → shipped` row.
    */
   private async propagateToOrder(
     tx: Tx,
     orderId: string,
     next: ShipmentStatus,
+    actor: DomainEventActor,
+    nodeId: string,
   ): Promise<void> {
     if (!ShipmentsService.IN_FLIGHT.includes(next)) return;
     const order = await tx.order.findUnique({
@@ -647,9 +671,22 @@ export class ShipmentsService {
     });
     if (!order || ShipmentsService.ORDER_TERMINAL.includes(order.status))
       return;
+    if (order.status === OrderStatus.shipped) return;
+
     await tx.order.update({
       where: { id: orderId },
       data: { status: OrderStatus.shipped },
+    });
+
+    await this.audit.record(tx, {
+      entity_type: 'order',
+      entity_id: orderId,
+      action: 'order.status_changed',
+      node_id: nodeId,
+      actor_type: actor.actor_type,
+      actor_id: actor.actor_id,
+      before: { status: order.status },
+      after: { status: OrderStatus.shipped },
     });
   }
 

@@ -72,6 +72,7 @@ export class EventsController {
 
   @Post(':id/checkout')
   @UseGuards(CustomerGuard)
+  @Public() // Bypass global JwtAuthGuard — CustomerGuard handles auth
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   async checkout(
     @Param('id', ParseUUIDPipe) id: string,
@@ -83,6 +84,7 @@ export class EventsController {
 
   @Post(':id/bookings/confirm')
   @UseGuards(CustomerGuard)
+  @Public() // Bypass global JwtAuthGuard — CustomerGuard handles auth
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   async confirmBooking(
     @Param('id', ParseUUIDPipe) id: string,
