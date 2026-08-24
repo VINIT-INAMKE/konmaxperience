@@ -31,6 +31,12 @@ export function ProductCard({
     item.base_price,
   );
 
+  // Surfaced on the card so the two things that decide how a product looks on
+  // the storefront — its variants and its gallery — are visible without opening
+  // the sheet. Archived variants are excluded: they no longer sell.
+  const variantCount = item.variants?.filter((v) => v.status !== 'archived').length ?? 0;
+  const mediaCount = item.media?.length ?? 0;
+
   const handleToggle = async (checked: boolean) => {
     setIsToggling(true);
     try {
@@ -54,6 +60,21 @@ export function ProductCard({
           ₹{item.base_price.toLocaleString()}
         </span>
         <FoodCostBadge percent={foodCostPercent} />
+      </div>
+
+      {/* Row 2b: what the storefront has to work with */}
+      <div className="flex items-center gap-1.5 flex-wrap text-xs text-ink-faint">
+        <span>
+          {variantCount === 0
+            ? 'No variants'
+            : `${variantCount} variant${variantCount === 1 ? '' : 's'}`}
+        </span>
+        <span aria-hidden="true">&middot;</span>
+        <span className={mediaCount === 0 ? 'text-[var(--status-warning)]' : undefined}>
+          {mediaCount === 0
+            ? 'No images'
+            : `${mediaCount} image${mediaCount === 1 ? '' : 's'}`}
+        </span>
       </div>
 
       {/* Row 3: availability toggle */}

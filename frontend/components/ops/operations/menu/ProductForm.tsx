@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -21,7 +21,10 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { FoodCostBadge } from './FoodCostBadge';
+import { MediaManager } from './MediaManager';
+import { VariantEditor } from './VariantEditor';
 import { apiClient } from '@/lib/api-client';
 import {
   calcFoodCostPercent,
@@ -34,12 +37,21 @@ import type { Recipe } from '@/lib/types/recipe';
 
 const PRODUCT_TYPES = Object.keys(PRODUCT_TYPE_DEFAULTS) as ProductType[];
 
+type FormTab = 'details' | 'variants' | 'media';
+
 interface ProductFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   categoryId: string;
   item?: Product | null;
   onSuccess: () => void;
+  /**
+   * Fired once, with the freshly created product. The page switches the sheet
+   * from "add" to "edit" on it so variants and media can be attached without
+   * closing and reopening — they need a product id that only exists after the
+   * first save.
+   */
+  onCreated?: (product: Product) => void;
 }
 
 export function ProductForm({
@@ -48,45 +60,80 @@ export function ProductForm({
   categoryId,
   item,
   onSuccess,
+  onCreated,
 }: ProductFormProps) {
+  // Held out here so it survives the remount that follows a create.
+  const [tab, setTab] = useState<FormTab>('details');
+
+  const handleCreated = (product: Product) => {
+    setTab('variants');
+    onCreated?.(product);
+  };
+
+  const handleOpenChange = (next: boolean) => {
+    if (!next) setTab('details');
+    onOpenChange(next);
+  };
+
+  return (
+    <Sheet open={open} onOpenChange={handleOpenChange}>
+      <SheetContent side="right" className="w-full sm:max-w-[640px]">
+        <SheetHeader>
+          <SheetTitle>{item ? 'Edit Product' : 'Add Product'}</SheetTitle>
+        </SheetHeader>
+        {/* Keying on the product resets every field without a populate effect,
+            so a background refetch of the catalog can refresh `item.variants`
+            and `item.media` underneath the form without wiping what is typed. */}
+        <ProductFormBody
+          key={`${item?.id ?? 'new'}:${categoryId}`}
+          open={open}
+          categoryId={categoryId}
+          item={item ?? null}
+          tab={tab}
+          onTabChange={setTab}
+          onClose={() => handleOpenChange(false)}
+          onSuccess={onSuccess}
+          onCreated={handleCreated}
+        />
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+interface ProductFormBodyProps {
+  open: boolean;
+  categoryId: string;
+  item: Product | null;
+  tab: FormTab;
+  onTabChange: (tab: FormTab) => void;
+  onClose: () => void;
+  onSuccess: () => void;
+  onCreated: (product: Product) => void;
+}
+
+function ProductFormBody({
+  open,
+  categoryId,
+  item,
+  tab,
+  onTabChange,
+  onClose,
+  onSuccess,
+  onCreated,
+}: ProductFormBodyProps) {
   const queryClient = useQueryClient();
   const isEditing = !!item;
 
-  const [name, setName] = useState('');
-  const [slug, setSlug] = useState('');
-  const [slugTouched, setSlugTouched] = useState(false);
-  const [type, setType] = useState<ProductType>('prepared_food');
-  const [recipeId, setRecipeId] = useState('');
-  const [selectedCategoryId, setSelectedCategoryId] = useState(categoryId);
-  const [basePrice, setBasePrice] = useState('');
-  const [description, setDescription] = useState('');
-  const [isActive, setIsActive] = useState(true);
+  const [name, setName] = useState(item?.name ?? '');
+  const [slug, setSlug] = useState(item?.slug ?? '');
+  const [slugTouched, setSlugTouched] = useState(!!item);
+  const [type, setType] = useState<ProductType>(item?.type ?? 'prepared_food');
+  const [recipeId, setRecipeId] = useState(item?.recipe_id ?? '');
+  const [selectedCategoryId, setSelectedCategoryId] = useState(item?.category_id ?? categoryId);
+  const [basePrice, setBasePrice] = useState(item ? String(item.base_price) : '');
+  const [description, setDescription] = useState(item?.description ?? '');
+  const [isActive, setIsActive] = useState(item ? item.status === 'active' : true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Populate form when editing
-  useEffect(() => {
-    if (item) {
-      setName(item.name);
-      setSlug(item.slug);
-      setSlugTouched(true);
-      setType(item.type);
-      setRecipeId(item.recipe_id ?? '');
-      setSelectedCategoryId(item.category_id);
-      setBasePrice(String(item.base_price));
-      setDescription(item.description ?? '');
-      setIsActive(item.status === 'active');
-    } else {
-      setName('');
-      setSlug('');
-      setSlugTouched(false);
-      setType('prepared_food');
-      setRecipeId('');
-      setSelectedCategoryId(categoryId);
-      setBasePrice('');
-      setDescription('');
-      setIsActive(true);
-    }
-  }, [item, categoryId, open]);
 
   // Query approved recipes only
   const { data: recipes = [] } = useQuery({
@@ -138,10 +185,6 @@ export function ProductForm({
     if (!slugTouched) setSlug(slugify(value));
   };
 
-  const handleClose = () => {
-    onOpenChange(false);
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!canSubmit) return;
@@ -165,13 +208,16 @@ export function ProductForm({
       if (isEditing && item) {
         await apiClient.patch<Product>(`/catalog/products/${item.id}`, payload);
         toast.success('Product updated.');
+        void queryClient.invalidateQueries({ queryKey: ['menu-items'] });
+        onSuccess();
+        onClose();
       } else {
-        await apiClient.post<Product>('/catalog/products', payload);
-        toast.success('Product added.');
+        const created = await apiClient.post<Product>('/catalog/products', payload);
+        toast.success('Product added. Variants and media are available now.');
+        void queryClient.invalidateQueries({ queryKey: ['menu-items'] });
+        onSuccess();
+        onCreated(created);
       }
-      void queryClient.invalidateQueries({ queryKey: ['menu-items'] });
-      handleClose();
-      onSuccess();
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Something went wrong.';
       toast.error(msg);
@@ -180,14 +226,38 @@ export function ProductForm({
     }
   };
 
-  return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full sm:max-w-[480px]">
-        <SheetHeader>
-          <SheetTitle>{isEditing ? 'Edit Product' : 'Add Product'}</SheetTitle>
-        </SheetHeader>
+  // Variants and media hang off a product id, so they only exist after the
+  // first save. The tabs say so rather than silently doing nothing.
+  const catalogTabsEnabled = isEditing;
+  const variantCount = item?.variants?.filter((v) => v.status !== 'archived').length ?? 0;
+  const mediaCount = item?.media?.length ?? 0;
 
-        <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4 mt-4 px-4 pb-4 overflow-y-auto">
+  const refreshProduct = () => {
+    void queryClient.invalidateQueries({ queryKey: ['menu-items'] });
+    onSuccess();
+  };
+
+  return (
+    <Tabs
+      value={tab}
+      onValueChange={(v) => onTabChange((v as FormTab) ?? 'details')}
+      className="flex min-h-0 flex-1 flex-col gap-4"
+    >
+      <TabsList className="mx-4 w-auto overflow-x-auto">
+        <TabsTrigger value="details">Details</TabsTrigger>
+        <TabsTrigger value="variants" disabled={!catalogTabsEnabled}>
+          Variants{variantCount > 0 ? ` (${variantCount})` : ''}
+        </TabsTrigger>
+        <TabsTrigger value="media" disabled={!catalogTabsEnabled}>
+          Media{mediaCount > 0 ? ` (${mediaCount})` : ''}
+        </TabsTrigger>
+      </TabsList>
+
+      {/* `keepMounted` is load-bearing: Base UI unmounts a hidden panel by
+          default, so without it a trip to Variants and back would silently
+          discard everything typed into Details. */}
+      <TabsContent value="details" keepMounted className="min-h-0 flex-1 overflow-y-auto">
+        <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4 px-4 pb-4">
           {/* Name */}
           <div className="space-y-2">
             <Label htmlFor="product-name">Name</Label>
@@ -380,14 +450,44 @@ export function ProductForm({
             <Button
               type="button"
               variant="ghost"
-              onClick={handleClose}
+              onClick={onClose}
               disabled={isSubmitting}
             >
               Cancel
             </Button>
           </div>
         </form>
-      </SheetContent>
-    </Sheet>
+      </TabsContent>
+
+      <TabsContent value="variants" keepMounted className="min-h-0 flex-1 overflow-y-auto">
+        <div className="px-4 pb-4">
+          {item ? (
+            <VariantEditor
+              productId={item.id}
+              basePrice={item.base_price}
+              stockMode={item.stock_mode}
+              variants={item.variants ?? []}
+              onChanged={refreshProduct}
+            />
+          ) : (
+            <p className="text-sm text-ink-muted">Save the product first, then add its variants.</p>
+          )}
+        </div>
+      </TabsContent>
+
+      <TabsContent value="media" keepMounted className="min-h-0 flex-1 overflow-y-auto">
+        <div className="px-4 pb-4">
+          {item ? (
+            <MediaManager
+              productId={item.id}
+              media={item.media ?? []}
+              onChanged={refreshProduct}
+            />
+          ) : (
+            <p className="text-sm text-ink-muted">Save the product first, then upload its images.</p>
+          )}
+        </div>
+      </TabsContent>
+    </Tabs>
   );
 }
