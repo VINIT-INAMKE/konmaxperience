@@ -89,6 +89,7 @@ import { AiModule } from './ai/ai.module';
 import { DailyCloseModule } from './daily-close/daily-close.module';
 import { FoodCostModule } from './food-cost/food-cost.module';
 import { EvidenceAssistModule } from './ai/evidence-assist/evidence-assist.module';
+import { MorningBriefModule } from './ai/morning-brief/morning-brief.module';
 
 @Module({
   imports: [
@@ -162,6 +163,7 @@ import { EvidenceAssistModule } from './ai/evidence-assist/evidence-assist.modul
     DailyCloseModule,
     FoodCostModule,
     EvidenceAssistModule,
+    MorningBriefModule,
   ],
   controllers: [AppController],
   providers: [
