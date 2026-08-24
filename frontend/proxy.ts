@@ -115,7 +115,7 @@ export async function proxy(request: NextRequest) {
 
     // Customer tokens should not access ops routes — redirect to public profile
     if (payload.type === 'customer') {
-      return NextResponse.redirect(new URL('/profile', request.url));
+      return NextResponse.redirect(new URL('/account', request.url));
     }
 
     const response = NextResponse.next();
