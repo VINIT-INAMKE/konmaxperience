@@ -407,12 +407,23 @@ enum NotificationType {
   order_ready
   delivery_update
   admin_notice
+  shipment_failed // RUN-01 nudge 4 — a Shipment that entered `failed` or `rto`
+  morning_brief // RUN-05 — the daily generated summary
+  daily_close_due // RUN-02 — yesterday's close is computed and unsigned
 }
 
 enum NotificationChannel {
   in_app
   email
   whatsapp
+}
+
+/// RUN-02 — a daily close is either computed and awaiting a signature (`open`)
+/// or signed and frozen (`signed`). There is no third state: a close that is
+/// wrong is re-computed while `open`, never after.
+enum DailyCloseStatus {
+  open
+  signed
 }
 
 /// The deployment's operating node. v2.0 runs exactly one node (SPEC §1.2); every
@@ -459,6 +470,9 @@ model Node {
   coupons             Coupon[]
   reviews             Review[]
   usage_events        UsageEvent[]
+
+  dailyCloses               DailyClose[]
+  evidenceReviewSuggestions EvidenceReviewSuggestion[]
 }
 
 /// SPEC §3: every mutating write that changes state also writes an AuditEvent inside
@@ -503,6 +517,12 @@ model User {
   xp_total             Int                       @default(0)
   level                Int                       @default(1)
   streak_days          Int                       @default(0)
+  /// Staff WhatsApp number for RUN-01 nudges. Not unique: a staff member may
+  /// also be a Customer (whose `phone` is unique in its own table), and two
+  /// staff may share a shop handset. `WhatsAppService.normalize` adds the 91.
+  phone                String?
+  /// Opt-in gate for every outbound WhatsApp nudge. In-app is unaffected.
+  whatsapp_opt_in      Boolean                   @default(false)
   created_at           DateTime                  @default(now()) @db.Timestamptz(3)
   updated_at           DateTime                  @updatedAt @db.Timestamptz(3)
   refresh_tokens       RefreshToken[]
@@ -537,6 +557,7 @@ model User {
   packed_shipments     Shipment[]                @relation("ShipmentPacker")
   requested_refunds    Refund[]                  @relation("RefundRequester")
   usage_events         UsageEvent[]
+  dailyCloseSigned     DailyClose[]              @relation("DailyCloseSigner")
 
   // Optimizes: leaderboard query (active users sorted by xp_total desc)
   @@index([status, xp_total(sort: Desc)])
@@ -688,6 +709,10 @@ model Evidence {
   reviewer        User?          @relation("EvidenceReviewer", fields: [reviewed_by], references: [id])
   reviewed_at     DateTime?      @db.Timestamptz(3)
   created_at      DateTime       @default(now()) @db.Timestamptz(3)
+
+  /// AI *suggestions* about this evidence — a sidecar, never a decision. A
+  /// suggestion can never reach `approval_status` (SPEC §1.2, decision 6).
+  reviewSuggestions EvidenceReviewSuggestion[]
 
   // Optimizes: findByTask (evidence by task_id)
   @@index([task_id])
@@ -1537,6 +1562,10 @@ model Notification {
   reference_id   String? // ID of related entity (task_id, order_id, ingredient_id, approval_id)
   reference_type String? // "task" | "order" | "ingredient" | "approval"
   is_read        Boolean               @default(false)
+  /// DEPRECATED — superseded by `channel` containing `email`, which the P6
+  /// `NotificationDispatcher` is the first code ever to write. Dropped by the
+  /// task that removes its three code references (P6 Task 4); the P6 migration
+  /// carries the DROP either way.
   is_email_sent  Boolean               @default(false)
   created_at     DateTime              @default(now()) @db.Timestamptz(3)
 
@@ -1879,4 +1908,59 @@ model Review {
   @@index([product_id, status, created_at(sort: Desc)])
   @@index([node_id, status])
   @@index([customer_id])
+}
+
+// ---------------------------------------------------------------------------
+// P6 — run-it layer (RUN-02 daily close, RUN-05 evidence assist)
+// ---------------------------------------------------------------------------
+
+/// RUN-02 — a persisted, signed artefact, not a live query. A cron computes and
+/// upserts `open` at 00:45 node-local; the screen renders `metrics` verbatim;
+/// sign-off flips to `signed` and writes an `AuditEvent` in the same
+/// transaction. Recomputing on read would let a late refund change a number
+/// someone already signed — the exact thing a close exists to prevent.
+model DailyClose {
+  id            String           @id @default(uuid())
+  node_id       String           @default("11111111-1111-4111-8111-111111111111")
+  node          Node             @relation(fields: [node_id], references: [id], onDelete: Restrict)
+  /// The node-local business day this close covers. `@db.Date`, never a timestamp:
+  /// a close is a calendar fact, and a timestamptz would drift under the node's tz.
+  business_date DateTime         @db.Date
+  status        DailyCloseStatus @default(open)
+  /// Frozen `DailyCloseMetrics` (see `daily-close.service.ts`). Json, not columns:
+  /// the shape grows with the business and a signed row must never be re-derived.
+  metrics       Json
+  notes         String?
+  signed_by     String?
+  signer        User?            @relation("DailyCloseSigner", fields: [signed_by], references: [id])
+  signed_at     DateTime?        @db.Timestamptz(3)
+  created_at    DateTime         @default(now()) @db.Timestamptz(3)
+  updated_at    DateTime         @updatedAt @db.Timestamptz(3)
+
+  @@unique([node_id, business_date])
+  @@index([node_id, status, business_date(sort: Desc)])
+}
+
+/// RUN-05 — an AI *suggestion* about a piece of evidence. A sidecar table, not
+/// columns on `Evidence`: `rejectEvidence` overwrites `Evidence.notes`, so an
+/// `ai_reason` column on the same row would be clobbered by the very human
+/// decision it exists to inform (decision 6). Nothing here is a decision.
+model EvidenceReviewSuggestion {
+  id          String   @id @default(uuid())
+  node_id     String   @default("11111111-1111-4111-8111-111111111111")
+  node        Node     @relation(fields: [node_id], references: [id], onDelete: Restrict)
+  evidence_id String
+  evidence    Evidence @relation(fields: [evidence_id], references: [id], onDelete: Cascade)
+  /// `approve` | `reject` | `unsure` — a *suggestion*. Deliberately NOT an
+  /// `ApprovalStatus`, so no code path can mistake it for a decision (SPEC §1.2).
+  verdict     String
+  /// 0..1. The heuristic provider emits banded values; the model emits its own.
+  confidence  Decimal  @db.Decimal(4, 3)
+  reasons     String[]
+  provider    String
+  model       String?
+  latency_ms  Int
+  created_at  DateTime @default(now()) @db.Timestamptz(3)
+
+  @@index([evidence_id, created_at(sort: Desc)])
 }
