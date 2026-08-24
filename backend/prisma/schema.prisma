@@ -1562,11 +1562,6 @@ model Notification {
   reference_id   String? // ID of related entity (task_id, order_id, ingredient_id, approval_id)
   reference_type String? // "task" | "order" | "ingredient" | "approval"
   is_read        Boolean               @default(false)
-  /// DEPRECATED — superseded by `channel` containing `email`, which the P6
-  /// `NotificationDispatcher` is the first code ever to write. Dropped by the
-  /// task that removes its three code references (P6 Task 4); the P6 migration
-  /// carries the DROP either way.
-  is_email_sent  Boolean               @default(false)
   created_at     DateTime              @default(now()) @db.Timestamptz(3)
 
   @@index([user_id, is_read, created_at(sort: Desc)])

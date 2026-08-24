@@ -41,7 +41,6 @@ export interface Notification {
   reference_id: string | null;
   reference_type: string | null;
   is_read: boolean;
-  is_email_sent: boolean;
   created_at: string;
 }
 

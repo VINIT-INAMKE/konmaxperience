@@ -1,6 +1,7 @@
 import {
   DailyCloseStatus,
   NotificationType,
+  Prisma,
   PrismaClient,
 } from '@prisma/client';
 import type {
@@ -116,13 +117,17 @@ describe('P6 run-it schema', () => {
     expect(suggestion.verdict).toBe('unsure');
   });
 
-  // Deferred, deliberately: dropping the column breaks `notifications.service.ts`
-  // and `notifications.processor.ts`, which this task does not own. The task that
-  // removes those references drops the column and turns this into a real
-  // assertion; the P6 migration carries the DROP either way (decision 10).
-  it.todo(
-    'drops Notification.is_email_sent once `channel` has its first writer',
-  );
+  // Decision 10 — `channel` now has its first writer (`NotificationDispatcher`),
+  // so the deprecated boolean is gone from the schema and from all three code
+  // references. `Prisma.NotificationScalarFieldEnum` is generated from the model,
+  // so this fails the moment the column comes back.
+  it('drops Notification.is_email_sent now `channel` has its first writer', () => {
+    const fields = Object.values(Prisma.NotificationScalarFieldEnum);
+    expect(fields).not.toContain('is_email_sent');
+    expect(fields).toEqual(
+      expect.arrayContaining(['channel', 'type', 'reference_id', 'is_read']),
+    );
+  });
 
   afterAll(async () => {
     await (client as unknown as PrismaClient).$disconnect();

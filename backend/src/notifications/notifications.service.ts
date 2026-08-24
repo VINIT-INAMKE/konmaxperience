@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { NotificationType } from '@prisma/client';
+import { NotificationChannel, NotificationType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationQueryDto } from './dto/notification-query.dto';
 import { isEnumValue } from '../common/utils/parse-enum';
@@ -24,7 +24,14 @@ export class NotificationsService {
     link_url?: string;
     reference_id?: string;
     reference_type?: string;
-    is_email_sent?: boolean;
+    /**
+     * The channels the dispatch actually attempted. Omitted, Prisma applies the
+     * `@default([in_app])` the column has carried since P2 — which is what the
+     * per-event callers (`new_order`, `order_ready`, `delivery_update`) want.
+     * This replaced `is_email_sent`, dropped in P6: `channel` containing
+     * `email` carries the same fact and one more besides (decision 10).
+     */
+    channel?: NotificationChannel[];
   }) {
     const notification = await this.prisma.notification.create({ data });
 
