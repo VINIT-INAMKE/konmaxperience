@@ -2,7 +2,7 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Mission OS + Marketplace
-status: "Phases 32 (P4 role-aware IA) and 33 (P5a marketplace backend) both complete — Phase 34 (P5b storefront + staff commerce) is next and is unblocked"
+status: "Phase 34 (P5b) 18/20 tasks merged — only T13 (SEO) and T20 (Playwright/CI/record) remain; Phase 35 (P6) planned, unexecuted. Paused on weekly usage limit 2026-08-24."
 stopped_at: P4 complete at e871cf4 — all 19 tasks merged, lint/CI enforcement landed, eight-role walk-through recorded; see .planning/phases/32-p4-role-aware-ia/32-01-SUMMARY.md. P5a complete at 5a15e39; see .planning/phases/33-p5a-marketplace-backend/33-01-SUMMARY.md
 last_updated: "2026-08-24"
 progress:
@@ -21,6 +21,33 @@ See: .planning/PROJECT.md (updated 2026-08-22) and /SPEC.md (canonical v2.0 spec
 **Core value:** Every piece of work must be evidence-backed, approved, and validated before it counts -- turning real execution into measurable readiness and progress.
 
 ## Current Position
+
+**PAUSED 2026-08-24 (weekly usage limit).** Phase 34 (P5b Storefront + Staff Commerce) is **18/20 merged** at
+`b1d7fcd`: Tasks 1–12 and 14–19 all landed (types/money/apiClient, seven backend gaps fixed incl. the six
+`@Public()` customer routes and cart-shrink, real light pin + colour sweep + proxy hardening + staff spine
+entries, storefront shell, cart store v3 + `/cart`, `/shop` + `/shop/[category]` + `/search`, `/p/[slug]`,
+`/experiences`, `/checkout` (quote → countdown → Razorpay → confirm), `/orders/[id]/track`, `/account/*` +
+`/login` + `/profile` retirement + session store, and the six staff screens: Shipments, Promotions, Reviews,
+Customers, Orders detail `/pos/orders/[id]` + refunds, Experiences attendance, Catalog variants + media).
+Frontend gates at `b1d7fcd`: tsc clean · eslint 0 errors / 55 warnings · build green. Backend: 104 suites /
+1645 tests, 0 lint errors.
+
+**Remaining for Phase 34 (next session):** Task 13 (SEO — sitemap/robots/redirects incl. `/menu`→`/shop` and
+lifting the route-level `/profile` + `/events` redirects into `next.config.ts` for real 30x, OG image,
+indexability audit incl. the two known soft-404s from the group-level `loading.tsx`; also delete
+`CategoryTabBar`/`MenuBrandTabs`/`ProductOrderCard` with the `/menu` redirect) and Task 20 (Playwright smoke 2
+split at the payment boundary, CI, the merged-tree manual walk-throughs every Wave-1/2 agent deferred, and
+`.planning/phases/34-*/34-01-SUMMARY.md`). Then all of Phase 35 (P6) per
+`docs/superpowers/plans/2026-08-24-p6-run-it-layer.md`.
+
+**Small recorded debts from Wave 1/2 reports:** catalog availability `capacity` branch ignores live holds
+(experiences pages read `/events/:id` instead — backend fix wanted); no `sort` param on `GET /catalog/products`
+(CatalogSort caps at 200); `PUBLIC_INCLUDE` variants lack `stock_on_hand`; `getOrderById` items lack the `event`
+relation (booking date on track page); `AccountLink` still does its own profile GET (should use
+`loadCustomerProfile`); `use-cart.ts` header comment stale + redundant profile effect; no staff receipt endpoint;
+no `PATCH /catalog/media/:id` (reorder = create-then-delete); no `order_id` filter on `GET /shipments`.
+
+### Pre-pause position (Phase 32/33 record)
 
 Milestone: v2.0 Mission OS + Marketplace (Phases 29–35 on branch `v2-os-marketplace`)
 Phase: 32 (Role-Aware IA + Identity, P4) — **COMPLETE** at `e871cf4` (record: `.planning/phases/32-p4-role-aware-ia/32-01-SUMMARY.md`)
