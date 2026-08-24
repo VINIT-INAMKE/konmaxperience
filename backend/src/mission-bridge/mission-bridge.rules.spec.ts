@@ -210,6 +210,23 @@ const P5_EVENTS: DomainEventName[] = [
   DomainEvent.COUPON_REDEEMED,
 ];
 
+/**
+ * A rule that owns only a slice of its event answers with an empty subject id
+ * for the other slice — that is how `applyOne` skips it (P6 Task 13 split
+ * `feedback.received` into an order rule and a standalone rule). The generic
+ * assertions below therefore feed each such rule the payload it actually
+ * applies to, rather than pretending one fixture fits every rule on an event.
+ */
+const RULE_PAYLOADS: Record<string, DomainEventPayloads[DomainEventName]> = {
+  feedback_received_standalone_v1: {
+    ...PAYLOADS[DomainEvent.FEEDBACK_RECEIVED]!,
+    orderId: null,
+  },
+};
+
+const payloadFor = (rule: { key: string; event: DomainEventName }) =>
+  RULE_PAYLOADS[rule.key] ?? PAYLOADS[rule.event];
+
 describe('BRIDGE_RULES', () => {
   it('keeps every rule key unique — the ledger index depends on it', () => {
     const keys = BRIDGE_RULES.map((r) => r.key);
@@ -261,7 +278,7 @@ describe('BRIDGE_RULES', () => {
 
   it('selects a subject id from a representative payload for every rule', () => {
     for (const rule of BRIDGE_RULES) {
-      const picked = rule.select(PAYLOADS[rule.event]);
+      const picked = rule.select(payloadFor(rule));
       expect(typeof picked.subject_id).toBe('string');
       expect(picked.subject_id.length).toBeGreaterThan(0);
     }
@@ -269,7 +286,7 @@ describe('BRIDGE_RULES', () => {
 
   it('produces a value for every placeholder its note template uses', () => {
     for (const rule of BRIDGE_RULES) {
-      const picked = rule.select(PAYLOADS[rule.event]);
+      const picked = rule.select(payloadFor(rule));
       for (const key of placeholders(rule.note_template)) {
         // A key the select never produces renders as an em-dash in front of a
         // human, so the miss has to fail here instead.
@@ -296,18 +313,69 @@ describe('BRIDGE_RULES', () => {
     ).toBe('wl-1');
   });
 
-  it('falls back to the feedback id when the guest order is unknown', () => {
-    const rule = BRIDGE_RULES.find((r) => r.key === 'feedback_received_v1')!;
+  // P6 Task 13. `BridgeDispatch @@unique([rule_key, source_type, source_id])`
+  // is the bridge's only de-duplication, so `orderId ?? feedbackId` on one rule
+  // meant two low ratings on one order spawned two improvement tasks whenever
+  // one of them arrived without an order id.
+  describe('feedback.received keying', () => {
+    const orderRule = BRIDGE_RULES.find(
+      (r) => r.key === 'feedback_received_order_v1',
+    )!;
+    const standaloneRule = BRIDGE_RULES.find(
+      (r) => r.key === 'feedback_received_standalone_v1',
+    )!;
     const payload = PAYLOADS[DomainEvent.FEEDBACK_RECEIVED]!;
 
-    expect(rule.select({ ...payload, orderId: null }).subject_id).toBe('fb-1');
+    it('keys an order-carrying feedback on the order, never the feedback', () => {
+      expect(orderRule.select(payload).subject_id).toBe('ord-1');
+      expect(
+        orderRule.select({ ...payload, feedbackId: 'fb-2' }).subject_id,
+      ).toBe('ord-1');
+    });
+
+    it('stands the order rule down when the guest order is unknown', () => {
+      expect(orderRule.select({ ...payload, orderId: null }).subject_id).toBe(
+        '',
+      );
+    });
+
+    it('keys an order-less feedback on the feedback id', () => {
+      expect(
+        standaloneRule.select({ ...payload, orderId: null }).subject_id,
+      ).toBe('fb-1');
+      expect(
+        standaloneRule.select({
+          ...payload,
+          orderId: null,
+          feedbackId: 'fb-2',
+        }).subject_id,
+      ).toBe('fb-2');
+    });
+
+    it('stands the standalone rule down whenever an order id exists', () => {
+      expect(standaloneRule.select(payload).subject_id).toBe('');
+    });
+
+    it('never lets both rules claim the same event', () => {
+      for (const p of [payload, { ...payload, orderId: null }]) {
+        const claimed = [orderRule, standaloneRule].filter(
+          (r) => r.select(p).subject_id !== '',
+        );
+        expect(claimed).toHaveLength(1);
+      }
+    });
   });
 
-  it('spawns from exactly one rule, and only from feedback', () => {
+  it('spawns only from feedback, once per order and once per order-less guest', () => {
     const spawning = BRIDGE_RULES.filter((r) => r.spawn);
-    expect(spawning.map((r) => r.key)).toEqual(['feedback_received_v1']);
-    expect(spawning[0].event).toBe(DomainEvent.FEEDBACK_RECEIVED);
-    expect(spawning[0].spawn).toBe('low_rating_improvement');
+    expect(spawning.map((r) => r.key).sort()).toEqual([
+      'feedback_received_order_v1',
+      'feedback_received_standalone_v1',
+    ]);
+    for (const rule of spawning) {
+      expect(rule.event).toBe(DomainEvent.FEEDBACK_RECEIVED);
+      expect(rule.spawn).toBe('low_rating_improvement');
+    }
   });
 });
 

@@ -589,6 +589,150 @@ describe('RefundsService', () => {
   });
 
   // ---------------------------------------------------------------
+  // refund.failed — P5a plan risk 3
+  // ---------------------------------------------------------------
+
+  describe('markGatewayRefundFailed', () => {
+    /** The `processed` row `refund.failed` is about to knock back. */
+    function failingRefundRow(over: Record<string, unknown> = {}) {
+      return {
+        id: 'refund-row-1',
+        order_id: ORDER_ID,
+        payment_id: PAYMENT_ROW_ID,
+        amount: new Prisma.Decimal('1000.00'),
+        reason: 'Damaged in transit',
+        razorpay_refund_id: 'rfnd_Abc',
+        status: RefundStatus.processed,
+        ...over,
+      };
+    }
+
+    beforeEach(() => {
+      prisma.refund.findFirst.mockResolvedValue(failingRefundRow());
+      prisma.payment.findUnique.mockResolvedValue(
+        paymentRow({
+          status: PaymentStatus.refunded,
+          refunded_amount: new Prisma.Decimal('1000.00'),
+        }),
+      );
+      prisma.refund.aggregate.mockResolvedValue(processedTotal(null));
+    });
+
+    it('is a logged no-op for a gateway refund id this system never recorded', async () => {
+      prisma.refund.findFirst.mockResolvedValue(null);
+
+      await service.markGatewayRefundFailed(refundEntity());
+
+      expect(prisma.refund.update).not.toHaveBeenCalled();
+      expect(prisma.payment.update).not.toHaveBeenCalled();
+      expect(audit.record).not.toHaveBeenCalled();
+    });
+
+    it('is idempotent under a replayed webhook', async () => {
+      prisma.refund.findFirst.mockResolvedValue(
+        failingRefundRow({ status: RefundStatus.failed }),
+      );
+
+      await service.markGatewayRefundFailed(refundEntity());
+
+      expect(prisma.refund.update).not.toHaveBeenCalled();
+      expect(prisma.payment.update).not.toHaveBeenCalled();
+      expect(audit.record).not.toHaveBeenCalled();
+    });
+
+    it('restores Payment.status to paid when the only refund fails', async () => {
+      await service.markGatewayRefundFailed(refundEntity());
+
+      expect(prisma.refund.update).toHaveBeenCalledWith({
+        where: { id: 'refund-row-1' },
+        data: { status: RefundStatus.failed },
+      });
+      expect(prisma.payment.update).toHaveBeenCalledWith({
+        where: { id: PAYMENT_ROW_ID },
+        data: {
+          refunded_amount: new Prisma.Decimal('0'),
+          status: PaymentStatus.paid,
+        },
+      });
+    });
+
+    it('leaves the remaining processed refunds behind when a partial one fails', async () => {
+      prisma.refund.findFirst.mockResolvedValue(
+        failingRefundRow({ amount: new Prisma.Decimal('250.00') }),
+      );
+      prisma.payment.findUnique.mockResolvedValue(
+        paymentRow({
+          status: PaymentStatus.partially_refunded,
+          refunded_amount: new Prisma.Decimal('650.00'),
+        }),
+      );
+      // ₹650 was on the payment; ₹250 of it just failed, so ₹400 is left —
+      // and it is *summed* from the surviving rows, never subtracted.
+      prisma.refund.aggregate.mockResolvedValue(processedTotal('400.00'));
+
+      await service.markGatewayRefundFailed(refundEntity({ amount: 25_000 }));
+
+      expect(prisma.refund.aggregate).toHaveBeenCalledWith({
+        where: { payment_id: PAYMENT_ROW_ID, status: RefundStatus.processed },
+        _sum: { amount: true },
+      });
+      expect(prisma.payment.update).toHaveBeenCalledWith({
+        where: { id: PAYMENT_ROW_ID },
+        data: {
+          refunded_amount: new Prisma.Decimal('400'),
+          status: PaymentStatus.partially_refunded,
+        },
+      });
+    });
+
+    it('keeps the payment refunded when the survivors still cover it', async () => {
+      prisma.refund.aggregate.mockResolvedValue(processedTotal('1000.00'));
+
+      await service.markGatewayRefundFailed(refundEntity());
+
+      expect(prisma.payment.update).toHaveBeenCalledWith({
+        where: { id: PAYMENT_ROW_ID },
+        data: {
+          refunded_amount: new Prisma.Decimal('1000'),
+          status: PaymentStatus.refunded,
+        },
+      });
+    });
+
+    it('writes a system-actor refund.failed audit row with both sides', async () => {
+      await service.markGatewayRefundFailed(refundEntity());
+
+      const input = callArg<AuditInput>(audit.record, 1);
+      expect(input).toMatchObject({
+        entity_type: 'refund',
+        entity_id: 'refund-row-1',
+        action: 'refund.failed',
+        actor_type: ActorType.system,
+        actor_id: null,
+      });
+      expect(input.before).toMatchObject({
+        status: RefundStatus.processed,
+        refunded_amount: '1000.00',
+        payment_status: PaymentStatus.refunded,
+      });
+      expect(input.after).toMatchObject({
+        status: RefundStatus.failed,
+        order_id: ORDER_ID,
+        razorpay_refund_id: 'rfnd_Abc',
+        refunded_amount: '0.00',
+        payment_status: PaymentStatus.paid,
+      });
+    });
+
+    it('never reopens the order or the loyalty ledger', async () => {
+      await service.markGatewayRefundFailed(refundEntity());
+
+      expect(prisma.order.update).not.toHaveBeenCalled();
+      expect(loyalty.reverse).not.toHaveBeenCalled();
+    });
+  });
+
+  // ---------------------------------------------------------------
   // GET /orders/:id/refunds + DTO
   // ---------------------------------------------------------------
 

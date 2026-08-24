@@ -1,4 +1,5 @@
 import {
+  Inject,
   Injectable,
   BadRequestException,
   ForbiddenException,
@@ -28,6 +29,11 @@ import {
 } from '../common/events/domain-events';
 import { SERIALIZABLE_TX_OPTIONS } from '../common/utils/transaction-retry';
 import { isEnumValue } from '../common/utils/parse-enum';
+import {
+  TASK_VALIDATION_PORT,
+  type TaskValidationPort,
+  type ValidateTaskResult,
+} from './task-validation.port';
 
 /** Page size used when a caller sends `cursor` but no `limit`. */
 export const DEFAULT_TASK_PAGE_SIZE = 50;
@@ -81,6 +87,8 @@ export class TasksService {
     private readonly eventEmitter: EventEmitter2,
     private readonly auditService: AuditService,
     private readonly approvalPolicy: ApprovalPolicyService,
+    @Inject(TASK_VALIDATION_PORT)
+    private readonly taskValidation: TaskValidationPort,
   ) {}
 
   /**
@@ -156,7 +164,8 @@ export class TasksService {
       where.owner_user_id = requestingUser.id;
     }
 
-    const paginated = filters.cursor !== undefined || filters.limit !== undefined;
+    const paginated =
+      filters.cursor !== undefined || filters.limit !== undefined;
     const limit = filters.limit ?? DEFAULT_TASK_PAGE_SIZE;
 
     const rows = await this.prisma.task.findMany({
@@ -166,9 +175,7 @@ export class TasksService {
       // are the legacy ordering, so unpaginated callers see no change.
       orderBy: [{ priority: 'desc' }, { created_at: 'desc' }, { id: 'desc' }],
       take: paginated ? limit + 1 : LEGACY_TASK_CAP,
-      ...(filters.cursor
-        ? { cursor: { id: filters.cursor }, skip: 1 }
-        : {}),
+      ...(filters.cursor ? { cursor: { id: filters.cursor }, skip: 1 } : {}),
     });
 
     const hasMore = paginated && rows.length > limit;
@@ -375,72 +382,58 @@ export class TasksService {
       dto.requires_approval === true && existing.requires_approval === false;
     const gateClosed =
       dto.requires_approval === false && existing.requires_approval === true;
-    const gatedAfterUpdate = dto.requires_approval ?? existing.requires_approval;
+    const gatedAfterUpdate =
+      dto.requires_approval ?? existing.requires_approval;
     const rematerialise =
       !gateClosed && gatedAfterUpdate && (gateOpened || domainChanged);
 
-    const result = await this.prisma.$transaction(async (tx) => {
-      const data: Record<string, unknown> = {};
+    const { updated: result, validation } = await this.prisma.$transaction(
+      async (tx) => {
+        // Carried out of the transaction so the after-commit `task.validated`
+        // emit and the response body can both see what validation decided.
+        let validation: ValidateTaskResult | null = null;
+        const data: Record<string, unknown> = {};
 
-      if (dto.title !== undefined) data.title = dto.title;
-      if (dto.description !== undefined) data.description = dto.description;
-      if (dto.status !== undefined) data.status = dto.status;
-      if (dto.priority !== undefined) data.priority = dto.priority;
-      if (dto.due_date !== undefined)
-        data.due_date = dto.due_date ? new Date(dto.due_date) : null;
-      if (dto.depends_on_task_id !== undefined)
-        data.depends_on_task_id = dto.depends_on_task_id;
-      if (dto.domain !== undefined) data.domain = dto.domain;
-      if (dto.owner_user_id !== undefined)
-        data.owner_user_id = dto.owner_user_id;
-      if (dto.requires_approval !== undefined)
-        data.requires_approval = dto.requires_approval;
-      if (dto.subject_type !== undefined) data.subject_type = dto.subject_type;
-      if (dto.subject_id !== undefined) data.subject_id = dto.subject_id;
+        if (dto.title !== undefined) data.title = dto.title;
+        if (dto.description !== undefined) data.description = dto.description;
+        if (dto.status !== undefined) data.status = dto.status;
+        if (dto.priority !== undefined) data.priority = dto.priority;
+        if (dto.due_date !== undefined)
+          data.due_date = dto.due_date ? new Date(dto.due_date) : null;
+        if (dto.depends_on_task_id !== undefined)
+          data.depends_on_task_id = dto.depends_on_task_id;
+        if (dto.domain !== undefined) data.domain = dto.domain;
+        if (dto.owner_user_id !== undefined)
+          data.owner_user_id = dto.owner_user_id;
+        if (dto.requires_approval !== undefined)
+          data.requires_approval = dto.requires_approval;
+        if (dto.subject_type !== undefined)
+          data.subject_type = dto.subject_type;
+        if (dto.subject_id !== undefined) data.subject_id = dto.subject_id;
 
-      // The column exists on Task and was never written before P3.
-      data.updated_by = requestingUser.id;
+        // The column exists on Task and was never written before P3.
+        data.updated_by = requestingUser.id;
 
-      // Handle completed_at
-      if (dto.status === 'done') {
-        data.completed_at = new Date();
-      } else if (statusChanged && existing.status === 'done') {
-        data.completed_at = null;
-      }
+        // Handle completed_at
+        if (dto.status === 'done') {
+          data.completed_at = new Date();
+        } else if (statusChanged && existing.status === 'done') {
+          data.completed_at = null;
+        }
 
-      const updated = await tx.task.update({
-        where: { id },
-        data,
-        include: {
-          owner: { select: { id: true, name: true } },
-          creator: { select: { id: true, name: true } },
-          depends_on: { select: { id: true, title: true, status: true } },
-        },
-      });
-
-      if (gateClosed) {
-        // Ungated task: drop the rows nobody will ever decide. Already-decided
-        // rows stay as the historical record of the gate that did run.
-        await tx.approval.deleteMany({
-          where: {
-            entity_type: ApprovalEntityType.task,
-            entity_id: id,
-            status: ApprovalStatus.pending,
+        const updated = await tx.task.update({
+          where: { id },
+          data,
+          include: {
+            owner: { select: { id: true, name: true } },
+            creator: { select: { id: true, name: true } },
+            depends_on: { select: { id: true, title: true, status: true } },
           },
         });
-        await this.auditService.record(tx, {
-          entity_type: 'task',
-          entity_id: id,
-          action: 'task.approvals_cleared',
-          ...AuditService.user(requestingUser.id),
-          before: { requires_approval: true },
-          after: { requires_approval: false },
-        });
-      } else if (rematerialise) {
-        // A domain change re-resolves the policy, so pending rows generated
-        // under the OLD domain must go first — an `all` policy needs every row
-        // approved, and a stale approver would hold the gate shut forever.
-        if (domainChanged) {
+
+        if (gateClosed) {
+          // Ungated task: drop the rows nobody will ever decide. Already-decided
+          // rows stay as the historical record of the gate that did run.
           await tx.approval.deleteMany({
             where: {
               entity_type: ApprovalEntityType.task,
@@ -448,40 +441,96 @@ export class TasksService {
               status: ApprovalStatus.pending,
             },
           });
-        }
-        await this.approvalPolicy.materialise(
-          tx,
-          {
-            entity_type: ApprovalEntityType.task,
+          await this.auditService.record(tx, {
+            entity_type: 'task',
             entity_id: id,
-            scope: ApprovalScope.task,
-            domain: updated.domain,
-          },
-          updated.node_id,
-        );
-      }
+            action: 'task.approvals_cleared',
+            ...AuditService.user(requestingUser.id),
+            before: { requires_approval: true },
+            after: { requires_approval: false },
+          });
+        } else if (rematerialise) {
+          // A domain change re-resolves the policy, so pending rows generated
+          // under the OLD domain must go first — an `all` policy needs every row
+          // approved, and a stale approver would hold the gate shut forever.
+          if (domainChanged) {
+            await tx.approval.deleteMany({
+              where: {
+                entity_type: ApprovalEntityType.task,
+                entity_id: id,
+                status: ApprovalStatus.pending,
+              },
+            });
+          }
+          await this.approvalPolicy.materialise(
+            tx,
+            {
+              entity_type: ApprovalEntityType.task,
+              entity_id: id,
+              scope: ApprovalScope.task,
+              domain: updated.domain,
+            },
+            updated.node_id,
+          );
+        }
 
-      // Recalculate progress if status changed — parallelized (independent aggregations)
-      if (statusChanged) {
-        await Promise.all([
-          this.recalculateQuestProgress(existing.quest_id, tx),
-          this.recalculateMissionProgress(existing.mission_id, tx),
-        ]);
+        // Recalculate progress if status changed — parallelized (independent aggregations)
+        if (statusChanged) {
+          await Promise.all([
+            this.recalculateQuestProgress(existing.quest_id, tx),
+            this.recalculateMissionProgress(existing.mission_id, tx),
+          ]);
 
-        await this.auditService.record(tx, {
-          entity_type: 'task',
-          entity_id: id,
-          action: 'task.status_changed',
-          ...AuditService.user(requestingUser.id),
-          before: { status: existing.status },
-          after: { status: updated.status },
-        });
-      }
+          await this.auditService.record(tx, {
+            entity_type: 'task',
+            entity_id: id,
+            action: 'task.status_changed',
+            ...AuditService.user(requestingUser.id),
+            before: { status: existing.status },
+            after: { status: updated.status },
+          });
 
-      return updated;
-    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+          // P6 Task 13 — the cascade gap. `validateTask` had four call sites
+          // (`evidence.service.ts` approve/reject, `approvals.service.ts`
+          // approve/reject) and this was not one of them, so a task whose evidence
+          // was approved *before* it was marked done never became `valid`, never
+          // awarded its XP and never moved its readiness meter. The daily close
+          // and the morning brief then reported readiness numbers that were wrong
+          // for a reason nobody could see.
+          //
+          // Run on every status change, not just `→ done`: validity is
+          // `done + approved evidence + approvals satisfied`, so `done → todo`
+          // has to take the XP and the meter contribution back off again.
+          // `validateTask` re-runs both progress recalculations itself, after it
+          // has written `valid`, so the pass above stays the pre-validation one
+          // and this is the authoritative recompute.
+          validation = await this.taskValidation.validateTask(id, tx);
+        }
 
-    return result;
+        return { updated, validation };
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
+
+    // SPEC §4.1 — `task.validated` is emitted only after the transaction
+    // commits, and only on the `false → true` transition (`event` is null
+    // otherwise). `emitTaskValidated` never throws.
+    this.taskValidation.emitTaskValidated(
+      validation?.event ?? null,
+      requestingUser.id,
+    );
+
+    // `validateTask` wrote `valid`/`valid_xp`/`verified` after `tx.task.update`
+    // read the row, so the response would otherwise answer with the values the
+    // task had *before* it was validated.
+    return validation
+      ? {
+          ...result,
+          valid: validation.valid,
+          valid_xp: validation.valid_xp,
+          verified: validation.valid,
+        }
+      : result;
   }
 
   async block(
@@ -508,37 +557,40 @@ export class TasksService {
       );
     }
 
-    const result = await this.prisma.$transaction(async (tx) => {
-      const updated = await tx.task.update({
-        where: { id },
-        data: {
-          status: TaskStatus.blocked,
-          blocked: true,
-          blocked_reason: reason,
-        },
-        include: {
-          owner: { select: { id: true, name: true } },
-          creator: { select: { id: true, name: true } },
-        },
-      });
+    const result = await this.prisma.$transaction(
+      async (tx) => {
+        const updated = await tx.task.update({
+          where: { id },
+          data: {
+            status: TaskStatus.blocked,
+            blocked: true,
+            blocked_reason: reason,
+          },
+          include: {
+            owner: { select: { id: true, name: true } },
+            creator: { select: { id: true, name: true } },
+          },
+        });
 
-      // Status changed, recalculate progress — parallelized (independent aggregations)
-      await Promise.all([
-        this.recalculateQuestProgress(existing.quest_id, tx),
-        this.recalculateMissionProgress(existing.mission_id, tx),
-      ]);
+        // Status changed, recalculate progress — parallelized (independent aggregations)
+        await Promise.all([
+          this.recalculateQuestProgress(existing.quest_id, tx),
+          this.recalculateMissionProgress(existing.mission_id, tx),
+        ]);
 
-      await this.auditService.record(tx, {
-        entity_type: 'task',
-        entity_id: id,
-        action: 'task.blocked',
-        ...AuditService.user(requestingUser.id),
-        before: { status: existing.status },
-        after: { status: TaskStatus.blocked, blocked_reason: reason },
-      });
+        await this.auditService.record(tx, {
+          entity_type: 'task',
+          entity_id: id,
+          action: 'task.blocked',
+          ...AuditService.user(requestingUser.id),
+          before: { status: existing.status },
+          after: { status: TaskStatus.blocked, blocked_reason: reason },
+        });
 
-      return updated;
-    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+        return updated;
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
 
     // Emit AFTER transaction commits (Pitfall 1 compliance)
     emitDomainEvent(this.eventEmitter, DomainEvent.TASK_BLOCKED, {
@@ -552,10 +604,7 @@ export class TasksService {
     return result;
   }
 
-  async unblock(
-    id: string,
-    requestingUser: { id: string; roleCode: string },
-  ) {
+  async unblock(id: string, requestingUser: { id: string; roleCode: string }) {
     // Parallelize independent lookups
     const [existing, perms] = await Promise.all([
       this.prisma.task.findUnique({ where: { id } }),
@@ -575,39 +624,45 @@ export class TasksService {
       );
     }
 
-    const result = await this.prisma.$transaction(async (tx) => {
-      // Note: We default to 'todo' because the schema does not store a previous_status.
-      // A proper fix would require adding a previous_status column to the Task model.
-      const updated = await tx.task.update({
-        where: { id },
-        data: {
-          status: TaskStatus.todo,
-          blocked: false,
-          blocked_reason: null,
-        },
-        include: {
-          owner: { select: { id: true, name: true } },
-          creator: { select: { id: true, name: true } },
-        },
-      });
+    const result = await this.prisma.$transaction(
+      async (tx) => {
+        // Note: We default to 'todo' because the schema does not store a previous_status.
+        // A proper fix would require adding a previous_status column to the Task model.
+        const updated = await tx.task.update({
+          where: { id },
+          data: {
+            status: TaskStatus.todo,
+            blocked: false,
+            blocked_reason: null,
+          },
+          include: {
+            owner: { select: { id: true, name: true } },
+            creator: { select: { id: true, name: true } },
+          },
+        });
 
-      // Status changed, recalculate progress — parallelized (independent aggregations)
-      await Promise.all([
-        this.recalculateQuestProgress(existing.quest_id, tx),
-        this.recalculateMissionProgress(existing.mission_id, tx),
-      ]);
+        // Status changed, recalculate progress — parallelized (independent aggregations)
+        await Promise.all([
+          this.recalculateQuestProgress(existing.quest_id, tx),
+          this.recalculateMissionProgress(existing.mission_id, tx),
+        ]);
 
-      await this.auditService.record(tx, {
-        entity_type: 'task',
-        entity_id: id,
-        action: 'task.unblocked',
-        ...AuditService.user(requestingUser.id),
-        before: { status: existing.status, blocked_reason: existing.blocked_reason },
-        after: { status: TaskStatus.todo, blocked_reason: null },
-      });
+        await this.auditService.record(tx, {
+          entity_type: 'task',
+          entity_id: id,
+          action: 'task.unblocked',
+          ...AuditService.user(requestingUser.id),
+          before: {
+            status: existing.status,
+            blocked_reason: existing.blocked_reason,
+          },
+          after: { status: TaskStatus.todo, blocked_reason: null },
+        });
 
-      return updated;
-    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+        return updated;
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
 
     return result;
   }
@@ -718,10 +773,7 @@ export class TasksService {
     });
   }
 
-  async recalculateMissionProgress(
-    missionId: string,
-    tx: any,
-  ): Promise<void> {
+  async recalculateMissionProgress(missionId: string, tx: any): Promise<void> {
     const counts = await tx.task.groupBy({
       by: ['valid'],
       where: { mission_id: missionId },

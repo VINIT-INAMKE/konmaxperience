@@ -234,12 +234,49 @@ export const BRIDGE_RULES: BridgeRule[] = [
     signal: { meter: 'QUALITY', value: -1 },
     emitter: 'P3',
   }),
+  // ── feedback.received, split in two (P6 Task 13) ───────────────────────────
+  //
+  // The `BridgeDispatch` ledger is keyed on `(rule_key, source_type, source_id)`
+  // and is the ONLY de-duplication the bridge has
+  // (`mission-bridge.service.ts:400-405` says so explicitly). One rule selecting
+  // `p.orderId ?? p.feedbackId` silently degrades "once per order" into "once
+  // per feedback": two low ratings on the same order — one carrying an order id,
+  // one not — key differently and spawn two improvement tasks for one problem.
+  //
+  // The split is two rules rather than a branch inside `select` because
+  // `subject_type` is declared at the rule level, not returned by `select`, and
+  // widening `defineRule` to allow a per-event override is out of scope. A
+  // `TaskSubjectType.feedback` member would be the honest subject type for the
+  // standalone case, but adding an enum member is a schema change this task does
+  // not own — so the standalone rule keeps `order` (exactly the subject type an
+  // order-less feedback already carried before P6, deep link included) and takes
+  // its key separation from `rule_key` instead.
+  //
+  // `applyOne` skips any rule whose `select` returns an empty subject id, so the
+  // two rules are discriminated on `p.orderId` with no new machinery.
   defineRule({
-    key: 'feedback_received_v1',
+    key: 'feedback_received_order_v1',
     event: DomainEvent.FEEDBACK_RECEIVED,
     subject_type: TaskSubjectType.order,
     select: (p) => ({
-      subject_id: p.orderId ?? p.feedbackId,
+      subject_id: p.orderId ?? '',
+      values: { rating: p.rating, comment: p.comment },
+    }),
+    note_template: 'Guest feedback received — {rating}/5. "{comment}"',
+    evidence: true,
+    signal: { meter: 'QUALITY', value: 1 },
+    spawn: 'low_rating_improvement',
+    emitter: 'P3',
+  }),
+  defineRule({
+    key: 'feedback_received_standalone_v1',
+    event: DomainEvent.FEEDBACK_RECEIVED,
+    subject_type: TaskSubjectType.order,
+    select: (p) => ({
+      // Feedback with no order has no order to be idempotent about, so the
+      // feedback id is the right key here — it is only the *wrong* key when an
+      // order id exists, which is precisely the case the sibling rule owns.
+      subject_id: p.orderId ? '' : p.feedbackId,
       values: { rating: p.rating, comment: p.comment },
     }),
     note_template: 'Guest feedback received — {rating}/5. "{comment}"',

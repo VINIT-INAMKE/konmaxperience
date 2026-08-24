@@ -109,6 +109,8 @@ export class WebhooksService {
       );
     } else if (event === 'refund.processed') {
       await this.handleRefundProcessed(payload);
+    } else if (event === 'refund.failed') {
+      await this.handleRefundFailed(payload);
     }
   }
 
@@ -258,5 +260,25 @@ export class WebhooksService {
     }
 
     await this.refundsService.reconcileGatewayRefund(refund);
+  }
+
+  /**
+   * P5a plan risk 3. `refund.processed` is optimistic: a refund can sit
+   * `pending` at Razorpay for hours after `payments.refund()` returned, and
+   * `RefundsService.refund` marks the row `processed` on that response. When the
+   * rail finally fails, this is the only event that says so — without it the
+   * refund stays `processed`, `Payment.refunded_amount` keeps counting money
+   * that never left, and the customer is told they were refunded.
+   *
+   * Event bookings are not handled here on purpose: `refund.failed` usually
+   * arrives with no preceding `refund.processed`, so there is no
+   * `payment_status: 'refunded'` to undo, and a booking carries no `Refund` row
+   * for the ledger to correct.
+   */
+  private async handleRefundFailed(payload: any) {
+    const refund = payload.refund?.entity as GatewayRefundEntity | undefined;
+    if (!refund?.id || !refund.payment_id) return;
+
+    await this.refundsService.markGatewayRefundFailed(refund);
   }
 }

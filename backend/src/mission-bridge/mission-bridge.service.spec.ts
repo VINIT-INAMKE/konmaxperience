@@ -753,6 +753,90 @@ describe('MissionBridgeService', () => {
       expect(prisma.readinessSignal.create).toHaveBeenCalledTimes(1);
     });
 
+    // P6 Task 13 — the ledger key. One rule selecting `orderId ?? feedbackId`
+    // meant a second low rating on the same order spawned a second improvement
+    // task whenever it arrived without an order id; the split gives each case
+    // its own `rule_key` and its own key space.
+    describe('per-order dispatch keying', () => {
+      /** The `(rule_key, source_type, source_id)` triple of the nth claim. */
+      const claim = (call = 0) =>
+        prisma.bridgeDispatch.create.mock.calls[call][0].data as {
+          rule_key: string;
+          source_type: string;
+          source_id: string;
+        };
+
+      it('claims the order id under the order rule, whatever the feedback id', async () => {
+        seedMeter('meter-quality');
+        seedSpawnPrerequisites();
+
+        await service.apply(DomainEvent.FEEDBACK_RECEIVED, feedbackReceived());
+        await service.apply(
+          DomainEvent.FEEDBACK_RECEIVED,
+          feedbackReceived({ feedbackId: 'fb-2' }),
+        );
+
+        expect(prisma.bridgeDispatch.create).toHaveBeenCalledTimes(2);
+        expect(claim(0)).toMatchObject({
+          rule_key: 'feedback_received_order_v1',
+          source_id: 'ord-1',
+        });
+        // Identical triple both times — so the unique index, not chance, is
+        // what makes the second one a no-op.
+        expect(claim(1)).toEqual(claim(0));
+      });
+
+      it('claims a different order id separately', async () => {
+        seedMeter('meter-quality');
+        seedSpawnPrerequisites();
+
+        await service.apply(DomainEvent.FEEDBACK_RECEIVED, feedbackReceived());
+        await service.apply(
+          DomainEvent.FEEDBACK_RECEIVED,
+          feedbackReceived({ orderId: 'ord-2', feedbackId: 'fb-2' }),
+        );
+
+        expect(claim(0).source_id).toBe('ord-1');
+        expect(claim(1).source_id).toBe('ord-2');
+        expect(prisma.task.create).toHaveBeenCalledTimes(2);
+      });
+
+      it('keys two order-less guests apart under the standalone rule', async () => {
+        seedMeter('meter-quality');
+        seedSpawnPrerequisites();
+
+        await service.apply(
+          DomainEvent.FEEDBACK_RECEIVED,
+          feedbackReceived({ orderId: null }),
+        );
+        await service.apply(
+          DomainEvent.FEEDBACK_RECEIVED,
+          feedbackReceived({ orderId: null, feedbackId: 'fb-2' }),
+        );
+
+        expect(claim(0)).toMatchObject({
+          rule_key: 'feedback_received_standalone_v1',
+          source_id: 'fb-1',
+        });
+        expect(claim(1)).toMatchObject({
+          rule_key: 'feedback_received_standalone_v1',
+          source_id: 'fb-2',
+        });
+        expect(prisma.task.create).toHaveBeenCalledTimes(2);
+      });
+
+      it('lets exactly one of the two rules claim any single event', async () => {
+        seedMeter('meter-quality');
+        seedSpawnPrerequisites();
+
+        await service.apply(DomainEvent.FEEDBACK_RECEIVED, feedbackReceived());
+
+        expect(prisma.bridgeDispatch.create).toHaveBeenCalledTimes(1);
+        expect(prisma.task.create).toHaveBeenCalledTimes(1);
+        expect(prisma.readinessSignal.create).toHaveBeenCalledTimes(1);
+      });
+    });
+
     it('falls back to the feedback id as the subject when the order is unknown', async () => {
       seedMeter('meter-quality');
       seedSpawnPrerequisites();

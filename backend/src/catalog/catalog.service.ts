@@ -9,6 +9,7 @@ import {
   MediaKind,
   PrepBatchStatus,
   PreparationType,
+  Prisma,
   ProductStatus,
   ProductType,
   RecipeStatus,
@@ -16,6 +17,7 @@ import {
 } from '@prisma/client';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditService } from '../audit/audit.service';
 import { DEFAULT_NODE_ID } from '../node/node.constants';
 import {
   DomainEvent,
@@ -31,6 +33,56 @@ import { CreateProductCategoryDto } from './dto/create-product-category.dto';
 import { UpdateProductCategoryDto } from './dto/update-product-category.dto';
 import { UpsertProductVariantDto } from './dto/upsert-product-variant.dto';
 import { UpsertChannelModifierDto } from './dto/upsert-channel-modifier.dto';
+
+/**
+ * The `Product` fields worth keeping in an audit `before`/`after` snapshot,
+ * JSON-safe.
+ *
+ * Deliberately **not** the whole row: `search_text` is a denormalised blob that
+ * would bloat every `AuditEvent` and change on edits nobody made, and the
+ * relations `STAFF_INCLUDE` pulls in (recipe cost, variants, media) belong to
+ * their own entities. `Decimal` goes through `String()` because
+ * `Prisma.InputJsonValue` has no decimal, and a `Number()` cast on money is how
+ * a rounding bug gets into the audit trail.
+ */
+function productSnapshot(product: {
+  name: string;
+  slug: string;
+  status: ProductStatus;
+  type: ProductType;
+  base_price: Prisma.Decimal;
+  tax_rate: Prisma.Decimal;
+  category_id: string;
+}): Prisma.InputJsonValue {
+  return {
+    name: product.name,
+    slug: product.slug,
+    status: product.status,
+    type: product.type,
+    base_price: String(product.base_price),
+    tax_rate: String(product.tax_rate),
+    category_id: product.category_id,
+  };
+}
+
+/** The `ProductCategory` fields worth keeping in an audit snapshot, JSON-safe. */
+function categorySnapshot(category: {
+  name: string;
+  slug: string;
+  status: ProductStatus;
+  sort_order: number;
+  brand_id: string;
+  product_types: ProductType[];
+}): Prisma.InputJsonValue {
+  return {
+    name: category.name,
+    slug: category.slug,
+    status: category.status,
+    sort_order: category.sort_order,
+    brand_id: category.brand_id,
+    product_types: category.product_types,
+  };
+}
 
 /** Public storefront shape — never selects cost, yield, BOM or margin fields (SPEC §8). */
 const PUBLIC_INCLUDE = {
@@ -142,10 +194,15 @@ const SEARCH_LIMIT_MAX = 50;
 export class CatalogService {
   private readonly logger = new Logger(CatalogService.name);
 
+  /**
+   * `AuditModule` is `@Global()`, so `catalog.module.ts` needs no import change
+   * for this — verified before it was left alone.
+   */
   constructor(
     private readonly prisma: PrismaService,
     private readonly cache: CatalogCacheService,
     private readonly eventEmitter: EventEmitter2,
+    private readonly audit: AuditService,
   ) {}
 
   // ----------------------------------------------------------------
@@ -170,37 +227,77 @@ export class CatalogService {
     );
   }
 
-  async createCategory(dto: CreateProductCategoryDto) {
+  async createCategory(dto: CreateProductCategoryDto, userId?: string) {
     // node_id comes from the Prisma-level @default until Task 5 lands `Node`.
-    const category = await this.prisma.productCategory.create({
-      data: { ...dto },
+    const category = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.productCategory.create({ data: { ...dto } });
+      await this.audit.record(tx, {
+        entity_type: 'product_category',
+        entity_id: created.id,
+        action: 'product_category.created',
+        node_id: created.node_id,
+        ...AuditService.user(userId),
+        after: categorySnapshot(created),
+      });
+      return created;
     });
     await this.cache.invalidate();
     return category;
   }
 
-  async updateCategory(id: string, dto: UpdateProductCategoryDto) {
-    await this.getCategoryOrThrow(id);
-    const category = await this.prisma.productCategory.update({
-      where: { id },
-      data: { ...dto },
+  async updateCategory(
+    id: string,
+    dto: UpdateProductCategoryDto,
+    userId?: string,
+  ) {
+    const existing = await this.getCategoryOrThrow(id);
+    const category = await this.prisma.$transaction(async (tx) => {
+      const updated = await tx.productCategory.update({
+        where: { id },
+        data: { ...dto },
+      });
+      await this.audit.record(tx, {
+        entity_type: 'product_category',
+        entity_id: id,
+        action: 'product_category.updated',
+        node_id: updated.node_id,
+        ...AuditService.user(userId),
+        before: categorySnapshot(existing),
+        after: categorySnapshot(updated),
+      });
+      return updated;
     });
     await this.cache.invalidate();
     return category;
   }
 
   /** Archives the category's products rather than deleting them — orders reference products. */
-  async removeCategory(id: string) {
-    await this.getCategoryOrThrow(id);
+  async removeCategory(id: string, userId?: string) {
+    const existing = await this.getCategoryOrThrow(id);
     const category = await this.prisma.$transaction(async (tx) => {
-      await tx.product.updateMany({
+      // The cascade is the audit-worthy half: a category delete quietly takes
+      // every product in it off the storefront, so the count goes in `after`.
+      const cascaded = await tx.product.updateMany({
         where: { category_id: id },
         data: { status: ProductStatus.archived },
       });
-      return tx.productCategory.update({
+      const archived = await tx.productCategory.update({
         where: { id },
         data: { status: ProductStatus.archived },
       });
+      await this.audit.record(tx, {
+        entity_type: 'product_category',
+        entity_id: id,
+        action: 'product_category.deleted',
+        node_id: archived.node_id,
+        ...AuditService.user(userId),
+        before: categorySnapshot(existing),
+        after: {
+          ...(categorySnapshot(archived) as Record<string, unknown>),
+          products_archived: cascaded.count,
+        },
+      });
+      return archived;
     });
     await this.cache.invalidate();
     return category;
@@ -434,10 +531,21 @@ export class CatalogService {
 
   async createProduct(dto: CreateProductDto, userId: string) {
     await this.assertRecipeUsable(dto.type, dto.recipe_id);
-    const product = await this.prisma.product.create({
-      // node_id comes from the Prisma-level @default until Task 5 lands `Node`.
-      data: { ...dto, created_by: userId, updated_by: userId },
-      include: STAFF_INCLUDE,
+    const product = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.product.create({
+        // node_id comes from the Prisma-level @default until Task 5 lands `Node`.
+        data: { ...dto, created_by: userId, updated_by: userId },
+        include: STAFF_INCLUDE,
+      });
+      await this.audit.record(tx, {
+        entity_type: 'product',
+        entity_id: created.id,
+        action: 'product.created',
+        node_id: created.node_id,
+        ...AuditService.user(userId),
+        after: productSnapshot(created),
+      });
+      return created;
     });
     await this.cache.invalidate();
     return product;
@@ -453,10 +561,22 @@ export class CatalogService {
         dto.recipe_id ?? existing.recipe_id,
       );
     }
-    const product = await this.prisma.product.update({
-      where: { id },
-      data: { ...dto, updated_by: userId },
-      include: STAFF_INCLUDE,
+    const product = await this.prisma.$transaction(async (tx) => {
+      const updated = await tx.product.update({
+        where: { id },
+        data: { ...dto, updated_by: userId },
+        include: STAFF_INCLUDE,
+      });
+      await this.audit.record(tx, {
+        entity_type: 'product',
+        entity_id: id,
+        action: 'product.updated',
+        node_id: updated.node_id,
+        ...AuditService.user(userId),
+        before: productSnapshot(existing),
+        after: productSnapshot(updated),
+      });
+      return updated;
     });
     await this.cache.invalidate();
     return product;
@@ -466,15 +586,33 @@ export class CatalogService {
   async setStatus(id: string, status: ProductStatus, userId: string) {
     // Read the status first so `product.published` fires only on the real
     // draft|archived → active transition, never on a re-save of a live product.
-    const before = await this.prisma.product.findUnique({
-      where: { id },
-      select: { status: true },
-    });
+    const before = await this.prisma.product.findUnique({ where: { id } });
 
-    const product = await this.prisma.product.update({
-      where: { id },
-      data: { status, updated_by: userId },
-      include: STAFF_INCLUDE,
+    const product = await this.prisma.$transaction(async (tx) => {
+      const updated = await tx.product.update({
+        where: { id },
+        data: { status, updated_by: userId },
+        include: STAFF_INCLUDE,
+      });
+      // One method backs three verbs, and the audit trail has to say which one
+      // happened: a publish and an archive are not the same act, and reading
+      // "product.updated" on the row that took a product off the storefront is
+      // how an audit trail stops being usable.
+      await this.audit.record(tx, {
+        entity_type: 'product',
+        entity_id: id,
+        action:
+          status === ProductStatus.active
+            ? 'product.published'
+            : status === ProductStatus.archived
+              ? 'product.archived'
+              : 'product.updated',
+        node_id: updated.node_id,
+        ...AuditService.user(userId),
+        before: before ? productSnapshot(before) : null,
+        after: productSnapshot(updated),
+      });
+      return updated;
     });
 
     // A publish or an archive must be visible on the storefront immediately,
@@ -598,10 +736,47 @@ export class CatalogService {
     });
   }
 
-  async removeVariant(id: string) {
-    const variant = await this.prisma.productVariant.update({
+  /**
+   * `ProductVariant` and `ProductMedia` carry no `node_id`, so their audit rows
+   * borrow the owning product's — a variant delete has to land in the same
+   * node's trail as the product it took a SKU off.
+   */
+  async removeVariant(id: string, userId?: string) {
+    // Read before the write: the pre-archive row *is* the `before` snapshot, and
+    // a missing id becomes a 404 instead of an unhandled Prisma `P2025`.
+    const existing = await this.prisma.productVariant.findUnique({
       where: { id },
-      data: { status: ProductStatus.archived },
+      include: { product: { select: { node_id: true } } },
+    });
+    if (!existing) {
+      throw new NotFoundException(`Product variant with ID ${id} not found`);
+    }
+
+    const variant = await this.prisma.$transaction(async (tx) => {
+      const archived = await tx.productVariant.update({
+        where: { id },
+        data: { status: ProductStatus.archived },
+      });
+      await this.audit.record(tx, {
+        entity_type: 'product_variant',
+        entity_id: id,
+        action: 'product_variant.deleted',
+        node_id: existing.product.node_id,
+        ...AuditService.user(userId),
+        before: {
+          product_id: existing.product_id,
+          name: existing.name,
+          sku: existing.sku,
+          status: existing.status,
+        },
+        after: {
+          product_id: archived.product_id,
+          name: archived.name,
+          sku: archived.sku,
+          status: archived.status,
+        },
+      });
+      return archived;
     });
     await this.cache.invalidate();
     return variant;
@@ -618,8 +793,35 @@ export class CatalogService {
     return media;
   }
 
-  async removeMedia(id: string) {
-    const media = await this.prisma.productMedia.delete({ where: { id } });
+  async removeMedia(id: string, userId?: string) {
+    const existing = await this.prisma.productMedia.findUnique({
+      where: { id },
+      include: { product: { select: { node_id: true } } },
+    });
+    if (!existing) {
+      throw new NotFoundException(`Product media with ID ${id} not found`);
+    }
+
+    const media = await this.prisma.$transaction(async (tx) => {
+      const deleted = await tx.productMedia.delete({ where: { id } });
+      // A hard delete: `before` is the only record that this image ever
+      // existed, so it carries the URL the row is about to lose.
+      await this.audit.record(tx, {
+        entity_type: 'product_media',
+        entity_id: id,
+        action: 'product_media.deleted',
+        node_id: existing.product.node_id,
+        ...AuditService.user(userId),
+        before: {
+          product_id: existing.product_id,
+          url: existing.url,
+          alt: existing.alt,
+          kind: existing.kind,
+          sort_order: existing.sort_order,
+        },
+      });
+      return deleted;
+    });
     await this.cache.invalidate();
     return media;
   }

@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { TasksService } from './tasks.service';
+import { TASK_VALIDATION_PORT } from './task-validation.port';
 import { PrismaService } from '../prisma/prisma.service';
 import { ApprovalPolicyService } from '../approvals/approval-policy.service';
 import { Permission } from '../types/permissions';
@@ -31,6 +32,10 @@ describe('TasksService', () => {
   let audit: ReturnType<typeof mockAuditService>;
   let approvalPolicy: ReturnType<typeof mockApprovalPolicyService>;
   let emitter: ReturnType<typeof mockEventEmitter>;
+  let taskValidation: {
+    validateTask: jest.Mock;
+    emitTaskValidated: jest.Mock;
+  };
 
   const adminUser = { id: 'admin-1', roleCode: 'FOUNDER_ADMIN' };
   const regularUser = { id: 'user-1', roleCode: 'FRONTEND_LEAD' };
@@ -116,6 +121,16 @@ describe('TasksService', () => {
     audit = mockAuditService();
     approvalPolicy = mockApprovalPolicyService();
     emitter = mockEventEmitter();
+    taskValidation = {
+      validateTask: jest.fn().mockResolvedValue({
+        valid: false,
+        valid_xp: 0,
+        newly_valid: false,
+        user: { id: 'user-1', xp_total: 0, level: 1 },
+        event: null,
+      }),
+      emitTaskValidated: jest.fn(),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -124,6 +139,7 @@ describe('TasksService', () => {
         provideEventEmitter(emitter),
         provideAuditService(audit),
         { provide: ApprovalPolicyService, useValue: approvalPolicy },
+        { provide: TASK_VALIDATION_PORT, useValue: taskValidation },
       ],
     }).compile();
 
@@ -628,6 +644,174 @@ describe('TasksService', () => {
         actor_id: 'user-1',
         before: { status: 'todo' },
         after: { status: 'doing' },
+      });
+    });
+
+    // ---------------------------------------------------------------
+    // P6 Task 13 — the validation cascade. P3 wired `validateTask` to the
+    // evidence and approval decisions but not to the status change, so a task
+    // whose evidence was approved before it was marked done never became valid.
+    // ---------------------------------------------------------------
+    describe('validation cascade on status change', () => {
+      /** Everything `update` touches on a `todo → done` move. */
+      const arrangeStatusChange = (status = 'done') => {
+        prisma.task.findUnique.mockResolvedValue(mockTask); // status: 'todo'
+        mockGetPermissions.mockResolvedValue([Permission.UPDATE_OWN_TASK]);
+        txMock.task.update.mockResolvedValue({ ...mockTask, status });
+        txMock.quest.findUnique.mockResolvedValue({
+          id: 'quest-1',
+          baseline_task_count: 5,
+        });
+        mockGroupBy([], []);
+        txMock.quest.update.mockResolvedValue({});
+        txMock.mission.update.mockResolvedValue({});
+      };
+
+      it('re-runs validateTask on the same tx when a task is marked done', async () => {
+        arrangeStatusChange();
+        taskValidation.validateTask.mockResolvedValue({
+          valid: true,
+          valid_xp: 25,
+          newly_valid: true,
+          user: { id: 'user-1', xp_total: 25, level: 1 },
+          event: {
+            taskId: 'task-1',
+            nodeId: 'node-1',
+            title: 'Design homepage',
+            ownerUserId: 'user-1',
+            questId: 'quest-1',
+            missionId: 'mission-1',
+            readinessMeterId: null,
+            validXp: 25,
+          },
+        });
+
+        const result = await service.update(
+          'task-1',
+          { status: 'done' },
+          regularUser,
+        );
+
+        expect(taskValidation.validateTask).toHaveBeenCalledWith(
+          'task-1',
+          txMock,
+        );
+        // The row `tx.task.update` returned was read before `validateTask`
+        // wrote these three columns, so the response has to carry the
+        // post-validation values, not the stale ones.
+        expect(result).toMatchObject({
+          valid: true,
+          valid_xp: 25,
+          verified: true,
+        });
+      });
+
+      it('emits task.validated after the transaction, never inside it', async () => {
+        arrangeStatusChange();
+        const event = {
+          taskId: 'task-1',
+          nodeId: 'node-1',
+          title: 'Design homepage',
+          ownerUserId: 'user-1',
+          questId: 'quest-1',
+          missionId: 'mission-1',
+          readinessMeterId: null,
+          validXp: 25,
+        };
+        taskValidation.validateTask.mockImplementation(() => {
+          expect(taskValidation.emitTaskValidated).not.toHaveBeenCalled();
+          return Promise.resolve({
+            valid: true,
+            valid_xp: 25,
+            newly_valid: true,
+            user: { id: 'user-1', xp_total: 25, level: 1 },
+            event,
+          });
+        });
+
+        await service.update('task-1', { status: 'done' }, regularUser);
+
+        expect(taskValidation.emitTaskValidated).toHaveBeenCalledWith(
+          event,
+          'user-1',
+        );
+      });
+
+      it('takes validity back off again on done → todo', async () => {
+        prisma.task.findUnique.mockResolvedValue({
+          ...mockTask,
+          status: 'done',
+          valid: true,
+          valid_xp: 25,
+          verified: true,
+        });
+        mockGetPermissions.mockResolvedValue([Permission.UPDATE_OWN_TASK]);
+        txMock.task.update.mockResolvedValue({
+          ...mockTask,
+          status: 'todo',
+          valid: true,
+          valid_xp: 25,
+          verified: true,
+        });
+        txMock.quest.findUnique.mockResolvedValue({
+          id: 'quest-1',
+          baseline_task_count: 5,
+        });
+        mockGroupBy([], []);
+        txMock.quest.update.mockResolvedValue({});
+        txMock.mission.update.mockResolvedValue({});
+
+        const result = await service.update(
+          'task-1',
+          { status: 'todo' },
+          regularUser,
+        );
+
+        expect(taskValidation.validateTask).toHaveBeenCalledWith(
+          'task-1',
+          txMock,
+        );
+        expect(result).toMatchObject({
+          valid: false,
+          valid_xp: 0,
+          verified: false,
+        });
+        // `event` is null when nothing flipped `false → true`.
+        expect(taskValidation.emitTaskValidated).toHaveBeenCalledWith(
+          null,
+          'user-1',
+        );
+      });
+
+      it('leaves an unsatisfied approval gate invalid — P3 decision 4 is not regressed', async () => {
+        arrangeStatusChange();
+        // `validateTask` is the single owner of that rule; `update` must not
+        // second-guess it or pre-empt it with a rule of its own.
+        const result = await service.update(
+          'task-1',
+          { status: 'done' },
+          regularUser,
+        );
+
+        expect(result).toMatchObject({ valid: false, valid_xp: 0 });
+        expect(taskValidation.emitTaskValidated).toHaveBeenCalledWith(
+          null,
+          'user-1',
+        );
+      });
+
+      it('does not validate an edit that leaves the status alone', async () => {
+        prisma.task.findUnique.mockResolvedValue(mockTask);
+        mockGetPermissions.mockResolvedValue([Permission.UPDATE_OWN_TASK]);
+        txMock.task.update.mockResolvedValue(mockTask);
+
+        await service.update('task-1', { title: 'Renamed' }, regularUser);
+
+        expect(taskValidation.validateTask).not.toHaveBeenCalled();
+        expect(taskValidation.emitTaskValidated).toHaveBeenCalledWith(
+          null,
+          'user-1',
+        );
       });
     });
 

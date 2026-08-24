@@ -51,8 +51,11 @@ export class CatalogController {
 
   @Post('catalog/categories')
   @RequiresPermission(Permission.MANAGE_OPS)
-  async createCategory(@Body() dto: CreateProductCategoryDto) {
-    return this.catalog.createCategory(dto);
+  async createCategory(
+    @Body() dto: CreateProductCategoryDto,
+    @Req() req: express.Request,
+  ) {
+    return this.catalog.createCategory(dto, userId(req));
   }
 
   @Patch('catalog/categories/:id')
@@ -60,14 +63,18 @@ export class CatalogController {
   async updateCategory(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateProductCategoryDto,
+    @Req() req: express.Request,
   ) {
-    return this.catalog.updateCategory(id, dto);
+    return this.catalog.updateCategory(id, dto, userId(req));
   }
 
   @Delete('catalog/categories/:id')
   @RequiresPermission(Permission.MANAGE_OPS)
-  async removeCategory(@Param('id', ParseUUIDPipe) id: string) {
-    return this.catalog.removeCategory(id);
+  async removeCategory(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Req() req: express.Request,
+  ) {
+    return this.catalog.removeCategory(id, userId(req));
   }
 
   // ----------------------------------------------------------------
@@ -196,8 +203,11 @@ export class CatalogController {
 
   @Delete('catalog/variants/:id')
   @RequiresPermission(Permission.MANAGE_OPS)
-  async removeVariant(@Param('id', ParseUUIDPipe) id: string) {
-    return this.catalog.removeVariant(id);
+  async removeVariant(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Req() req: express.Request,
+  ) {
+    return this.catalog.removeVariant(id, userId(req));
   }
 
   @Post('catalog/products/:id/media')
@@ -212,8 +222,11 @@ export class CatalogController {
 
   @Delete('catalog/media/:id')
   @RequiresPermission(Permission.MANAGE_OPS)
-  async removeMedia(@Param('id', ParseUUIDPipe) id: string) {
-    return this.catalog.removeMedia(id);
+  async removeMedia(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Req() req: express.Request,
+  ) {
+    return this.catalog.removeMedia(id, userId(req));
   }
 
   // ----------------------------------------------------------------

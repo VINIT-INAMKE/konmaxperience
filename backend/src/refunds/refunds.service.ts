@@ -46,8 +46,9 @@ function gatewayErrorMessage(err: unknown): string {
 }
 
 /**
- * The `payload.refund.entity` Razorpay sends on `refund.processed`. `amount` is
- * in **paise**, as everything on the wire from Razorpay is.
+ * The `payload.refund.entity` Razorpay sends on `refund.processed` and
+ * `refund.failed`. `amount` is in **paise**, as everything on the wire from
+ * Razorpay is.
  */
 export interface GatewayRefundEntity {
   id: string;
@@ -304,6 +305,114 @@ export class RefundsService {
             payment_status: full
               ? PaymentStatus.refunded
               : PaymentStatus.partially_refunded,
+          },
+        });
+      }, SERIALIZABLE_TX_OPTIONS),
+    );
+  }
+
+  /**
+   * The `refund.failed` branch of the Razorpay webhook (P5a plan risk 3).
+   *
+   * Razorpay's `refund.processed` is optimistic — `payments.refund()` can return
+   * a refund whose status is still `pending` for hours, and {@link refund} marks
+   * the row `processed` on that optimistic response. When the rail ultimately
+   * fails, `refund.failed` arrives and the money is still ours; without this
+   * handler the row stays `processed`, `Payment.refunded_amount` keeps counting
+   * it and the customer's money is nowhere.
+   *
+   * Flips the row to `failed`, recomputes `Payment.refunded_amount` from the
+   * **sum of the processed rows only** (never by subtraction, which drifts
+   * across partial refunds), restores `Payment.status`, and writes an
+   * `AuditEvent` so the failure shows up in the order's history rather than only
+   * in the logs.
+   *
+   * Deliberately does *not* touch `Order.status` or the loyalty ledger: a fully
+   * refunded order has already been closed and its points clawed back, and the
+   * status it held before the close is not recoverable from this row. The audit
+   * event is what puts a re-opened order in front of the order desk. Nor does a
+   * failed refund raise a notification — that is an order-desk problem, not a
+   * shipment one, and it surfaces on the order and in Mission Control's Action
+   * Required.
+   *
+   * Idempotent twice over: an unknown `razorpay_refund_id` is a logged no-op
+   * (Razorpay may fail a refund this system never recorded), and a row already
+   * `failed` returns without writing, so a replayed webhook changes nothing.
+   */
+  async markGatewayRefundFailed(entity: GatewayRefundEntity): Promise<void> {
+    const existing = await this.prisma.refund.findFirst({
+      where: { razorpay_refund_id: entity.id },
+    });
+    if (!existing) {
+      this.logger.warn(
+        `refund.failed ${entity.id} references a refund this system has no row for — ignored`,
+      );
+      return;
+    }
+    if (existing.status === RefundStatus.failed) return;
+
+    const payment = await this.prisma.payment.findUnique({
+      where: { id: existing.payment_id },
+    });
+    if (!payment) {
+      this.logger.error(
+        `refund.failed ${entity.id} points at missing payment ${existing.payment_id}`,
+      );
+      return;
+    }
+
+    await withSerializableRetry(() =>
+      this.prisma.$transaction(async (tx) => {
+        await tx.refund.update({
+          where: { id: existing.id },
+          data: { status: RefundStatus.failed },
+        });
+
+        const paid = toPaise(payment.amount);
+        const totals = await tx.refund.aggregate({
+          where: {
+            payment_id: payment.id,
+            status: RefundStatus.processed,
+          },
+          _sum: { amount: true },
+        });
+        const refunded = toPaise(totals._sum.amount ?? 0);
+        // Three branches, not the two a subtraction would give: a failed
+        // *partial* refund leaves the remaining processed rows behind, and if
+        // those still cover the whole payment the row stays `refunded` rather
+        // than falsely reopening a settled order.
+        const status =
+          refunded <= 0
+            ? PaymentStatus.paid
+            : refunded >= paid
+              ? PaymentStatus.refunded
+              : PaymentStatus.partially_refunded;
+
+        await tx.payment.update({
+          where: { id: payment.id },
+          data: { refunded_amount: toDecimal(refunded), status },
+        });
+
+        await this.audit.record(tx, {
+          entity_type: 'refund',
+          entity_id: existing.id,
+          action: 'refund.failed',
+          actor_type: ActorType.system,
+          actor_id: null,
+          before: {
+            status: existing.status,
+            refunded_amount: toDecimal(
+              toPaise(payment.refunded_amount),
+            ).toFixed(2),
+            payment_status: payment.status,
+          },
+          after: {
+            status: RefundStatus.failed,
+            order_id: existing.order_id,
+            razorpay_refund_id: entity.id,
+            amount: toDecimal(toPaise(existing.amount)).toFixed(2),
+            refunded_amount: toDecimal(refunded).toFixed(2),
+            payment_status: status,
           },
         });
       }, SERIALIZABLE_TX_OPTIONS),

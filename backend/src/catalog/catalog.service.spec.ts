@@ -3,12 +3,16 @@ import { CatalogService } from './catalog.service';
 import { CatalogCacheService } from './catalog-cache.service';
 import { PrismaService } from '../prisma/prisma.service';
 import {
+  mockAuditService,
   mockEventEmitter,
+  provideAuditService,
   provideEventEmitter,
 } from '../test-utils/mock-providers';
+import { Prisma } from '@prisma/client';
 import { DomainEvent } from '../common/events/domain-events';
 
 const emitter = mockEventEmitter();
+const audit = mockAuditService();
 
 /**
  * A pass-through cache: every `wrap` is a miss, so these suites keep asserting
@@ -33,6 +37,18 @@ jest.mock('../common/utils/unit-conversion', () => ({
 }));
 
 const dec = (n: number) => ({ valueOf: () => n, toNumber: () => n });
+
+/**
+ * Every mutating catalog method now writes its `AuditEvent` on the same
+ * transaction as the change, so a prisma stand-in that reaches one needs a
+ * pass-through `$transaction` that hands the callback the very same object —
+ * which is also what lets a test assert the audit row and the write share a tx.
+ */
+function withTx<T extends object>(prisma: T): T & { $transaction: jest.Mock } {
+  const client = prisma as T & { $transaction: jest.Mock };
+  client.$transaction = jest.fn((cb: any) => cb(client));
+  return client;
+}
 
 const assembleProduct = (lineUnit: string) => ({
   id: 'p-1',
@@ -80,6 +96,7 @@ describe('CatalogService.computeServings (assemble)', () => {
         { provide: PrismaService, useValue: prisma },
         provideCatalogCache(),
         provideEventEmitter(emitter),
+        provideAuditService(audit),
       ],
     }).compile();
     service = module.get(CatalogService);
@@ -250,6 +267,7 @@ describe('CatalogService product queries', () => {
         { provide: PrismaService, useValue: prisma },
         provideCatalogCache(),
         provideEventEmitter(emitter),
+        provideAuditService(audit),
       ],
     }).compile();
     service = module.get(CatalogService);
@@ -303,10 +321,10 @@ describe('CatalogService product queries', () => {
 
 describe('CatalogService write guards', () => {
   let service: CatalogService;
-  const prisma = {
+  const prisma = withTx({
     product: { create: jest.fn(), update: jest.fn(), findUnique: jest.fn() },
     recipe: { findUnique: jest.fn() },
-  };
+  });
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -315,6 +333,7 @@ describe('CatalogService write guards', () => {
         { provide: PrismaService, useValue: prisma },
         provideCatalogCache(),
         provideEventEmitter(emitter),
+        provideAuditService(audit),
       ],
     }).compile();
     service = module.get(CatalogService);
@@ -377,9 +396,9 @@ describe('CatalogService write guards', () => {
 // -----------------------------------------------------------------
 describe('CatalogService.setStatus — product.published', () => {
   let service: CatalogService;
-  const prisma = {
+  const prisma = withTx({
     product: { update: jest.fn(), findUnique: jest.fn() },
-  };
+  });
   const published = {
     id: 'p-1',
     node_id: 'node-1',
@@ -396,6 +415,7 @@ describe('CatalogService.setStatus — product.published', () => {
         { provide: PrismaService, useValue: prisma },
         provideCatalogCache(),
         provideEventEmitter(emitter),
+        provideAuditService(audit),
       ],
     }).compile();
     service = module.get(CatalogService);
@@ -481,6 +501,7 @@ describe('CatalogService.findProductsPublic — cursor envelope', () => {
         { provide: PrismaService, useValue: prisma },
         provideCatalogCache(),
         provideEventEmitter(emitter),
+        provideAuditService(audit),
       ],
     }).compile();
     service = module.get(CatalogService);
@@ -605,6 +626,7 @@ describe('CatalogService.search — facets and cursor', () => {
         { provide: PrismaService, useValue: prisma },
         provideCatalogCache(),
         provideEventEmitter(emitter),
+        provideAuditService(audit),
       ],
     }).compile();
     service = module.get(CatalogService);
@@ -766,12 +788,13 @@ describe('CatalogService.search — facets and cursor', () => {
 // -----------------------------------------------------------------
 describe('CatalogService — catalog cache', () => {
   let service: CatalogService;
-  const prisma = {
+  const prisma = withTx({
     product: {
       findMany: jest.fn().mockResolvedValue([]),
       findUnique: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
+      updateMany: jest.fn().mockResolvedValue({ count: 0 }),
     },
     productCategory: {
       findMany: jest.fn().mockResolvedValue([]),
@@ -779,10 +802,18 @@ describe('CatalogService — catalog cache', () => {
       create: jest.fn(),
       update: jest.fn(),
     },
-    productVariant: { upsert: jest.fn(), update: jest.fn() },
-    productMedia: { create: jest.fn(), delete: jest.fn() },
+    productVariant: {
+      upsert: jest.fn(),
+      update: jest.fn(),
+      findUnique: jest.fn(),
+    },
+    productMedia: {
+      create: jest.fn(),
+      delete: jest.fn(),
+      findUnique: jest.fn(),
+    },
     recipe: { findUnique: jest.fn() },
-  };
+  });
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -791,6 +822,7 @@ describe('CatalogService — catalog cache', () => {
         { provide: PrismaService, useValue: prisma },
         provideCatalogCache(),
         provideEventEmitter(emitter),
+        provideAuditService(audit),
       ],
     }).compile();
     service = module.get(CatalogService);
@@ -856,8 +888,25 @@ describe('CatalogService — catalog cache', () => {
       product: { id: 'p-1', node_id: 'n-1', name: 'Oil' },
     });
     prisma.productVariant.update.mockResolvedValue({ id: 'v-1' });
+    prisma.productVariant.findUnique.mockResolvedValue({
+      id: 'v-1',
+      product_id: 'p-1',
+      name: '500 ml',
+      sku: 'KX-OIL-500',
+      status: 'active',
+      product: { node_id: 'n-1' },
+    });
     prisma.productMedia.create.mockResolvedValue({ id: 'm-1' });
     prisma.productMedia.delete.mockResolvedValue({ id: 'm-1' });
+    prisma.productMedia.findUnique.mockResolvedValue({
+      id: 'm-1',
+      product_id: 'p-1',
+      url: 'https://x/y.jpg',
+      alt: '',
+      kind: 'image',
+      sort_order: 0,
+      product: { node_id: 'n-1' },
+    });
 
     await service.createProduct({ type: 'merchandise' } as never, 'u-1');
     await service.updateProduct('p-1', { name: 'x' } as never, 'u-1');
@@ -899,6 +948,7 @@ describe('CatalogService.upsertVariant — stock.low', () => {
         { provide: PrismaService, useValue: prisma },
         provideCatalogCache(),
         provideEventEmitter(emitter),
+        provideAuditService(audit),
       ],
     }).compile();
     service = module.get(CatalogService);
@@ -976,5 +1026,275 @@ describe('CatalogService.upsertVariant — stock.low', () => {
     await expect(
       service.upsertVariant({ sku: 'KX-OIL-500' } as never),
     ).resolves.toMatchObject({ id: 'v-1' });
+  });
+});
+
+// -----------------------------------------------------------------
+// P6 Task 13 — SPEC §3: every mutating write in a transaction also writes
+// `AuditEvent`. `CatalogService` had nine mutating methods and zero audit
+// calls, against three in `ShipmentsService` and four in `CouponsService` — and
+// a price or a publish flip is the most audit-worthy write in the catalog.
+// -----------------------------------------------------------------
+describe('CatalogService — audit trail', () => {
+  let service: CatalogService;
+  const prisma = withTx({
+    product: {
+      create: jest.fn(),
+      update: jest.fn(),
+      updateMany: jest.fn().mockResolvedValue({ count: 3 }),
+      findUnique: jest.fn(),
+    },
+    productCategory: {
+      create: jest.fn(),
+      update: jest.fn(),
+      findUnique: jest.fn(),
+    },
+    productVariant: { update: jest.fn(), findUnique: jest.fn() },
+    productMedia: { delete: jest.fn(), findUnique: jest.fn() },
+    recipe: { findUnique: jest.fn() },
+  });
+
+  /** A real `Decimal`, because `productSnapshot` stringifies money. */
+  const money = (n: number) => new Prisma.Decimal(n);
+
+  const productRow = (over: Record<string, unknown> = {}) => ({
+    id: 'p-1',
+    node_id: 'node-1',
+    name: 'Masala Chai',
+    slug: 'masala-chai',
+    type: 'prepared_food',
+    status: 'draft',
+    base_price: money(180),
+    tax_rate: money(5),
+    category_id: 'c-1',
+    // The column `productSnapshot` must never copy into an AuditEvent.
+    search_text: 'masala chai tea beverage hot',
+    ...over,
+  });
+
+  const categoryRow = (over: Record<string, unknown> = {}) => ({
+    id: 'c-1',
+    node_id: 'node-1',
+    name: 'Beverages',
+    slug: 'beverages',
+    status: 'active',
+    sort_order: 10,
+    brand_id: 'b-1',
+    product_types: ['prepared_food'],
+    ...over,
+  });
+
+  /** The `AuditInput` of the nth `audit.record` call. */
+  const recorded = (call = 0) =>
+    audit.record.mock.calls[call][1] as {
+      entity_type: string;
+      entity_id: string;
+      action: string;
+      node_id?: string;
+      actor_type: string;
+      actor_id: string | null;
+      before?: Record<string, unknown> | null;
+      after?: Record<string, unknown> | null;
+    };
+
+  /** `jest.clearAllMocks()` drops the pass-through, so re-arm it every time. */
+  const rearm = () => {
+    jest.clearAllMocks();
+    prisma.$transaction.mockImplementation((cb: any) => cb(prisma));
+    prisma.product.updateMany.mockResolvedValue({ count: 3 });
+    emitter.emit.mockReturnValue(true);
+  };
+
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        CatalogService,
+        { provide: PrismaService, useValue: prisma },
+        provideCatalogCache(),
+        provideEventEmitter(emitter),
+        provideAuditService(audit),
+      ],
+    }).compile();
+    service = module.get(CatalogService);
+    rearm();
+  });
+
+  it('writes product.created on the same tx as the insert', async () => {
+    prisma.product.create.mockResolvedValue(productRow());
+
+    await service.createProduct({ type: 'merchandise' } as never, 'u-1');
+
+    expect(audit.record).toHaveBeenCalledTimes(1);
+    // Same client object for the write and the audit row — the audit rolls back
+    // with the change it describes.
+    expect(audit.record.mock.calls[0][0]).toBe(prisma);
+    expect(recorded()).toMatchObject({
+      entity_type: 'product',
+      entity_id: 'p-1',
+      action: 'product.created',
+      node_id: 'node-1',
+      actor_type: 'user',
+      actor_id: 'u-1',
+    });
+  });
+
+  it('never copies search_text into the snapshot', async () => {
+    prisma.product.create.mockResolvedValue(productRow());
+
+    await service.createProduct({ type: 'merchandise' } as never, 'u-1');
+
+    expect(Object.keys(recorded().after!).sort()).toEqual([
+      'base_price',
+      'category_id',
+      'name',
+      'slug',
+      'status',
+      'tax_rate',
+      'type',
+    ]);
+  });
+
+  it('writes product.updated with both sides of a price change', async () => {
+    prisma.product.findUnique.mockResolvedValue(productRow());
+    prisma.product.update.mockResolvedValue(
+      productRow({ base_price: money(210) }),
+    );
+
+    await service.updateProduct('p-1', { base_price: 210 } as never, 'u-1');
+
+    expect(recorded()).toMatchObject({ action: 'product.updated' });
+    expect(recorded().before).toMatchObject({ base_price: '180' });
+    expect(recorded().after).toMatchObject({ base_price: '210' });
+  });
+
+  it('writes no audit row when the update is rejected before the write', async () => {
+    prisma.product.findUnique.mockResolvedValue(
+      productRow({ type: 'prepared_food', recipe_id: 'r-1' }),
+    );
+    prisma.recipe.findUnique.mockResolvedValue({ id: 'r-1', status: 'draft' });
+
+    await expect(
+      service.updateProduct('p-1', { recipe_id: 'r-1' } as never, 'u-1'),
+    ).rejects.toThrow(/Only approved recipes/);
+
+    expect(audit.record).not.toHaveBeenCalled();
+  });
+
+  it('distinguishes a publish from an archive on the one setStatus method', async () => {
+    prisma.product.findUnique.mockResolvedValue(productRow());
+    prisma.product.update.mockResolvedValue(productRow({ status: 'active' }));
+
+    await service.setStatus('p-1', 'active' as never, 'u-1');
+    expect(recorded()).toMatchObject({ action: 'product.published' });
+
+    rearm();
+    prisma.product.findUnique.mockResolvedValue(
+      productRow({ status: 'active' }),
+    );
+    prisma.product.update.mockResolvedValue(productRow({ status: 'archived' }));
+
+    await service.archiveProduct('p-1', 'u-1');
+    expect(recorded()).toMatchObject({ action: 'product.archived' });
+  });
+
+  it('writes product_category.created / updated / deleted', async () => {
+    prisma.productCategory.create.mockResolvedValue(categoryRow());
+    await service.createCategory({ name: 'Beverages' } as never, 'u-1');
+    expect(recorded()).toMatchObject({
+      entity_type: 'product_category',
+      entity_id: 'c-1',
+      action: 'product_category.created',
+    });
+
+    rearm();
+    prisma.productCategory.findUnique.mockResolvedValue(categoryRow());
+    prisma.productCategory.update.mockResolvedValue(
+      categoryRow({ name: 'Hot drinks' }),
+    );
+    await service.updateCategory('c-1', { name: 'Hot drinks' } as never, 'u-1');
+    expect(recorded()).toMatchObject({ action: 'product_category.updated' });
+    expect(recorded().before).toMatchObject({ name: 'Beverages' });
+    expect(recorded().after).toMatchObject({ name: 'Hot drinks' });
+
+    rearm();
+    prisma.productCategory.findUnique.mockResolvedValue(categoryRow());
+    prisma.productCategory.update.mockResolvedValue(
+      categoryRow({ status: 'archived' }),
+    );
+    await service.removeCategory('c-1', 'u-1');
+    expect(recorded()).toMatchObject({ action: 'product_category.deleted' });
+    // The cascade is the part a reader would otherwise never see.
+    expect(recorded().after).toMatchObject({ products_archived: 3 });
+  });
+
+  it('borrows the product node for a variant and a media delete', async () => {
+    prisma.productVariant.findUnique.mockResolvedValue({
+      id: 'v-1',
+      product_id: 'p-1',
+      name: '500 ml',
+      sku: 'KX-OIL-500',
+      status: 'active',
+      product: { node_id: 'node-9' },
+    });
+    prisma.productVariant.update.mockResolvedValue({
+      id: 'v-1',
+      product_id: 'p-1',
+      name: '500 ml',
+      sku: 'KX-OIL-500',
+      status: 'archived',
+    });
+
+    await service.removeVariant('v-1', 'u-1');
+
+    expect(recorded()).toMatchObject({
+      entity_type: 'product_variant',
+      entity_id: 'v-1',
+      action: 'product_variant.deleted',
+      node_id: 'node-9',
+    });
+
+    rearm();
+    prisma.productMedia.findUnique.mockResolvedValue({
+      id: 'm-1',
+      product_id: 'p-1',
+      url: 'https://cdn/x.jpg',
+      alt: 'Chai',
+      kind: 'image',
+      sort_order: 2,
+      product: { node_id: 'node-9' },
+    });
+    prisma.productMedia.delete.mockResolvedValue({ id: 'm-1' });
+
+    await service.removeMedia('m-1', 'u-1');
+
+    expect(recorded()).toMatchObject({
+      entity_type: 'product_media',
+      action: 'product_media.deleted',
+      node_id: 'node-9',
+    });
+    // A hard delete: `before` is the only surviving record of the URL.
+    expect(recorded().before).toMatchObject({ url: 'https://cdn/x.jpg' });
+  });
+
+  it('404s instead of leaking a Prisma P2025 on an unknown variant or media id', async () => {
+    prisma.productVariant.findUnique.mockResolvedValue(null);
+    await expect(service.removeVariant('ghost')).rejects.toThrow(/not found/);
+    expect(prisma.productVariant.update).not.toHaveBeenCalled();
+
+    prisma.productMedia.findUnique.mockResolvedValue(null);
+    await expect(service.removeMedia('ghost')).rejects.toThrow(/not found/);
+    expect(prisma.productMedia.delete).not.toHaveBeenCalled();
+    expect(audit.record).not.toHaveBeenCalled();
+  });
+
+  it('falls back to a system actor when no staff id reaches the service', async () => {
+    prisma.productCategory.create.mockResolvedValue(categoryRow());
+
+    await service.createCategory({ name: 'Beverages' } as never);
+
+    expect(recorded()).toMatchObject({
+      actor_type: 'system',
+      actor_id: null,
+    });
   });
 });
