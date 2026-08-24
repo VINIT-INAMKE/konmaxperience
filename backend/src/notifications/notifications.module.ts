@@ -7,6 +7,7 @@ import { QStashService } from './qstash.service';
 import { NotificationsCron } from './notifications.cron';
 import { NotificationsListener } from './notifications.listener';
 import { NotificationsCleanupCron } from './notifications.cleanup.cron';
+import { StaffNudgeCron } from './staff-nudge.cron';
 import { SettingsModule } from '../settings/settings.module';
 import { CustomerAuthModule } from '../customer-auth/customer-auth.module';
 
@@ -29,6 +30,7 @@ import { CustomerAuthModule } from '../customer-auth/customer-auth.module';
     NotificationsCron,
     NotificationsListener,
     NotificationsCleanupCron,
+    StaffNudgeCron,
   ],
   exports: [NotificationsService, NotificationDispatcher],
 })
