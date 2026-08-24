@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { AlertTriangle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -15,7 +16,6 @@ import {
 } from '@/components/ui/select';
 import { DailyRevenueSummary } from '@/components/ops/pos/DailyRevenueSummary';
 import { OrderHistoryTable } from '@/components/ops/pos/OrderHistoryTable';
-import { OrderDetailSheet } from '@/components/ops/pos/OrderDetailSheet';
 import { apiClient } from '@/lib/api-client';
 import type { Order, DailySummary } from '@/lib/types/orders';
 import type { OrderStatus, OrderChannel, PaymentMethod } from '@/lib/types/kds';
@@ -55,13 +55,13 @@ function buildQueryString(filters: {
 }
 
 export default function OrderHistoryPage() {
+  const router = useRouter();
   const [dateFrom, setDateFrom] = useState(todayStr());
   const [dateTo, setDateTo] = useState(todayStr());
   const [channel, setChannel] = useState('');
   const [status, setStatus] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('');
   const [search, setSearch] = useState('');
-  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 
   const filters = useMemo(
     () => ({ dateFrom, dateTo, channel, status, paymentMethod, search }),
@@ -85,13 +85,6 @@ export default function OrderHistoryPage() {
     queryKey: ['orders', filters],
     queryFn: () =>
       apiClient.get<Order[]>('/orders?' + buildQueryString(filters)),
-  });
-
-  const { data: orderDetail } = useQuery({
-    queryKey: ['orders', selectedOrder?.id],
-    queryFn: () =>
-      apiClient.get<Order>('/orders/' + selectedOrder!.id),
-    enabled: !!selectedOrder,
   });
 
   return (
@@ -213,21 +206,13 @@ export default function OrderHistoryPage() {
           <OrderHistoryTable
             orders={orders ?? []}
             isLoading={ordersLoading}
-            onSelectOrder={setSelectedOrder}
+            // P5b decision 8: the detail is a route, not a sheet. Selecting a
+            // row navigates to `/pos/orders/[id]`, which keeps the refund
+            // ledger, the shipment link and the lifecycle actions linkable,
+            // reloadable and back-button-able.
+            onSelectOrder={(order) => router.push(`/pos/orders/${order.id}`)}
           />
         )}
-
-        {/* Order detail Sheet */}
-        <OrderDetailSheet
-          order={orderDetail ?? selectedOrder}
-          open={!!selectedOrder}
-          onOpenChange={(open) => {
-            if (!open) setSelectedOrder(null);
-          }}
-          onOrderUpdated={() => {
-            setSelectedOrder(null);
-          }}
-        />
       </div>
     </>
   );
