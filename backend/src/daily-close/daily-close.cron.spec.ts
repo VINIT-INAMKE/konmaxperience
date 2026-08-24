@@ -73,7 +73,7 @@ describe('DailyCloseCron', () => {
   let cron: DailyCloseCron;
   let prisma: MockPrisma;
   let dailyClose: { computeAndUpsert: jest.Mock };
-  let notifications: { create: jest.Mock };
+  let notifications: { dispatch: jest.Mock };
   let settings: ReturnType<typeof mockSettings>;
   let logSpy: jest.SpyInstance;
   let errorSpy: jest.SpyInstance;
@@ -89,7 +89,7 @@ describe('DailyCloseCron', () => {
     dailyClose = {
       computeAndUpsert: jest.fn().mockResolvedValue(closeRow()),
     };
-    notifications = { create: jest.fn().mockResolvedValue({ id: 'notif-1' }) };
+    notifications = { dispatch: jest.fn().mockResolvedValue({ id: 'notif-1', channels: ['in_app'] }) };
     settings = mockSettings();
 
     logSpy = jest.spyOn(Logger.prototype, 'log').mockImplementation(() => {});
@@ -164,7 +164,7 @@ describe('DailyCloseCron', () => {
       await cron.nightlyClose();
 
       expect(dailyClose.computeAndUpsert).not.toHaveBeenCalled();
-      expect(notifications.create).not.toHaveBeenCalled();
+      expect(notifications.dispatch).not.toHaveBeenCalled();
       // Only the acquire ran: releasing a lock this instance never took would
       // free it for whoever is actually holding it.
       expect(prisma.$queryRaw).toHaveBeenCalledTimes(1);
@@ -218,8 +218,8 @@ describe('DailyCloseCron', () => {
         },
         select: { id: true },
       });
-      expect(notifications.create).toHaveBeenCalledTimes(2);
-      expect(notifications.create).toHaveBeenCalledWith(
+      expect(notifications.dispatch).toHaveBeenCalledTimes(2);
+      expect(notifications.dispatch).toHaveBeenCalledWith(
         expect.objectContaining({
           user_id: 'user-1',
           type: NotificationType.daily_close_due,
@@ -241,13 +241,13 @@ describe('DailyCloseCron', () => {
       const result = await cron.closeYesterday(FIRED_AT);
 
       expect(prisma.user.findMany).not.toHaveBeenCalled();
-      expect(notifications.create).not.toHaveBeenCalled();
+      expect(notifications.dispatch).not.toHaveBeenCalled();
       expect(result.notified).toBe(0);
       expect(result.status).toBe(DailyCloseStatus.signed);
     });
 
     it('isolates a failed notification so the rest still land', async () => {
-      notifications.create
+      notifications.dispatch
         .mockRejectedValueOnce(new Error('pusher down'))
         .mockResolvedValueOnce({ id: 'notif-2' });
 

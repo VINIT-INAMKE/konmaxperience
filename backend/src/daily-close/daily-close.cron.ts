@@ -4,7 +4,7 @@ import { DailyClose, DailyCloseStatus, NotificationType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { NodeService } from '../node/node.service';
 import { SettingsService } from '../settings/settings.service';
-import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationDispatcher } from '../notifications/notification-dispatcher.service';
 import { DEFAULT_NODE_TIMEZONE } from '../node/node.constants';
 import { nodeDayKey } from '../common/utils/node-time';
 import { ADVISORY_LOCK, withAdvisoryLock } from '../common/utils/advisory-lock';
@@ -55,7 +55,7 @@ export class DailyCloseCron {
     private readonly dailyClose: DailyCloseService,
     private readonly node: NodeService,
     private readonly settings: SettingsService,
-    private readonly notifications: NotificationsService,
+    private readonly notifications: NotificationDispatcher,
   ) {}
 
   /**
@@ -140,7 +140,7 @@ export class DailyCloseCron {
     let written = 0;
     for (const signer of signers) {
       try {
-        await this.notifications.create({
+        const dispatched = await this.notifications.dispatch({
           user_id: signer.id,
           type: NotificationType.daily_close_due,
           title: `Daily close ready for ${day}`,
@@ -149,7 +149,7 @@ export class DailyCloseCron {
           reference_id: close.id,
           reference_type: DAILY_CLOSE_ENTITY_TYPE,
         });
-        written += 1;
+        if (dispatched) written += 1;
       } catch (error) {
         this.logger.error(
           `Could not notify ${signer.id} about the ${day} daily close: ${
