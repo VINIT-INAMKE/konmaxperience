@@ -54,7 +54,7 @@
 - [x] **Phase 30: Platform Foundation (P2)** - Fresh migration baseline: Node, Prisma enums, AuditEvent, Task.subject, ApprovalPolicy, timestamptz, CHECKs, Product replacing MenuItem, new seeds *(complete 2026-08-23 at `fc49c19`)*
 - [x] **Phase 31: Mission Bridge (P3)** - Domain events, MissionBridgeService, derived meters + snapshots + history, policy-generated approvals, recipe approval via policy, decision votes *(complete 2026-08-23 at `080a664`, range `ced2385..080a664`)*
 - [ ] **Phase 32: Role-Aware IA + Identity (P4)** - Persistent header, spine nav, ModuleAccess, /tasks, My Quests, sheets, chips, motion allowlist, brand tokens light + dark, Pusher on kitchen screens, usage events
-- [ ] **Phase 33: Marketplace Backend (P5a)** - Catalog, mixed-fulfilment quote/checkout/confirm, FulfilmentService, Shiprocket + shipments, coupons, loyalty, reviews, search, refunds
+- [x] **Phase 33: Marketplace Backend (P5a)** - Catalog, mixed-fulfilment quote/checkout/confirm, FulfilmentService, Shiprocket + shipments, coupons, loyalty, reviews, search, refunds *(complete 2026-08-24 at `5a15e39`, range `8b46610..5a15e39`)*
 - [ ] **Phase 34: Marketplace Storefront + Staff Commerce (P5b)** - Storefront routes (desktop + SEO), cart/checkout UI, account, staff Catalog/Promotions/Reviews/Shipments/Orders/Experiences/Customers screens
 - [ ] **Phase 35: Run-It Layer (P6)** - WhatsApp nudges, daily close, theoretical vs actual food cost, usage dashboard, AI evidence-review assist + morning brief (human-in-the-loop)
 
@@ -127,7 +127,9 @@ Plans:
 **Execution Order:**
 v1.1 (done): 14 -> 15 -> 16 -> 17 -> 18 -> 19 -> 20 -> 21 -> 22 -> 23 -> 24 -> 27 -> 28 (25, 26 never executed).
 v2.0: 29 -> 30 -> 31 -> 32 -> 33 -> 34 -> 35. Phase 33 may run in parallel with Phase 32 once Phase 31 is complete; Phase 34 needs both.
-**Phase 31 completed 2026-08-23 — Phases 32 and 33 are now unblocked and should run in parallel.**
+**Phase 31 completed 2026-08-23 — Phases 32 and 33 ran in parallel.**
+**Phase 33 completed 2026-08-24. Phase 32's code is all merged (`p4-01`…`p4-18`) with its record outstanding;
+Phase 34 is unblocked once that record is written.**
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -148,9 +150,9 @@ v2.0: 29 -> 30 -> 31 -> 32 -> 33 -> 34 -> 35. Phase 33 may run in parallel with 
 | 28. Recipe preparation_type | v1.1 | 5/5 | Complete    | 2026-03-27 |
 | 29. Stop the Bleeding (P1) | v2.0 | 1/1 | Complete    | 2026-08-23 |
 | 30. Platform Foundation (P2) | v2.0 | 1/1 | Complete    | 2026-08-23 |
-| 31. Mission Bridge (P3) | v2.0 | 1/1 | Complete (frontend gates to re-run) | 2026-08-23 |
-| 32. Role-Aware IA + Identity (P4) | v2.0 | 0/? | Not started | — |
-| 33. Marketplace Backend (P5a) | v2.0 | 0/? | Not started | — |
+| 31. Mission Bridge (P3) | v2.0 | 1/1 | Complete    | 2026-08-23 |
+| 32. Role-Aware IA + Identity (P4) | v2.0 | 1/1 | Code merged (`p4-01`…`p4-18`); record outstanding | — |
+| 33. Marketplace Backend (P5a) | v2.0 | 1/1 | Complete    | 2026-08-24 |
 | 34. Marketplace Storefront + Staff Commerce (P5b) | v2.0 | 0/? | Not started | — |
 | 35. Run-It Layer (P6) | v2.0 | 0/? | Not started | — |
 
@@ -475,7 +477,7 @@ Plans:
 **Spec sections**: §2, §3.5, §6.1–§6.5, §7, §8 (observability), §11 P4
 **Plans**: TBD
 
-### Phase 33: Marketplace Backend (P5a)
+### Phase 33: Marketplace Backend (P5a) — ✅ COMPLETE (2026-08-24, `5a15e39`)
 **Goal**: The backend sells all four product types through one catalog and one mixed-fulfilment quote → pay → confirm pipeline, with Shiprocket shipments, coupons, loyalty, reviews, search and refunds.
 **Depends on**: Phase 31 (bridge events) and Phase 30 (`Product` model); may run in parallel with Phase 32
 **Requirements**: CAT-01 … CAT-04, CHK-01 … CHK-05, SHIP-01 … SHIP-05, PROMO-01, PROMO-02, LOYAL-01, LOYAL-02, REV-01, REV-02, SRCH-01, QA-05
@@ -486,8 +488,13 @@ Plans:
   4. `ShippingProvider` interface is implemented by `ShiprocketAdapter` (token cached ~9 days, create/AWB/pickup/label/track/cancel) and `ManualProvider`; `POST /webhooks/shiprocket` is shared-secret protected and idempotent on `(awb, status, occurred_at)`; shipment status drives `Order.status` `shipped → delivered` with customer Pusher event and WhatsApp template
   5. Coupons are validated only server-side in the quote (no stacking, `free_shipping` on shipped lines only); loyalty earns on `delivered`/`attended` and expires after 365 days; reviews are one per `order_item`, auto-published at rating ≥ 4, with `rating_avg/count` maintained by trigger; `POST /orders/:id/refund` (full/partial) creates a `Refund` reconciled by the `refund.processed` webhook
   6. Integration tests cover order confirm, fulfilment, shipment lifecycle, coupon, loyalty and review flows; the smoke-test-2 API path is green
+     — **Corrected 2026-08-24:** criteria 1–5 all shipped and were verified end to end against `dist/src/main.js`; the evidence is recorded verbatim in the phase summary (51 numbered requests). Criterion 6 is **half met**: the smoke-test-2 **API** path is green as a recorded curl/webhook walk-through — faceted catalog → mixed-fulfilment cart → quote with coupon + loyalty + booking hold → order from quote → signed Razorpay webhook confirm → pack → AWB → pickup → Shiprocket webhook → delivered → loyalty earn → reviews with moderation and rollup → partial and full refunds. The **Postgres-backed integration harness** (`test/jest-integration.json`, the second half of `QA-05`, carried from Phase 31's `QA-02`) is still not built and moves to **Phase 34**. Playwright smoke test 2 needs the storefront and also moves to Phase 34.
+     — Two deviations worth carrying: criterion 3 says shipped lines go to a `packed` queue — they are set to `OrderItemStatus.packed` at **confirm**, before anyone packs, so the Pick & Pack queue's real predicate is "shipped lines whose order has no `Shipment` row". Criterion 5's rating rollup is maintained by **both** the SPEC §5.4 trigger and `ReviewsService.rollup()` inside the service transaction; they compute the identical value.
 **Spec sections**: §3.3, §5.2–§5.4, §8, §9, §10, §11 P5
-**Plans**: TBD
+**Plans**: `docs/superpowers/plans/2026-08-23-p5a-marketplace-backend.md` (18 tasks) — record: `.planning/phases/33-p5a-marketplace-backend/33-01-SUMMARY.md`
+**Migration**: `20260826120000_p5a_marketplace_backend` — 2 enums (`RefundStatus`, `CouponStatus`), 8 tables (`Shipment`, `ShipmentEvent`, `Refund`, `Coupon`, `CouponRedemption`, `LoyaltyAccount`, `LoyaltyTransaction`, `Review`), `Order.coupon_id`, `OrderItem.event_booking_id`, `Customer.marketing_opt_in/last_seen_at`, 17 indexes, 19 FKs, plus hand-written review-rollup and category/brand-rename triggers and six CHECK constraints. Additive only, zero DROPs. Drift gate: `No difference detected.` The directory timestamp is `20260826120000`, not the plan's pinned `20260824090000`, because the applied `20260826000000_p4_role_aware_ia` would otherwise sort after it; and it creates 8 tables, not 9, because `UsageEvent` landed with P4.
+**Gates at `5a15e39`**: backend 102/102 suites · 1575 tests · `tsc` exit 0 · 0 lint errors · build clean. Frontend on the same tree: `tsc --noEmit` exit 0 · `next build` compiled.
+**Hands off to Phase 34**: the storefront purchase flow is broken until it is rebuilt around the quote — `frontend/hooks/use-cart.ts:35` posts an empty body to `POST /customer/orders`, which now requires `{ quote_id }` — and `variantId` appears nowhere in the frontend. Full gap list at the end of the phase summary.
 
 ### Phase 34: Marketplace Storefront + Staff Commerce (P5b)
 **Goal**: Customers shop all four product types on a desktop-designed, SEO-ready storefront with account, tracking and reviews, and staff run catalog, promotions, reviews, shipments, orders, experiences and customers from the ops app.

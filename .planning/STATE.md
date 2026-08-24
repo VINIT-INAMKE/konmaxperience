@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Mission OS + Marketplace
-status: "Phase 31 (P3 mission bridge) complete pending the frontend gate re-run — Phases 32 and 33 next, in parallel"
-stopped_at: P3 complete at 080a664 — migration 20260823180000_p3_mission_bridge applied, seeded, drift-gated and smoke-tested end to end; see .planning/phases/31-p3-mission-bridge/31-01-SUMMARY.md
-last_updated: "2026-08-23"
+status: "Phase 33 (P5a marketplace backend) complete — Phase 32 (P4) in flight with every wave merged and its record still to be written; Phase 34 next"
+stopped_at: P5a complete at 5a15e39 — migration 20260826120000_p5a_marketplace_backend applied, seeded, drift-gated and smoke-tested end to end; see .planning/phases/33-p5a-marketplace-backend/33-01-SUMMARY.md
+last_updated: "2026-08-24"
 progress:
   total_phases: 7
   completed_phases: 0
@@ -23,10 +23,27 @@ See: .planning/PROJECT.md (updated 2026-08-22) and /SPEC.md (canonical v2.0 spec
 ## Current Position
 
 Milestone: v2.0 Mission OS + Marketplace (Phases 29–35 on branch `v2-os-marketplace`)
-Phase: 31 (Mission Bridge, P3) — **COMPLETE pending the frontend gate re-run** at `080a664` (record: `.planning/phases/31-p3-mission-bridge/31-01-SUMMARY.md`)
-Next phases: 32 (Role-Aware IA + Identity, P4) and 33 (Marketplace Backend, P5a) — can proceed in parallel
-Previous phase: 30 (Platform Foundation, P2) — complete at `fc49c19` (record: `.planning/phases/30-p2-platform-foundation/30-01-SUMMARY.md`)
+Phase: 33 (Marketplace Backend, P5a) — **COMPLETE** at `5a15e39` (record: `.planning/phases/33-p5a-marketplace-backend/33-01-SUMMARY.md`)
+In flight: 32 (Role-Aware IA + Identity, P4) — every wave (`p4-01` … `p4-18`) is merged into `v2-os-marketplace`, including migration `20260826000000_p4_role_aware_ia`; the phase record is still to be written
+Next phase: 34 (Marketplace Storefront + Staff Commerce, P5b) — needs both 32 and 33
+Previous phases: 31 (Mission Bridge, P3) complete at `080a664`; 30 (Platform Foundation, P2) complete at `fc49c19`
 Previous milestone: v1.1 complete 2026-03-27 (Phases 14–24, 27, 28 shipped; Phases 25 and 26 were never built — see ROADMAP.md notes)
+
+P5a shipped all 18 tasks of `docs/superpowers/plans/2026-08-23-p5a-marketplace-backend.md`: integer-paise money
+helpers, the `ShippingProvider` interface with `ManualProvider` + `ShiprocketAdapter`, a 60-second-cached public
+catalog with faceted `tsvector` search, server-priced carts, `POST /customer/checkout/quote` (coupon + loyalty +
+shipping rate + tax breakup + 15-minute booking holds, stored as `quote:{customerId}:{quoteId}`), `POST /customer/orders`
+taking a `quote_id`, `confirmPaidOrder` extended with `applyCommercialEffects` in the same Serializable transaction,
+the shipments staff API, the shared-secret Shiprocket webhook, refunds with `refund.processed` reconciliation,
+reviews with auto-publish and a rating rollup, loyalty earn/redeem/expiry, and the staff customers + usage surface.
+One additive migration `20260826120000_p5a_marketplace_backend` (2 enums, 8 tables, 3 altered tables, zero DROPs)
+plus hand-written triggers and six CHECK constraints. Gates at `5a15e39`: backend 102/102 suites · 1575 tests ·
+tsc clean · 0 lint errors · build clean · drift gate `No difference detected.` · frontend tsc clean and `next build`
+compiled.
+
+**The storefront purchase flow is broken until Phase 34 fixes it:** `frontend/hooks/use-cart.ts:35` still posts an
+empty body to `POST /customer/orders`, which now requires `{ quote_id }`, and `variantId` does not appear anywhere
+in the frontend. Full gap list at the end of the Phase 33 summary.
 
 P3 shipped all 17 tasks of `docs/superpowers/plans/2026-08-23-p3-mission-bridge.md`: the typed after-commit
 domain-event catalogue (`common/events/domain-events.ts`), `MissionBridgeService` + `mission-bridge.rules.ts`
@@ -281,30 +298,47 @@ None yet.
 ### Blockers/Concerns
 
 - Phase 29 must close all 14 Critical/High audit defects (FIX-01..14) before Phase 30 resets the schema; the DB is not deployed, so the reset is safe but nothing from v1 migrations survives.
-- Shiprocket credentials (`SHIPROCKET_*`) are needed before Phase 33 integration tests can run against the sandbox.
+- ~~Shiprocket credentials (`SHIPROCKET_*`) are needed before Phase 33~~ — **resolved 2026-08-24**: P5a never
+  required them. `SystemSetting['shipping'].provider` seeds `manual`, `SHIPROCKET_*` is validated only when the
+  provider is `shiprocket` in production, and the whole shipment lifecycle was smoke-tested with the manual
+  provider. Credentials are needed only to exercise the eight `ShiprocketAdapter` request/response shapes
+  against the sandbox before the first production switch.
+- The configured Upstash Redis host was unresolvable from the dev machine on 2026-08-24
+  (`getaddrinfo ENOTFOUND present-pelican-68710.upstash.io`). Without Redis there is no OTP, cart, quote or
+  pending-order key. The P5a smoke ran against a throwaway local `redis:8.6-alpine` container on port 6390.
 
 ## Session Continuity
 
-Last session: 2026-08-23
-Stopped at: Phase 31 (P3 mission bridge) complete at `080a664` — migration
-`20260823180000_p3_mission_bridge` committed, applied to Postgres, seeded, drift-checked and smoke-tested
-end to end against `dist/src/main.js`. Record: `.planning/phases/31-p3-mission-bridge/31-01-SUMMARY.md`
+Last session: 2026-08-24
+Stopped at: Phase 33 (P5a marketplace backend) complete at `5a15e39` — migration
+`20260826120000_p5a_marketplace_backend` committed, applied to Postgres, seeded, drift-checked and
+smoke-tested end to end against `dist/src/main.js`. Record:
+`.planning/phases/33-p5a-marketplace-backend/33-01-SUMMARY.md`
 Resume file: None
-Next action: `/gsd:plan-phase 32` and `/gsd:plan-phase 33` — they are independent and can run in parallel.
+Next action: write the Phase 32 (P4) record, then `/gsd:plan-phase 34`.
 
-Carry into Phases 32/33:
-- **Re-run the frontend gates on the merged tree** (`cd frontend && npx tsc --noEmit && npm run lint &&
-  npm run build`). Tasks 15/16 were verified in their worktrees only.
-- `QA-03` (Playwright smoke test 1) → **Phase 32**. The six-step flow is proven by the recorded curl smoke in
-  the Phase 31 summary; only the browser automation moves.
-- `QA-02` (Postgres-backed integration harness) → **Phase 33**. P3 delivers unit coverage plus the runtime
-  smoke, so `QA-02` is partially met, not fully.
-- Phase 33 also owns the deferred emitters (`shipment.status_changed`, `shipment.delivered`,
-  `review.published`, `coupon.redeemed`, `booking.attended` — declared with `emitter: 'P5'` in
-  `mission-bridge.rules.ts`, one `emitDomainEvent` call each) and swapping `Review` in for `Feedback.rating`
-  behind the `ratingSource` seam in the `QUALITY` formula.
-- Phase 32 owns `/admin/approval-policies`, the header approvals badge, the spine nav, `/tasks`, the Mission
-  Control §6.5 layout, and the `Notification.is_email_sent` removal.
+Carry into Phase 34:
+- **The storefront purchase flow is broken.** `POST /customer/orders` now requires `{ quote_id }` and
+  `frontend/hooks/use-cart.ts:35` sends no body. The flow must become quote → render → order → Razorpay →
+  confirm, with `410` (re-quote silently) distinguished from `404` (back to the cart).
+- **`variantId` is absent from the entire frontend** (zero matches). The backend carries it end to end; a
+  two-variant product cannot be sold at the right price without it. P2 follow-up #1, now load-bearing.
+- **`tax_amount` is contained inside `subtotal`** and must never be added to a displayed total (P5a
+  decision 1, signed off and verified live). Money is a JSON **number**, not a string.
+- **`Order.discount_amount` bundles coupon discount and loyalty redemption**; the split is in
+  `Order.coupon_id`, `Order.loyalty_points_redeemed` and the `CouponRedemption` row.
+- Every staff commerce screen (Catalog, Promotions, Reviews, Shipments, Orders + refunds, Experiences,
+  Customers) is still missing; the APIs are complete and specified in the P5a plan appendix §C.
+- `/menu` → `/shop` plus the rest of the SPEC storefront routes, JSON-LD, sitemap and robots.
+- **`QA-05` second half — the Postgres-backed integration harness** (`test/jest-integration.json`) is still
+  unbuilt, now with two phases' worth of multi-write transactions waiting for it. Carried from `QA-02`.
+- Playwright smoke test 2 (`browse → three fulfilment types → coupon → pay → confirm → track`) → Phase 34.
+- Shiprocket sandbox was never needed (`SystemSetting['shipping'].provider` seeds `manual`); the eight
+  adapter request/response shapes remain the only surface untested against reality.
+
+Carry into the Phase 32 record (all code merged, summary outstanding):
+- `QA-03` (Playwright smoke test 1) — still not automated.
+- `/admin/approval-policies`, the `Notification.is_email_sent` removal.
 - **Decision 4 is a live behaviour change**: `requires_approval: true` with zero `Approval` rows now blocks
   validation. On a populated database, affected tasks stop being `valid` on their next cascade. No backfill was
   written.
