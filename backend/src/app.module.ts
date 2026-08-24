@@ -79,6 +79,11 @@ import { ReviewsModule } from './reviews/reviews.module';
 // `Customer.last_seen_at` (throttled to one write per customer per 15 minutes).
 import { CustomersModule } from './customers/customers.module';
 import { CustomerPresenceInterceptor } from './customers/customer-presence.interceptor';
+// P6 wave 1 — the AI port (RUN-05). No controllers of its own; registered here
+// so `AiProviderResolver` is constructed once and wave 2's assist and brief
+// surfaces can import `AiModule`. Kept on its own line at the end of both
+// blocks so concurrent phases adding imports do not collide with this one.
+import { AiModule } from './ai/ai.module';
 
 @Module({
   imports: [
@@ -148,6 +153,7 @@ import { CustomerPresenceInterceptor } from './customers/customer-presence.inter
     SearchModule,
     ReviewsModule,
     CustomersModule,
+    AiModule,
   ],
   controllers: [AppController],
   providers: [
