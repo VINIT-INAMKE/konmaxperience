@@ -5,6 +5,7 @@ import { Plus, Minus } from 'lucide-react';
 import { useCartStore } from '@/lib/stores/cart-store';
 import { productImage } from '@/lib/types/catalog';
 import type { Product } from '@/lib/types/catalog';
+import { cartLineKey } from '@/lib/types/storefront';
 
 interface ProductOrderCardProps {
   item: Product;
@@ -12,15 +13,18 @@ interface ProductOrderCardProps {
 }
 
 export function ProductOrderCard({ item, available }: ProductOrderCardProps) {
-  const quantity = useCartStore(
-    (s) => s.items.find((i) => i.productId === item.id)?.quantity || 0,
-  );
+  // `/menu` has no variant picker, so a quick-add here is always the variantless
+  // line — key `"<id>:"`. The cart store keys every line by product *and*
+  // variant (P5b decision 2), so a bare product id would address nothing.
+  const lineKey = cartLineKey(item.id, null);
+  const quantity = useCartStore((s) => s.getQuantity(lineKey));
   const imageUrl = productImage(item);
 
   const handleAdd = () => {
     if (!available) return;
     useCartStore.getState().addItem({
       productId: item.id,
+      variantId: null,
       name: item.name,
       unitPrice: item.base_price,
       imageUrl,
@@ -28,11 +32,11 @@ export function ProductOrderCard({ item, available }: ProductOrderCardProps) {
   };
 
   const handleDecrement = () => {
-    useCartStore.getState().updateQuantity(item.id, quantity - 1);
+    useCartStore.getState().updateQuantity(lineKey, quantity - 1);
   };
 
   const handleIncrement = () => {
-    useCartStore.getState().updateQuantity(item.id, quantity + 1);
+    useCartStore.getState().updateQuantity(lineKey, quantity + 1);
   };
 
   return (

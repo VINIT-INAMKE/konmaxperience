@@ -8,8 +8,6 @@ import { Button } from '@/components/ui/button';
 import { MenuBrandTabs } from '@/components/public/MenuBrandTabs';
 import { CategoryTabBar } from '@/components/public/CategoryTabBar';
 import { ProductOrderCard } from '@/components/public/ProductOrderCard';
-import { FloatingCartBar } from '@/components/public/FloatingCartBar';
-import { CartBottomSheet } from '@/components/public/CartBottomSheet';
 import { apiClient } from '@/lib/api-client';
 import type { ProductCategory, Product } from '@/lib/types/catalog';
 
@@ -20,7 +18,6 @@ interface AvailabilityMap {
 export default function MenuPage() {
   const [activeBrandId, setActiveBrandId] = useState<string>('');
   const [activeCategoryId, setActiveCategoryId] = useState<string>('');
-  const [cartSheetOpen, setCartSheetOpen] = useState(false);
   const sectionRefs = useRef<Map<string, IntersectionObserverEntry>>(new Map());
 
   const {
@@ -267,11 +264,12 @@ export default function MenuPage() {
         )}
       </div>
 
-      {/* Floating cart bar */}
-      <FloatingCartBar onViewCart={() => setCartSheetOpen(true)} />
-
-      {/* Cart bottom sheet */}
-      <CartBottomSheet open={cartSheetOpen} onOpenChange={setCartSheetOpen} />
+      {/*
+        The phone-shaped floating cart bar and its bottom sheet were deleted with
+        the v2 cart (P5b Task 8). The cart now lives in the storefront header's
+        mini-cart, and this route redirects to `/shop?type=prepared_food` once
+        Task 13 lands.
+      */}
     </>
   );
 }
