@@ -20,8 +20,14 @@ export default function AuthLayout({
     panel.style.setProperty('--mouse-y', `${y * 10}px`);
   }, []);
 
+  // `light` pins the sign-in screen to the light palette whatever the OS or
+  // next-themes says: the brand panel is a fixed near-black composition and the
+  // form panel sits on `--public-bg`, so a dark semantic layer would mix a dark
+  // `--background` under a light ground. `app/tokens.css` gives the class its
+  // values *and* its `color-scheme: light`, which is why the inline
+  // `colorScheme` this element used to carry is gone.
   return (
-    <div className="min-h-screen flex" style={{ colorScheme: 'light' }}>
+    <div className="light min-h-screen flex">
       {/*
         Left brand panel. `dark` scopes the semantic tokens to this permanently
         near-black surface so --gold / --status-* resolve to their on-dark values

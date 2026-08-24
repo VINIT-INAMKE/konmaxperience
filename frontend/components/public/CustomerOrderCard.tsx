@@ -115,7 +115,7 @@ export function CustomerOrderCard({
         <button
           type="button"
           onClick={() => onReorder(order)}
-          className="text-xs bg-[var(--public-terracotta)] text-white rounded-lg px-3 py-1.5 font-medium hover:bg-[var(--public-terracotta-hover)]"
+          className="text-xs bg-[var(--public-terracotta)] text-[var(--accent-ink)] rounded-lg px-3 py-1.5 font-medium hover:bg-[var(--public-terracotta-hover)]"
         >
           Order again
         </button>

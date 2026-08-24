@@ -193,7 +193,7 @@ export function CartBottomSheet({ open, onOpenChange }: CartBottomSheetProps) {
                 <span className="text-sm font-medium text-[var(--public-fg)] flex-1 truncate mr-3">
                   {item.name}
                 </span>
-                <div className="flex items-center gap-1 bg-[var(--public-terracotta)] text-white rounded-full px-2 py-1 text-sm shrink-0">
+                <div className="flex items-center gap-1 bg-[var(--public-terracotta)] text-[var(--accent-ink)] rounded-full px-2 py-1 text-sm shrink-0">
                   <button
                     type="button"
                     onClick={() =>
@@ -270,7 +270,7 @@ export function CartBottomSheet({ open, onOpenChange }: CartBottomSheetProps) {
 
           {/* Login form inline */}
           {showLogin && !customer && (
-            <div className="border border-[var(--public-border)] rounded-xl p-4 bg-white">
+            <div className="border border-[var(--public-border)] rounded-xl p-4 bg-[var(--surface)]">
               <CustomerOtpForm
                 onAuthenticated={handleAuthenticated}
                 onCancel={() => setShowLogin(false)}
@@ -295,7 +295,7 @@ export function CartBottomSheet({ open, onOpenChange }: CartBottomSheetProps) {
             type="button"
             onClick={() => void handlePay()}
             disabled={isLoading || totalItems === 0 || (!channel)}
-            className="w-full h-12 rounded-xl bg-[var(--public-terracotta)] text-white text-base font-semibold disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer hover:bg-[var(--public-terracotta-hover)] transition-colors"
+            className="w-full h-12 rounded-xl bg-[var(--public-terracotta)] text-[var(--accent-ink)] text-base font-semibold disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer hover:bg-[var(--public-terracotta-hover)] transition-colors"
           >
             {isLoading ? (
               <span className="flex items-center justify-center gap-2">

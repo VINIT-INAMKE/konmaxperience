@@ -12,9 +12,10 @@
  *    runtime — `buildSpine()` only filters.
  * 2. **A module key with no route is absent.** The registry is the source of
  *    truth for "has a page". `shipments`, `customers`, `reviews` and
- *    `promotions` are seeded in `ModuleAccess` but ship their routes in Phase
- *    34, and `talent` lands in v2.1; none of them appear below, so granting the
- *    key can never produce a dead link. Phase 34 adds the entries.
+ *    `promotions` were seeded in `ModuleAccess` ahead of their screens and are
+ *    listed below as of Phase 34, which ships `/shipments`, `/customers`,
+ *    `/reviews` and `/promotions`. `talent` lands in v2.1 and is still absent,
+ *    so granting that key can never produce a dead link.
  *
  * Module-key → group mapping (47 seeded keys):
  * - primary  : mission_control, my_tasks, my_quests, evidence, approvals,
@@ -23,12 +24,12 @@
  * - kitchen  : kds, pick_pack, prep_batches, recipes, ingredients,
  *              supply_usage, waste
  * - procurement: inventory, procurement, purchase_orders, vendors
- * - commerce : pos, orders, delivery   (+ shipments · customers · reviews → P34)
- * - catalog  : catalog, experiences, brands, assets   (+ promotions → P34)
+ * - commerce : pos, orders, delivery, shipments, customers, reviews
+ * - catalog  : catalog, experiences, brands, assets, promotions
  * - intelligence: analytics, kpis, feedback, exports
  * - admin    : imports, users, permissions, delegations, notices, settings,
  *              modules, guide_editor, zones, channels
- * - no route : shipments, customers, reviews, promotions, talent
+ * - no route : talent (v2.1)
  *
  * `/leaderboard`, `/boards/wins`, `/team-contribution` and `/activity` are
  * routes without a spine entry — SPEC §6.2 merges them into `/team` and
@@ -51,6 +52,7 @@ import {
   ChefHat,
   Salad,
   Package,
+  PackageCheck,
   Monitor,
   PackageSearch,
   Trash2,
@@ -58,7 +60,9 @@ import {
   TrendingUp,
   Truck,
   CalendarDays,
+  Star,
   Tag,
+  TicketPercent,
   FolderOpen,
   BarChart3,
   MessageSquare,
@@ -137,7 +141,9 @@ export const SPINE_GROUPS: SpineGroupDef[] = [
       { moduleKey: 'pos', label: 'Take Order', href: '/pos', icon: ShoppingCart },
       { moduleKey: 'orders', label: 'Order History', href: '/pos/orders', icon: ClipboardList },
       { moduleKey: 'delivery', label: 'Delivery Queue', href: '/pos/delivery', icon: Truck },
-      // shipments · customers · reviews → Phase 34 adds their routes and entries.
+      { moduleKey: 'shipments', label: 'Shipments', href: '/shipments', icon: PackageCheck },
+      { moduleKey: 'customers', label: 'Customers', href: '/customers', icon: Users },
+      { moduleKey: 'reviews', label: 'Reviews', href: '/reviews', icon: Star },
     ],
   },
   {
@@ -148,7 +154,7 @@ export const SPINE_GROUPS: SpineGroupDef[] = [
       { moduleKey: 'experiences', label: 'Experiences', href: '/operations/events', icon: CalendarDays },
       { moduleKey: 'brands', label: 'Brands', href: '/operations/brands', icon: Tag },
       { moduleKey: 'assets', label: 'Assets', href: '/operations/assets', icon: FolderOpen },
-      // promotions → Phase 34.
+      { moduleKey: 'promotions', label: 'Promotions', href: '/promotions', icon: TicketPercent },
     ],
   },
   {

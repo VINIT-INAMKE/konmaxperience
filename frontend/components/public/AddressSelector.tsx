@@ -57,7 +57,7 @@ export function AddressSelector({
               className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
                 selectedId === addr.id
                   ? 'border-[var(--public-terracotta)] bg-[var(--public-surface)]'
-                  : 'border-[var(--public-border)] bg-white'
+                  : 'border-[var(--public-border)] bg-[var(--surface)]'
               }`}
             >
               <input
@@ -105,7 +105,7 @@ export function AddressSelector({
                 onClick={() => setSelectedLabel(label)}
                 className={`px-3 py-1.5 text-xs font-medium rounded-full cursor-pointer transition-colors ${
                   selectedLabel === label
-                    ? 'bg-[var(--public-terracotta)] text-white'
+                    ? 'bg-[var(--public-terracotta)] text-[var(--accent-ink)]'
                     : 'bg-[var(--public-surface)] text-[var(--public-fg-subtle)] border border-[var(--public-border)]'
                 }`}
               >

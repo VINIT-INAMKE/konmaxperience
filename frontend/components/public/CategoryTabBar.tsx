@@ -57,7 +57,7 @@ export function CategoryTabBar({
               onClick={() => handleClick(cat.id)}
               className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap cursor-pointer transition-colors ${
                 isActive
-                  ? 'bg-[var(--public-terracotta)] text-white'
+                  ? 'bg-[var(--public-terracotta)] text-[var(--accent-ink)]'
                   : 'bg-[var(--public-surface)] text-[var(--public-fg-subtle)] border border-[var(--public-border)]'
               }`}
             >

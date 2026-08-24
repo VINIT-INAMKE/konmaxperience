@@ -25,7 +25,7 @@ export function FloatingCartBar({ onViewCart }: FloatingCartBarProps) {
       <div className="flex items-center">
         <span
           aria-live="polite"
-          className="bg-[var(--public-terracotta)] text-white text-xs font-bold px-2 py-1 rounded mr-3"
+          className="bg-[var(--public-terracotta)] text-[var(--accent-ink)] text-xs font-bold px-2 py-1 rounded mr-3"
         >
           {totalItems}
         </span>
@@ -42,7 +42,7 @@ export function FloatingCartBar({ onViewCart }: FloatingCartBarProps) {
         <button
           type="button"
           onClick={onViewCart}
-          className="bg-[var(--public-terracotta)] text-white text-sm font-semibold px-4 py-2 rounded-lg cursor-pointer hover:bg-[var(--public-terracotta-hover)] transition-colors"
+          className="bg-[var(--public-terracotta)] text-[var(--accent-ink)] text-sm font-semibold px-4 py-2 rounded-lg cursor-pointer hover:bg-[var(--public-terracotta-hover)] transition-colors"
         >
           View Cart
         </button>

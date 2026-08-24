@@ -2,7 +2,37 @@ import { jwtVerify } from 'jose';
 import { NextRequest, NextResponse } from 'next/server';
 
 const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET!);
-const PUBLIC_PATHS = ['/login', '/menu', '/events', '/feedback', '/profile'];
+
+/**
+ * Customer-facing routes: reachable with no `access_token` at all. Everything
+ * not listed here (and not a staff auth page) is an ops route and bounces an
+ * anonymous visitor to `/team`.
+ *
+ * `/orders` is unambiguous because **staff orders live at `/pos/orders`** — the
+ * ops Order History spine entry (`lib/nav/spine.ts`) and the staff order detail
+ * route both sit under `/pos`, which leaves `/orders/[id]/track` entirely to the
+ * customer.
+ *
+ * Matched with {@link matchesPath}, not `startsWith`. This matters: a bare
+ * prefix match on `/p` would make `/pos`, `/pos/orders`, `/profile` and any
+ * future `/permissions` publicly reachable, and `/search` would swallow a
+ * `/search-admin`. Segment-aware matching is the only correct rule here.
+ */
+const PUBLIC_PATHS = [
+  '/login',
+  '/menu',
+  '/events',
+  '/feedback',
+  '/profile',
+  '/shop',
+  '/p',
+  '/experiences',
+  '/search',
+  '/cart',
+  '/checkout',
+  '/account',
+  '/orders',
+];
 
 /**
  * Staff-facing auth pages. `/team` is in the list because the frozen homepage
@@ -20,7 +50,10 @@ const STAFF_AUTH_PAGES = [
   '/reset-password',
 ];
 
-/** Segment-aware prefix match — `/team` must not swallow `/team-contribution`. */
+/**
+ * Segment-aware prefix match — `/team` must not swallow `/team-contribution`,
+ * and `/p` must not swallow `/pos`.
+ */
 function matchesPath(pathname: string, base: string): boolean {
   return pathname === base || pathname.startsWith(`${base}/`);
 }
@@ -34,8 +67,8 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Public pages — always accessible (customer login, menu, events, profile)
-  if (PUBLIC_PATHS.some((p) => pathname.startsWith(p))) {
+  // Public pages — always accessible (the storefront, customer login, tracking)
+  if (PUBLIC_PATHS.some((p) => matchesPath(pathname, p))) {
     return NextResponse.next();
   }
 

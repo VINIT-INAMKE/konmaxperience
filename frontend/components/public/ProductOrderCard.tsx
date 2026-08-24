@@ -79,7 +79,7 @@ export function ProductOrderCard({ item, available }: ProductOrderCardProps) {
               onClick={handleAdd}
               disabled={!available}
               aria-label={`Add ${item.name} to cart`}
-              className={`w-7 h-7 rounded-full flex items-center justify-center text-white shadow-sm ${
+              className={`w-7 h-7 rounded-full flex items-center justify-center text-[var(--accent-ink)] shadow-sm ${
                 available
                   ? 'bg-[var(--public-terracotta)] hover:bg-[var(--public-terracotta-hover)] cursor-pointer'
                   : 'bg-[var(--public-border-light)] cursor-not-allowed'
@@ -88,7 +88,7 @@ export function ProductOrderCard({ item, available }: ProductOrderCardProps) {
               <Plus className="size-4" />
             </button>
           ) : (
-            <div className="flex items-center gap-1 bg-[var(--public-terracotta)] text-white rounded-full px-2 py-1 text-sm shadow-sm">
+            <div className="flex items-center gap-1 bg-[var(--public-terracotta)] text-[var(--accent-ink)] rounded-full px-2 py-1 text-sm shadow-sm">
               <button
                 type="button"
                 onClick={handleDecrement}

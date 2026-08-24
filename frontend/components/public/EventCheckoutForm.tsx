@@ -253,7 +253,7 @@ export function EventCheckoutForm({
               }
             }}
             disabled={isSubmitting || isRazorpayOpen}
-            className="w-20 text-center bg-white border-[var(--public-border)] text-[var(--public-fg)]"
+            className="w-20 text-center bg-[var(--surface)] border-[var(--public-border)] text-[var(--public-fg)]"
           />
           <Button
             type="button"
@@ -274,7 +274,7 @@ export function EventCheckoutForm({
         type="button"
         onClick={() => void handleSubmit()}
         disabled={isSubmitting || isRazorpayOpen}
-        className="w-full h-11 rounded-lg bg-[var(--public-terracotta)] text-white hover:bg-[var(--public-terracotta)]/90 disabled:opacity-50"
+        className="w-full h-11 rounded-lg bg-[var(--public-terracotta)] text-[var(--accent-ink)] hover:bg-[var(--public-terracotta)]/90 disabled:opacity-50"
       >
         {(isSubmitting || isRazorpayOpen) && (
           <Loader2 className="size-4 animate-spin mr-2" />

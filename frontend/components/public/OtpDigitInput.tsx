@@ -78,7 +78,7 @@ export function OtpDigitInput({ value, onChange, disabled }: OtpDigitInputProps)
           value={value[i] || ''}
           onChange={(e) => handleChange(i, e.target.value)}
           onKeyDown={(e) => handleKeyDown(i, e)}
-          className="size-11 text-center text-lg font-semibold border border-[var(--public-border)] rounded-lg bg-white focus:ring-2 focus:ring-[var(--public-accent)] focus:border-[var(--public-accent)] outline-none disabled:opacity-50"
+          className="size-11 text-center text-lg font-semibold border border-[var(--public-border)] rounded-lg bg-[var(--surface)] focus:ring-2 focus:ring-[var(--public-accent)] focus:border-[var(--public-accent)] outline-none disabled:opacity-50"
         />
       ))}
     </div>
