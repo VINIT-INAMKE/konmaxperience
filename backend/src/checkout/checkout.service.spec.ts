@@ -622,4 +622,256 @@ describe('CheckoutService', () => {
       points_earned_estimate: 0,
     });
   });
+
+  // ─── serviceability pre-check (P5b gap 6) ─────────────────────────────────
+  //
+  // The address step could not ask "do you reach this pincode?" before a quote
+  // existed: `quote` needs a *saved* `delivery_address_id`, and a customer
+  // typing a new address has not saved one. The pre-check must therefore agree
+  // with the quote exactly — a pre-check that says yes where the quote says no
+  // is worse than none.
+
+  describe('checkServiceability', () => {
+    const withAllowList = (pincodes: string[]) =>
+      settings.get.mockImplementation((key: string) =>
+        Promise.resolve(
+          key === 'delivery_pincodes'
+            ? pincodes
+            : key === 'shipping'
+              ? {
+                  provider: 'manual',
+                  pickup_location_code: '',
+                  default_weight_grams: 500,
+                  default_dimensions_cm: {
+                    length: 20,
+                    breadth: 15,
+                    height: 10,
+                  },
+                }
+              : {},
+        ),
+      );
+
+    it('answers local:true for a pincode on the allow-list', async () => {
+      withAllowList(['600131']);
+
+      const result = await service.checkServiceability(CART, {
+        pincode: '600131',
+      });
+
+      expect(result.local).toEqual({ serviceable: true });
+    });
+
+    it('answers local:false with the same message the quote throws', async () => {
+      withAllowList(['600131']);
+
+      const result = await service.checkServiceability(CART, {
+        pincode: '110001',
+      });
+
+      expect(result.local).toEqual({
+        serviceable: false,
+        reason: "Sorry, we don't deliver to this pincode yet",
+      });
+    });
+
+    it('treats an empty allow-list as "no restriction configured"', async () => {
+      withAllowList([]);
+
+      const result = await service.checkServiceability(CART, {
+        pincode: '110001',
+      });
+
+      expect(result.local.serviceable).toBe(true);
+    });
+
+    it('trims the pincode before matching, as the allow-list check does', async () => {
+      withAllowList(['600131']);
+
+      const result = await service.checkServiceability(CART, {
+        pincode: ' 600131 ',
+      });
+
+      expect(result.local.serviceable).toBe(true);
+    });
+
+    it('returns shipped:null for a cart with no shipped line, and asks no provider', async () => {
+      withAllowList(['600131']);
+      pricing.price.mockResolvedValue(priced([line()]));
+
+      const result = await service.checkServiceability(CART, {
+        pincode: '600131',
+      });
+
+      expect(result.shipped).toBeNull();
+      expect(provider.checkServiceability).not.toHaveBeenCalled();
+    });
+
+    it('returns shipped:null for an empty cart without pricing anything', async () => {
+      withAllowList(['600131']);
+
+      const result = await service.checkServiceability([], {
+        pincode: '600131',
+      });
+
+      expect(result.shipped).toBeNull();
+      expect(pricing.price).not.toHaveBeenCalled();
+      expect(provider.checkServiceability).not.toHaveBeenCalled();
+    });
+
+    it('asks the provider with exactly the arguments the quote builds', async () => {
+      withAllowList(['600131']);
+      pricing.price.mockResolvedValue(priced([shippedLine()]));
+      provider.checkServiceability.mockResolvedValue({
+        serviceable: true,
+        rate: 8000,
+        courier_name: 'Delhivery Surface',
+        courier_id: '12',
+        etd: new Date('2026-08-29T00:00:00.000Z'),
+      });
+
+      const result = await service.checkServiceability(CART, {
+        pincode: '600131',
+      });
+
+      expect(provider.checkServiceability).toHaveBeenCalledWith({
+        // An unconfigured pickup code means "ship from wherever the customer
+        // is", exactly as the quote resolves it.
+        pickup_pincode: '600131',
+        delivery_pincode: '600131',
+        weight_grams: 550,
+        declared_value_paise: 64900,
+        cod: false,
+      });
+      expect(result.shipped).toMatchObject({
+        serviceable: true,
+        courier_name: 'Delhivery Surface',
+        etd: '2026-08-29T00:00:00.000Z',
+      });
+      // Rupees on the wire, like every other money field.
+      expect(result.shipped?.amount?.toNumber()).toBe(80);
+    });
+
+    it('floors the default weight the way the quote does', async () => {
+      withAllowList(['600131']);
+      pricing.price.mockResolvedValue(
+        priced([shippedLine({ weight_grams: 100 })]),
+      );
+
+      await service.checkServiceability(CART, { pincode: '600131' });
+
+      expect(provider.checkServiceability).toHaveBeenCalledWith(
+        expect.objectContaining({ weight_grams: 500 }),
+      );
+    });
+
+    it('clamps a fractional or negative provider rate, as the quote does', async () => {
+      withAllowList(['600131']);
+      pricing.price.mockResolvedValue(priced([shippedLine()]));
+      provider.checkServiceability.mockResolvedValue({
+        serviceable: true,
+        rate: -12.7,
+        courier_name: null,
+        courier_id: null,
+        etd: null,
+      });
+
+      const result = await service.checkServiceability(CART, {
+        pincode: '600131',
+      });
+
+      expect(result.shipped?.amount?.toNumber()).toBe(0);
+    });
+
+    it('reports an unserviceable courier without throwing, carrying its reason', async () => {
+      withAllowList([]);
+      pricing.price.mockResolvedValue(priced([shippedLine()]));
+      provider.checkServiceability.mockResolvedValue({
+        serviceable: false,
+        rate: 0,
+        courier_name: null,
+        courier_id: null,
+        etd: null,
+        reason: 'No courier serves 110001',
+      });
+
+      const result = await service.checkServiceability(CART, {
+        pincode: '110001',
+      });
+
+      expect(result.shipped).toEqual({
+        serviceable: false,
+        reason: 'No courier serves 110001',
+      });
+    });
+
+    it('falls back to a house message when the provider gives no reason', async () => {
+      withAllowList([]);
+      pricing.price.mockResolvedValue(priced([shippedLine()]));
+      provider.checkServiceability.mockResolvedValue({
+        serviceable: false,
+        rate: 0,
+        courier_name: null,
+        courier_id: null,
+        etd: null,
+      });
+
+      const result = await service.checkServiceability(CART, {
+        pincode: '110001',
+      });
+
+      expect(result.shipped?.reason).toBe('We cannot ship to this pincode yet');
+    });
+
+    it('answers both halves independently — local no, courier yes', async () => {
+      withAllowList(['600131']);
+      pricing.price.mockResolvedValue(priced([line(), shippedLine()]));
+      provider.checkServiceability.mockResolvedValue({
+        serviceable: true,
+        rate: 8000,
+        courier_name: 'Delhivery Surface',
+        courier_id: '12',
+        etd: null,
+      });
+
+      const result = await service.checkServiceability(CART, {
+        pincode: '110001',
+      });
+
+      expect(result.local.serviceable).toBe(false);
+      expect(result.shipped?.serviceable).toBe(true);
+    });
+
+    it('prices the cart on the channel the client named', async () => {
+      withAllowList([]);
+      pricing.price.mockResolvedValue(priced([line()]));
+
+      await service.checkServiceability(CART, {
+        pincode: '600131',
+        channel: OrderChannel.takeaway,
+      });
+
+      expect(pricing.price).toHaveBeenCalledWith(CART, OrderChannel.takeaway);
+    });
+
+    it('defaults the channel to delivery, as the cart routes do', async () => {
+      withAllowList([]);
+      pricing.price.mockResolvedValue(priced([line()]));
+
+      await service.checkServiceability(CART, { pincode: '600131' });
+
+      expect(pricing.price).toHaveBeenCalledWith(CART, OrderChannel.delivery);
+    });
+
+    it('needs no Redis — it writes nothing and holds nothing', async () => {
+      withAllowList([]);
+      redis.getClient.mockReturnValue(null);
+      pricing.price.mockResolvedValue(priced([line()]));
+
+      await expect(
+        service.checkServiceability(CART, { pincode: '600131' }),
+      ).resolves.toMatchObject({ local: { serviceable: true } });
+      expect(prisma.eventBooking.create).not.toHaveBeenCalled();
+    });
+  });
 });

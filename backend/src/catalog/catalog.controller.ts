@@ -228,7 +228,12 @@ export class CatalogController {
     return this.catalog.getAllServingsAvailable();
   }
 
+  // Same audience as the batch route above: `/p/[slug]` needs live availability
+  // for exactly one product. Without `@Public()` this falls to the global staff
+  // guard and answers `401` to an anonymous shopper.
   @Get(['catalog/availability/:productId', 'menu/availability/:productId'])
+  @Public()
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
   async availability(@Param('productId', ParseUUIDPipe) productId: string) {
     return this.catalog.getServingsAvailable(productId);
   }

@@ -1,6 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException } from '@nestjs/common';
 import { CouponType, LoyaltyTier, OrderChannel } from '@prisma/client';
+import { plainToInstance } from 'class-transformer';
+import { validate } from 'class-validator';
+import { ServiceabilityDto } from './dto/serviceability.dto';
 import { CustomerOrdersService } from '../customer-orders/customer-orders.service';
 import { CouponsService } from '../promotions/coupons.service';
 import { toDecimal } from '../common/money/money';
@@ -43,7 +46,7 @@ function storedQuote(over: Partial<StoredQuote> = {}): StoredQuote {
 
 describe('CheckoutController', () => {
   let controller: CheckoutController;
-  let checkout: { quote: jest.Mock };
+  let checkout: { quote: jest.Mock; checkServiceability: jest.Mock };
   let carts: { getCart: jest.Mock };
   let coupons: { validate: jest.Mock };
   let pricing: { price: jest.Mock };
@@ -62,6 +65,7 @@ describe('CheckoutController', () => {
           redeem_value_per_point: 0.25,
         },
       }),
+      checkServiceability: jest.fn(),
     };
     carts = {
       getCart: jest.fn().mockResolvedValue({
@@ -163,5 +167,63 @@ describe('CheckoutController', () => {
     await expect(
       controller.validateCoupon(REQ, { code: 'OLDCODE' }),
     ).rejects.toThrow('This coupon has expired');
+  });
+
+  // ─── serviceability pre-check (P5b gap 6) ─────────────────────────────────
+
+  it('checks serviceability against the stored cart, never a cart from the body', async () => {
+    const answer = {
+      local: { serviceable: true },
+      shipped: null,
+    };
+    checkout.checkServiceability.mockResolvedValue(answer);
+
+    const body = await controller.serviceability(REQ, { pincode: '600131' });
+
+    expect(carts.getCart).toHaveBeenCalledWith(CUSTOMER);
+    expect(checkout.checkServiceability).toHaveBeenCalledWith(CART_ITEMS, {
+      pincode: '600131',
+    });
+    expect(body).toBe(answer);
+  });
+
+  it('treats an absent cart as an empty one so the service owns the branch', async () => {
+    carts.getCart.mockResolvedValue(null);
+    checkout.checkServiceability.mockResolvedValue({
+      local: { serviceable: true },
+      shipped: null,
+    });
+
+    await controller.serviceability(REQ, { pincode: '600131' });
+
+    expect(checkout.checkServiceability).toHaveBeenCalledWith([], {
+      pincode: '600131',
+    });
+  });
+});
+
+describe('ServiceabilityDto', () => {
+  const errors = (body: Record<string, unknown>) =>
+    validate(plainToInstance(ServiceabilityDto, body));
+
+  it('accepts a bare six-digit pincode', async () => {
+    await expect(errors({ pincode: '600131' })).resolves.toEqual([]);
+  });
+
+  it.each(['60013', '6001311', '60013a', ''])(
+    'rejects %p',
+    async (pincode) => {
+      const bad = await errors({ pincode });
+      expect(bad.map((e) => e.property)).toContain('pincode');
+    },
+  );
+
+  it('accepts an optional takeaway/delivery channel and rejects any other', async () => {
+    await expect(
+      errors({ pincode: '600131', channel: OrderChannel.takeaway }),
+    ).resolves.toEqual([]);
+
+    const bad = await errors({ pincode: '600131', channel: 'dine_in' });
+    expect(bad.map((e) => e.property)).toContain('channel');
   });
 });

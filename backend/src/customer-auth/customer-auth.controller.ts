@@ -20,6 +20,21 @@ import { VerifyOtpDto } from './dto/verify-otp.dto';
 import { UpdateCustomerDto } from './dto/update-customer.dto';
 import { Public } from '../common/decorators/public.decorator';
 
+/**
+ * Every route here is `@Public()`, and none of them is open.
+ *
+ * NestJS runs the **global** guards before the route-level ones, and the global
+ * `PermissionsGuard` rejects `user.type === 'customer'` unconditionally on any
+ * route not marked `@Public()`. So a customer route guarded only by
+ * `@UseGuards(CustomerGuard)` answers `403` to its own logged-in customer —
+ * which is exactly what the four session routes below used to do. `@Public()`
+ * switches off the global staff stack; `CustomerGuard` remains the sole
+ * authority and still answers `401` to a missing or staff token.
+ *
+ * This mirrors `CustomerOrdersController`, `CheckoutController`,
+ * `LoyaltyController` and `CustomerReviewsController`, which all pair the two
+ * decorators at class level for the same reason.
+ */
 @Controller('customer-auth')
 export class CustomerAuthController {
   constructor(
@@ -46,6 +61,7 @@ export class CustomerAuthController {
 
   @Get('profile')
   @UseGuards(CustomerGuard)
+  @Public() // Bypass global JwtAuthGuard — CustomerGuard handles auth
   async getProfile(@Req() req: express.Request) {
     const user = (req as any).user;
     return this.customerAuthService.getProfile(user.customerId);
@@ -53,6 +69,7 @@ export class CustomerAuthController {
 
   @Patch('profile')
   @UseGuards(CustomerGuard)
+  @Public() // Bypass global JwtAuthGuard — CustomerGuard handles auth
   async updateProfile(
     @Req() req: express.Request,
     @Body() dto: UpdateCustomerDto,
@@ -63,12 +80,14 @@ export class CustomerAuthController {
 
   @Post('logout')
   @UseGuards(CustomerGuard)
+  @Public() // Bypass global JwtAuthGuard — CustomerGuard handles auth
   async logout(@Res({ passthrough: true }) res: express.Response) {
     return this.customerAuthService.logout(res);
   }
 
   @Post('pusher-auth')
   @UseGuards(CustomerGuard)
+  @Public() // Bypass global JwtAuthGuard — CustomerGuard handles auth
   @HttpCode(200)
   async pusherAuth(
     @Body() body: { socket_id: string; channel_name: string },

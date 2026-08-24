@@ -11,8 +11,10 @@ import {
   CheckoutService,
   toQuoteResponse,
   type QuoteResponse,
+  type ServiceabilityResponse,
 } from './checkout.service';
 import { QuoteCheckoutDto } from './dto/quote-checkout.dto';
+import { ServiceabilityDto } from './dto/serviceability.dto';
 
 /** The customer JWT payload `CustomerGuard` puts on the request. */
 interface CustomerRequest {
@@ -58,6 +60,22 @@ export class CheckoutController {
     return toQuoteResponse(
       await this.checkout.quote(customerId, cart?.items ?? [], dto),
     );
+  }
+
+  /**
+   * The address step's pre-check. Like `quote`, the cart comes from Redis and
+   * never from the body — the pincode is the only thing the client gets to say,
+   * because it is the only thing it knows that the server does not.
+   */
+  @Post('checkout/serviceability')
+  @Throttle({ default: { limit: 20, ttl: 60000 } })
+  async serviceability(
+    @Req() req: CustomerRequest,
+    @Body() dto: ServiceabilityDto,
+  ): Promise<ServiceabilityResponse> {
+    const customerId = req.user.customerId;
+    const cart = await this.carts.getCart(customerId);
+    return this.checkout.checkServiceability(cart?.items ?? [], dto);
   }
 
   /**
