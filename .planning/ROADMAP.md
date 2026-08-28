@@ -4,7 +4,8 @@
 
 - ✅ **v1.0 MVP** - Phases 1-13 (shipped 2026-03-22)
 - ✅ **v1.1 User Guide, Data Management & Commerce Foundations** - Phases 14-28 (complete 2026-03-27; Phases 25 and 26 not built — see notes)
-- 🚧 **v2.0 Mission OS + Marketplace** - Phases 29-35 (P0 spec sync done 2026-08-22; Phase 29 next). Canonical spec: `/SPEC.md`
+- ✅ **v2.0 Mission OS + Marketplace** - Phases 29-35 (**COMPLETE 2026-08-28 at `dce8180`**). Canonical spec: `/SPEC.md`
+- ⬜ **Next milestone: intentionally open.** The talent module is parked for v2.1 — the SPEC spine carries a "no route" note against it and nothing in v2.0 was written assuming it.
 
 ## Phases
 
@@ -40,7 +41,7 @@
 - [x] **Phase 27: Mission Flow & Assessment Gap Closure** - Mission-control API, PO→Task linking, activity feed, team contribution, Today's Focus (completed 2026-03-27)
 - [x] **Phase 28: Recipe preparation_type** - scratch/batch_prepared/ready_to_sell/assemble routing, Pick & Pack, supply usage, DB ingredient categories (completed 2026-03-27)
 
-### 🚧 v2.0 Mission OS + Marketplace (Phases 29–35)
+### ✅ v2.0 Mission OS + Marketplace (Phases 29–35) — COMPLETE 2026-08-28 at `dce8180`
 
 **Milestone Goal (SPEC.md §1.1):** One system, not two — operational events produce mission evidence and readiness signals automatically, approval gates execute, four meters are derived from ops state. Every role lands on "what I must move today". A full Konma-only storefront (prepared food, packaged products shipped via Shiprocket, experiences, merchandise) with one catalog, cart, checkout, accounts, reviews, coupons, loyalty, search, desktop + SEO. No money or account at risk from a known defect; CI gates every change; `Node` and enums from day one.
 
@@ -50,13 +51,13 @@
 - Decimal phases (29.1, 30.1): urgent insertions (marked with INSERTED).
 - Branch: `v2-os-marketplace`. Each phase: plan → parallel subagents by module → CI green → walk-through → summary.
 
-- [ ] **Phase 29: Stop the Bleeding (P1)** - 14 Critical/High defects fixed with regression tests, config validation, safe seeds, error boundaries, test suite green, CI enforcing
+- [x] **Phase 29: Stop the Bleeding (P1)** - 14 Critical/High defects fixed with regression tests, config validation, safe seeds, error boundaries, test suite green, CI enforcing *(complete 2026-08-23; the checkbox lagged the progress table until the v2.0 close)*
 - [x] **Phase 30: Platform Foundation (P2)** - Fresh migration baseline: Node, Prisma enums, AuditEvent, Task.subject, ApprovalPolicy, timestamptz, CHECKs, Product replacing MenuItem, new seeds *(complete 2026-08-23 at `fc49c19`)*
 - [x] **Phase 31: Mission Bridge (P3)** - Domain events, MissionBridgeService, derived meters + snapshots + history, policy-generated approvals, recipe approval via policy, decision votes *(complete 2026-08-23 at `080a664`, range `ced2385..080a664`)*
 - [x] **Phase 32: Role-Aware IA + Identity (P4)** - Persistent header, spine nav, ModuleAccess, /tasks, My Quests, sheets, chips, motion allowlist, brand tokens light + dark, Pusher on kitchen screens, usage events *(complete 2026-08-24 at `e871cf4`, range `be2879f..e871cf4`)*
 - [x] **Phase 33: Marketplace Backend (P5a)** - Catalog, mixed-fulfilment quote/checkout/confirm, FulfilmentService, Shiprocket + shipments, coupons, loyalty, reviews, search, refunds *(complete 2026-08-24 at `5a15e39`, range `8b46610..5a15e39`)*
 - [x] **Phase 34: Marketplace Storefront + Staff Commerce (P5b)** - Storefront routes (desktop + SEO), cart/checkout UI, account, staff Catalog/Promotions/Reviews/Shipments/Orders/Experiences/Customers screens *(complete 2026-08-25 at `6b82f7f`, range `089a947..6b82f7f`)*
-- [ ] **Phase 35: Run-It Layer (P6)** - WhatsApp nudges, daily close, theoretical vs actual food cost, usage dashboard, AI evidence-review assist + morning brief (human-in-the-loop) — **IN PROGRESS**: Wave 1 merged (`b7da851`, `6885699`, `8e29ac8`), Wave 2 in flight
+- [x] **Phase 35: Run-It Layer (P6)** - WhatsApp nudges, daily close, theoretical vs actual food cost, usage dashboard, AI evidence-review assist + morning brief (human-in-the-loop), five locked crons, R2 hygiene *(complete 2026-08-28 at `dce8180`, 16/16 tasks over five waves)*
 
 ## Phase Details
 
@@ -129,7 +130,9 @@ v1.1 (done): 14 -> 15 -> 16 -> 17 -> 18 -> 19 -> 20 -> 21 -> 22 -> 23 -> 24 -> 2
 v2.0: 29 -> 30 -> 31 -> 32 -> 33 -> 34 -> 35. Phase 33 may run in parallel with Phase 32 once Phase 31 is complete; Phase 34 needs both.
 **Phase 31 completed 2026-08-23 — Phases 32 and 33 ran in parallel.**
 **Phases 32 and 33 both completed 2026-08-24.**
-**Phase 34 completed 2026-08-25 at `6b82f7f`. Phase 35 (the last phase of v2.0) is in progress.**
+**Phase 34 completed 2026-08-25 at `6b82f7f`. Phase 35 — the last phase of v2.0 — completed 2026-08-28 at
+`dce8180`, closing the milestone.** Note that Phase 35's Wave 1 (`b7da851`, `6885699`, `8e29ac8`) merged
+*before* Phase 34's last two tasks, which is why Phase 34's backend gate figures are merged-tree numbers.
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -154,7 +157,9 @@ v2.0: 29 -> 30 -> 31 -> 32 -> 33 -> 34 -> 35. Phase 33 may run in parallel with 
 | 32. Role-Aware IA + Identity (P4) | v2.0 | 1/1 | Complete    | 2026-08-24 |
 | 33. Marketplace Backend (P5a) | v2.0 | 1/1 | Complete    | 2026-08-24 |
 | 34. Marketplace Storefront + Staff Commerce (P5b) | v2.0 | 1/1 | Complete    | 2026-08-25 |
-| 35. Run-It Layer (P6) | v2.0 | 0/1 | In progress (Wave 1 merged) | — |
+| 35. Run-It Layer (P6) | v2.0 | 1/1 | Complete    | 2026-08-28 |
+
+**v2.0 Mission OS + Marketplace — COMPLETE 2026-08-28 at `dce8180`.** Phases 29–35, seven phases, 7/7.
 
 ### Phase 18: Data Export
 **Goal**: CSV/XLSX export for all 22 report types with server-side file generation, R2 storage, export history, and export buttons on 13 data pages
@@ -519,7 +524,7 @@ Plans:
 **Gates at `6b82f7f`**: frontend `tsc --noEmit` exit 0 · `eslint .` **0 errors / 53 warnings** against the new ceiling of 60 (ratcheted from 80) · `next build` compiled, 83/83 static pages · **`npm run test:e2e` 3 passed**. Backend on the same tree — note the counts include Phase 35 Wave 1, which merged into this branch first — 111 suites · 1749 tests (1722 passed, 27 todo) · `tsc` exit 0 · 0 lint errors · build clean.
 **Hands off to Phase 35**: the fresh staff walk-through; `QA-05`'s Postgres-backed integration harness (now three phases deep); `refund.failed` reconciliation; the `Notification.is_email_sent` drop (P6 Task 4); three soft-404s that return `200` bodies (all `noindex`ed — the status-code fix needs slug resolution in `proxy.ts`); and the `metadataBase` / `NEXT_PUBLIC_SITE_URL` split between `app/layout.tsx` and `lib/seo/metadata.ts`. Four operator actions are outstanding and cannot be done from the repo: the three Razorpay CI secrets, `NEXT_PUBLIC_R2_PUBLIC_URL` in production, the R2 `expire-exports-30d` lifecycle rule, and the five Meta WhatsApp template submissions.
 
-### Phase 35: Run-It Layer (P6) — 🚧 IN PROGRESS (Wave 1 merged 2026-08-25)
+### Phase 35: Run-It Layer (P6) — ✅ COMPLETE (2026-08-28, `dce8180`)
 **Goal**: The node runs day-to-day on the system — staff get WhatsApp nudges, a daily close screen, theoretical vs actual food cost, a usage dashboard, and human-in-the-loop AI assists.
 **Depends on**: Phase 34
 **Requirements**: RUN-01 … RUN-06
@@ -530,6 +535,34 @@ Plans:
   4. An admin usage dashboard reads `UsageEvent` (page views per role, key actions)
   5. AI evidence-review assist and a morning brief run on the Claude API as suggestions only — no evidence is approved, readiness value set or price changed by AI
   6. Nightly jobs (stock reconciliation with drift `AuditEvent`, loyalty expiry, readiness snapshots) run under `pg_try_advisory_lock`; R2 has a 30-day lifecycle rule on `exports/` and a weekly orphan sweep
+     — **Recorded 2026-08-28:** all six criteria shipped and were exercised against a live stack; the eleven-request smoke is recorded verbatim in the phase summary. Three honest qualifications. **Criterion 1's WhatsApp channel is correctly inert until the operator acts**: the dispatcher implements it in full (master switch + template resolution + `whatsapp_opt_in` + a phone + quiet hours, with per-type cooldowns), and all five templates are declared — but the five Meta submissions have not been made and `settings.notifications.whatsapp_enabled` is off, so in-app and email are the delivering channels today. That is the designed degradation, not a gap in the code. **Criterion 5 was proved with no API key configured**: the morning brief returned `provider: heuristic` and the evidence assist returned verdict `unsure` / confidence 0.35 while leaving the evidence `approval_status: pending` — the "suggestions only" limit is enforced by the schema (`EvidenceReviewSuggestion` is a table no approval path reads) and by the UI (`EvidenceAssistPanel` shares no state with the approve/reject controls), not by prompt instruction. **Criterion 6's R2 lifecycle rule is documented, not created** — `docs/R2-LIFECYCLE.md` is the code half's companion and the rule itself is a console action the operator must still perform; the weekly orphan sweep, the five locked crons and the checked `pg_advisory_unlock` release all shipped.
+     — Two deviations worth carrying: the **staff-nudge sweep covers two of the four nudge types** (blocked tasks and failed shipments, the latter with a 14-day lookback so a stuck AWB does not nudge forever) because approvals-waiting and low-stock are already dispatcher-routed at the moment the condition arises, and a second hourly path would carry its own cooldown state for the same event; and the **`AiProviderPort` degrades internally rather than surfacing a provider error** (plan decision 4), so no caller has an "AI is down" branch — the cost is that the Anthropic refusal fallback is local-only and invisible at the call site beyond the persisted `provider` field.
+     — One defect the smoke found that review did not: **`FRONTEND_LEAD` did not hold `MANAGE_OPS`**, so the signer criterion 2 names by role was 403-blocked from signing a daily close. The grant landed in `seed-data/roles.ts` with `seed-data.spec.ts` covering it.
 **Spec sections**: §1.2 (AI limits), §3.4, §6.5, §8, §11 P6
-**Plans**: `docs/superpowers/plans/2026-08-24-p6-run-it-layer.md`
-**Progress (2026-08-25)**: **Wave 1 (Tasks 1–3) merged** with a green combined backend gate — `b7da851` (P6 schema: `DailyClose`, `EvidenceReviewSuggestion`, `User.phone`/`whatsapp_opt_in`, new `NotificationType` members, plus the `notifications`/`ai`/`daily_close` setting blocks and the jest mock registry), `8e29ac8` (`AiProviderPort` — a heuristic-first resolver with an optional-key `AnthropicProvider` and its env contract, so criterion 5's "suggestions only" holds even with no API key configured) and `6885699` (one unified `ADVISORY_LOCK` registry with an unlock check, the stock-reconciliation cron, the R2 orphan sweep and `docs/R2-LIFECYCLE.md`). **Wave 2 (Tasks 4–7) is in flight.** Criterion 6's R2 lifecycle rule is documented but is a console action the operator must still perform; criterion 1's five Meta WhatsApp templates are still awaiting submission and approval.
+**Plans**: `docs/superpowers/plans/2026-08-24-p6-run-it-layer.md` (16 tasks) — record: `.planning/phases/35-p6-run-it-layer/35-01-SUMMARY.md`
+**Migration**: `20260828000000_p6_run_it_layer` (92 lines) — 3 `NotificationType` enum adds (`shipment_failed`, `morning_brief`, `daily_close_due`), **`ALTER TABLE "Notification" DROP COLUMN "is_email_sent"` — the first DROP since the P2 baseline**, 2 tables (`DailyClose`, `EvidenceReviewSuggestion`), the `User.phone` / `User.whatsapp_opt_in` columns, and two hand-written CHECKs the generator cannot produce: `DailyClose_signed_has_signer` (`status <> 'signed' OR (signed_by IS NOT NULL AND signed_at IS NOT NULL)` — a signed close with no signer would make the `AuditEvent` trail a lie, and is now unrepresentable) and `EvidenceReviewSuggestion_verdict_check`. Drift gate: `No difference detected.`
+**Gates at `dce8180`**: backend **125 suites · 2023 tests** (1997 passed, 26 todo), 0 failures · **full** `tsc --noEmit` exit 0 (specs included — the build tsconfig excludes them, which is what `8a2ae4b` fixed) · 0 lint errors · build green. Frontend `tsc --noEmit` exit 0 · `eslint .` 0 errors / **56 warnings** against the ceiling of 60 · `next build` green, **85 routes**. `prisma migrate deploy` applied · `seed:reference` green (8 roles, 49 modules, 14 settings).
+**Also discharged here** (debts three phases deep, all in Task 13, `cdae634`): `refund.failed` is handled, re-deriving refund state by **summing** the surviving refunds rather than reversing the failed one (a reversal is only correct if the failed refund was the last write); `PATCH /tasks/:id` re-runs the validation cascade **on every status change**, crossing the `TasksModule ↔ EvidenceModule` edge P3 deliberately avoided **through `TASK_VALIDATION_PORT`** — a symbol-injected interface declared in `tasks/`, implemented by `EvidenceService`, with a module spec asserting the graph stays acyclic; all nine catalog writes now audit; and the feedback bridge dispatch is keyed per order (it had deduped a second order's feedback against the first).
+**Carried past v2.0**: `QA-05`'s Postgres-backed integration harness (now four phases deep); `QA-03` (Playwright smoke 1 on the ops shell, never owned); a fresh operator walk-through of the seven P5b staff commerce screens; the 15-minute hold vs the 30-minute pending order; the three soft-404s and the `metadataBase` / `NEXT_PUBLIC_SITE_URL` split; the Shiprocket sandbox; `/admin/approval-policies`; `Order.zone_id` → `fulfilment_zone_id`; multi-shipment orders. Four operator actions remain and cannot be done from the repo: the five Meta WhatsApp template submissions **then** the `whatsapp_enabled` flip, the R2 `expire-exports-30d` lifecycle rule, `NEXT_PUBLIC_R2_PUBLIC_URL` in production, and the three Razorpay test-mode CI secrets.
+
+---
+
+## v2.0 Milestone Close (2026-08-28)
+
+**v2.0 Mission OS + Marketplace is COMPLETE** at `dce8180` on branch `v2-os-marketplace`. Seven phases,
+29 through 35, from a schema reset to a running node:
+
+| Phase | Delivered | At |
+|---|---|---|
+| 29 (P1) | Stop the Bleeding — 14 Critical/High audit defects, CI gating | 2026-08-23 |
+| 30 (P2) | Platform Foundation — one migration baseline, `Node`, 50 enums, `AuditEvent`, `Product` | `fc49c19` |
+| 31 (P3) | Mission Bridge — ops events become evidence and readiness automatically | `080a664` |
+| 32 (P4) | Role-Aware IA + Identity — header, spine, `/tasks`, one token system | `e871cf4` |
+| 33 (P5a) | Marketplace Backend — catalog, quote → pay → confirm, shipments, refunds | `5a15e39` |
+| 34 (P5b) | Storefront + Staff Commerce — 18 public routes, 6 staff screens, SEO, Playwright | `6b82f7f` |
+| 35 (P6) | Run-It Layer — nudges, daily close, food cost, usage, AI assists, locked crons | `dce8180` |
+
+**Next milestone is intentionally left open.** The talent module is parked for **v2.1** — the SPEC spine
+carries a "no route" note against it, and nothing built in v2.0 assumes it exists. Whatever v2.1 scopes, it
+should not skip the two oldest deferrals: `QA-05`'s Postgres-backed integration harness (carried from Phase
+31's `QA-02` through 33, 34 and 35) and `QA-03`, the ops-shell Playwright smoke that has never had an owner.

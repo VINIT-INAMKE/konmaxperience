@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Mission OS + Marketplace
-status: "Phase 34 (P5b Storefront + Staff Commerce) COMPLETE at 6b82f7f — all 20 tasks merged, Playwright smoke 2 green on the merged tree. Phase 35 (P6 Run-It Layer) IN PROGRESS — Wave 1 (Tasks 1–3) merged, Wave 2 (Tasks 4–7) in flight."
-stopped_at: P5b complete at 6b82f7f — all 20 tasks merged, sitemap/robots/308 redirects landed, `npm run test:e2e` 3/3 on the merged tree; see .planning/phases/34-p5b-storefront-staff-commerce/34-01-SUMMARY.md
-last_updated: "2026-08-25"
+status: "Phase 35 (P6 Run-It Layer) COMPLETE at dce8180 — all 16 tasks merged, migrated, gated and runtime-smoked. **The v2.0 milestone (Mission OS + Marketplace, Phases 29–35) is COMPLETE.** Next milestone intentionally open; talent module parked for v2.1."
+stopped_at: v2.0 complete. P6 complete at dce8180 — 16/16 tasks, migration 20260828000000_p6_run_it_layer applied, drift gate clean, live-stack smoke recorded; see .planning/phases/35-p6-run-it-layer/35-01-SUMMARY.md
+last_updated: "2026-08-28"
 progress:
   total_phases: 7
   completed_phases: 0
@@ -22,13 +22,75 @@ See: .planning/PROJECT.md (updated 2026-08-22) and /SPEC.md (canonical v2.0 spec
 
 ## Current Position
 
-Milestone: v2.0 Mission OS + Marketplace (Phases 29–35 on branch `v2-os-marketplace`)
-Phase: 34 (Marketplace Storefront + Staff Commerce, P5b) — **COMPLETE** at `6b82f7f`
-(record: `.planning/phases/34-p5b-storefront-staff-commerce/34-01-SUMMARY.md`)
-Current phase: 35 (Run-It Layer, P6) — **IN PROGRESS**: Wave 1 merged, Wave 2 dispatched
-Previous phases: 33 (Marketplace Backend, P5a) at `5a15e39`; 32 (Role-Aware IA + Identity, P4) at `e871cf4`;
-31 (Mission Bridge, P3) at `080a664`; 30 (Platform Foundation, P2) at `fc49c19`
+Milestone: **v2.0 Mission OS + Marketplace — COMPLETE 2026-08-28** (Phases 29–35 on branch `v2-os-marketplace`)
+Phase: 35 (Run-It Layer, P6) — **COMPLETE** at `dce8180`
+(record: `.planning/phases/35-p6-run-it-layer/35-01-SUMMARY.md`)
+Current phase: **none — next milestone intentionally open.** The talent module is parked for v2.1 (the
+SPEC spine carries a "no route" note against it, and nothing in v2.0 assumes it).
+Previous phases: 34 (Storefront + Staff Commerce, P5b) at `6b82f7f`; 33 (Marketplace Backend, P5a) at `5a15e39`;
+32 (Role-Aware IA + Identity, P4) at `e871cf4`; 31 (Mission Bridge, P3) at `080a664`;
+30 (Platform Foundation, P2) at `fc49c19`
 Previous milestone: v1.1 complete 2026-03-27 (Phases 14–24, 27, 28 shipped; Phases 25 and 26 were never built — see ROADMAP.md notes)
+
+**Phase 35 (P6 Run-It Layer) is complete.** All 16 tasks of
+`docs/superpowers/plans/2026-08-24-p6-run-it-layer.md` are merged at `dce8180` across five waves. W1:
+`b7da851` (P6 schema — `DailyClose`, `EvidenceReviewSuggestion`, `User.phone`/`whatsapp_opt_in`, three
+`NotificationType` members, the `notifications`/`ai`/`daily_close` setting blocks), `6885699` (unified
+`ADVISORY_LOCK` registry with a **checked** `pg_advisory_unlock` release, nightly stock reconciliation
+record-only, weekly R2 orphan sweep, `docs/R2-LIFECYCLE.md`), `8e29ac8` (heuristic-first `AiProviderPort` —
+`AnthropicProvider` optional, degrades internally, **no API key needed to boot, test or ship**).
+W2: `c2131c5` evidence assist (suggestion-only, boundary-guard enforced), `182195f` food cost
+(theoretical-vs-actual, vendor-price valuation, unpriced ingredients reported not zero-costed), `108d4be`
+daily close (compute/recompute/sign, versioned integer-paise metrics, 00:45 cron), `ab79518`
+`NotificationDispatcher` (in_app always · email per settings · whatsapp behind enabled + opt-in + template +
+quiet-hours, per-type cooldowns) with `Notification.is_email_sent` **retired end to end**, plus `117389b`
+sibling registration and `173d88b` the dispatcher seam in the daily-close cron.
+W3: `81a0e53` hourly staff-nudge sweep (blocked tasks, failed shipments with a 14-day lookback; approvals and
+low-stock were already dispatcher-routed), `c707648` `GET /usage/summary`, `9d00c8c` 07:00 morning brief
+(gathered from close/readiness/pending/shipments/low-stock, per-recipient delivery, 20 h cooldown), `cdae634`
+gap closure, `8a2ae4b` spec-type fix.
+W4: `14fc543` `/operations/daily-close`, `0e98987` `/intelligence/food-cost`, `82128a4` `/admin/usage` +
+`usage` module key, `65d66f0` the human edges (`EvidenceAssistPanel` — structurally unable to touch the human
+controls — `MorningBriefCard`, staff contactability incl. `PATCH /me/notification-prefs` with the
+phone/opt-in invariant), `202320a` the nav gap T12 flagged (`daily_close` module key + Commerce spine entry).
+W5: `dce8180` migration `20260828000000_p6_run_it_layer` (3 enum adds, the `is_email_sent` **DROP** — first
+DROP since the P2 baseline — 2 tables, 2 hand-written CHECKs: `DailyClose_signed_has_signer`,
+`EvidenceReviewSuggestion_verdict_check`), the `FRONTEND_LEAD` → `MANAGE_OPS` grant (the named daily-close
+signer was 403-blocked; found by the smoke, not by review), and seed spec coverage.
+
+**Task 13 closed four debts, three of them phases old**: `refund.failed` is handled (state re-derived by
+**summing** surviving refunds, not reversing the failed one); `PATCH /tasks/:id` re-runs the validation
+cascade **on every status change**, crossing the `TasksModule ↔ EvidenceModule` edge P3 avoided **via a
+`TASK_VALIDATION_PORT`** that inverts the dependency (a module spec asserts the graph stays acyclic); all
+nine catalog writes audit; the feedback bridge dispatch is keyed per order.
+
+**Gates at `dce8180`:** backend **125 suites / 2023 tests** (1997 passed, 26 todo), 0 failures · **full**
+`tsc --noEmit` clean (specs included — that is what `8a2ae4b` fixed; the build tsconfig excludes them) ·
+0 lint errors · build green. Frontend `tsc` clean · `eslint .` 0 errors / **56 warnings** (ceiling 60) ·
+build green, **85 routes**. `prisma migrate deploy` applied · drift gate `No difference detected.` ·
+`seed:reference` green (8 roles, 49 modules, 14 settings).
+
+**Runtime smoke (live stack, T16):** recompute 2026-08-27 → metrics v1, IST window, reconciliation 13
+checked / 0 drifted · sign as `BI_LEAD` → **403** at the `MANAGE_OPS` gate · sign as `FRONTEND_LEAD` →
+**201 signed** + `daily_close.signed` `AuditEvent` · re-sign → **409** · morning brief generate →
+`provider: heuristic`, `delivered_to: 5`, headline "2026-08-27: 0 orders, 2 approvals waiting" · regenerate →
+`delivered_to: 0` (cooldown) · evidence assist on pending evidence → verdict `unsure` / confidence 0.35 /
+heuristic, **the evidence stays `pending`** · food cost → `currency_unit: paise`, theoretical ₹16,570.00 over
+3 products, unpriced: Basmati Rice · usage summary → 3 roles incl. the synthetic `CUSTOMER`, dense 31-day
+series · notification prefs → opt-in **forced off** when the phone is cleared · boot → **12 cron jobs**
+registered including all five new ones.
+
+**New debts recorded in P6** (none blocking): `GET /evidence?approval_status=` filter is a no-op; there is no
+`GET /me/notification-prefs` (PATCH only); the phone pattern is 10–13 digits with **no `+`** (rejects E.164);
+`CreateUserDialog` lacks the contact fields (`ContactNotificationsFields` is a pending drop-in);
+`lib/types/settings.ts` should absorb the `notifications` block (typed locally in
+`components/ops/admin/settings/notifications-setting.ts`); no personal notification-prefs UI consumes the
+PATCH; there is no `/admin/audit` browser, so the daily-close drift drill-down points at
+`/operations/inventory`; the retired `feedback_received_v1` bridge key means old `BridgeDispatch` rows no
+longer dedupe a replay (harmless pre-launch); `mockAiResolver()` lacks `settings()` (specs layer it locally);
+the Anthropic refusal fallback is local-only per plan decision 4.
+
+### Prior position (Phase 34 record)
 
 **Phase 34 (P5b) is complete.** All 20 tasks of
 `docs/superpowers/plans/2026-08-24-p5b-storefront-staff-commerce.md` are merged. Tasks 1–12 and 14–19 landed
@@ -58,14 +120,11 @@ block dropped, error block widened to the whole customer surface, CI ceiling 80�
 Wave 1): 111 suites / 1749 tests (1722 passed, 27 todo) · `tsc` clean · 0 lint errors · build green. P5b adds
 no migration, so the drift gate stands where P5a left it.
 
-**Phase 35 (P6 Run-It Layer) is in progress.** Wave 1 (Tasks 1–3) merged at `b7da851` (P6 schema —
-`DailyClose`, `EvidenceReviewSuggestion`, `User.phone`/`whatsapp_opt_in`, `NotificationType` members, plus the
-`notifications`/`ai`/`daily_close` setting blocks), `6885699` (unified `ADVISORY_LOCK` registry + unlock check,
-stock reconciliation cron, R2 orphan sweep + `docs/R2-LIFECYCLE.md`) and `8e29ac8` (`AiProviderPort` —
-heuristic-first resolver, optional-key `AnthropicProvider`, env contract), with a green combined backend gate.
-Wave 2 (Tasks 4–7) is in flight.
+Phase 35 Wave 1 (`b7da851`, `6885699`, `8e29ac8`) merged into this branch *before* P5b's final two tasks,
+which is why the backend counts above are a merged-tree figure and not P5b's delta.
 
-**Recorded debts carried out of Phase 34** (none blocking): catalog availability `capacity` branch ignores live
+**Recorded debts carried out of Phase 34** (none blocking; `Notification.is_email_sent` was **discharged by
+P6 Task 4 and dropped in the P6 migration**, the rest are still open): catalog availability `capacity` branch ignores live
 holds (experiences pages read `/events/:id` instead — backend fix wanted); no `sort` param on
 `GET /catalog/products` (CatalogSort caps at 200); `PUBLIC_INCLUDE` variants lack `stock_on_hand`;
 `getOrderById` items lack the `event` relation (booking date on track page); `AccountLink` still does its own
@@ -75,8 +134,9 @@ no staff receipt endpoint; no `PATCH /catalog/media/:id` (reorder = create-then-
 reads `NEXT_PUBLIC_SITE_URL`** (two sources of truth for one origin); **unknown routes 307-bounce to `/team`**
 via the `proxy.ts` fallthrough (no real 404); **three soft-404s** (`/p|/shop|/experiences` with an unknown slug
 return 200 bodies — all `noindex`ed, but the status-code fix needs proxy slug resolution); **sitemap cursor
-pagination unexercised** by one-page seed data; **`Notification.is_email_sent` drop deferred to P6 Task 4**
-(a schema comment and an `it.todo` mark it).
+pagination unexercised** by one-page seed data; ~~**`Notification.is_email_sent` drop deferred to P6 Task 4**~~
+— **done 2026-08-28**: the column, its writes, its reads and the frontend field are gone, and the migration
+carries the `DROP COLUMN`.
 
 ### Prior position (Phase 32/33 record)
 
@@ -372,6 +432,8 @@ Recent decisions affecting current work:
 - 2026-08-22 audit: Phases 25 and 26 confirmed never built (no code, no plans). v1.1 closed as-is; their intent moves to v2.0 Phases 33/34.
 - v2.0 opened 2026-08-22 from SPEC.md: Phase 29 Stop the Bleeding (P1), 30 Platform Foundation (P2), 31 Mission Bridge (P3), 32 Role-Aware IA + Identity (P4), 33 Marketplace Backend (P5a), 34 Marketplace Storefront + Staff Commerce (P5b), 35 Run-It Layer (P6). 89 requirements scoped.
 - 2026-08-25: Phase 34 (P5b) complete at `6b82f7f` — 20/20 tasks. Phase 26's intent (a real staff order detail page) is now discharged by `/pos/orders/[id]`; Phase 25's remains superseded by Phase 33's `ShippingProvider`. The frontend gained its first automated test infrastructure (Playwright + the `frontend-e2e` CI job); there was none before.
+- 2026-08-28: Phase 35 (P6 Run-It Layer) complete at `dce8180` — 16/16 tasks. **v2.0 (Mission OS + Marketplace, Phases 29–35) is COMPLETE.** Seven phases from a schema reset to a running node. Two structural firsts landed here: the P6 migration carries the **first `DROP COLUMN` since the P2 baseline** (`Notification.is_email_sent`), and `TASK_VALIDATION_PORT` breaks the `TasksModule ↔ EvidenceModule` cycle P3 deliberately avoided, so the validation cascade finally runs on every task status change.
+- 2026-08-28: **Next milestone intentionally left open.** The talent module is parked for v2.1 — the SPEC spine carries a "no route" note against it and nothing in v2.0 was written assuming it. A v2.1 scope must not skip the two oldest deferrals: `QA-05`'s Postgres-backed integration harness (four phases deep, carried from Phase 31's `QA-02`) and `QA-03` (Playwright smoke 1 on the ops shell, never owned).
 
 ### Pending Todos
 
@@ -388,54 +450,60 @@ None yet.
 - The configured Upstash Redis host was unresolvable from the dev machine on 2026-08-24
   (`getaddrinfo ENOTFOUND present-pelican-68710.upstash.io`). Without Redis there is no OTP, cart, quote or
   pending-order key. The P5a smoke ran against a throwaway local `redis:8.6-alpine` container on port 6390.
-- **Operator actions outstanding (none doable from the repo, two of them gate CI):** set the three Razorpay
-  test-mode repository secrets `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` / `RAZORPAY_WEBHOOK_SECRET` — the
-  `frontend-e2e` job fails at "Razorpay not configured" without them; set `NEXT_PUBLIC_R2_PUBLIC_URL` in
-  production (`next.config.ts` otherwise degrades to the `cdn.konma.store` / `**.r2.dev` fallbacks); create
-  the R2 lifecycle rule `expire-exports-30d` per `docs/R2-LIFECYCLE.md`; submit the five Meta WhatsApp
-  templates for approval before P6's `RUN-01` can fire.
+- **Operator actions outstanding at v2.0 close (none doable from the repo, one of them gates CI and one gates
+  a shipped feature):** submit the five Meta WhatsApp templates (`staff_approval_waiting`,
+  `staff_task_blocked`, `staff_low_stock`, `staff_shipment_failed`, `staff_morning_brief`) **then flip
+  `settings.notifications.whatsapp_enabled`** — until both are done the dispatcher's WhatsApp channel is
+  correctly inert (master switch off, no template resolves) while in-app and email deliver regardless; create
+  the R2 lifecycle rule `expire-exports-30d` per `docs/R2-LIFECYCLE.md` (a console action — the weekly orphan
+  sweep is the code half and shipped in P6 Wave 1); set `NEXT_PUBLIC_R2_PUBLIC_URL` in production
+  (`next.config.ts` otherwise degrades to the `cdn.konma.store` / `**.r2.dev` fallbacks); add the three
+  Razorpay test-mode repository secrets `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` / `RAZORPAY_WEBHOOK_SECRET`
+  — the `frontend-e2e` job still fails at "Razorpay not configured" without them.
 
 ## Session Continuity
 
-Last session: 2026-08-25
-Stopped at: Phase 34 (P5b storefront + staff commerce) complete at `6b82f7f` — all 20 tasks merged, SEO
-surface landed (sitemap 21 URLs, robots, four 308 redirects, `proxy.ts` matcher fix), Playwright smoke 2
-passing 3/3 on the merged tree. Record:
-`.planning/phases/34-p5b-storefront-staff-commerce/34-01-SUMMARY.md`
+Last session: 2026-08-28
+Stopped at: **v2.0 complete.** Phase 35 (P6 Run-It Layer) complete at `dce8180` — all 16 tasks merged across
+five waves, migration `20260828000000_p6_run_it_layer` applied, drift gate `No difference detected.`, and an
+eleven-step live-stack smoke recorded (403/201/409 on the daily-close sign, `provider: heuristic` on the
+morning brief with no API key, evidence left `pending` by the assist). Record:
+`.planning/phases/35-p6-run-it-layer/35-01-SUMMARY.md`
 Resume file: None
-Next action: finish Phase 35 (P6) Wave 2 (Tasks 4–7), then Wave 3, per
-`docs/superpowers/plans/2026-08-24-p6-run-it-layer.md`.
+Next action: **none queued — the next milestone is intentionally open.** The talent module is parked for
+v2.1 (SPEC spine "no route" note). Before scoping v2.1, read the deferrals below: two of them are four
+phases old.
 
-Carry into Phase 35:
-- **A fresh operator walk-through of the seven staff commerce screens** on the merged tree was NOT done.
-  The storefront money path is proven by the passing Playwright smoke; the staff path (pack → AWB → pickup →
-  label → courier webhook → delivered → review moderation → partial/full refund with loyalty clawback) was
-  runtime-proved at the API layer by P5a's 51-request smoke and re-checked per screen by each Wave-3 task
-  agent at merge time. Recorded as outstanding, not claimed.
+Deferrals that survive v2.0:
 - **`QA-05` second half — the Postgres-backed integration harness** (`test/jest-integration.json`) is still
-  unbuilt, now three phases deep (carried from `QA-02` → Phase 33 → Phase 34). The Playwright smoke covers
-  the storefront path through HTTP, which is not transaction-level coverage.
-- **`refund.failed` webhook reconciliation** — deliberately out of P5b scope (plan decision 11), still
-  unhandled.
+  unbuilt, now **four phases deep** (carried `QA-02` → 33 → 34 → 35). Unit coverage plus the Playwright
+  storefront smoke plus the recorded API walk-throughs are what stand in for it; none is transaction-level.
+- **`QA-03` (Playwright smoke test 1 — the ops shell)** — still not automated and still unowned. Phase 34
+  built the harness and smoke **2**.
+- **A fresh operator walk-through of the seven staff commerce screens** on a merged tree was NOT done. The
+  storefront money path is proven by the passing Playwright smoke; the staff path (pack → AWB → pickup →
+  label → courier webhook → delivered → review moderation → partial/full refund with loyalty clawback) was
+  runtime-proved at the API layer by P5a's 51-request smoke and re-checked per screen by each P5b Wave-3 task
+  agent at merge time. P6's smoke exercised the *new* operational surfaces, not P5b's commerce ones.
 - **The 15-minute hold vs the 30-minute pending order** — a payment captured after its booking hold was
   swept still throws inside `applyCommercialEffects` and leaves a captured payment with no order.
-- **`Notification.is_email_sent` drop** — deferred to P6 Task 4; a schema comment and an `it.todo` mark it.
 - **Soft-404 status codes** (`/p|/shop|/experiences` unknown slugs return `200` bodies, all `noindex`ed) and
   the **`metadataBase` vs `NEXT_PUBLIC_SITE_URL` split** in `app/layout.tsx` / `lib/seo/metadata.ts`.
 - Shiprocket sandbox was never needed (`SystemSetting['shipping'].provider` seeds `manual`); the eight
   adapter request/response shapes remain the only surface untested against reality.
-- `Order.zone_id` → `fulfilment_zone_id` rename and multi-shipment orders — unchanged deferrals.
+- `/admin/approval-policies`; `Order.zone_id` → `fulfilment_zone_id` rename; multi-shipment orders.
+- **P3 decision 4 still has no backfill**: `requires_approval: true` with zero `Approval` rows blocks
+  validation, so on a populated database affected tasks stop being `valid` on their next cascade — and P6
+  Task 13 made that cascade run on **every** task status change, so the effect now arrives sooner than it
+  would have.
+- ~~`refund.failed` webhook reconciliation~~ — **closed by P6 Task 13** (`cdae634`); state is re-derived by
+  summing surviving refunds, not by reversing the failed one.
+- ~~`PATCH /tasks/:id {"status":"done"}` does not re-run the validation cascade~~ — **closed by P6 Task 13**
+  via `TASK_VALIDATION_PORT`, which inverts the `TasksModule ↔ EvidenceModule` dependency P3 avoided; a module
+  spec asserts the graph stays acyclic.
+- ~~`Notification.is_email_sent` removal~~ — **closed by P6 Task 4 + the P6 migration's `DROP COLUMN`.**
 
 Long-lived carry-forwards (recorded in the Phase 32 record, `e7ab01e`, and still open):
-- `QA-03` (Playwright smoke test 1 — the ops shell) — still not automated. Phase 34 built the Playwright
-  harness and smoke **2**; smoke 1 was never in P5b's scope and has no owner yet.
-- `/admin/approval-policies`, the `Notification.is_email_sent` removal.
-- **Decision 4 is a live behaviour change**: `requires_approval: true` with zero `Approval` rows now blocks
-  validation. On a populated database, affected tasks stop being `valid` on their next cascade. No backfill was
-  written.
-- `PATCH /tasks/:id {"status":"done"}` does not re-run the validation cascade (pre-existing v1 behaviour;
-  `evidence.service.ts:334` is the only validator and `TasksService` never calls it). Fixing it means crossing
-  the `TasksModule ↔ EvidenceModule` edge P3 deliberately avoided.
 - P2 deferred `Shipment*`/`Refund`/`Coupon*`/`Loyalty*`/`Review`/`UsageEvent` **models** to Phase 33 (P5);
   their enums and the `Order` money columns already exist. ROADMAP Phase 30 criterion 4 corrected accordingly.
 - Six frontend follow-ups are listed at the end of the Phase 30 summary (variant selection UI, `purchase_orders`
