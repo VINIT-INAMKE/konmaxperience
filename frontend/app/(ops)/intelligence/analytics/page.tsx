@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -36,7 +37,7 @@ import type {
   ChannelRevenue,
   RecipeCostRow,
 } from '@/lib/types/analytics';
-import { AlertCircle, ShieldAlert } from 'lucide-react';
+import { AlertCircle, Scale, ShieldAlert } from 'lucide-react';
 import { ExportButton } from '@/components/ops/exports/ExportButton';
 
 type TimeRange = 'today' | '7d' | '30d' | 'custom';
@@ -154,6 +155,20 @@ export default function AnalyticsPage() {
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <h1 className="text-2xl font-bold">Analytics</h1>
           <div className="flex flex-wrap items-center gap-2">
+            {/*
+              RUN-03's entry point. `/intelligence/food-cost` deliberately has no
+              spine item (P6 decision 20) — it shares the `analytics` module key,
+              and two entries under one key are indistinguishable in the modules
+              editor — so this link is how it is reached.
+            */}
+            <Button
+              variant="outline"
+              size="sm"
+              render={<Link href="/intelligence/food-cost" />}
+            >
+              <Scale className="size-4" aria-hidden />
+              Food Cost
+            </Button>
             <ExportButton
               reportType="revenue_summary"
               reportName="Analytics"
