@@ -32,6 +32,11 @@ export const ROLE_SEEDS: RoleSeed[] = [
       Permission.APPROVE_EVIDENCE,
       Permission.VERIFY_TASK,
       Permission.CREATE_DECISION,
+      // The front-of-house lead is a named `daily_close.signer_role_codes`
+      // signatory and owns channels, but every daily-close route is
+      // `MANAGE_OPS`-gated — without this grant a named signer 403s at the
+      // controller before the signer check in the service ever runs (P6).
+      Permission.MANAGE_OPS,
     ],
     functionDomain: 'food',
     userName: 'Advitha2',
