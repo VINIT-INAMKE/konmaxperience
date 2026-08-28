@@ -22,6 +22,7 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
+    "test:integration": "jest --config ./test/jest-integration.json --runInBand",
     "seed:reference": "ts-node prisma/seed-reference.ts",
     "seed:demo": "ts-node prisma/seed-demo.ts",
     "backfill:approvals": "ts-node src/cli/backfill-approvals.ts",

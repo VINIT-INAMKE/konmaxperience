@@ -1,0 +1,18 @@
+{
+  "displayName": "integration",
+  "rootDir": "..",
+  "roots": ["<rootDir>/test"],
+  "moduleFileExtensions": ["js", "json", "ts"],
+  "testEnvironment": "node",
+  "testRegex": "\\.integration\\.spec\\.ts$",
+  "transform": {
+    "^.+\\.(t|j)s$": "ts-jest"
+  },
+  "setupFiles": ["<rootDir>/test/integration-env.ts"],
+  "globalSetup": "<rootDir>/test/integration-setup.ts",
+  "globalTeardown": "<rootDir>/test/integration-teardown.ts",
+  "testTimeout": 60000,
+  "maxWorkers": 1,
+  "forceExit": false,
+  "verbose": true
+}
