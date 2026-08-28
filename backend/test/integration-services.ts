@@ -11,7 +11,11 @@
  * URL.
  */
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../src/prisma/prisma.service';
+import { RazorpayService } from '../src/razorpay/razorpay.service';
+import { RefundsService } from '../src/refunds/refunds.service';
+import type { BackfillValidationPort } from '../src/approvals/backfill-validation.port';
 import { AuditService } from '../src/audit/audit.service';
 import { SettingsService } from '../src/settings/settings.service';
 import { CouponsService } from '../src/promotions/coupons.service';
@@ -40,12 +44,21 @@ export function buildMoneyPathServices(
   const settings = new SettingsService(prisma);
   const coupons = new CouponsService(prisma, audit, settings, eventEmitter);
   const loyalty = new LoyaltyService(prisma, settings, audit);
+  // RazorpayService reads its keys in onModuleInit, which `new` never calls —
+  // these specs stay on the happy confirm path and never reach the gateway.
+  const refunds = new RefundsService(
+    prisma,
+    new RazorpayService(new ConfigService()),
+    audit,
+    loyalty,
+  );
   const fulfilment = new FulfilmentService(
     prisma,
     audit,
     eventEmitter,
     coupons,
     loyalty,
+    refunds,
   );
   return { eventEmitter, audit, settings, coupons, loyalty, fulfilment };
 }
@@ -57,7 +70,14 @@ export function buildMissionBridgeService(
   const settings = new SettingsService(prisma);
   const node = new NodeService(prisma);
   const derivation = new ReadinessDerivationService(prisma, settings, node);
-  const approvalPolicy = new ApprovalPolicyService(prisma);
   const audit = new AuditService(prisma);
+  // The backfill port is only reached by `backfillMissing`, which no
+  // mission-bridge path calls; a throwing stand-in keeps that true by force.
+  const neverBackfill: BackfillValidationPort = {
+    validateTask: () => {
+      throw new Error('backfill port must not be reached from mission-bridge specs');
+    },
+  };
+  const approvalPolicy = new ApprovalPolicyService(prisma, audit, neverBackfill);
   return new MissionBridgeService(prisma, derivation, approvalPolicy, audit);
 }

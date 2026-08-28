@@ -223,7 +223,7 @@ export class TasksService {
     return new Map(groups.map((g) => [g.entity_id, g._count.id]));
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, requestingUser?: { id: string; roleCode: string }) {
     const task = await this.prisma.task.findUnique({
       where: { id },
       include: {
@@ -257,7 +257,20 @@ export class TasksService {
       throw new NotFoundException(`Task with ID ${id} not found`);
     }
 
-    return task;
+    // Same ownership rule the list projects — without it the detail page
+    // renders read-only for the task's own author (QA-03 finding).
+    let is_own = false;
+    if (requestingUser) {
+      const perms = await getPermissionsForRole(
+        requestingUser.roleCode,
+        this.prisma,
+      );
+      is_own =
+        perms.includes(Permission.VIEW_ALL) ||
+        task.owner_user_id === requestingUser.id;
+    }
+
+    return { ...task, is_own };
   }
 
   async create(dto: CreateTaskDto, userId: string) {

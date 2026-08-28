@@ -74,8 +74,11 @@ export class TasksController {
 
   @Get(':id')
   @RequiresPermission(Permission.VIEW_ROLE_SCOPED)
-  async findOne(@Param('id', ParseUUIDPipe) id: string) {
-    return this.tasksService.findOne(id);
+  async findOne(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Req() req: express.Request,
+  ) {
+    return this.tasksService.findOne(id, (req as any).user);
   }
 
   @Post()
