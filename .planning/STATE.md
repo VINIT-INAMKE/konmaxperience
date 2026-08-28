@@ -469,33 +469,50 @@ five waves, migration `20260828000000_p6_run_it_layer` applied, drift gate `No d
 eleven-step live-stack smoke recorded (403/201/409 on the daily-close sign, `provider: heuristic` on the
 morning brief with no API key, evidence left `pending` by the assist). Record:
 `.planning/phases/35-p6-run-it-layer/35-01-SUMMARY.md`
+Post-close debt wave (2026-08-28, same day): the four plan-promised deferrals were closed — QA-03 ops smoke
+(`a6b9617`), QA-05 integration harness (`cefb1b2`), the hold-vs-capture refuse-and-refund fix (`8f13497`),
+and the P3 approval backfill (`0b4b99b`) — plus the two defects QA-03 surfaced (`91839f8`). Full gates and
+both Playwright smokes re-run green on the merged tree. Everything still open below is either deliberately
+descoped or an operator action; no development is queued.
 Resume file: None
 Next action: **none queued — the next milestone is intentionally open.** The talent module is parked for
 v2.1 (SPEC spine "no route" note). Before scoping v2.1, read the deferrals below: two of them are four
 phases old.
 
 Deferrals that survive v2.0:
-- **`QA-05` second half — the Postgres-backed integration harness** (`test/jest-integration.json`) is still
-  unbuilt, now **four phases deep** (carried `QA-02` → 33 → 34 → 35). Unit coverage plus the Playwright
-  storefront smoke plus the recorded API walk-throughs are what stand in for it; none is transaction-level.
-- **`QA-03` (Playwright smoke test 1 — the ops shell)** — still not automated and still unowned. Phase 34
-  built the harness and smoke **2**.
+- ~~**`QA-05` second half — the Postgres-backed integration harness**~~ — **closed by the 2026-08-28 debt
+  wave** (`cefb1b2`): `test/jest-integration.json` runs 8 transaction-level specs against a guarded
+  `konma_test` database (Serializable confirm commit/rollback/replay/race, three DB CHECKs by name, the
+  `BridgeDispatch` exactly-once ledger under concurrency), with a `backend-integration` CI job.
+- ~~**`QA-03` (Playwright smoke test 1 — the ops shell)**~~ — **closed by the same wave** (`a6b9617`):
+  `e2e/smoke-1-mission.spec.ts` walks login → task → evidence → both approval gates → meter +20, plus the
+  stranger negative. It found two live defects, both fixed same-day in `91839f8`: `GET /tasks/:id` never
+  projected `is_own` (a task's own author saw a read-only page — only admins could drive it), and note-type
+  evidence could never save (`url` `@IsNotEmpty` rejected the form's empty string). CI hands the seeded staff
+  passwords to the fixture via `E2E_STAFF_PASSWORDS` (same commit).
 - **A fresh operator walk-through of the seven staff commerce screens** on a merged tree was NOT done. The
   storefront money path is proven by the passing Playwright smoke; the staff path (pack → AWB → pickup →
   label → courier webhook → delivered → review moderation → partial/full refund with loyalty clawback) was
   runtime-proved at the API layer by P5a's 51-request smoke and re-checked per screen by each P5b Wave-3 task
   agent at merge time. P6's smoke exercised the *new* operational surfaces, not P5b's commerce ones.
-- **The 15-minute hold vs the 30-minute pending order** — a payment captured after its booking hold was
-  swept still throws inside `applyCommercialEffects` and leaves a captured payment with no order.
+- ~~**The 15-minute hold vs the 30-minute pending order**~~ — **closed by the same wave** (`8f13497`): a
+  capture arriving after the sweep now re-acquires the seat atomically inside the confirm transaction
+  (hold-aware arithmetic, `order.booking_reacquired` audit); if any line cannot be re-seated the whole order
+  is refused — a `cancelled` order row is written to hang the `paid` Payment on, a full auto-refund issues as
+  the system actor (`refunded` end state), `order.refunded` fires on the customer channel, and the webhook
+  answers 2xx with replay-safety in both branches. A gateway-refused refund keeps the row and writes
+  `order.auto_refund_failed` for the order desk.
 - **Soft-404 status codes** (`/p|/shop|/experiences` unknown slugs return `200` bodies, all `noindex`ed) and
   the **`metadataBase` vs `NEXT_PUBLIC_SITE_URL` split** in `app/layout.tsx` / `lib/seo/metadata.ts`.
 - Shiprocket sandbox was never needed (`SystemSetting['shipping'].provider` seeds `manual`); the eight
   adapter request/response shapes remain the only surface untested against reality.
 - `/admin/approval-policies`; `Order.zone_id` → `fulfilment_zone_id` rename; multi-shipment orders.
-- **P3 decision 4 still has no backfill**: `requires_approval: true` with zero `Approval` rows blocks
-  validation, so on a populated database affected tasks stop being `valid` on their next cascade — and P6
-  Task 13 made that cascade run on **every** task status change, so the effect now arrives sooner than it
-  would have.
+- ~~**P3 decision 4 still has no backfill**~~ — **closed by the same wave** (`0b4b99b`):
+  `ApprovalPolicyService.backfillMissing` materialises the missing rows through the existing single writer
+  and re-runs the validation cascade, audited per task (`task.approvals_backfilled`), idempotent, silent by
+  construction. CLI: `npm run backfill:approvals` (`--dry-run` supported; exit 2 if anything was skipped).
+  Proven live against the local DB with a torn-down fixture. Run it once on any pre-P3 production data
+  **before** first real traffic.
 - ~~`refund.failed` webhook reconciliation~~ — **closed by P6 Task 13** (`cdae634`); state is re-derived by
   summing surviving refunds, not by reversing the failed one.
 - ~~`PATCH /tasks/:id {"status":"done"}` does not re-run the validation cascade~~ — **closed by P6 Task 13**
