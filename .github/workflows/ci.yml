@@ -34,6 +34,58 @@ jobs:
       - name: Services log through the Nest Logger (QA-04)
         run: '! grep -rn "console\." src --include=*.service.ts'
 
+  backend-integration:
+    name: Backend (integration — real Postgres)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    # QA-05, promised by the P1c plan and carried through Phases 33 → 34 → 35.
+    # The unit job above mocks `PrismaService`, so it cannot prove a
+    # Serializable transaction commits together, that a hand-written `CHECK`
+    # rejects a row, or that a unique index makes a replayed event a no-op.
+    # This job runs `test/jest-integration.json` against a real database.
+    #
+    # The database is a dedicated `konma_test`, never the demo database — the
+    # harness truncates every table between suites and refuses outright to open
+    # a database whose name does not say "test" (see `test/integration-setup.ts`).
+    # No Redis, no Razorpay, no Shiprocket: nothing in these specs boots the
+    # Nest app or leaves the process.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: konma
+          POSTGRES_PASSWORD: konma
+          POSTGRES_DB: konma_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U konma"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      NODE_ENV: test
+      TZ: Asia/Kolkata
+      # The one variable the harness reads; it defaults to the local Docker
+      # Postgres on 5433, which does not exist on a runner.
+      INTEGRATION_DATABASE_URL: postgresql://konma:konma@localhost:5432/konma_test?schema=public
+      DATABASE_URL: postgresql://konma:konma@localhost:5432/konma_test?schema=public
+      DIRECT_DATABASE_URL: postgresql://konma:konma@localhost:5432/konma_test?schema=public
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - run: npx prisma generate
+      # `globalSetup` deploys again (a no-op second time) — running it here
+      # first attributes a schema failure to the migration, not to jest.
+      - run: npx prisma migrate deploy
+      - run: npm run test:integration
+
   frontend:
     name: Frontend (lint, typecheck, build)
     runs-on: ubuntu-latest
