@@ -8,6 +8,7 @@ import {
   Plus,
   Loader2,
   AlertCircle,
+  MessageCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -45,20 +46,26 @@ import { apiClient } from '@/lib/api-client';
 import { STATUS_BADGE } from '@/lib/status-styles';
 import { ROLE_DISPLAY_NAMES } from '@/lib/types/roles';
 import { CreateUserDialog } from '@/components/ops/CreateUserDialog';
+import { StaffContactDialog } from '@/components/ops/admin/users/StaffContactDialog';
+import type { StaffContact } from '@/components/ops/admin/users/staff-contact';
 import type { UserProfile } from '@/lib/types/users';
+
+/** RUN-01 — `GET /users` now selects `phone` and `whatsapp_opt_in` too. */
+type StaffRow = UserProfile & StaffContact;
 
 export default function AdminUsersPage() {
   const queryClient = useQueryClient();
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  const [deactivateUser, setDeactivateUser] = useState<UserProfile | null>(
+  const [deactivateUser, setDeactivateUser] = useState<StaffRow | null>(
     null,
   );
+  const [contactUser, setContactUser] = useState<StaffRow | null>(null);
   const [isDeactivating, setIsDeactivating] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
   const { data: users, isLoading, isError, refetch } = useQuery({
     queryKey: ['users'],
-    queryFn: () => apiClient.get<UserProfile[]>('/users'),
+    queryFn: () => apiClient.get<StaffRow[]>('/users'),
   });
 
   function showToast(message: string) {
@@ -66,7 +73,7 @@ export default function AdminUsersPage() {
     setTimeout(() => setToast(null), 3000);
   }
 
-  async function handleSendResetEmail(user: UserProfile) {
+  async function handleSendResetEmail(user: StaffRow) {
     try {
       await apiClient.post(`/users/${user.id}/reset-password`);
       showToast(`Password reset email sent to ${user.name}`);
@@ -170,6 +177,7 @@ export default function AdminUsersPage() {
             <TableRow>
               <TableHead>Name</TableHead>
               <TableHead>Email</TableHead>
+              <TableHead>Contact</TableHead>
               <TableHead>Role</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Last active</TableHead>
@@ -191,6 +199,25 @@ export default function AdminUsersPage() {
                 </TableCell>
                 <TableCell className="text-muted-foreground">
                   {user.email}
+                </TableCell>
+                {/* RUN-01 — whether this person can be nudged at all. A number
+                    with the opt-in off is shown plainly rather than hidden:
+                    "we have it, they said no" is a different fact from "we do
+                    not have it". */}
+                <TableCell className="text-muted-foreground">
+                  {user.phone ? (
+                    <span className="flex items-center gap-1.5 tabular-nums">
+                      {user.phone}
+                      {user.whatsapp_opt_in && (
+                        <MessageCircle
+                          className="size-3.5 text-[var(--status-good)]"
+                          aria-label="WhatsApp nudges on"
+                        />
+                      )}
+                    </span>
+                  ) : (
+                    <span aria-label="No phone number">—</span>
+                  )}
                 </TableCell>
                 <TableCell>
                   <Badge variant="secondary">
@@ -221,6 +248,9 @@ export default function AdminUsersPage() {
                       <MoreHorizontal className="size-4" />
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => setContactUser(user)}>
+                        Contact &amp; notifications
+                      </DropdownMenuItem>
                       <DropdownMenuItem
                         onClick={() => handleSendResetEmail(user)}
                       >
@@ -246,6 +276,14 @@ export default function AdminUsersPage() {
       <CreateUserDialog
         open={createDialogOpen}
         onOpenChange={setCreateDialogOpen}
+      />
+
+      <StaffContactDialog
+        open={!!contactUser}
+        onOpenChange={(open) => {
+          if (!open) setContactUser(null);
+        }}
+        user={contactUser}
       />
 
       {/* Deactivate confirmation dialog */}

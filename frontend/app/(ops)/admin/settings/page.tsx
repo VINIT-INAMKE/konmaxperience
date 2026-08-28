@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/dialog';
 import { apiClient } from '@/lib/api-client';
 import { Label } from '@/components/ui/label';
+import { NotificationSettingsForm } from '@/components/ops/admin/settings/NotificationSettingsForm';
 import type { SystemSetting, UpdateSettingPayload } from '@/lib/types/settings';
 import { readSetting } from '@/lib/types/settings';
 
@@ -95,6 +96,9 @@ export default function AdminSettingsPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* RUN-01 — the `notifications` Json block, as a typed sub-form. */}
+      <NotificationSettingsForm />
 
       {/* Disable confirmation dialog */}
       <Dialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
