@@ -24,6 +24,7 @@
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "seed:reference": "ts-node prisma/seed-reference.ts",
     "seed:demo": "ts-node prisma/seed-demo.ts",
+    "backfill:approvals": "ts-node src/cli/backfill-approvals.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {

@@ -17,10 +17,12 @@ import { RoleCode } from '../types/roles';
 import type { Tx } from '../common/types/transaction';
 import {
   mockPrisma,
+  provideAuditService,
   PRISMA_METHODS,
   type MockModel,
   type MockPrisma,
 } from '../test-utils/mock-providers';
+import { BACKFILL_VALIDATION_PORT } from './backfill-validation.port';
 
 /**
  * `approvalPolicy` is not in `PRISMA_MODELS` at this commit (Task 1 of P3 adds it),
@@ -94,6 +96,11 @@ describe('ApprovalPolicyService', () => {
       providers: [
         ApprovalPolicyService,
         { provide: PrismaService, useValue: prisma },
+        provideAuditService(),
+        {
+          provide: BACKFILL_VALIDATION_PORT,
+          useValue: { validateTask: jest.fn() },
+        },
       ],
     }).compile();
     service = module.get<ApprovalPolicyService>(ApprovalPolicyService);
