@@ -17,14 +17,15 @@
  *    `/reviews` and `/promotions`. `talent` lands in v2.1 and is still absent,
  *    so granting that key can never produce a dead link.
  *
- * Module-key → group mapping (48 seeded keys):
+ * Module-key → group mapping (49 seeded keys):
  * - primary  : mission_control, my_tasks, my_quests, evidence, approvals,
  *              decisions, readiness, team
  * - header   : guide, chat            (rendered by `AppHeader`, never the spine)
  * - kitchen  : kds, pick_pack, prep_batches, recipes, ingredients,
  *              supply_usage, waste
  * - procurement: inventory, procurement, purchase_orders, vendors
- * - commerce : pos, orders, delivery, shipments, customers, reviews
+ * - commerce : pos, orders, delivery, shipments, customers, reviews,
+ *              daily_close
  * - catalog  : catalog, experiences, brands, assets, promotions
  * - intelligence: analytics, kpis, feedback, exports
  * - admin    : imports, users, permissions, delegations, notices, settings,
@@ -59,6 +60,7 @@ import {
   ShoppingCart,
   TrendingUp,
   Truck,
+  CalendarCheck,
   CalendarDays,
   Star,
   Tag,
@@ -145,6 +147,7 @@ export const SPINE_GROUPS: SpineGroupDef[] = [
       { moduleKey: 'shipments', label: 'Shipments', href: '/shipments', icon: PackageCheck },
       { moduleKey: 'customers', label: 'Customers', href: '/customers', icon: Users },
       { moduleKey: 'reviews', label: 'Reviews', href: '/reviews', icon: Star },
+      { moduleKey: 'daily_close', label: 'Daily Close', href: '/operations/daily-close', icon: CalendarCheck },
     ],
   },
   {

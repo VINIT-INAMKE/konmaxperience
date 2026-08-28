@@ -71,13 +71,19 @@ export const MODULE_ACCESS: ModuleAccessSeed[] = [
   })),
 
   // Commerce
-  ...['pos', 'orders', 'delivery', 'shipments', 'customers', 'reviews'].map(
-    (k, i) => ({
-      module_key: k,
-      role_codes: [R.FRONTEND_LEAD, R.FOUNDER_ADMIN, R.TECH_LEAD] as string[],
-      sort_order: 400 + i,
-    }),
-  ),
+  ...[
+    'pos',
+    'orders',
+    'delivery',
+    'shipments',
+    'customers',
+    'reviews',
+    'daily_close',
+  ].map((k, i) => ({
+    module_key: k,
+    role_codes: [R.FRONTEND_LEAD, R.FOUNDER_ADMIN, R.TECH_LEAD] as string[],
+    sort_order: 400 + i,
+  })),
 
   // Catalog & Experiences
   ...['catalog', 'promotions', 'experiences', 'brands', 'assets'].map(
