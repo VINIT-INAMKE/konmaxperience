@@ -17,7 +17,7 @@
  *    `/reviews` and `/promotions`. `talent` lands in v2.1 and is still absent,
  *    so granting that key can never produce a dead link.
  *
- * Module-key → group mapping (47 seeded keys):
+ * Module-key → group mapping (48 seeded keys):
  * - primary  : mission_control, my_tasks, my_quests, evidence, approvals,
  *              decisions, readiness, team
  * - header   : guide, chat            (rendered by `AppHeader`, never the spine)
@@ -28,7 +28,7 @@
  * - catalog  : catalog, experiences, brands, assets, promotions
  * - intelligence: analytics, kpis, feedback, exports
  * - admin    : imports, users, permissions, delegations, notices, settings,
- *              modules, guide_editor, zones, channels
+ *              modules, usage, guide_editor, zones, channels
  * - no route : talent (v2.1)
  *
  * `/leaderboard`, `/boards/wins`, `/team-contribution` and `/activity` are
@@ -78,6 +78,7 @@ import {
   Radio,
   UtensilsCrossed,
   Boxes,
+  Activity,
 } from 'lucide-react';
 import type { ModuleKey } from '@/lib/types/modules';
 
@@ -185,6 +186,7 @@ export const SPINE_GROUPS: SpineGroupDef[] = [
       { moduleKey: 'settings', label: 'Settings', href: '/admin/settings', icon: Settings },
       { moduleKey: 'settings', label: 'Node', href: '/admin/node', icon: MapPin },
       { moduleKey: 'modules', label: 'Modules', href: '/admin/modules', icon: SlidersHorizontal },
+      { moduleKey: 'usage', label: 'Usage', href: '/admin/usage', icon: Activity },
       { moduleKey: 'guide_editor', label: 'Guide Editor', href: '/admin/guide', icon: BookOpen },
       { moduleKey: 'zones', label: 'Zones', href: '/operations/zones', icon: MapPin },
       { moduleKey: 'channels', label: 'Channels', href: '/operations/channels', icon: Radio },
