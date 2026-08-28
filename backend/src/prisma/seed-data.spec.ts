@@ -133,6 +133,8 @@ describe('seed-data: module access (SPEC §6.3)', () => {
       'guide_editor',
       'zones',
       'channels',
+      // RUN-04's `/admin/usage` dashboard (P6 decision 19).
+      'usage',
     ]) {
       const row = MODULE_ACCESS.find((m) => m.module_key === key);
       expect(row).toBeDefined();
@@ -140,6 +142,36 @@ describe('seed-data: module access (SPEC §6.3)', () => {
         [RoleCode.FOUNDER_ADMIN, RoleCode.TECH_LEAD].sort(),
       );
     }
+  });
+
+  it('seeds the RUN-04 usage key in the admin block at sort_order 710', () => {
+    // Decision 19: its own key rather than a corner of `settings`, so it can be
+    // revoked without revoking system settings.
+    const usage = MODULE_ACCESS.find((m) => m.module_key === 'usage');
+    expect(usage).toBeDefined();
+    expect(usage!.sort_order).toBe(710);
+    expect(resolveModuleRoleCodes(usage!, approverRoleCodes).sort()).toEqual(
+      [RoleCode.FOUNDER_ADMIN, RoleCode.TECH_LEAD].sort(),
+    );
+  });
+
+  it('seeds the RUN-02 daily_close key in the Commerce block at sort_order 406', () => {
+    // Decision 21: the close sits under the same audience as `orders` —
+    // FRONTEND_LEAD, FOUNDER_ADMIN, TECH_LEAD are RUN-02's signatories.
+    const close = MODULE_ACCESS.find((m) => m.module_key === 'daily_close');
+    expect(close).toBeDefined();
+    expect(close!.sort_order).toBe(406);
+    expect(resolveModuleRoleCodes(close!, approverRoleCodes).sort()).toEqual(
+      [
+        RoleCode.FRONTEND_LEAD,
+        RoleCode.FOUNDER_ADMIN,
+        RoleCode.TECH_LEAD,
+      ].sort(),
+    );
+    const orders = MODULE_ACCESS.find((m) => m.module_key === 'orders');
+    expect(resolveModuleRoleCodes(close!, approverRoleCodes).sort()).toEqual(
+      resolveModuleRoleCodes(orders!, approverRoleCodes).sort(),
+    );
   });
 });
 
@@ -298,6 +330,23 @@ describe('seed-data: system settings', () => {
       'delivery_pincodes',
     ] as const) {
       expect(SEED_SETTING_KEYS).toContain(key);
+    }
+  });
+
+  it('seeds the three P6 run-it blocks so seed-reference creates them', () => {
+    for (const key of ['notifications', 'ai', 'daily_close'] as const) {
+      expect(SEED_SETTING_KEYS).toContain(key);
+      expect(SEED_SETTING_DEFAULTS[key]).toEqual(SETTING_DEFAULTS[key]);
+      expect(typeof SEED_SETTING_DEFAULTS[key]).toBe('object');
+    }
+    // The AI port ships off by default — a missing key is a supported state.
+    expect(SEED_SETTING_DEFAULTS.ai.provider).toBe('heuristic');
+    // Every signer role named here must hold MANAGE_OPS, or the controller
+    // 403s a named signatory before the service's signer check runs.
+    for (const code of SEED_SETTING_DEFAULTS.daily_close.signer_role_codes) {
+      const role = ROLE_SEEDS.find((r) => (r.code as string) === code);
+      expect(role).toBeDefined();
+      expect(role!.permissions).toContain(Permission.MANAGE_OPS);
     }
   });
 });
