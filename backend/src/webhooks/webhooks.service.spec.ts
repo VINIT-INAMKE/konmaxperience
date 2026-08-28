@@ -5,7 +5,11 @@ import { RazorpayService } from '../razorpay/razorpay.service';
 import { RedisService } from '../customer-auth/redis.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { PusherService } from '../chat/pusher.service';
-import { FulfilmentService } from '../fulfilment/fulfilment.service';
+import {
+  FulfilmentService,
+  OrderRefusedAndRefundedException,
+  type OrderRefusedDetail,
+} from '../fulfilment/fulfilment.service';
 import {
   RefundsService,
   type GatewayRefundEntity,
@@ -543,5 +547,109 @@ describe('WebhooksService', () => {
       1800,
       'NX',
     );
+  });
+
+  // ---------------------------------------------------------------
+  // P5a debt — a capture whose booking hold was already swept
+  // ---------------------------------------------------------------
+  describe('marketplace: the payment could not become an order', () => {
+    const REFUSED_PENDING = {
+      customerId: 'cust-1',
+      cart: { items: [] },
+      subtotal: 300,
+      modifierAmount: 0,
+      total: 300,
+      channel: 'takeaway',
+      deliveryAddressId: null,
+    };
+
+    /** Delivers a capture that `confirmPaidOrder` resolves with a refund. */
+    const deliverRefused = async (
+      detail: Partial<OrderRefusedDetail> = {},
+      eventId = 'evt_refused',
+    ) => {
+      const raw = JSON.stringify(REFUSED_PENDING);
+      (razorpayService.verifyWebhookSignature as jest.Mock).mockReturnValue(
+        true,
+      );
+      mockRedisClient.set.mockResolvedValue('OK');
+      mockRedisClient.getdel.mockResolvedValue(raw);
+      mockFulfilment.confirmPaidOrder.mockRejectedValue(
+        new OrderRefusedAndRefundedException({
+          order_id: 'ord-refused',
+          refund_id: 'rf-1',
+          refunded: true,
+          lines: [],
+          ...detail,
+        }),
+      );
+      const result = await service.processWebhook(
+        Buffer.from(
+          JSON.stringify({
+            event: 'payment.captured',
+            payload: {
+              payment: {
+                entity: {
+                  id: 'pay_m4',
+                  order_id: 'order_m4',
+                  amount: 30000,
+                  notes: { type: 'marketplace', entity_id: 'cust-1' },
+                },
+              },
+            },
+          }),
+        ),
+        'sig',
+        eventId,
+      );
+      return { raw, result };
+    };
+
+    it('acknowledges with 2xx so Razorpay stops retrying', async () => {
+      const { result } = await deliverRefused();
+      expect(result).toEqual({ status: 'ok' });
+    });
+
+    it('does NOT restore the pending key — the payment is settled, not retryable', async () => {
+      const { raw } = await deliverRefused();
+      expect(mockRedisClient.set).not.toHaveBeenCalledWith(
+        'pending_order:order_m4',
+        raw,
+        'EX',
+        1800,
+        'NX',
+      );
+      expect(mockRedisClient.del).toHaveBeenCalledWith('cart:cust-1');
+    });
+
+    it('tells the customer on the channel that already carries order events', async () => {
+      await deliverRefused();
+      expect(mockPusher.trigger).toHaveBeenCalledWith(
+        'private-customer-cust-1',
+        'order.refunded',
+        expect.objectContaining({
+          orderId: 'ord-refused',
+          refunded: true,
+        }),
+      );
+      expect(mockPusher.trigger).not.toHaveBeenCalledWith(
+        'private-customer-cust-1',
+        'order.placed',
+        expect.anything(),
+      );
+    });
+
+    it('still acknowledges when the gateway refused the refund too', async () => {
+      const { result } = await deliverRefused(
+        { refund_id: null, refunded: false },
+        'evt_refused_2',
+      );
+      expect(result).toEqual({ status: 'ok' });
+      expect(mockPusher.trigger).toHaveBeenCalledWith(
+        'private-customer-cust-1',
+        'order.refunded',
+        expect.objectContaining({ refunded: false }),
+      );
+    });
   });
 });

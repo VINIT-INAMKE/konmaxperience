@@ -1,12 +1,15 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
+  Logger,
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import {
   ActorType,
   BookingStatus,
+  EventStatus,
   FulfilmentType,
   MovementType,
   OrderChannel,
@@ -41,6 +44,9 @@ import {
   type CouponRedeemedEvent,
 } from '../promotions/coupons.service';
 import { LoyaltyService } from '../loyalty/loyalty.service';
+import { OCCUPYING_BOOKINGS } from '../events/events.service';
+import { RefundsService } from '../refunds/refunds.service';
+import { SYSTEM_USER_ID } from '../common/constants/system-actor';
 
 export const MARKETPLACE_ZONE_SETTING_KEY = 'marketplace_fulfilment_zone_id';
 /** Zone.zone_type used by seed.ts for production kitchens ('Main Kitchen', 'Prep Station'). */
@@ -108,6 +114,108 @@ export type PendingOrderPayload = PendingOrderV2 | PendingOrderData;
  */
 export const BOOKING_HOLD_EXPIRED =
   'Booking hold expired — payment will be refunded';
+
+/** Reason stamped on the `Refund` this service raises without a human asking. */
+export const AUTO_REFUND_REASON =
+  'Auto-refund: seats unavailable after payment';
+
+/** One booking line whose swept hold was replaced by a fresh confirmed seat. */
+export interface ReacquiredSeat {
+  order_item_id: string;
+  product_id: string;
+  event_id: string;
+  guests: number;
+  booking_id: string;
+}
+
+/** One booking line that could not be seated, and why. */
+export interface UnseatableBookingLine {
+  order_item_id: string;
+  product_id: string;
+  event_id: string | null;
+  guests: number;
+  reason: string;
+}
+
+/**
+ * Raised **inside** the confirm transaction when at least one booking line has
+ * no seat left, so the whole transaction rolls back.
+ *
+ * Rolling back is the point (SPEC §5.2): a paid order is all-or-nothing, and a
+ * "confirmed" order missing the experience the customer paid for is worse than
+ * no order at all. `confirmPaidOrder` catches this outside the transaction and
+ * resolves the captured payment with a refund instead.
+ *
+ * Not an `HttpException`: it never reaches a client, it only crosses the
+ * transaction boundary.
+ */
+export class BookingSeatUnavailableError extends Error {
+  constructor(readonly lines: UnseatableBookingLine[]) {
+    super(BOOKING_HOLD_EXPIRED);
+    this.name = 'BookingSeatUnavailableError';
+  }
+}
+
+/** What {@link OrderRefusedAndRefundedException} carries to its two callers. */
+export interface OrderRefusedDetail {
+  /** The `cancelled` → `refunded` order row the refund is hung off. */
+  order_id: string;
+  /** `null` when the gateway itself refused the refund — see the audit trail. */
+  refund_id: string | null;
+  refunded: boolean;
+  lines: UnseatableBookingLine[];
+}
+
+/**
+ * A captured marketplace payment that could **not** become an order and has
+ * been sent back to the customer instead (SPEC §5.2: a captured payment always
+ * resolves to a confirmed order or a refund).
+ *
+ * `409`, not `400`: the customer did nothing wrong — the seat went while their
+ * money was in flight. Both entry points into `confirmPaidOrder` treat this as
+ * *resolved*, not as a failure to retry: the pending-order key must **not** be
+ * put back, or the next webhook delivery would try to charge the same seat
+ * again.
+ */
+export class OrderRefusedAndRefundedException extends ConflictException {
+  constructor(readonly detail: OrderRefusedDetail) {
+    super(BOOKING_HOLD_EXPIRED);
+  }
+}
+
+/**
+ * How one booking line will be seated, decided by a read-only pass **before**
+ * any booking row is written.
+ *
+ * Two passes rather than one because a partial order is forbidden: the plan has
+ * to know that *every* line can be seated before the first `EventBooking` is
+ * touched. It also keeps a unique-constraint violation out of the transaction —
+ * in Postgres a failed statement poisons the whole transaction, so "try the
+ * insert and catch P2002" is not available here.
+ */
+type SeatDecision =
+  | {
+      /** The 15-minute hold survived — promote it, exactly as P5a always did. */
+      kind: 'hold';
+      item: ConfirmedOrderItem;
+      booking_id: string;
+    }
+  | {
+      /** The hold was swept; capacity was taken again inside this transaction. */
+      kind: 'reacquire';
+      item: ConfirmedOrderItem;
+      /** A reusable `cancelled`/`no_show`/stale-`held` row, else `null`. */
+      booking_id: string | null;
+      event_id: string;
+      guests: number;
+      gross: Paise;
+    };
+
+/** `EventBooking` carries the contact denormalised; a re-seat needs it. */
+interface BookingContact {
+  name: string | null;
+  phone: string;
+}
 
 /** A v2 payload is self-describing; a v1 record has no `v` at all (decision 5). */
 export function isPendingOrderV2(
@@ -222,12 +330,16 @@ export function actorForOrder(order: {
 
 @Injectable()
 export class FulfilmentService {
+  private readonly logger = new Logger(FulfilmentService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditService: AuditService,
     private readonly eventEmitter: EventEmitter2,
     private readonly coupons: CouponsService,
     private readonly loyalty: LoyaltyService,
+    /** `RefundsModule` is `@Global()`, so this needs no module edit. */
+    private readonly refunds: RefundsService,
   ) {}
 
   /**
@@ -582,12 +694,36 @@ export class FulfilmentService {
             { actor_type: ActorType.customer, actor_id: customerId },
           );
 
-          const { couponEvent: event } = await this.applyCommercialEffects(
-            tx,
-            { id: created.id, node_id: created.node_id, items },
-            pending,
-            customerId,
-          );
+          const { couponEvent: event, reacquired } =
+            await this.applyCommercialEffects(
+              tx,
+              { id: created.id, node_id: created.node_id, items },
+              pending,
+              customerId,
+            );
+
+          // The seat was re-taken after the 15-minute hold had already been
+          // swept — a fact that is invisible on the order row and has to be
+          // recoverable when someone asks why an event went over its old count.
+          if (reacquired.length > 0) {
+            await this.auditService.record(tx, {
+              entity_type: 'order',
+              entity_id: created.id,
+              action: 'order.booking_reacquired',
+              node_id: created.node_id,
+              ...AuditService.customer(customerId),
+              after: {
+                razorpay_payment_id: input.razorpayPaymentId,
+                lines: reacquired.map((line) => ({
+                  order_item_id: line.order_item_id,
+                  product_id: line.product_id,
+                  event_id: line.event_id,
+                  guests: line.guests,
+                  booking_id: line.booking_id,
+                })),
+              },
+            });
+          }
 
           await this.auditService.record(tx, {
             entity_type: 'order',
@@ -632,11 +768,224 @@ export class FulfilmentService {
 
       return order;
     } catch (err) {
+      // SPEC §5.2 — a captured marketplace payment must resolve to a confirmed
+      // order or to a refund. The transaction has already rolled back, so
+      // nothing partial exists; the money is what is left to settle.
+      if (err instanceof BookingSeatUnavailableError) {
+        return await this.refuseAndRefund(input, pending, err.lines);
+      }
       if (hasPrismaCode(err, 'P2002')) {
         const existing = await this.findOrderByRazorpayPaymentId(
           input.razorpayPaymentId,
         );
         if (existing) return existing;
+      }
+      throw err;
+    }
+  }
+
+  /**
+   * The other half of the §5.2 invariant: the payment was captured, the order
+   * cannot exist, so the money goes back.
+   *
+   * Three writes, in this order and no other:
+   *
+   * 1. A **`cancelled`** `Order` with its `OrderItem`s `cancelled` and a `paid`
+   *    `Payment`. `OrderStatus` has no `failed` member and `Refund.order_id` /
+   *    `Payment.order_id` are both required, so a row is the only shape this
+   *    schema supports for a refund — and `cancelled` is the honest word for an
+   *    order that never reached the kitchen. `RefundsService.settle` moves it on
+   *    to `refunded` once the full amount is back, which is where it belongs.
+   *    **No** coupon redemption, **no** loyalty spend, **no** stock movement and
+   *    **no** booking: none of those happened.
+   * 2. The gateway refund, through the one `RefundsService` that owns `Refund`
+   *    rows and `Payment.refunded_amount`, as the system actor.
+   * 3. `OrderRefusedAndRefundedException`, which tells both callers this payment
+   *    is *resolved* — the pending-order key must not be restored.
+   *
+   * A gateway that refuses the refund is not allowed to undo step 1: the
+   * `Refund` row `RefundsService` already opened stays `failed`, an audit event
+   * puts it in front of the order desk, and the exception still carries
+   * `refunded: false`. Losing the order row here would leave a captured payment
+   * with nothing at all attached to it — the exact defect being fixed.
+   */
+  private async refuseAndRefund(
+    input: ConfirmPaidOrderInput,
+    pending: PendingOrderV2,
+    lines: UnseatableBookingLine[],
+  ): Promise<never> {
+    const reason = lines[0]?.reason ?? BOOKING_HOLD_EXPIRED;
+    const { order, alreadyRecorded, alreadyRefunded } =
+      await this.recordRefusedOrder(input, pending, lines, reason);
+
+    // A replayed capture lands on the order the first delivery already refused.
+    // Re-calling the gateway would only earn a "payment already refunded"
+    // rejection, so the replay stays the no-op it has to be — and the flag
+    // reports what the `Payment` row actually says, not what it should say.
+    if (alreadyRecorded) {
+      throw new OrderRefusedAndRefundedException({
+        order_id: order.id,
+        refund_id: null,
+        refunded: alreadyRefunded,
+        lines,
+      });
+    }
+
+    let refundId: string | null = null;
+    try {
+      const refund = await this.refunds.refund(
+        order.id,
+        { reason: `${AUTO_REFUND_REASON} — ${reason}`.slice(0, 200) },
+        SYSTEM_USER_ID,
+      );
+      refundId = refund.id;
+    } catch (err) {
+      this.logger.error(
+        `Auto-refund failed for payment ${input.razorpayPaymentId} on refused order ${order.id}: ${
+          err instanceof Error ? err.message : String(err)
+        }`,
+      );
+      await this.prisma.$transaction((tx) =>
+        this.auditService.record(tx, {
+          entity_type: 'order',
+          entity_id: order.id,
+          action: 'order.auto_refund_failed',
+          node_id: order.node_id,
+          actor_type: ActorType.system,
+          actor_id: null,
+          after: {
+            razorpay_payment_id: input.razorpayPaymentId,
+            amount: String(toDecimal(pending.total)),
+            error: err instanceof Error ? err.message : String(err),
+          },
+        }),
+      );
+    }
+
+    throw new OrderRefusedAndRefundedException({
+      order_id: order.id,
+      refund_id: refundId,
+      refunded: refundId !== null,
+      lines,
+    });
+  }
+
+  /**
+   * Writes the refused order, its cancelled items, its captured payment and the
+   * `order.payment_refused` audit row in one transaction.
+   *
+   * `alreadyRecorded` distinguishes the replay: `Payment.razorpay_payment_id` is
+   * unique, so a second capture for the same payment trips P2002 and resolves to
+   * the order the first pass wrote rather than creating a second one.
+   * `alreadyRefunded` then reports what that payment row actually says, so a
+   * replay after a *failed* auto-refund does not claim the money went back.
+   */
+  private async recordRefusedOrder(
+    input: ConfirmPaidOrderInput,
+    pending: PendingOrderV2,
+    lines: UnseatableBookingLine[],
+    reason: string,
+  ): Promise<{
+    order: { id: string; node_id: string };
+    alreadyRecorded: boolean;
+    alreadyRefunded: boolean;
+  }> {
+    try {
+      const order = await withSerializableRetry(() =>
+        this.prisma.$transaction(async (tx) => {
+          const created = await tx.order.create({
+            data: {
+              channel: pending.channel,
+              customer_id: input.customerId,
+              subtotal: toDecimal(pending.subtotal),
+              channel_modifier_amount: toDecimal(0),
+              // The money columns are copied so the order reconciles against the
+              // bank statement, but nothing commercial was *applied*: no coupon
+              // was redeemed and no points were spent, so neither is claimed.
+              discount_amount: toDecimal(
+                pending.discount_amount + pending.loyalty_redeem_amount,
+              ),
+              shipping_amount: toDecimal(pending.shipping_amount),
+              tax_amount: toDecimal(pending.tax_amount),
+              total: toDecimal(pending.total),
+              coupon_id: null,
+              loyalty_points_redeemed: 0,
+              loyalty_points_earned: 0,
+              idempotency_key: pending.idempotency_key || null,
+              address_snapshot: Prisma.JsonNull,
+              delivery_address: null,
+              status: OrderStatus.cancelled,
+              placed_via: input.placedVia,
+              created_by: null,
+              // Deliberately unzoned: nothing was routed to a kitchen, and a
+              // zone would put this order on a production queue.
+              zone_id: null,
+              items: {
+                create: pending.lines.map((line) => ({
+                  product_id: line.product_id,
+                  variant_id: line.variant_id,
+                  quantity: line.quantity,
+                  unit_price: toDecimal(line.unit_price),
+                  tax_rate: new Prisma.Decimal(line.tax_rate),
+                  fulfilment: line.fulfilment,
+                  status: OrderItemStatus.cancelled,
+                })),
+              },
+              payment: {
+                create: {
+                  method: PaymentMethod.razorpay,
+                  amount: toDecimal(pending.total),
+                  status: PaymentStatus.paid,
+                  razorpay_order_id: input.razorpayOrderId,
+                  razorpay_payment_id: input.razorpayPaymentId,
+                },
+              },
+            },
+            select: { id: true, node_id: true },
+          });
+
+          await this.auditService.record(tx, {
+            entity_type: 'order',
+            entity_id: created.id,
+            action: 'order.payment_refused',
+            node_id: created.node_id,
+            actor_type: ActorType.system,
+            actor_id: null,
+            after: {
+              status: OrderStatus.cancelled,
+              placed_via: input.placedVia,
+              razorpay_payment_id: input.razorpayPaymentId,
+              total: String(toDecimal(pending.total)),
+              reason,
+              unseatable: lines.map((line) => ({
+                order_item_id: line.order_item_id,
+                product_id: line.product_id,
+                event_id: line.event_id,
+                guests: line.guests,
+                reason: line.reason,
+              })),
+            },
+          });
+
+          return created;
+        }, SERIALIZABLE_TX_OPTIONS),
+      );
+      return { order, alreadyRecorded: false, alreadyRefunded: false };
+    } catch (err) {
+      if (hasPrismaCode(err, 'P2002')) {
+        const existing = await this.findOrderByRazorpayPaymentId(
+          input.razorpayPaymentId,
+        );
+        if (existing) {
+          const status = existing.payment?.status;
+          return {
+            order: { id: existing.id, node_id: existing.node_id },
+            alreadyRecorded: true,
+            alreadyRefunded:
+              status === PaymentStatus.refunded ||
+              status === PaymentStatus.partially_refunded,
+          };
+        }
       }
       throw err;
     }
@@ -690,13 +1039,18 @@ export class FulfilmentService {
    *
    * Returns the `coupon.redeemed` payload rather than emitting it: SPEC §4.1
    * requires events only after the transaction commits, and this runs inside it.
+   * `reacquired` lists the booking lines whose hold had already been swept and
+   * whose seat had to be taken again.
    */
   private async applyCommercialEffects(
     tx: Tx,
     order: { id: string; node_id: string; items: ConfirmedOrderItem[] },
     pending: PendingOrderV2,
     customerId: string,
-  ): Promise<{ couponEvent: CouponRedeemedEvent | null }> {
+  ): Promise<{
+    couponEvent: CouponRedeemedEvent | null;
+    reacquired: ReacquiredSeat[];
+  }> {
     const shipped = order.items.filter(
       (item) => item.fulfilment === FulfilmentType.shipped,
     );
@@ -707,10 +1061,11 @@ export class FulfilmentService {
       });
     }
 
-    await this.confirmBookingHolds(
+    const reacquired = await this.confirmBookingHolds(
       tx,
       order.items.filter((item) => item.fulfilment === FulfilmentType.booking),
       pending,
+      customerId,
     );
 
     // PROMO-02. `redeem` is an upsert on (coupon_id, order_id), so a retried
@@ -738,7 +1093,7 @@ export class FulfilmentService {
       );
     }
 
-    return { couponEvent };
+    return { couponEvent, reacquired };
   }
 
   /**
@@ -747,20 +1102,152 @@ export class FulfilmentService {
    *
    * Holds are matched to items **by product**, not by position: `order.items`
    * comes back from a nested create and its order is the database's, not the
-   * quote's. A missing or cancelled hold throws — the seat is gone, and the
-   * caller refunds rather than confirming a booking that does not exist.
+   * quote's.
+   *
+   * A hold that is **gone** is no longer fatal. The hold window is 15 minutes
+   * and the pending-order key lives 30, so a customer who pays late has their
+   * seat swept out from under them by `EventHoldsCron` through no fault of their
+   * own — and before this, `applyCommercialEffects` threw and left a captured
+   * payment with no order at all (SPEC §5.2 violated). Instead the seat is
+   * **taken again** inside this same Serializable transaction with the same
+   * hold-aware arithmetic the quote used (`capacity − confirmed − live holds`,
+   * `OCCUPYING_BOOKINGS`). Only when a line genuinely cannot be re-seated does
+   * this raise {@link BookingSeatUnavailableError}, and then for the *whole*
+   * order — never a partial confirmation.
    *
    * `razorpay_payment_id` is cleared: that id belongs to the order's `Payment`
    * row, and `EventBooking.razorpay_payment_id` is unique, so copying it would
    * make a second booking on the same payment impossible.
+   *
+   * Returns the lines whose seat had to be re-acquired, for the audit trail.
    */
   private async confirmBookingHolds(
     tx: Tx,
     bookingItems: ConfirmedOrderItem[],
     pending: PendingOrderV2,
-  ): Promise<void> {
-    if (bookingItems.length === 0) return;
+    customerId: string,
+  ): Promise<ReacquiredSeat[]> {
+    if (bookingItems.length === 0) return [];
 
+    const { decisions, unseatable, contact } = await this.planBookingSeats(
+      tx,
+      bookingItems,
+      pending,
+      customerId,
+    );
+    if (unseatable.length > 0)
+      throw new BookingSeatUnavailableError(unseatable);
+
+    const reacquired: ReacquiredSeat[] = [];
+    for (const decision of decisions) {
+      let bookingId: string;
+
+      if (decision.kind === 'hold') {
+        await tx.eventBooking.update({
+          where: { id: decision.booking_id },
+          data: {
+            status: BookingStatus.confirmed,
+            payment_status: 'paid',
+            hold_expires_at: null,
+            razorpay_payment_id: null,
+          },
+        });
+        bookingId = decision.booking_id;
+      } else if (decision.booking_id) {
+        // Reusing the row rather than inserting a new one: at most one booking
+        // can exist per (event, customer_phone), so a `cancelled` or stale
+        // `held` row is the only seat this customer can hold on this event.
+        await tx.eventBooking.update({
+          where: { id: decision.booking_id },
+          data: {
+            status: BookingStatus.confirmed,
+            payment_status: 'paid',
+            hold_expires_at: null,
+            razorpay_payment_id: null,
+            customer_id: customerId,
+            guests: decision.guests,
+            payment_amount: toDecimal(decision.gross),
+          },
+        });
+        bookingId = decision.booking_id;
+      } else {
+        // `planBookingSeats` refuses any line whose customer row is missing, so
+        // a decision that reaches an insert always carries a contact. Guarded
+        // rather than defaulted: a booking with a blank phone would collide with
+        // every other phoneless row on `@@unique([event_id, customer_phone])`.
+        if (!contact) {
+          throw new BookingSeatUnavailableError([
+            {
+              order_item_id: decision.item.id,
+              product_id: decision.item.product_id,
+              event_id: decision.event_id,
+              guests: decision.guests,
+              reason: 'Customer record not found',
+            },
+          ]);
+        }
+        const created = await tx.eventBooking.create({
+          data: {
+            event_id: decision.event_id,
+            customer_id: customerId,
+            customer_name: contact.name ?? 'Guest',
+            customer_phone: contact.phone,
+            guests: decision.guests,
+            status: BookingStatus.confirmed,
+            payment_status: 'paid',
+            hold_expires_at: null,
+            payment_amount: toDecimal(decision.gross),
+          },
+          select: { id: true },
+        });
+        bookingId = created.id;
+      }
+
+      await tx.orderItem.update({
+        where: { id: decision.item.id },
+        data: {
+          event_booking_id: bookingId,
+          status: OrderItemStatus.ready,
+        },
+      });
+
+      if (decision.kind === 'reacquire') {
+        reacquired.push({
+          order_item_id: decision.item.id,
+          product_id: decision.item.product_id,
+          event_id: decision.event_id,
+          guests: decision.guests,
+          booking_id: bookingId,
+        });
+      }
+    }
+
+    return reacquired;
+  }
+
+  /**
+   * The read-only half of {@link confirmBookingHolds}: decides how every
+   * booking line would be seated, without writing anything.
+   *
+   * Nothing is recomputed for a line whose hold survived — that seat was never
+   * given back, and re-checking capacity would let a staff member who shrank an
+   * event between quote and confirm turn a legitimately held seat into a refund.
+   * The capacity arithmetic runs **only** on the re-acquire path.
+   *
+   * `reserved` carries seats already promised to earlier lines of this same
+   * order, so two lines pointing at one event cannot both be told the last seat
+   * is theirs.
+   */
+  private async planBookingSeats(
+    tx: Tx,
+    bookingItems: ConfirmedOrderItem[],
+    pending: PendingOrderV2,
+    customerId: string,
+  ): Promise<{
+    decisions: SeatDecision[];
+    unseatable: UnseatableBookingLine[];
+    contact: BookingContact | null;
+  }> {
     const queues = new Map<string, QuoteHold[]>();
     for (const hold of pending.holds) {
       const queue = queues.get(hold.product_id);
@@ -768,35 +1255,120 @@ export class FulfilmentService {
       else queues.set(hold.product_id, [hold]);
     }
 
-    for (const item of bookingItems) {
-      const hold = queues.get(item.product_id)?.shift();
-      if (!hold) throw new BadRequestException(BOOKING_HOLD_EXPIRED);
+    const decisions: SeatDecision[] = [];
+    const unseatable: UnseatableBookingLine[] = [];
+    const reserved = new Map<string, number>();
+    const now = new Date();
+    let contact: BookingContact | null = null;
 
-      const booking = await tx.eventBooking.findUnique({
-        where: { id: hold.booking_id },
-        select: { id: true, status: true },
-      });
-      if (!booking || booking.status === BookingStatus.cancelled) {
-        throw new BadRequestException(BOOKING_HOLD_EXPIRED);
+    for (const item of bookingItems) {
+      const hold = queues.get(item.product_id)?.shift() ?? null;
+      const held = hold
+        ? await tx.eventBooking.findUnique({
+            where: { id: hold.booking_id },
+            select: { id: true, status: true },
+          })
+        : null;
+
+      if (held && held.status !== BookingStatus.cancelled) {
+        decisions.push({ kind: 'hold', item, booking_id: held.id });
+        continue;
       }
 
-      await tx.eventBooking.update({
-        where: { id: hold.booking_id },
-        data: {
-          status: BookingStatus.confirmed,
-          payment_status: 'paid',
-          hold_expires_at: null,
-          razorpay_payment_id: null,
-        },
+      // ── the hold is gone: take the capacity again ───────────────────────
+      const line = pending.lines.find(
+        (candidate) =>
+          candidate.product_id === item.product_id && candidate.event_id,
+      );
+      const eventId = hold?.event_id ?? line?.event_id ?? null;
+      const guests = hold?.guests ?? item.quantity;
+      const refuse = (reason: string) =>
+        unseatable.push({
+          order_item_id: item.id,
+          product_id: item.product_id,
+          event_id: eventId,
+          guests,
+          reason,
+        });
+
+      if (!eventId) {
+        refuse('This experience is no longer on the catalogue');
+        continue;
+      }
+
+      const event = await tx.event.findUnique({
+        where: { id: eventId },
+        select: { id: true, capacity: true, status: true },
       });
-      await tx.orderItem.update({
-        where: { id: item.id },
-        data: {
-          event_booking_id: hold.booking_id,
-          status: OrderItemStatus.ready,
+      if (!event || event.status === EventStatus.cancelled) {
+        refuse('This experience is no longer running');
+        continue;
+      }
+
+      contact ??= await this.bookingContact(tx, customerId);
+      if (!contact) {
+        refuse('Customer record not found');
+        continue;
+      }
+
+      // `@@unique([event_id, customer_phone])` — one row per customer per
+      // event. Found first, and reused rather than inserted alongside: a P2002
+      // inside a Postgres transaction aborts the transaction outright, so the
+      // constraint has to be avoided, not caught.
+      const existing = await tx.eventBooking.findFirst({
+        where: { event_id: eventId, customer_phone: contact.phone },
+        select: { id: true, status: true },
+      });
+      if (
+        existing &&
+        (existing.status === BookingStatus.confirmed ||
+          existing.status === BookingStatus.attended)
+      ) {
+        // Some other order already owns this customer's only possible seat;
+        // confirming here would sell it twice.
+        refuse('This experience is already booked on another order');
+        continue;
+      }
+
+      const occupancy = await tx.eventBooking.aggregate({
+        where: {
+          event_id: eventId,
+          ...OCCUPYING_BOOKINGS(now),
+          // The row about to be promoted must not count against itself.
+          ...(existing ? { NOT: { id: existing.id } } : {}),
         },
+        _sum: { guests: true },
+      });
+      const taken = (occupancy._sum.guests ?? 0) + (reserved.get(eventId) ?? 0);
+      if (event.capacity - taken < guests) {
+        refuse('The last seats went while the payment was being taken');
+        continue;
+      }
+
+      reserved.set(eventId, (reserved.get(eventId) ?? 0) + guests);
+      decisions.push({
+        kind: 'reacquire',
+        item,
+        booking_id: existing?.id ?? null,
+        event_id: eventId,
+        guests,
+        gross: line?.gross ?? 0,
       });
     }
+
+    return { decisions, unseatable, contact };
+  }
+
+  /** The denormalised contact an `EventBooking` row needs. */
+  private async bookingContact(
+    tx: Tx,
+    customerId: string,
+  ): Promise<BookingContact | null> {
+    const customer = await tx.customer.findUnique({
+      where: { id: customerId },
+      select: { name: true, phone: true },
+    });
+    return customer ? { name: customer.name, phone: customer.phone } : null;
   }
 
   /**

@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   GoneException,
   NotFoundException,
@@ -13,7 +14,10 @@ import { NodeService } from '../node/node.service';
 import { RedisService } from '../customer-auth/redis.service';
 import { RazorpayService } from '../razorpay/razorpay.service';
 import { PusherService } from '../chat/pusher.service';
-import { FulfilmentService } from '../fulfilment/fulfilment.service';
+import {
+  FulfilmentService,
+  OrderRefusedAndRefundedException,
+} from '../fulfilment/fulfilment.service';
 import { CartPricingService } from '../checkout/cart-pricing.service';
 import type {
   PricedCart,
@@ -968,6 +972,40 @@ describe('CustomerOrdersService', () => {
         1800,
         'NX',
       );
+    });
+
+    it('does NOT restore the pending key when the payment was refused and refunded', async () => {
+      const raw = JSON.stringify(pendingData);
+      redisClient.get.mockResolvedValue(raw);
+      redisClient.getdel.mockResolvedValue(raw);
+      razorpayService.verifyPaymentSignature.mockReturnValue(true);
+      razorpayService.fetchPayment.mockResolvedValue({
+        status: 'captured',
+        amount: 30000,
+      });
+      fulfilmentService.confirmPaidOrder.mockRejectedValue(
+        new OrderRefusedAndRefundedException({
+          order_id: 'ord-refused',
+          refund_id: 'rf-1',
+          refunded: true,
+          lines: [],
+        }),
+      );
+
+      // 409 — the customer did nothing wrong, the seat went.
+      await expect(service.confirmOrder(customerId, dto)).rejects.toBeInstanceOf(
+        ConflictException,
+      );
+      // Restoring it would let the webhook fallback re-attempt an order that
+      // can never exist, against a payment that has already gone back.
+      expect(redisClient.set).not.toHaveBeenCalledWith(
+        'pending_order:order_rzp123',
+        raw,
+        'EX',
+        1800,
+        'NX',
+      );
+      expect(redisClient.del).toHaveBeenCalledWith(`cart:${customerId}`);
     });
 
     it('confirms a pre-P5a v1 pending record, upgraded in memory', async () => {
