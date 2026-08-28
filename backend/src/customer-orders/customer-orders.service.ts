@@ -22,6 +22,7 @@ import { PusherService } from '../chat/pusher.service';
 import {
   ConfirmPaidOrderInput,
   FulfilmentService,
+  OrderRefusedAndRefundedException,
   PendingOrderData,
 } from '../fulfilment/fulfilment.service';
 import { CartPricingService } from '../checkout/cart-pricing.service';
@@ -648,6 +649,18 @@ export class CustomerOrdersService {
         placedVia: OrderSource.storefront,
       });
     } catch (err) {
+      // SPEC §5.2 — the seats were gone and `confirmPaidOrder` has already sent
+      // the money back. The session must **not** come back: this payment is
+      // settled, and a restored key would let the webhook fallback re-attempt an
+      // order that can never exist. The customer learns it from this response
+      // (409), so there is no second notification to send.
+      if (err instanceof OrderRefusedAndRefundedException) {
+        await redis.del(this.cartKey(customerId));
+        this.logger.warn(
+          `Order refused after capture for customer ${customerId}: refused order ${err.detail.order_id}, refunded=${err.detail.refunded}`,
+        );
+        throw err;
+      }
       // Restore the session so the webhook fallback or a retry can still create the order
       await redis.set(pendingKey, consumed, 'EX', PENDING_ORDER_TTL, 'NX');
       throw err;

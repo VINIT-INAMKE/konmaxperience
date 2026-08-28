@@ -16,6 +16,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { PusherService } from '../chat/pusher.service';
 import {
   FulfilmentService,
+  OrderRefusedAndRefundedException,
   PendingOrderPayload,
   pendingTotalPaise,
 } from '../fulfilment/fulfilment.service';
@@ -211,6 +212,16 @@ export class WebhooksService {
         placedVia: OrderSource.webhook_fallback,
       });
     } catch (err) {
+      // SPEC §5.2 — the payment could not become an order and has already been
+      // refunded inside `confirmPaidOrder`. That is a *resolution*, not a
+      // failure: restoring the pending key would have Razorpay's next delivery
+      // (and the storefront) try to buy the same sold-out seat all over again.
+      // 2xx for the same reason — there is nothing left for a retry to fix.
+      if (err instanceof OrderRefusedAndRefundedException) {
+        await redis.del(`cart:${customerId}`);
+        this.notifyPaymentRefused(customerId, err);
+        return;
+      }
       await redis.set(pendingKey, pendingRaw, 'EX', 1800, 'NX');
       this.logger.error(
         `confirmPaidOrder failed for ${payment.order_id}: ${(err as Error).message}`,
@@ -228,6 +239,43 @@ export class WebhooksService {
       .catch((err) =>
         this.logger.error(
           '[Pusher] Webhook order trigger error',
+          err instanceof Error ? err.stack : String(err),
+        ),
+      );
+  }
+
+  /**
+   * Tells the customer their payment is coming back, on the same
+   * `private-customer-{id}` channel that already carries `order.placed`,
+   * `delivery.updated` and `shipment.updated` — no new channel is invented for
+   * this.
+   *
+   * The webhook is the only path that needs it: the storefront confirm endpoint
+   * surfaces the same outcome synchronously as a `409`. Failure-isolated, and
+   * logged either way, because the money has already moved and a dead socket
+   * must not turn a settled refund into a webhook retry.
+   */
+  private notifyPaymentRefused(
+    customerId: string,
+    refusal: OrderRefusedAndRefundedException,
+  ): void {
+    this.logger.warn(
+      `Order refused after capture (order ${refusal.detail.order_id}); refund ${
+        refusal.detail.refunded
+          ? `issued (${refusal.detail.refund_id ?? 'reconciled'})`
+          : 'FAILED at the gateway — see order.auto_refund_failed'
+      }`,
+    );
+    this.pusherService
+      .trigger(`private-customer-${customerId}`, 'order.refunded', {
+        orderId: refusal.detail.order_id,
+        status: OrderStatus.refunded,
+        reason: refusal.message,
+        refunded: refusal.detail.refunded,
+      })
+      .catch((err) =>
+        this.logger.error(
+          '[Pusher] Webhook order refused trigger error',
           err instanceof Error ? err.stack : String(err),
         ),
       );

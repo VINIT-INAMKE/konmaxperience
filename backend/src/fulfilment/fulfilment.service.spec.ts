@@ -8,14 +8,18 @@ import {
 } from '@nestjs/common';
 import { OrderSource, Prisma } from '@prisma/client';
 import {
+  AUTO_REFUND_REASON,
   BOOKING_HOLD_EXPIRED,
   FulfilmentService,
+  OrderRefusedAndRefundedException,
   actorForOrder,
   parsePendingOrder,
   pendingTotalPaise,
   upgradePendingOrder,
 } from './fulfilment.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { RefundsService } from '../refunds/refunds.service';
+import { SYSTEM_USER_ID } from '../common/constants/system-actor';
 import {
   mockAuditService,
   mockEventEmitter,
@@ -40,7 +44,15 @@ const makeTx = () => ({
   product: { findMany: jest.fn(), findUniqueOrThrow: jest.fn() },
   orderItem: { update: jest.fn(), updateMany: jest.fn() },
   order: { create: jest.fn(), findUniqueOrThrow: jest.fn() },
-  eventBooking: { findUnique: jest.fn(), update: jest.fn() },
+  eventBooking: {
+    findUnique: jest.fn(),
+    findFirst: jest.fn(),
+    aggregate: jest.fn(),
+    update: jest.fn(),
+    create: jest.fn(),
+  },
+  event: { findUnique: jest.fn() },
+  customer: { findUnique: jest.fn() },
   ingredientStock: { findFirst: jest.fn(), update: jest.fn() },
   stockMovement: { create: jest.fn() },
   prepBatch: { findMany: jest.fn(), update: jest.fn() },
@@ -82,6 +94,9 @@ const coupons = {
 const loyalty = {
   redeemForOrder: jest.fn(),
 };
+const refunds = {
+  refund: jest.fn(),
+};
 
 const userActor = { actor_type: 'user' as const, actor_id: 'user-1' };
 const orderItem = {
@@ -104,6 +119,7 @@ describe('FulfilmentService', () => {
         provideEventEmitter(emitter),
         { provide: CouponsService, useValue: coupons },
         { provide: LoyaltyService, useValue: loyalty },
+        { provide: RefundsService, useValue: refunds },
       ],
     }).compile();
     service = module.get(FulfilmentService);
@@ -115,6 +131,7 @@ describe('FulfilmentService', () => {
       event: { couponId: 'cp-1', code: 'SAVE10' },
     });
     loyalty.redeemForOrder.mockResolvedValue(null);
+    refunds.refund.mockResolvedValue({ id: 'rf-1' });
   });
 
   describe('actorForOrder', () => {
@@ -1017,6 +1034,20 @@ describe('FulfilmentService', () => {
         items: items.map((i) => ({ order_id: 'ord-1', quantity: 1, ...i })),
       });
       tx.product.findMany.mockResolvedValue(products);
+      // Re-seat defaults: an event with room, no rival row, a real customer.
+      // Every booking test overrides exactly the one it is about.
+      tx.event.findUnique.mockResolvedValue({
+        id: 'ev-1',
+        capacity: 10,
+        status: 'upcoming',
+      });
+      tx.eventBooking.findFirst.mockResolvedValue(null);
+      tx.eventBooking.aggregate.mockResolvedValue({ _sum: { guests: 0 } });
+      tx.eventBooking.create.mockResolvedValue({ id: 'bk-new' });
+      tx.customer.findUnique.mockResolvedValue({
+        name: 'Demo Customer',
+        phone: '9900000001',
+      });
       tx.order.findUniqueOrThrow.mockResolvedValue({
         id: 'ord-1',
         node_id: 'node-1',
@@ -1154,34 +1185,311 @@ describe('FulfilmentService', () => {
       });
     });
 
-    it('throws before the coupon step when the hold was cancelled', async () => {
-      const tx = arrange(MIXED_ITEMS, MIXED_PRODUCTS);
-      tx.eventBooking.findUnique.mockResolvedValue({
-        id: 'bk-1',
-        status: 'cancelled',
+    // ── P5a debt: the 15-minute hold vs the 30-minute pending order ────────
+    //
+    // `EventHoldsCron` sweeps a hold at 15 minutes; the pending-order key lives
+    // 30. A capture in that window used to throw inside `applyCommercialEffects`
+    // and leave a captured payment with no order at all — the §5.2 violation
+    // these specs pin shut.
+
+    describe('a hold that was swept before the payment landed', () => {
+      it('re-acquires the seat and confirms the order normally', async () => {
+        const tx = arrange(MIXED_ITEMS, MIXED_PRODUCTS);
+        tx.eventBooking.findUnique.mockResolvedValue(null); // swept
+
+        await service.confirmPaidOrder(confirmInput(MIXED_PENDING()));
+
+        // Capacity was re-checked with the quote's own hold-aware arithmetic.
+        expect(tx.eventBooking.aggregate).toHaveBeenCalledWith(
+          expect.objectContaining({
+            where: expect.objectContaining({ event_id: 'ev-1' }),
+            _sum: { guests: true },
+          }),
+        );
+        expect(tx.eventBooking.create).toHaveBeenCalledWith({
+          data: expect.objectContaining({
+            event_id: 'ev-1',
+            customer_id: 'cust-1',
+            customer_phone: '9900000001',
+            guests: 2,
+            status: 'confirmed',
+            payment_status: 'paid',
+            hold_expires_at: null,
+          }),
+          select: { id: true },
+        });
+        expect(tx.orderItem.update).toHaveBeenCalledWith({
+          where: { id: 'oi-book' },
+          data: { event_booking_id: 'bk-new', status: 'ready' },
+        });
+        // A normal confirmation: the order exists, nothing was refunded.
+        expect(refunds.refund).not.toHaveBeenCalled();
+        expect(emitter.emit).toHaveBeenCalledWith(
+          DomainEvent.ORDER_CONFIRMED,
+          expect.anything(),
+        );
       });
 
-      await expect(
-        service.confirmPaidOrder(confirmInput(MIXED_PENDING())),
-      ).rejects.toThrow(BOOKING_HOLD_EXPIRED);
-      expect(coupons.redeem).not.toHaveBeenCalled();
-      expect(loyalty.redeemForOrder).not.toHaveBeenCalled();
-      expect(emitter.emit).not.toHaveBeenCalled();
+      it('audits the re-acquisition so the extra seat is traceable', async () => {
+        const tx = arrange(MIXED_ITEMS, MIXED_PRODUCTS);
+        tx.eventBooking.findUnique.mockResolvedValue(null);
+
+        await service.confirmPaidOrder(confirmInput(MIXED_PENDING()));
+
+        expect(audit.record).toHaveBeenCalledWith(
+          tx,
+          expect.objectContaining({
+            action: 'order.booking_reacquired',
+            entity_id: 'ord-1',
+            after: expect.objectContaining({
+              lines: [
+                {
+                  order_item_id: 'oi-book',
+                  product_id: 'p-book',
+                  event_id: 'ev-1',
+                  guests: 2,
+                  booking_id: 'bk-new',
+                },
+              ],
+            }),
+          }),
+        );
+      });
+
+      it('promotes a cancelled hold row in place rather than inserting beside it', async () => {
+        const tx = arrange(MIXED_ITEMS, MIXED_PRODUCTS);
+        tx.eventBooking.findUnique.mockResolvedValue({
+          id: 'bk-1',
+          status: 'cancelled',
+        });
+        tx.eventBooking.findFirst.mockResolvedValue({
+          id: 'bk-1',
+          status: 'cancelled',
+        });
+
+        await service.confirmPaidOrder(confirmInput(MIXED_PENDING()));
+
+        // `@@unique([event_id, customer_phone])` — a second insert would abort
+        // the whole Postgres transaction, so the row is reused.
+        expect(tx.eventBooking.create).not.toHaveBeenCalled();
+        expect(tx.eventBooking.update).toHaveBeenCalledWith({
+          where: { id: 'bk-1' },
+          data: expect.objectContaining({
+            status: 'confirmed',
+            payment_status: 'paid',
+            hold_expires_at: null,
+            guests: 2,
+          }),
+        });
+        // The row it is promoting must not count against its own capacity check.
+        expect(tx.eventBooking.aggregate).toHaveBeenCalledWith(
+          expect.objectContaining({
+            where: expect.objectContaining({ NOT: { id: 'bk-1' } }),
+          }),
+        );
+      });
+
+      it('seats a line whose hold never reached the payload, from the quoted line', async () => {
+        const tx = arrange(MIXED_ITEMS, MIXED_PRODUCTS);
+        const pending = MIXED_PENDING();
+        pending.holds = [];
+
+        await service.confirmPaidOrder(confirmInput(pending));
+
+        expect(tx.eventBooking.findUnique).not.toHaveBeenCalled();
+        expect(tx.eventBooking.create).toHaveBeenCalledWith({
+          data: expect.objectContaining({ event_id: 'ev-1', guests: 1 }),
+          select: { id: true },
+        });
+      });
     });
 
-    it('throws when a booking line has no hold at all', async () => {
-      const tx = arrange(MIXED_ITEMS, MIXED_PRODUCTS);
-      tx.eventBooking.findUnique.mockResolvedValue({
-        id: 'bk-1',
-        status: 'held',
-      });
-      const pending = MIXED_PENDING();
-      pending.holds = [];
+    describe('a booking line that cannot be re-seated', () => {
+      /** The event has filled up while the customer was on the payment screen. */
+      const soldOut = () => {
+        const tx = arrange(MIXED_ITEMS, MIXED_PRODUCTS);
+        tx.eventBooking.findUnique.mockResolvedValue(null);
+        tx.event.findUnique.mockResolvedValue({
+          id: 'ev-1',
+          capacity: 10,
+          status: 'upcoming',
+        });
+        tx.eventBooking.aggregate.mockResolvedValue({ _sum: { guests: 9 } });
+        return tx;
+      };
 
-      await expect(
-        service.confirmPaidOrder(confirmInput(pending)),
-      ).rejects.toThrow(BOOKING_HOLD_EXPIRED);
-      expect(tx.eventBooking.update).not.toHaveBeenCalled();
+      it('refuses the whole order rather than confirming a partial one', async () => {
+        const tx = soldOut();
+
+        await expect(
+          service.confirmPaidOrder(confirmInput(MIXED_PENDING())),
+        ).rejects.toBeInstanceOf(OrderRefusedAndRefundedException);
+
+        // Nothing commercial was applied and no seat was written.
+        expect(coupons.redeem).not.toHaveBeenCalled();
+        expect(loyalty.redeemForOrder).not.toHaveBeenCalled();
+        expect(tx.eventBooking.update).not.toHaveBeenCalled();
+        expect(tx.eventBooking.create).not.toHaveBeenCalled();
+        expect(emitter.emit).not.toHaveBeenCalled();
+      });
+
+      it('writes a cancelled order with cancelled items and the captured payment', async () => {
+        const tx = soldOut();
+
+        await expect(
+          service.confirmPaidOrder(confirmInput(MIXED_PENDING())),
+        ).rejects.toThrow(BOOKING_HOLD_EXPIRED);
+
+        // The second `order.create` is the refusal: `OrderStatus` has no
+        // `failed` member and `Refund.order_id` is required, so a `cancelled`
+        // row is the shape this schema supports for the refund to hang off.
+        const refused = (
+          tx.order.create.mock.calls.at(-1)?.[0] as {
+            data: Record<string, any> & {
+              items: { create: Array<Record<string, any>> };
+            };
+          }
+        ).data;
+        expect(refused.status).toBe('cancelled');
+        expect(refused.zone_id).toBeNull();
+        expect(refused.coupon_id).toBeNull();
+        expect(refused.loyalty_points_redeemed).toBe(0);
+        expect(String(refused.total)).toBe('1800');
+        expect(
+          refused.items.create.every((item) => item.status === 'cancelled'),
+        ).toBe(true);
+        expect(refused.payment.create).toMatchObject({
+          status: 'paid',
+          razorpay_payment_id: 'pay_1',
+        });
+      });
+
+      it('issues a full gateway refund as the system actor and audits the refusal', async () => {
+        const tx = soldOut();
+
+        await expect(
+          service.confirmPaidOrder(confirmInput(MIXED_PENDING())),
+        ).rejects.toThrow(BOOKING_HOLD_EXPIRED);
+
+        // No `amount` — `RefundsService` refunds the whole remaining balance.
+        expect(refunds.refund).toHaveBeenCalledWith(
+          'ord-1',
+          { reason: expect.stringContaining(AUTO_REFUND_REASON) },
+          SYSTEM_USER_ID,
+        );
+        expect(audit.record).toHaveBeenCalledWith(
+          tx,
+          expect.objectContaining({
+            action: 'order.payment_refused',
+            entity_id: 'ord-1',
+            actor_type: 'system',
+            after: expect.objectContaining({
+              status: 'cancelled',
+              razorpay_payment_id: 'pay_1',
+              unseatable: [
+                expect.objectContaining({
+                  order_item_id: 'oi-book',
+                  event_id: 'ev-1',
+                  guests: 2,
+                }),
+              ],
+            }),
+          }),
+        );
+      });
+
+      it('carries the refund outcome on the exception', async () => {
+        soldOut();
+
+        await expect(
+          service.confirmPaidOrder(confirmInput(MIXED_PENDING())),
+        ).rejects.toMatchObject({
+          detail: { order_id: 'ord-1', refund_id: 'rf-1', refunded: true },
+        });
+      });
+
+      it('keeps the refused order when the gateway rejects the refund', async () => {
+        const tx = soldOut();
+        refunds.refund.mockRejectedValue(new Error('gateway down'));
+
+        await expect(
+          service.confirmPaidOrder(confirmInput(MIXED_PENDING())),
+        ).rejects.toMatchObject({ detail: { refunded: false } });
+
+        // The order row survives on purpose: dropping it would put a captured
+        // payment back to having nothing attached to it at all.
+        expect(tx.order.create).toHaveBeenCalledTimes(2);
+        expect(audit.record).toHaveBeenCalledWith(
+          tx,
+          expect.objectContaining({ action: 'order.auto_refund_failed' }),
+        );
+      });
+
+      it('replays as a no-op: no second order, no second gateway call', async () => {
+        const tx = soldOut();
+        // The confirm attempt still runs and still rolls back; it is the
+        // *refusal* write that collides, because the first delivery already
+        // wrote it and `Payment.razorpay_payment_id` is unique.
+        tx.order.create
+          .mockResolvedValueOnce({
+            id: 'ord-1',
+            node_id: 'node-1',
+            zone_id: 'zone-1',
+            items: MIXED_ITEMS.map((i) => ({
+              order_id: 'ord-1',
+              quantity: 1,
+              ...i,
+            })),
+          })
+          .mockRejectedValueOnce(
+            Object.assign(new Error('unique'), { code: 'P2002' }),
+          );
+        mockPrisma.order.findFirst.mockResolvedValue({
+          id: 'ord-1',
+          node_id: 'node-1',
+          payment: { status: 'refunded' },
+        });
+
+        await expect(
+          service.confirmPaidOrder(confirmInput(MIXED_PENDING())),
+        ).rejects.toMatchObject({
+          detail: { order_id: 'ord-1', refunded: true, refund_id: null },
+        });
+
+        expect(refunds.refund).not.toHaveBeenCalled();
+        expect(audit.record).not.toHaveBeenCalledWith(
+          tx,
+          expect.objectContaining({ action: 'order.payment_refused' }),
+        );
+      });
+
+      it('reports refunded:false on a replay whose first auto-refund failed', async () => {
+        const tx = soldOut();
+        tx.order.create
+          .mockResolvedValueOnce({
+            id: 'ord-1',
+            node_id: 'node-1',
+            zone_id: 'zone-1',
+            items: MIXED_ITEMS.map((i) => ({
+              order_id: 'ord-1',
+              quantity: 1,
+              ...i,
+            })),
+          })
+          .mockRejectedValueOnce(
+            Object.assign(new Error('unique'), { code: 'P2002' }),
+          );
+        // The money never left: the `Payment` row still reads `paid`.
+        mockPrisma.order.findFirst.mockResolvedValue({
+          id: 'ord-1',
+          node_id: 'node-1',
+          payment: { status: 'paid' },
+        });
+
+        await expect(
+          service.confirmPaidOrder(confirmInput(MIXED_PENDING())),
+        ).rejects.toMatchObject({ detail: { refunded: false } });
+      });
     });
 
     it('redeems the coupon inside the transaction and emits only after it commits', async () => {
