@@ -14,6 +14,7 @@ import {
   meterTone,
 } from '@/components/ops/readiness/meter-tone';
 import { MissionContextStrip } from './MissionContextStrip';
+import { MorningBriefCard } from './MorningBriefCard';
 import { ActivityFeedWidget } from './ActivityFeedWidget';
 import { TeamContributionWidget } from './TeamContributionWidget';
 import { ReadinessSparkline } from './ReadinessSparkline';
@@ -160,6 +161,10 @@ export function StatusPanel() {
           )}
         </div>
       )}
+
+      {/* RUN-05 — yesterday in one paragraph, read before the meters that
+          explain it. Renders nothing at all on a day with no brief. */}
+      <MorningBriefCard />
 
       <Card>
         <CardContent className="space-y-4">

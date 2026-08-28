@@ -16,6 +16,9 @@ import {
   Truck,
   Megaphone,
   Check,
+  CircleX,
+  Sunrise,
+  CalendarClock,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -37,6 +40,13 @@ export const NOTIFICATION_STYLE: Record<
   order_ready: { badge: STATUS_BADGE.good, icon: Bell },
   delivery_update: { badge: STATUS_BADGE.info, icon: Truck },
   admin_notice: { badge: STATUS_BADGE.neutral, icon: Megaphone },
+  // A shipment that could not be booked is a broken promise to a customer, so
+  // it reads `serious` rather than sitting in `delivery_update`'s `info` blue.
+  shipment_failed: { badge: STATUS_BADGE.serious, icon: CircleX },
+  // The brief reports, it does not ask for anything — `info`, like `new_order`.
+  morning_brief: { badge: STATUS_BADGE.info, icon: Sunrise },
+  // An outstanding close is a task waiting on a person, like `approval_pending`.
+  daily_close_due: { badge: STATUS_BADGE.warning, icon: CalendarClock },
 };
 
 function formatRelativeTime(dateStr: string): string {

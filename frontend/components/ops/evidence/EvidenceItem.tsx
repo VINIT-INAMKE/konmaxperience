@@ -15,6 +15,7 @@ import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { RejectionDialog } from './RejectionDialog';
+import { EvidenceAssistPanel } from './EvidenceAssistPanel';
 import { QuestTaskChip } from '@/components/ops/tasks/QuestTaskChip';
 import { apiClient } from '@/lib/api-client';
 import type { Evidence, EvidenceType } from '@/lib/types/evidence';
@@ -224,6 +225,15 @@ export function EvidenceItem({
           </div>
         )}
       </div>
+
+      {/* SPEC §1.2 — the model's second opinion, strictly *below* the buttons
+          above. It is offered only where a decision is actually open, and it
+          receives no handle on the approve/reject controls: it cannot
+          pre-select, disable or reorder them because it has nothing to do it
+          with. A person decides. */}
+      {canApprove && evidence.approval_status === 'pending' && (
+        <EvidenceAssistPanel evidenceId={evidence.id} />
+      )}
 
       {/* SPEC §6.4 — which task this proves, and the quest that asked for it. */}
       {evidence.task && (

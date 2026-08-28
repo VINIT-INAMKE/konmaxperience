@@ -7,7 +7,11 @@ export type NotificationType =
   | 'new_order'
   | 'order_ready'
   | 'delivery_update'
-  | 'admin_notice';
+  | 'admin_notice'
+  // P6 (RUN-01 / RUN-05 / RUN-02) — the three run-it-layer types.
+  | 'shipment_failed'
+  | 'morning_brief'
+  | 'daily_close_due';
 
 /** Prisma `NotificationChannel`. */
 export type NotificationChannel = 'in_app' | 'email' | 'whatsapp';
@@ -21,6 +25,9 @@ export const NOTIFICATION_TYPE_LABELS: Record<NotificationType, string> = {
   order_ready: 'Order Ready',
   delivery_update: 'Delivery Update',
   admin_notice: 'Admin Notice',
+  shipment_failed: 'Shipment Failed',
+  morning_brief: 'Morning Brief',
+  daily_close_due: 'Daily Close Due',
 };
 
 export const NOTIFICATION_CHANNEL_LABELS: Record<NotificationChannel, string> = {

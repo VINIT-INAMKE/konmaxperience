@@ -49,7 +49,13 @@ export class UsersController {
   ) {
     const currentUser = (request as any).user;
     return this.usersService.create(
-      { name: dto.name, email: dto.email, roleId: dto.roleId },
+      {
+        name: dto.name,
+        email: dto.email,
+        roleId: dto.roleId,
+        phone: dto.phone,
+        whatsapp_opt_in: dto.whatsapp_opt_in,
+      },
       currentUser.id,
     );
   }
