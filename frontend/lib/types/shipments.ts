@@ -13,7 +13,10 @@
  * 3. **`GET /shipments/:id/label` answers `200 { label_url: null }`** for a
  *    manual shipment that has an AWB but no label. `400` is reserved for
  *    "no AWB assigned yet".
- * 4. **`POST /shipments/:id/pickup` also moves `Order.status` to `shipped`.**
+ * 4. **`POST /shipments/:id/pickup` does NOT move the order** — `pickup_scheduled`
+ *    is deliberately outside `ShipmentsService.IN_FLIGHT`; the order flips to
+ *    `shipped` on the courier's first scan (`picked_up`/`in_transit`), not at
+ *    scheduling time.
  *
  * The "to pack" queue is *not* driven by `OrderItemStatus.packed`: `confirm`
  * already sets shipped lines to `packed` before anyone has touched a box

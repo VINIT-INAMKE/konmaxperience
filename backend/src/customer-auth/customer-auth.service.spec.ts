@@ -421,20 +421,18 @@ describe('CustomerAuthService', () => {
   });
 
   describe('WhatsAppService dev fallback', () => {
-    it('should log the OTP through the Nest logger when WHATSAPP_TOKEN not set', async () => {
+    it('should warn-log the OTP when WHATSAPP_TOKEN not set (never throw — a node without Meta credentials is a supported production state)', async () => {
       const wa = new WhatsAppService();
-      // QA-04 (Task 19) replaced the raw `console.log` with the service's own
-      // `Logger`, so the spy moves to the prototype rather than to `console`.
-      const logSpy = jest
-        .spyOn(Logger.prototype, 'log')
+      const warnSpy = jest
+        .spyOn(Logger.prototype, 'warn')
         .mockImplementation(() => undefined);
 
       await wa.sendOtp('9876543210', '123456');
 
-      expect(logSpy).toHaveBeenCalledWith(
-        expect.stringContaining('[DEV] OTP for 9876543210: 123456'),
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('OTP for 9876543210: 123456'),
       );
-      logSpy.mockRestore();
+      warnSpy.mockRestore();
     });
   });
 });

@@ -13,14 +13,15 @@ export class WhatsAppService {
   }
 
   async sendOtp(recipientPhone: string, otp: string): Promise<void> {
-    // Dev fallback -- log to console if WhatsApp not configured
+    // Fallback when WhatsApp is not configured: log the code instead of
+    // throwing. A node without Meta credentials is a supported production
+    // state (the channel ships disabled until the templates are approved),
+    // and throwing here blocks the entire customer sign-in funnel — the
+    // operator relays the code from the server log in the meantime.
     if (!this.token || !this.phoneId) {
-      if (process.env.NODE_ENV === 'production') {
-        throw new Error(
-          'WhatsApp not configured in production — set WHATSAPP_TOKEN and WHATSAPP_PHONE_ID',
-        );
-      }
-      this.logger.log(`[DEV] OTP for ${recipientPhone}: ${otp}`);
+      this.logger.warn(
+        `[OTP fallback — WhatsApp unconfigured] OTP for ${recipientPhone}: ${otp}`,
+      );
       return;
     }
 

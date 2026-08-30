@@ -13,7 +13,7 @@ import { request, type APIRequestContext, type BrowserContext } from '@playwrigh
  * /customer-auth/send-otp` → the OTP → `POST /customer-auth/verify-otp` is the
  * only way into a customer session, and this fixture walks it. The OTP itself is
  * read from the **backend's own stdout**: `WhatsAppService` logs
- * `[DEV] OTP for <phone>: <code>` whenever WhatsApp is unconfigured, which is
+ * `OTP for <phone>: <code>` (with a `[DEV]`/`[OTP fallback…]` prefix) whenever WhatsApp is unconfigured, which is
  * the case on every developer machine and on CI. So the backend must be started
  * with its output redirected to a file and `E2E_BACKEND_LOG` pointed at it —
  * `e2e/README.md` and the `frontend-e2e` CI job both do exactly that.
@@ -65,7 +65,7 @@ function sleep(ms: number): Promise<void> {
 }
 
 /**
- * The last `[DEV] OTP` line written **after** `fromByte`.
+ * The last OTP line written **after** `fromByte`.
  *
  * The offset matters: the log is append-only across runs, so without it the
  * first read would happily return an hour-old code and `verify-otp` would answer
@@ -83,7 +83,7 @@ export async function readDevOtp(
         'and point E2E_BACKEND_LOG at it — see frontend/e2e/README.md.',
     );
   }
-  const pattern = new RegExp(`\\[DEV\\] OTP for ${phone}:\\s*(\\d{4,8})`, 'g');
+  const pattern = new RegExp(`OTP for ${phone}:\\s*(\\d{4,8})`, 'g');
   const deadline = Date.now() + timeoutMs;
 
   while (Date.now() < deadline) {
@@ -97,7 +97,7 @@ export async function readDevOtp(
     await sleep(250);
   }
   throw new Error(
-    `No "[DEV] OTP for ${phone}" line appeared in ${BACKEND_LOG} within ${timeoutMs} ms. ` +
+    `No "OTP for ${phone}" line appeared in ${BACKEND_LOG} within ${timeoutMs} ms. ` +
       'Is the backend running, and is WhatsApp genuinely unconfigured?',
   );
 }

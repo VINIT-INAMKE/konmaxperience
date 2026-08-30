@@ -158,7 +158,7 @@ export function OrderReceipt({ order, redeemValuePerPoint }: OrderReceiptProps) 
         </h3>
 
         <MoneyLine label="Subtotal (incl. GST)" value={order.subtotal} />
-        <MoneyLine label="of which GST" value={order.tax_amount} variant="of-which" />
+        <MoneyLine label="GST" value={order.tax_amount} variant="of-which" />
 
         {order.channel_modifier_amount !== 0 ? (
           <MoneyLine

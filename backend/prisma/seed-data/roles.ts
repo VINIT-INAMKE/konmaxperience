@@ -37,6 +37,10 @@ export const ROLE_SEEDS: RoleSeed[] = [
       // `MANAGE_OPS`-gated — without this grant a named signer 403s at the
       // controller before the signer check in the service ever runs (P6).
       Permission.MANAGE_OPS,
+      // The same role runs the till: POS order-taking, order lifecycle and
+      // refunds are all MANAGE_POS-gated, and its module grant exposes those
+      // screens (found writing the team walkthroughs).
+      Permission.MANAGE_POS,
     ],
     functionDomain: 'food',
     userName: 'Advitha2',
@@ -53,6 +57,10 @@ export const ROLE_SEEDS: RoleSeed[] = [
       Permission.APPROVE_EVIDENCE,
       Permission.VERIFY_TASK,
       Permission.CREATE_DECISION,
+      // The kitchen lead's whole module group (KDS, prep batches, waste,
+      // supply usage) is MANAGE_KITCHEN-gated — without it the nav renders
+      // but every action 403s (found writing the team walkthroughs).
+      Permission.MANAGE_KITCHEN,
     ],
     functionDomain: 'food',
     userName: 'Sadhana',
@@ -86,6 +94,10 @@ export const ROLE_SEEDS: RoleSeed[] = [
       Permission.MANAGE_INVENTORY,
       Permission.MANAGE_PROCUREMENT,
       Permission.MANAGE_KITCHEN,
+      // Vendor and vendor-price writes are MANAGE_OPS-gated; the role that
+      // owns "Vendors, sourcing" must be able to create both (found writing
+      // the team walkthroughs).
+      Permission.MANAGE_OPS,
     ],
     functionDomain: 'procurement',
     userName: 'Surya',
@@ -99,6 +111,13 @@ export const ROLE_SEEDS: RoleSeed[] = [
       Permission.VIEW_ROLE_SCOPED,
       Permission.UPDATE_OWN_TASK,
       Permission.UPLOAD_EVIDENCE,
+      // The role that runs onboarding/training must drive the mission loop,
+      // and the seeded `hiring` approval policy names TALENT_LEAD as a
+      // required approver — a required approver must hold APPROVE_EVIDENCE
+      // (found writing the team walkthroughs).
+      Permission.CREATE_TASK,
+      Permission.CREATE_QUEST,
+      Permission.APPROVE_EVIDENCE,
     ],
     functionDomain: 'talent',
     userName: 'Sathya',
@@ -122,6 +141,10 @@ export const ROLE_SEEDS: RoleSeed[] = [
       Permission.UPDATE_OWN_TASK,
       Permission.UPLOAD_EVIDENCE,
       Permission.CREATE_DECISION,
+      // This role's entire module grant (catalog, experiences, brands,
+      // assets, promotions) is MANAGE_OPS-gated — without it Experiences and
+      // Promotions do not even load (found writing the team walkthroughs).
+      Permission.MANAGE_OPS,
     ],
     functionDomain: 'design',
     userName: 'Advitha',
