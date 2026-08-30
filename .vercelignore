@@ -1,0 +1,5 @@
+backend/
+.claude/
+.planning/
+docs/
+.git/
