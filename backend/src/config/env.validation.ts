@@ -10,6 +10,8 @@ import {
 
 const inProduction = (o: EnvironmentVariables) => o.NODE_ENV === 'production';
 const qstashEnabled = (o: EnvironmentVariables) => !!o.QSTASH_TOKEN;
+const whatsappConfigured = (o: EnvironmentVariables) =>
+  !!(o.WHATSAPP_TOKEN || o.WHATSAPP_PHONE_ID);
 /**
  * SPEC §5.3 — the Shiprocket credentials only matter when the deployment actually
  * calls Shiprocket. `SHIPPING_PROVIDER` mirrors `SystemSetting['shipping'].provider`
@@ -42,8 +44,15 @@ export class EnvironmentVariables {
   @ValidateIf(inProduction) @IsString() @IsNotEmpty() RAZORPAY_KEY_ID?: string;
   @ValidateIf(inProduction) @IsString() @IsNotEmpty() RAZORPAY_KEY_SECRET?: string;
   @ValidateIf(inProduction) @IsString() @IsNotEmpty() RAZORPAY_WEBHOOK_SECRET?: string;
-  @ValidateIf(inProduction) @IsString() @IsNotEmpty() WHATSAPP_TOKEN?: string;
-  @ValidateIf(inProduction) @IsString() @IsNotEmpty() WHATSAPP_PHONE_ID?: string;
+  /**
+   * Required as a pair only when either is set (the QSTASH pattern below).
+   * WhatsApp ships disabled (`SystemSetting['notifications'].whatsapp_enabled`
+   * seeds false until the Meta templates are approved), and the dispatcher
+   * degrades to in_app/email without credentials — so a node with no Meta
+   * account is a supported production state, exactly like the Anthropic key.
+   */
+  @ValidateIf(whatsappConfigured) @IsString() @IsNotEmpty() WHATSAPP_TOKEN?: string;
+  @ValidateIf(whatsappConfigured) @IsString() @IsNotEmpty() WHATSAPP_PHONE_ID?: string;
 
   // Required together with QSTASH_TOKEN
   @IsOptional() @IsString() QSTASH_TOKEN?: string;
